@@ -1,35 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect, useState } from "react";
+import styled from "styled-components";
+import { Button } from "reactstrap";
+import { supabase } from "./supabaseClient";
+
+const Container = styled.div`
+  padding: 2rem;
+  background: #121212;
+  color: white;
+  min-height: 100vh;
+`;
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
+      setSession(session)
+    );
+    return () => listener?.subscription.unsubscribe();
+  }, []);
+
+  const signIn = async () => {
+    await supabase.auth.signInWithOAuth({ provider: "github" });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Container>
+      <h1>Bandmate</h1>
+      {session ? (
+        <>
+          <p>Welcome, {session.user.email}</p>
+          <Button color="danger" onClick={signOut}>
+            Sign Out
+          </Button>
+        </>
+      ) : (
+        <Button color="primary" onClick={signIn}>
+          Sign in with GitHub
+        </Button>
+      )}
+    </Container>
+  );
 }
 
-export default App
+export default App;
