@@ -1,11 +1,18 @@
+import type { FC } from "react";
+import type { User } from "@supabase/supabase-js";
+import type { Song } from "../services/songsService";
 import { useEffect, useState } from "react";
+import { Spinner, Container } from "reactstrap";
 import { getMySongs } from "../services/songsService";
 import { NewSongForm } from "./NewSongForm";
 import { SongList } from "./SongList";
-import { Spinner, Container } from "reactstrap";
 
-const SongsView = ({ user }: { user: any }) => {
-  const [songs, setSongs] = useState<any[]>([]);
+interface Props {
+  user: User | null;
+}
+
+const SongsView: FC<Props> = ({ user }) => {
+  const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadSongs = async () => {

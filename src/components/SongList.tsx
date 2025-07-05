@@ -1,12 +1,12 @@
+import type { FC } from "react";
+import type { Song } from "../services/songsService";
 import { ListGroup, ListGroupItem } from "reactstrap";
 
-interface Song {
-  id: number;
-  title: string;
-  artist?: string;
+interface Props {
+  songs: Song[];
 }
 
-export const SongList = ({ songs }: { songs: Song[] }) => (
+export const SongList: FC<Props> = ({ songs }) => (
   <ListGroup>
     {songs.map((song) => (
       <ListGroupItem key={song.id}>

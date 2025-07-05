@@ -1,5 +1,8 @@
+import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
+import type { Band } from "./services/bandsService";
 import { supabase } from "./lib/supabaseClient";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
@@ -19,13 +22,11 @@ import {
 } from "reactstrap";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
-function App() {
-  const [user, setUser] = useState<any>(null);
+const App: FC = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedBand, setSelectedBand] = useState<import("./components/BandList").Band | null>(
-    null
-  );
+  const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -108,6 +109,6 @@ function App() {
       )}
     </div>
   );
-}
+};
 
 export default App;

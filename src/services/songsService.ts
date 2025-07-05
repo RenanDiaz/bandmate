@@ -1,6 +1,16 @@
 import { supabase } from "../lib/supabaseClient";
 
-export async function getMySongs() {
+export interface Song {
+  id: string;
+  user_id: string;
+  title: string;
+  artist?: string;
+  lyrics?: string;
+  chords?: string;
+  created_at: string;
+}
+
+export async function getMySongs(): Promise<Song[]> {
   const { data, error } = await supabase
     .from("songs")
     .select("*")

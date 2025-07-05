@@ -1,17 +1,16 @@
+import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { getMyBands, createBand } from "../services/bandsService";
-import { BandList } from "./BandList";
-import type { Band } from "./BandList";
-import { NewBandForm } from "./NewBandForm";
 import { Spinner, Container, Alert } from "reactstrap";
+import { createBand, getMyBands, type Band } from "../services/bandsService";
+import { BandList } from "./BandList";
+import { NewBandForm } from "./NewBandForm";
 
-export const BandSelector = ({
-  onSelect,
-  selectedBand,
-}: {
-  onSelect: (band: Band) => void;
+interface Props {
   selectedBand?: Band;
-}) => {
+  onSelect: (band: Band) => void;
+}
+
+export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   const [bands, setBands] = useState<Band[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +21,12 @@ export const BandSelector = ({
     try {
       const data = await getMyBands();
       setBands(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("An unexpected error occurred.");
+      }
     }
     setLoading(false);
   };

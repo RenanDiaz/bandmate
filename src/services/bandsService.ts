@@ -1,6 +1,13 @@
 import { supabase } from "../lib/supabaseClient";
 
-export async function getMyBands() {
+export interface Band {
+  id: number;
+  name: string;
+  owner_id: string;
+  created_at: string;
+}
+
+export async function getMyBands(): Promise<Band[]> {
   const {
     data: { user },
     error: userError,

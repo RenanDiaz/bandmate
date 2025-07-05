@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import type { User } from "@supabase/supabase-js";
+import type { FC } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Spinner, Alert } from "reactstrap";
 import { supabase } from "./lib/supabaseClient";
 
-export const AuthButton = () => {
-  const [user, setUser] = useState<any>(null);
+export const AuthButton: FC = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ export const AuthButton = () => {
     setError(null);
     try {
       await supabase.auth.signInWithOAuth({ provider: "github" });
-    } catch (err: any) {
+    } catch {
       setError("Error signing in");
     } finally {
       setLoading(false);
@@ -38,7 +40,7 @@ export const AuthButton = () => {
     setError(null);
     try {
       await supabase.auth.signOut();
-    } catch (err: any) {
+    } catch {
       setError("Error signing out");
     } finally {
       setLoading(false);

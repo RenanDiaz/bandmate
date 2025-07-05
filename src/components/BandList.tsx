@@ -1,19 +1,14 @@
+import type { FC } from "react";
+import type { Band } from "../services/bandsService";
 import { ListGroup, ListGroupItem } from "reactstrap";
 
-export interface Band {
-  id: number;
-  name: string;
-}
-
-export const BandList = ({
-  bands,
-  onSelect,
-  selectedBandId,
-}: {
+interface Props {
   bands: Band[];
   onSelect: (band: Band) => void;
   selectedBandId?: number;
-}) => (
+}
+
+export const BandList: FC<Props> = ({ bands, onSelect, selectedBandId }) => (
   <ListGroup>
     {bands.map((band) => (
       <ListGroupItem
