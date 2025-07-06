@@ -1,9 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
-import type { User } from "@supabase/supabase-js";
-import type { Band } from "./services/bandsService";
-import { supabase } from "./lib/supabaseClient";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
 import SongsView from "./components/SongsView";
@@ -21,28 +18,15 @@ import {
   Collapse,
 } from "reactstrap";
 import styled from "styled-components";
+import { BandProvider } from "./context/BandContext";
+import { useBandContext } from "./context/useBandContext";
 
-const App: FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+const AppContent: FC = () => {
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedBand, setSelectedBand] = useState<Band | null>(null);
-  const [showBandSelector, setShowBandSelector] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector } =
+    useBandContext();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", mode);
@@ -131,6 +115,12 @@ const App: FC = () => {
     </div>
   );
 };
+
+const App: FC = () => (
+  <BandProvider>
+    <AppContent />
+  </BandProvider>
+);
 
 const BandNameContainer = styled.span`
   margin-left: 8px;
