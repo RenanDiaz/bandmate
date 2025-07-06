@@ -20,13 +20,14 @@ import {
   NavbarToggler,
   Collapse,
 } from "reactstrap";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import styled from "styled-components";
 
 const App: FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
+  const [showBandSelector, setShowBandSelector] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -59,6 +60,20 @@ const App: FC = () => {
         <Container className="px-3">
           <NavbarBrand tag={Link} to="/">
             🎶 Bandmate
+            {selectedBand && (
+              <>
+                <BandNameContainer>{selectedBand.name}</BandNameContainer>
+                <Button
+                  size="sm"
+                  color="secondary"
+                  style={{ marginLeft: 8 }}
+                  onClick={() => setShowBandSelector(true)}
+                  aria-label="Switch Band"
+                >
+                  <i className="bi bi-arrow-left-right"></i>
+                </Button>
+              </>
+            )}
           </NavbarBrand>
           <NavbarToggler onClick={toggleNavbar} />
           <Collapse isOpen={isOpen} navbar>
@@ -96,9 +111,15 @@ const App: FC = () => {
           </Collapse>
         </Container>
       </Navbar>
-      {/* Show BandSelector after login, before showing main app content */}
-      {user && !selectedBand ? (
-        <BandSelector onSelect={setSelectedBand} selectedBand={selectedBand || undefined} />
+      {/* Show BandSelector after login, before showing main app content, or when switching bands */}
+      {user && (!selectedBand || showBandSelector) ? (
+        <BandSelector
+          onSelect={(band) => {
+            setSelectedBand(band);
+            setShowBandSelector(false);
+          }}
+          selectedBand={selectedBand || undefined}
+        />
       ) : (
         <Routes>
           <Route path="/" element={<Home />} />
@@ -110,5 +131,12 @@ const App: FC = () => {
     </div>
   );
 };
+
+const BandNameContainer = styled.span`
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid #ccc;
+  font-weight: 500;
+`;
 
 export default App;
