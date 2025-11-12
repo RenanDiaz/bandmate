@@ -23,12 +23,17 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const [showBandSelector, setShowBandSelector] = useState(false);
   const [bands, setBands] = useState<Band[]>([]);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // Auth state
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setHasCheckedAuth(true);
+    });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setHasCheckedAuth(true);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -63,10 +68,16 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (selectedBand) {
       BandStorage.setSelectedBandId(selectedBand.id);
-    } else {
+    }
+    // Do NOT clear localStorage here if selectedBand is null
+  }, [selectedBand]);
+
+  // Clear bandId from storage only when user logs out (after auth check)
+  useEffect(() => {
+    if (hasCheckedAuth && !user) {
       BandStorage.clearSelectedBandId();
     }
-  }, [selectedBand]);
+  }, [user, hasCheckedAuth]);
 
   return (
     <BandContext.Provider
