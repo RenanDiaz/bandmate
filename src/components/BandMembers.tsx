@@ -1,0 +1,519 @@
+import type { FC } from "react";
+import { useEffect, useState } from "react";
+import { Spinner } from "reactstrap";
+import styled from "styled-components";
+import { theme } from "../theme";
+import type { Band } from "../services/bandsService";
+import {
+  getBandMembers,
+  removeBandMember,
+  updateMemberRole,
+  leaveBand,
+} from "../services/bandMembersService";
+import type { BandMember, BandRole } from "../services/bandMembersService";
+
+interface Props {
+  band: Band;
+  currentUserId: string;
+  onMemberChange: () => void;
+  onInviteClick: () => void;
+}
+
+export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, onInviteClick }) => {
+  const [members, setMembers] = useState<BandMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isOwner = band.user_role === "owner";
+  const currentMember = members.find((m) => m.user_id === currentUserId);
+
+  useEffect(() => {
+    loadMembers();
+  }, [band.id]);
+
+  const loadMembers = async () => {
+    setLoading(true);
+    try {
+      const data = await getBandMembers(band.id);
+      setMembers(data);
+    } catch (error) {
+      console.error("Failed to load members:", error);
+    }
+    setLoading(false);
+  };
+
+  const handleRemoveMember = async (member: BandMember) => {
+    if (member.role === "owner") {
+      alert("Cannot remove the band owner");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${member.email || "this member"} from the band?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await removeBandMember(member.id);
+      await loadMembers();
+      onMemberChange();
+    } catch (error) {
+      console.error("Failed to remove member:", error);
+      alert("Failed to remove member. Please try again.");
+    }
+  };
+
+  const handleChangeRole = async (member: BandMember, newRole: BandRole) => {
+    if (member.role === "owner" && newRole !== "owner") {
+      alert("Cannot change owner role. Transfer ownership instead.");
+      return;
+    }
+
+    try {
+      await updateMemberRole(member.id, { role: newRole });
+      await loadMembers();
+      onMemberChange();
+    } catch (error) {
+      console.error("Failed to update member role:", error);
+      alert("Failed to update member role. Please try again.");
+    }
+  };
+
+  const handleLeaveBand = async () => {
+    if (currentMember?.role === "owner") {
+      alert("Band owners cannot leave. Transfer ownership or delete the band instead.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to leave ${band.name}? You'll need to be re-invited to rejoin.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await leaveBand(band.id);
+      onMemberChange();
+      // The parent component should handle navigation after leaving
+    } catch (error) {
+      console.error("Failed to leave band:", error);
+      alert("Failed to leave band. Please try again.");
+    }
+  };
+
+  const getRoleBadgeColor = (role: BandRole) => {
+    switch (role) {
+      case "owner":
+        return {
+          bg: theme.gradients.brandPrimary,
+          text: "white",
+          border: theme.colors.brand.primary,
+        };
+      case "member":
+        return {
+          bg: theme.colors.dark.bg.tertiary,
+          text: theme.colors.dark.text.primary,
+          border: theme.colors.dark.border.strong,
+        };
+      case "guest":
+        return {
+          bg: theme.colors.semantic.warningBgDark,
+          text: theme.colors.semantic.warning,
+          border: theme.colors.semantic.warning,
+        };
+    }
+  };
+
+  const getInitials = (email: string | undefined): string => {
+    if (!email) return "?";
+    return email.charAt(0).toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <LoadingContainer>
+        <Spinner color="primary" />
+        <p>Loading members...</p>
+      </LoadingContainer>
+    );
+  }
+
+  return (
+    <Container>
+      <Header>
+        <HeaderLeft>
+          <Title>
+            <i className="bi bi-people"></i>
+            Band Members
+          </Title>
+          <MemberCount>{members.length} {members.length === 1 ? "member" : "members"}</MemberCount>
+        </HeaderLeft>
+        <HeaderActions>
+          {!isOwner && currentMember && (
+            <LeaveButton onClick={handleLeaveBand}>
+              <i className="bi bi-box-arrow-right"></i>
+              Leave Band
+            </LeaveButton>
+          )}
+          {isOwner && (
+            <InviteButton onClick={onInviteClick}>
+              <i className="bi bi-person-plus"></i>
+              Invite Member
+            </InviteButton>
+          )}
+        </HeaderActions>
+      </Header>
+
+      <MembersList>
+        {members.map((member) => {
+          const roleColors = getRoleBadgeColor(member.role);
+          const isCurrentUser = member.user_id === currentUserId;
+
+          return (
+            <MemberCard key={member.id} $isCurrentUser={isCurrentUser}>
+              <MemberInfo>
+                <Avatar>{getInitials(member.email)}</Avatar>
+                <MemberDetails>
+                  <MemberEmail>
+                    {member.email || "Unknown"}
+                    {isCurrentUser && <YouBadge>You</YouBadge>}
+                  </MemberEmail>
+                  <MemberMeta>
+                    Joined {new Date(member.joined_at).toLocaleDateString()}
+                    {member.expires_at && (
+                      <ExpiryNotice>
+                        <i className="bi bi-clock"></i>
+                        Expires {new Date(member.expires_at).toLocaleDateString()}
+                      </ExpiryNotice>
+                    )}
+                  </MemberMeta>
+                </MemberDetails>
+              </MemberInfo>
+
+              <MemberActions>
+                {isOwner && member.role !== "owner" ? (
+                  <RoleSelect
+                    value={member.role}
+                    onChange={(e) => handleChangeRole(member, e.target.value as BandRole)}
+                  >
+                    <option value="member">Member</option>
+                    <option value="guest">Guest</option>
+                  </RoleSelect>
+                ) : (
+                  <RoleBadge $bg={roleColors.bg} $text={roleColors.text} $border={roleColors.border}>
+                    {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                  </RoleBadge>
+                )}
+
+                {isOwner && member.role !== "owner" && !isCurrentUser && (
+                  <RemoveButton onClick={() => handleRemoveMember(member)} title="Remove member">
+                    <i className="bi bi-x-lg"></i>
+                  </RemoveButton>
+                )}
+              </MemberActions>
+            </MemberCard>
+          );
+        })}
+      </MembersList>
+    </Container>
+  );
+};
+
+// Styled Components
+
+const Container = styled.div`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.lg};
+  overflow: hidden;
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${theme.space[5]};
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${theme.space[4]};
+  }
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+`;
+
+const Title = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.h2};
+  }
+`;
+
+const MemberCount = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+  background: ${theme.colors.dark.bg.tertiary};
+  padding: ${theme.space[1]} ${theme.space[3]};
+  border-radius: ${theme.radius.full};
+  font-weight: ${theme.fontWeights.medium};
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: ${theme.space[3]};
+`;
+
+const InviteButton = styled.button`
+  background: ${theme.colors.brand.primary};
+  border: none;
+  color: white;
+  padding: ${theme.space[2]} ${theme.space[5]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${theme.colors.brand.primaryHover};
+    transform: translateY(-1px);
+    box-shadow: ${theme.shadows.md};
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const LeaveButton = styled.button`
+  background: transparent;
+  border: 1px solid ${theme.colors.semantic.error};
+  color: ${theme.colors.semantic.error};
+  padding: ${theme.space[2]} ${theme.space[5]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${theme.colors.semantic.errorBgDark};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const MembersList = styled.div`
+  padding: ${theme.space[4]};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const MemberCard = styled.div<{ $isCurrentUser: boolean }>`
+  background: ${(props) =>
+    props.$isCurrentUser ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+  border: 1px solid ${(props) =>
+    props.$isCurrentUser ? theme.colors.brand.primary : theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[4]};
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+  }
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const MemberInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  flex: 1;
+  min-width: 0;
+`;
+
+const Avatar = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: ${theme.radius.full};
+  background: ${theme.gradients.brandPrimary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.bold};
+  flex-shrink: 0;
+`;
+
+const MemberDetails = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const MemberEmail = styled.div`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.dark.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const YouBadge = styled.span`
+  background: ${theme.colors.brand.primary};
+  color: white;
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const MemberMeta = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[1]};
+`;
+
+const ExpiryNotice = styled.span`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  color: ${theme.colors.semantic.warning};
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
+`;
+
+const MemberActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 100%;
+    justify-content: space-between;
+  }
+`;
+
+const RoleBadge = styled.div<{ $bg: string; $text: string; $border: string }>`
+  background: ${(props) => props.$bg};
+  color: ${(props) => props.$text};
+  border: 1px solid ${(props) => props.$border};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  white-space: nowrap;
+`;
+
+const RoleSelect = styled.select`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.primary};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+`;
+
+const RemoveButton = styled.button`
+  background: transparent;
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.semantic.error};
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${theme.colors.semantic.errorBgDark};
+    border-color: ${theme.colors.semantic.error};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.space[12]};
+  gap: ${theme.space[4]};
+
+  p {
+    font-size: ${theme.fontSizes.body};
+    color: ${theme.colors.dark.text.secondary};
+    margin: 0;
+  }
+`;

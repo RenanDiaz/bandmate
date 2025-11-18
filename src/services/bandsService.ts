@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import type { BandRole } from "./bandMembersService";
 
 export interface Band {
   id: number;
@@ -7,6 +8,9 @@ export interface Band {
   created_at: string;
   genre?: string;
   description?: string;
+  // Additional fields for member context
+  member_count?: number;
+  user_role?: BandRole;
 }
 
 export async function getMyBands(): Promise<Band[]> {
@@ -17,14 +21,35 @@ export async function getMyBands(): Promise<Band[]> {
 
   if (userError || !user) throw new Error("User not authenticated");
 
+  // Get bands where user is a member (any role)
+  const { data: memberData, error: memberError } = await supabase
+    .from("band_members")
+    .select("band_id, role")
+    .eq("user_id", user.id);
+
+  if (memberError) throw memberError;
+
+  if (!memberData || memberData.length === 0) {
+    return [];
+  }
+
+  const bandIds = memberData.map((m) => m.band_id);
+  const bandRoles = new Map(memberData.map((m) => [m.band_id, m.role]));
+
+  // Get full band details
   const { data, error } = await supabase
     .from("bands")
     .select("*")
-    .eq("owner_id", user.id)
+    .in("id", bandIds)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data;
+
+  // Add user's role to each band
+  return (data || []).map((band) => ({
+    ...band,
+    user_role: bandRoles.get(band.id),
+  }));
 }
 
 export interface CreateBandInput {
@@ -47,6 +72,7 @@ export async function createBand(input: CreateBandInput) {
 
   if (userError || !user) throw new Error("User not authenticated");
 
+  // Create the band
   const { data, error } = await supabase
     .from("bands")
     .insert([{ ...input, owner_id: user.id }])
@@ -54,6 +80,24 @@ export async function createBand(input: CreateBandInput) {
     .single();
 
   if (error) throw error;
+
+  // Add the creator as an owner in band_members
+  const { error: memberError } = await supabase
+    .from("band_members")
+    .insert([
+      {
+        band_id: data.id,
+        user_id: user.id,
+        role: "owner",
+      },
+    ]);
+
+  if (memberError) {
+    // If member insert fails, clean up the band
+    await supabase.from("bands").delete().eq("id", data.id);
+    throw memberError;
+  }
+
   return data;
 }
 
