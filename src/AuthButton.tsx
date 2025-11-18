@@ -28,7 +28,12 @@ export const AuthButton: FC = () => {
   const loginWithGitHub = useCallback(async () => {
     setLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({ provider: "github" });
+      await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
     } catch (error) {
       console.error("Error signing in with GitHub:", error);
     } finally {
@@ -39,7 +44,12 @@ export const AuthButton: FC = () => {
   const loginWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({ provider: "google" });
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
     } catch (error) {
       console.error("Error signing in with Google:", error);
     } finally {
