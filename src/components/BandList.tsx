@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Band } from "../services/bandsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -11,7 +12,23 @@ interface Props {
   selectedBandId?: number;
 }
 
-export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selectedBandId }) => (
+export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selectedBandId }) => {
+  const navigate = useNavigate();
+
+  const getRoleBadgeColor = (role?: string) => {
+    switch (role) {
+      case "owner":
+        return { bg: theme.gradients.brandPrimary, text: "white" };
+      case "member":
+        return { bg: theme.colors.dark.bg.tertiary, text: theme.colors.dark.text.primary };
+      case "guest":
+        return { bg: theme.colors.semantic.warningBgDark, text: theme.colors.semantic.warning };
+      default:
+        return { bg: theme.colors.dark.bg.tertiary, text: theme.colors.dark.text.secondary };
+    }
+  };
+
+  return (
   <BandGrid>
     {bands.map((band) => (
       <BandCard
@@ -33,7 +50,17 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
           </BandIcon>
 
           <BandInfo>
-            <BandName>{band.name}</BandName>
+            <BandNameRow>
+              <BandName>{band.name}</BandName>
+              {band.user_role && (() => {
+                const roleColors = getRoleBadgeColor(band.user_role);
+                return (
+                  <RoleBadge $bg={roleColors.bg} $text={roleColors.text}>
+                    {band.user_role.charAt(0).toUpperCase() + band.user_role.slice(1)}
+                  </RoleBadge>
+                );
+              })()}
+            </BandNameRow>
             {band.genre && <BandGenre>{band.genre}</BandGenre>}
             {band.description && <BandDescription>{band.description}</BandDescription>}
           </BandInfo>
@@ -50,6 +77,16 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
           <ActionButton
             onClick={(e) => {
               e.stopPropagation();
+              navigate(`/bands/${band.id}/settings`);
+            }}
+            title="Band settings and members"
+            aria-label={`Manage ${band.name}`}
+          >
+            <i className="bi bi-people"></i>
+          </ActionButton>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
               onEdit(band);
             }}
             title="Edit band"
@@ -57,22 +94,25 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
           >
             <i className="bi bi-pencil"></i>
           </ActionButton>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(band);
-            }}
-            title="Delete band"
-            aria-label={`Delete ${band.name}`}
-            $danger
-          >
-            <i className="bi bi-trash"></i>
-          </ActionButton>
+          {band.user_role === "owner" && (
+            <ActionButton
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(band);
+              }}
+              title="Delete band"
+              aria-label={`Delete ${band.name}`}
+              $danger
+            >
+              <i className="bi bi-trash"></i>
+            </ActionButton>
+          )}
         </BandActions>
       </BandCard>
     ))}
   </BandGrid>
-);
+  );
+};
 
 // Styled Components
 
@@ -149,12 +189,31 @@ const BandInfo = styled.div`
   flex: 1;
 `;
 
+const BandNameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  flex-wrap: wrap;
+`;
+
 const BandName = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.dark.text.primary};
-  margin-bottom: ${theme.space[1]};
+  margin: 0;
   line-height: ${theme.lineHeights.snug};
+`;
+
+const RoleBadge = styled.span<{ $bg: string; $text: string }>`
+  background: ${(props) => props.$bg};
+  color: ${(props) => props.$text};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  white-space: nowrap;
 `;
 
 const BandGenre = styled.div`

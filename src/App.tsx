@@ -7,6 +7,7 @@ import SongsView from "./components/SongsView";
 import SetlistsView from "./components/SetlistsView";
 import SetlistEditor from "./components/SetlistEditor";
 import SetlistPerformanceView from "./components/SetlistPerformanceView";
+import { BandSettings } from "./components/BandSettings";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
@@ -133,6 +134,7 @@ const AppContent: FC = () => {
             <Route path="/setlists" element={<SetlistsView user={user} selectedBand={selectedBand} />} />
             <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
             <Route path="/setlists/:setlistId/perform" element={<SetlistPerformanceView />} />
+            <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
