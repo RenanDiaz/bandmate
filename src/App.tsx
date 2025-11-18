@@ -4,6 +4,8 @@ import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
 import SongsView from "./components/SongsView";
+import SetlistsView from "./components/SetlistsView";
+import SetlistEditor from "./components/SetlistEditor";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
@@ -76,6 +78,16 @@ const AppContent: FC = () => {
               <NavItem>
                 <StyledNavLink
                   as={Link}
+                  to="/setlists"
+                  $active={location.pathname === "/setlists"}
+                  $mode={mode}
+                >
+                  Setlists
+                </StyledNavLink>
+              </NavItem>
+              <NavItem>
+                <StyledNavLink
+                  as={Link}
                   to="/about"
                   $active={location.pathname === "/about"}
                   $mode={mode}
@@ -117,6 +129,8 @@ const AppContent: FC = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/songs" element={<SongsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/setlists" element={<SetlistsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

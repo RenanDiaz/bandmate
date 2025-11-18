@@ -6,9 +6,17 @@ import { theme } from "../theme";
 
 interface Props {
   songs: Song[];
+  onEdit: (song: Song) => void;
+  onDelete: (song: Song) => void;
 }
 
-export const SongList: FC<Props> = ({ songs }) => {
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
 
   const toggleExpanded = (songId: string) => {
@@ -23,21 +31,73 @@ export const SongList: FC<Props> = ({ songs }) => {
 
         return (
           <SongCard key={song.id} $isExpanded={isExpanded}>
-            <SongHeader onClick={() => hasDetails && toggleExpanded(song.id)}>
-              <SongIcon>
-                <i className="bi bi-music-note-beamed"></i>
-              </SongIcon>
+            <SongHeader>
+              <SongClickArea onClick={() => hasDetails && toggleExpanded(song.id)}>
+                <SongIcon>
+                  <i className="bi bi-music-note-beamed"></i>
+                </SongIcon>
 
-              <SongInfo>
-                <SongTitle>{song.title}</SongTitle>
-                {song.artist && <SongArtist>by {song.artist}</SongArtist>}
-              </SongInfo>
+                <SongInfo>
+                  <SongTitle>{song.title}</SongTitle>
+                  {song.artist && <SongArtist>by {song.artist}</SongArtist>}
+                  <MetadataRow>
+                    {song.key && (
+                      <MetadataBadge>
+                        <i className="bi bi-music-note-beamed"></i>
+                        {song.key}
+                      </MetadataBadge>
+                    )}
+                    {song.tempo && (
+                      <MetadataBadge>
+                        <i className="bi bi-speedometer2"></i>
+                        {song.tempo} BPM
+                      </MetadataBadge>
+                    )}
+                    {song.duration && (
+                      <MetadataBadge>
+                        <i className="bi bi-clock"></i>
+                        {formatDuration(song.duration)}
+                      </MetadataBadge>
+                    )}
+                  </MetadataRow>
+                  {song.tags && song.tags.length > 0 && (
+                    <TagsRow>
+                      {song.tags.map((tag, index) => (
+                        <Tag key={index}>{tag}</Tag>
+                      ))}
+                    </TagsRow>
+                  )}
+                </SongInfo>
 
-              {hasDetails && (
-                <ExpandButton>
-                  <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`}></i>
-                </ExpandButton>
-              )}
+                {hasDetails && (
+                  <ExpandButton>
+                    <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                  </ExpandButton>
+                )}
+              </SongClickArea>
+
+              <ActionButtons>
+                <ActionButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(song);
+                  }}
+                  title="Edit song"
+                  $variant="edit"
+                >
+                  <i className="bi bi-pencil"></i>
+                </ActionButton>
+                <ActionButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(song);
+                  }}
+                  title="Delete song"
+                  $variant="delete"
+                >
+                  <i className="bi bi-trash"></i>
+                </ActionButton>
+              </ActionButtons>
             </SongHeader>
 
             {isExpanded && hasDetails && (
@@ -104,13 +164,68 @@ const SongCard = styled.div<{ $isExpanded: boolean }>`
 const SongHeader = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${theme.space[3]};
   padding: ${theme.space[4]};
-  cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
+`;
+
+const SongClickArea = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
 
   &:hover {
     background: ${theme.colors.dark.bg.tertiary};
+    margin: -${theme.space[4]};
+    padding: ${theme.space[4]};
+    border-radius: ${theme.radius.md};
+  }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  opacity: 0;
+  transition: opacity ${theme.transitions.fast} ease;
+
+  ${SongHeader}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
+  background: transparent;
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${(props) =>
+    props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.dark.text.secondary};
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${(props) =>
+      props.$variant === "delete"
+        ? theme.colors.semantic.errorBgDark
+        : theme.colors.dark.bg.elevated};
+    border-color: ${(props) =>
+      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
+    color: ${(props) =>
+      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
@@ -150,6 +265,51 @@ const SongArtist = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const MetadataRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[2]};
+`;
+
+const MetadataBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  background: ${theme.colors.dark.bg.tertiary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.secondary};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
+
+  i {
+    font-size: ${theme.fontSizes.bodySm};
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const TagsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${theme.space[1]};
+  margin-top: ${theme.space[2]};
+`;
+
+const Tag = styled.span`
+  display: inline-block;
+  background: ${theme.colors.brand.primary};
+  color: white;
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
 `;
 
 const ExpandButton = styled.button`

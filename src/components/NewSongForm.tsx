@@ -14,6 +14,10 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
     artist: "",
     lyrics: "",
     chords: "",
+    key: "",
+    tempo: "",
+    duration: "",
+    tags: "",
   });
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,10 +34,14 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         artist: formData.artist.trim() || undefined,
         lyrics: formData.lyrics.trim() || undefined,
         chords: formData.chords.trim() || undefined,
+        key: formData.key.trim() || undefined,
+        tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
+        duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
+        tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
       };
 
       await createSong(songInput);
-      setFormData({ title: "", artist: "", lyrics: "", chords: "" });
+      setFormData({ title: "", artist: "", lyrics: "", chords: "", key: "", tempo: "", duration: "", tags: "" });
       setIsExpanded(false);
       onSongCreated();
     } catch (error) {
@@ -97,6 +105,103 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
             />
           </FormGroup>
         </FormRow>
+
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="songKey">
+              <i className="bi bi-music-note-beamed"></i>
+              Key
+            </Label>
+            <Select
+              id="songKey"
+              value={formData.key}
+              onChange={(e) => setFormData({ ...formData, key: e.target.value })}
+              disabled={isSubmitting}
+            >
+              <option value="">Select key (optional)</option>
+              <option value="C">C Major</option>
+              <option value="C#">C# Major</option>
+              <option value="Db">Db Major</option>
+              <option value="D">D Major</option>
+              <option value="D#">D# Major</option>
+              <option value="Eb">Eb Major</option>
+              <option value="E">E Major</option>
+              <option value="F">F Major</option>
+              <option value="F#">F# Major</option>
+              <option value="Gb">Gb Major</option>
+              <option value="G">G Major</option>
+              <option value="G#">G# Major</option>
+              <option value="Ab">Ab Major</option>
+              <option value="A">A Major</option>
+              <option value="A#">A# Major</option>
+              <option value="Bb">Bb Major</option>
+              <option value="B">B Major</option>
+              <option value="Cm">C Minor</option>
+              <option value="C#m">C# Minor</option>
+              <option value="Dm">D Minor</option>
+              <option value="D#m">D# Minor</option>
+              <option value="Ebm">Eb Minor</option>
+              <option value="Em">E Minor</option>
+              <option value="Fm">F Minor</option>
+              <option value="F#m">F# Minor</option>
+              <option value="Gm">G Minor</option>
+              <option value="G#m">G# Minor</option>
+              <option value="Am">A Minor</option>
+              <option value="A#m">A# Minor</option>
+              <option value="Bbm">Bb Minor</option>
+              <option value="Bm">B Minor</option>
+            </Select>
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="songTempo">
+              <i className="bi bi-speedometer2"></i>
+              Tempo (BPM)
+            </Label>
+            <Input
+              id="songTempo"
+              type="number"
+              placeholder="e.g., 120"
+              value={formData.tempo}
+              onChange={(e) => setFormData({ ...formData, tempo: e.target.value })}
+              disabled={isSubmitting}
+              min="1"
+              max="300"
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="songDuration">
+              <i className="bi bi-clock"></i>
+              Duration (seconds)
+            </Label>
+            <Input
+              id="songDuration"
+              type="number"
+              placeholder="e.g., 180"
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+              disabled={isSubmitting}
+              min="1"
+            />
+            <HelperText>Total song length in seconds</HelperText>
+          </FormGroup>
+        </FormRow>
+
+        <FormGroup>
+          <Label htmlFor="songTags">
+            <i className="bi bi-tags"></i>
+            Tags / Categories
+          </Label>
+          <Input
+            id="songTags"
+            placeholder="e.g., Rock, Ballad, Encore"
+            value={formData.tags}
+            onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+            disabled={isSubmitting}
+          />
+          <HelperText>Separate multiple tags with commas</HelperText>
+        </FormGroup>
 
         <FormGroup>
           <Label htmlFor="songChords">
@@ -247,7 +352,7 @@ const Form = styled.form`
 
 const FormRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: ${theme.space[4]};
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -291,6 +396,33 @@ const Input = styled.input`
   &::placeholder {
     color: ${theme.colors.dark.text.tertiary};
   }
+
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+
+  &:hover:not(:focus):not(:disabled) {
+    border-color: ${theme.colors.dark.border.strong};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const Select = styled.select`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.primary};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  transition: all ${theme.transitions.fast} ease;
+  font-family: ${theme.fonts.sans};
+  cursor: pointer;
 
   &:focus {
     outline: none;

@@ -6,9 +6,13 @@ import { useEffect, useState } from "react";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
-import { getBandSongs } from "../services/songsService";
+import { getBandSongs, updateSong, deleteSong } from "../services/songsService";
+import type { UpdateSongInput } from "../services/songsService";
 import { NewSongForm } from "./NewSongForm";
 import { SongList } from "./SongList";
+import { EditSongModal } from "./EditSongModal";
+import { SongSearchFilter, type SortOption, type FilterOptions } from "./SongSearchFilter";
+import { processSongs } from "../utils/songFilters";
 
 interface Props {
   user: User | null;
@@ -18,6 +22,23 @@ interface Props {
 const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("date_desc");
+  const [filters, setFilters] = useState<FilterOptions>({
+    hasChords: false,
+    hasLyrics: false,
+    hasKey: false,
+    hasTempo: false,
+    hasDuration: false,
+    hasTags: false,
+  });
+
+  // Process songs with filters and search
+  const filteredSongs = processSongs(songs, searchQuery, filters, sortBy);
 
   const loadSongs = async () => {
     if (!selectedBand) {
@@ -45,6 +66,31 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       setLoading(false);
     }
   }, [user, selectedBand]);
+
+  const handleEditSong = (song: Song) => {
+    setEditingSong(song);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveSong = async (songId: string, updates: UpdateSongInput) => {
+    await updateSong(songId, updates);
+    await loadSongs();
+  };
+
+  const handleDeleteSong = async (song: Song) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${song.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteSong(song.id);
+      await loadSongs();
+    } catch (error) {
+      console.error("Failed to delete song:", error);
+      alert("Failed to delete song. Please try again.");
+    }
+  };
 
   if (!user) {
     return (
@@ -119,9 +165,41 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
               </EmptyText>
             </EmptyState>
           ) : (
-            <SongList songs={songs} />
+            <>
+              <SongSearchFilter
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                filters={filters}
+                onFilterChange={setFilters}
+                resultsCount={filteredSongs.length}
+                totalCount={songs.length}
+              />
+
+              {filteredSongs.length === 0 ? (
+                <EmptyState>
+                  <EmptyIcon>
+                    <i className="bi bi-search"></i>
+                  </EmptyIcon>
+                  <EmptyTitle>No songs found</EmptyTitle>
+                  <EmptyText>
+                    Try adjusting your search or filters to find what you're looking for
+                  </EmptyText>
+                </EmptyState>
+              ) : (
+                <SongList songs={filteredSongs} onEdit={handleEditSong} onDelete={handleDeleteSong} />
+              )}
+            </>
           )}
         </ContentSection>
+
+        <EditSongModal
+          song={editingSong}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveSong}
+        />
       </Container>
     </PageWrapper>
   );
