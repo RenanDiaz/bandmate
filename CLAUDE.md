@@ -73,8 +73,8 @@ Bandmate will evolve into a full-featured collaboration platform for bands, incl
 
 ### 5. User Accounts & Authentication
 - User registration and login
-- Planned integration with Google sign-in for convenience
-- GitHub OAuth currently implemented
+- GitHub OAuth and Google OAuth implemented
+- Multiple OAuth providers supported
 - Each user can belong to multiple bands
 - Profile management
 
@@ -231,8 +231,9 @@ CREATE POLICY "Users can create songs"
 
 **Authentication Setup**:
 1. In Supabase Dashboard, go to Authentication > Providers
-2. Enable GitHub provider
-3. Add your GitHub OAuth app credentials
+2. Enable GitHub and Google providers
+3. Add your OAuth app credentials for each provider
+4. For detailed Google OAuth setup instructions, see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
 
 ## Development Workflow
 
