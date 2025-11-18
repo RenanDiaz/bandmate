@@ -26,6 +26,10 @@ export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
     navigate(`/setlists/${setlistId}`);
   };
 
+  const handlePerformSetlist = (setlistId: string) => {
+    navigate(`/setlists/${setlistId}/perform`);
+  };
+
   return (
     <SetlistsGrid>
       {setlists.map((setlist) => {
@@ -55,6 +59,17 @@ export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
               </SetlistInfo>
 
               <ActionButtons>
+                <ActionButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePerformSetlist(setlist.id);
+                  }}
+                  title="Start performance mode"
+                  $variant="perform"
+                  disabled={songCount === 0}
+                >
+                  <i className="bi bi-play-circle"></i>
+                </ActionButton>
                 <ActionButton
                   onClick={(e) => {
                     e.stopPropagation();
@@ -221,11 +236,14 @@ const ActionButtons = styled.div`
   }
 `;
 
-const ActionButton = styled.button<{ $variant: "view" | "edit" | "delete" }>`
+const ActionButton = styled.button<{ $variant: "perform" | "view" | "edit" | "delete" }>`
   background: transparent;
   border: 1px solid ${theme.colors.dark.border.default};
-  color: ${(props) =>
-    props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.dark.text.secondary};
+  color: ${(props) => {
+    if (props.$variant === "perform") return theme.colors.semantic.success;
+    if (props.$variant === "delete") return theme.colors.semantic.error;
+    return theme.colors.dark.text.secondary;
+  }};
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -236,20 +254,32 @@ const ActionButton = styled.button<{ $variant: "view" | "edit" | "delete" }>`
   transition: all ${theme.transitions.fast} ease;
   flex-shrink: 0;
 
-  &:hover {
-    background: ${(props) =>
-      props.$variant === "delete"
-        ? theme.colors.semantic.errorBgDark
-        : theme.colors.dark.bg.elevated};
-    border-color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
-    color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
+  &:hover:not(:disabled) {
+    background: ${(props) => {
+      if (props.$variant === "perform") return theme.colors.semantic.successBgDark;
+      if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
+      return theme.colors.dark.bg.elevated;
+    }};
+    border-color: ${(props) => {
+      if (props.$variant === "perform") return theme.colors.semantic.success;
+      if (props.$variant === "delete") return theme.colors.semantic.error;
+      return theme.colors.brand.primary;
+    }};
+    color: ${(props) => {
+      if (props.$variant === "perform") return theme.colors.semantic.success;
+      if (props.$variant === "delete") return theme.colors.semantic.error;
+      return theme.colors.brand.primary;
+    }};
     transform: translateY(-1px);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `;
 

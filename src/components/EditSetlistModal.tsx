@@ -21,6 +21,13 @@ export const EditSetlistModal = ({ setlist, isOpen, onClose }: Props) => {
     navigate(`/setlists/${setlist.id}/edit`);
   };
 
+  const handleStartPerformance = () => {
+    onClose();
+    navigate(`/setlists/${setlist.id}/perform`);
+  };
+
+  const songCount = setlist.songs?.length || 0;
+
   return (
     <>
       <Overlay onClick={onClose} />
@@ -57,14 +64,20 @@ export const EditSetlistModal = ({ setlist, isOpen, onClose }: Props) => {
             )}
             <InfoRow>
               <InfoLabel><i className="bi bi-music-note-beamed"></i> Songs:</InfoLabel>
-              <InfoValue>{setlist.songs?.length || 0} songs</InfoValue>
+              <InfoValue>{songCount} songs</InfoValue>
             </InfoRow>
           </InfoSection>
 
-          <ActionButton onClick={handleEditSongs}>
-            <i className="bi bi-pencil"></i>
-            Edit Songs & Details
-          </ActionButton>
+          <ActionButtonsRow>
+            <ActionButton onClick={handleStartPerformance} disabled={songCount === 0} $primary>
+              <i className="bi bi-play-circle"></i>
+              Start Performance
+            </ActionButton>
+            <ActionButton onClick={handleEditSongs}>
+              <i className="bi bi-pencil"></i>
+              Edit Songs & Details
+            </ActionButton>
+          </ActionButtonsRow>
         </ModalContent>
       </ModalContainer>
     </>
@@ -205,11 +218,20 @@ const InfoValue = styled.div`
   flex: 1;
 `;
 
-const ActionButton = styled.button`
+const ActionButtonsRow = styled.div`
+  display: flex;
+  gap: ${theme.space[3]};
   width: 100%;
-  background: ${theme.colors.brand.primary};
-  border: none;
-  color: white;
+`;
+
+const ActionButton = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  background: ${(props) =>
+    props.$primary ? theme.colors.brand.primary : "transparent"};
+  border: ${(props) =>
+    props.$primary ? "none" : `1px solid ${theme.colors.dark.border.default}`};
+  color: ${(props) =>
+    props.$primary ? "white" : theme.colors.dark.text.primary};
   padding: ${theme.space[3]} ${theme.space[6]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -225,13 +247,24 @@ const ActionButton = styled.button`
     font-size: ${theme.fontSizes.bodyLg};
   }
 
-  &:hover {
-    background: ${theme.colors.brand.primaryHover};
+  &:hover:not(:disabled) {
+    background: ${(props) =>
+      props.$primary ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+    border-color: ${(props) =>
+      props.$primary ? "transparent" : theme.colors.brand.primary};
+    color: ${(props) =>
+      props.$primary ? "white" : theme.colors.brand.primary};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: ${(props) =>
+      props.$primary ? theme.shadows.md : "none"};
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;

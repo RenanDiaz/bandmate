@@ -25,12 +25,23 @@ export const AuthButton: FC = () => {
     };
   }, []);
 
-  const login = useCallback(async () => {
+  const loginWithGitHub = useCallback(async () => {
     setLoading(true);
     try {
       await supabase.auth.signInWithOAuth({ provider: "github" });
     } catch (error) {
-      console.error("Error signing in:", error);
+      console.error("Error signing in with GitHub:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    setLoading(true);
+    try {
+      await supabase.auth.signInWithOAuth({ provider: "google" });
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
     } finally {
       setLoading(false);
     }
@@ -50,19 +61,25 @@ export const AuthButton: FC = () => {
 
   if (!user) {
     return (
-      <SignInButton onClick={login} disabled={loading}>
+      <SignInContainer>
         {loading ? (
-          <>
+          <SignInButton disabled>
             <Spinner size="sm" />
             <span>Signing in...</span>
-          </>
+          </SignInButton>
         ) : (
           <>
-            <i className="bi bi-github"></i>
-            <span>Sign in</span>
+            <SignInButton onClick={loginWithGitHub}>
+              <i className="bi bi-github"></i>
+              <span>Sign in with GitHub</span>
+            </SignInButton>
+            <SignInButton onClick={loginWithGoogle} $variant="google">
+              <i className="bi bi-google"></i>
+              <span>Sign in with Google</span>
+            </SignInButton>
           </>
         )}
-      </SignInButton>
+      </SignInContainer>
     );
   }
 
@@ -109,10 +126,30 @@ export const AuthButton: FC = () => {
 
 // Styled Components
 
-const SignInButton = styled.button`
-  background: ${theme.colors.brand.primary};
-  color: white;
-  border: none;
+const SignInContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  flex-wrap: wrap;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    gap: ${theme.space[2]};
+  }
+`;
+
+const SignInButton = styled.button<{ $variant?: "google" }>`
+  background: ${(props) => {
+    if (props.$variant === "google") return "#ffffff";
+    return theme.colors.brand.primary;
+  }};
+  color: ${(props) => {
+    if (props.$variant === "google") return "#3c4043";
+    return "white";
+  }};
+  border: ${(props) => {
+    if (props.$variant === "google") return "1px solid #dadce0";
+    return "none";
+  }};
   padding: ${theme.space[2]} ${theme.space[5]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -126,16 +163,31 @@ const SignInButton = styled.button`
 
   i {
     font-size: ${theme.fontSizes.body};
+    color: ${(props) => {
+      if (props.$variant === "google") return "#4285f4";
+      return "inherit";
+    }};
   }
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.brand.primaryHover};
+    background: ${(props) => {
+      if (props.$variant === "google") return "#f8f9fa";
+      return theme.colors.brand.primaryHover;
+    }};
+    border-color: ${(props) => {
+      if (props.$variant === "google") return "#d2e3fc";
+      return "transparent";
+    }};
     transform: translateY(-1px);
     box-shadow: ${theme.shadows.md};
   }
 
   &:active:not(:disabled) {
     transform: translateY(0);
+    background: ${(props) => {
+      if (props.$variant === "google") return "#f1f3f4";
+      return theme.colors.brand.primaryHover;
+    }};
   }
 
   &:disabled {
