@@ -20,6 +20,7 @@ export interface Song {
   danceability?: number;
   tags?: string[];
   created_at: string;
+  hasBackingTracks?: boolean;
 }
 
 export async function getMySongs(): Promise<Song[]> {
@@ -60,6 +61,7 @@ export interface CreateSongInput {
   energy?: number;
   danceability?: number;
   tags?: string[];
+  hasBackingTracks?: boolean;
 }
 
 export interface UpdateSongInput {
@@ -78,6 +80,7 @@ export interface UpdateSongInput {
   energy?: number;
   danceability?: number;
   tags?: string[];
+  hasBackingTracks?: boolean;
 }
 
 export async function createSong(song: CreateSongInput) {
