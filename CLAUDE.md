@@ -39,8 +39,8 @@ Bandmate will evolve into a full-featured collaboration platform for bands, incl
 - Spotify Web API for song metadata enrichment (optional)
 
 **External APIs**:
-- See [API_RESEARCH.md](API_RESEARCH.md) for comprehensive API evaluation
-- See [SPOTIFY_SETUP.md](SPOTIFY_SETUP.md) for Spotify integration setup
+- See [API_RESEARCH.md](docs/API_RESEARCH.md) for comprehensive API evaluation
+- See [SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) for Spotify integration setup
 
 ## Core Features
 
@@ -55,7 +55,7 @@ Bandmate will evolve into a full-featured collaboration platform for bands, incl
 ### 2. Songs Management
 - Register and organize songs with comprehensive metadata:
   - Title, artist, album, key, tempo
-  - Automatic metadata enrichment via Spotify API (see [SPOTIFY_SETUP.md](SPOTIFY_SETUP.md))
+  - Automatic metadata enrichment via Spotify API (see [SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md))
   - Audio features: energy, danceability, time signature
   - Lyrics and chord charts
   - Album artwork and Spotify links
@@ -241,7 +241,7 @@ CREATE POLICY "Users can create songs"
 1. In Supabase Dashboard, go to Authentication > Providers
 2. Enable GitHub and Google providers
 3. Add your OAuth app credentials for each provider
-4. For detailed Google OAuth setup instructions, see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
+4. For detailed Google OAuth setup instructions, see [GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md)
 
 ## Development Workflow
 

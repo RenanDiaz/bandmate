@@ -159,16 +159,19 @@ bandmate/
 │   ├── AuthButton.tsx    # Authentication UI
 │   ├── main.tsx          # Entry point
 │   └── theme.ts          # Theme configuration
-├── CLAUDE.md             # Development guide
-├── STYLE_GUIDE.md        # Design system
-└── IMPLEMENTATION_EXAMPLES.md  # Code examples
+├── docs/                 # Documentation files
+├── migrations/           # Database migrations
+└── CLAUDE.md             # Development guide
 ```
 
 ## 📚 Documentation
 
 - **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide with architecture and roadmap
-- **[STYLE_GUIDE.md](./STYLE_GUIDE.md)** - Complete design system and brand guidelines
-- **[IMPLEMENTATION_EXAMPLES.md](./IMPLEMENTATION_EXAMPLES.md)** - Copy-paste ready component examples
+- **[STYLE_GUIDE.md](./docs/STYLE_GUIDE.md)** - Complete design system and brand guidelines
+- **[IMPLEMENTATION_EXAMPLES.md](./docs/IMPLEMENTATION_EXAMPLES.md)** - Copy-paste ready component examples
+- **[API_RESEARCH.md](./docs/API_RESEARCH.md)** - External API evaluation and integration notes
+- **[SPOTIFY_SETUP.md](./docs/SPOTIFY_SETUP.md)** - Spotify API integration guide
+- **[GOOGLE_OAUTH_SETUP.md](./docs/GOOGLE_OAUTH_SETUP.md)** - Google OAuth configuration guide
 
 ## 🗺️ Roadmap
 
@@ -221,7 +224,7 @@ Bandmate uses a custom design system featuring:
 - **Dark-first Design:** Optimized for stage/low-light environments
 - **Accessibility:** WCAG AA compliant
 
-See [STYLE_GUIDE.md](./STYLE_GUIDE.md) for complete design specifications.
+See [STYLE_GUIDE.md](./docs/STYLE_GUIDE.md) for complete design specifications.
 
 ## 🤝 Contributing
 
