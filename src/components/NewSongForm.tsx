@@ -56,9 +56,13 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           key: metadata.key || prev.key,
           tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
           duration: metadata.duration ? metadata.duration.toString() : prev.duration,
-          timeSignature: metadata.timeSignature ? metadata.timeSignature.toString() : prev.timeSignature,
+          timeSignature: metadata.timeSignature
+            ? metadata.timeSignature.toString()
+            : prev.timeSignature,
           energy: metadata.energy ? metadata.energy.toString() : prev.energy,
-          danceability: metadata.danceability ? metadata.danceability.toString() : prev.danceability,
+          danceability: metadata.danceability
+            ? metadata.danceability.toString()
+            : prev.danceability,
         }));
         setMetadataFetched(true);
       } else {
@@ -130,11 +134,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           <i className="bi bi-plus-circle"></i>
           Add New Song
         </FormTitle>
-        <CloseButton
-          onClick={() => setIsExpanded(false)}
-          type="button"
-          aria-label="Close form"
-        >
+        <CloseButton onClick={() => setIsExpanded(false)} type="button" aria-label="Close form">
           <i className="bi bi-x"></i>
         </CloseButton>
       </FormHeader>
@@ -388,6 +388,7 @@ const ExpandButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: ${theme.space[2]};
+  margin-bottom: ${theme.space[6]};
 
   i {
     font-size: ${theme.fontSizes.h3};
@@ -694,7 +695,7 @@ const MetadataSection = styled.div`
 `;
 
 const FetchButton = styled.button`
-  background: #1DB954; /* Spotify green */
+  background: #1db954; /* Spotify green */
   border: none;
   color: white;
   padding: ${theme.space[3]} ${theme.space[4]};

@@ -71,7 +71,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
 
                 {hasDetails && (
                   <ExpandButton>
-                    <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                    <i className={`bi bi-chevron-${isExpanded ? "up" : "down"}`}></i>
                   </ExpandButton>
                 )}
               </SongClickArea>
@@ -155,7 +155,9 @@ const SongCard = styled.div<{ $isExpanded: boolean }>`
     box-shadow: ${theme.shadows.md};
   }
 
-  ${props => props.$isExpanded && `
+  ${(props) =>
+    props.$isExpanded &&
+    `
     box-shadow: ${theme.shadows.lg};
     border-color: ${theme.colors.brand.primary};
   `}

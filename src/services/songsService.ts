@@ -120,11 +120,7 @@ export async function deleteSong(songId: string) {
 
   if (!user) throw new Error("User not authenticated");
 
-  const { error } = await supabase
-    .from("songs")
-    .delete()
-    .eq("id", songId)
-    .eq("user_id", user.id);
+  const { error } = await supabase.from("songs").delete().eq("id", songId).eq("user_id", user.id);
 
   if (error) throw error;
 }
