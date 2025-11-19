@@ -27,10 +27,6 @@ serve(async (req) => {
         band:bands (
           id,
           name
-        ),
-        inviter:invited_by (
-          email,
-          raw_user_meta_data
         )
       `)
       .eq('id', invitationId)
@@ -40,12 +36,21 @@ serve(async (req) => {
       throw new Error('Invitation not found')
     }
 
+    // Get inviter details from auth.users using admin API
+    const { data: { user: inviter }, error: inviterError } = await supabaseClient.auth.admin.getUserById(
+      invitation.invited_by
+    )
+
+    if (inviterError) {
+      console.warn('Could not fetch inviter details:', inviterError)
+    }
+
     // Generate invitation link
     const invitationLink = `${Deno.env.get('APP_URL')}/invite/accept?token=${invitation.token}`
 
     // Prepare email content
-    const inviterName = invitation.inviter?.raw_user_meta_data?.full_name ||
-                       invitation.inviter?.email ||
+    const inviterName = inviter?.user_metadata?.full_name ||
+                       inviter?.email ||
                        'A band member'
 
     const roleText = invitation.role === 'member'
