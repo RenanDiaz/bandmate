@@ -29,7 +29,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>GitHub OAuth Authentication</strong> - Secure sign-in with your GitHub account
+                <strong>OAuth Authentication</strong> - Secure sign-in with GitHub or Google accounts
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -37,7 +37,15 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Band Management</strong> - Create and manage multiple bands with different genres
+                <strong>Band Management</strong> - Create and manage multiple bands with different members
+              </FeatureText>
+            </FeatureItem>
+            <FeatureItem>
+              <FeatureIcon>
+                <i className="bi bi-check-circle-fill"></i>
+              </FeatureIcon>
+              <FeatureText>
+                <strong>Member Roles & Invitations</strong> - Invite members and guests with role-based permissions
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -46,6 +54,22 @@ const About = () => (
               </FeatureIcon>
               <FeatureText>
                 <strong>Song Library</strong> - Store songs with titles, artists, lyrics, and chords
+              </FeatureText>
+            </FeatureItem>
+            <FeatureItem>
+              <FeatureIcon>
+                <i className="bi bi-check-circle-fill"></i>
+              </FeatureIcon>
+              <FeatureText>
+                <strong>Setlist Management</strong> - Create, edit, and perform setlists with full-screen view
+              </FeatureText>
+            </FeatureItem>
+            <FeatureItem>
+              <FeatureIcon>
+                <i className="bi bi-check-circle-fill"></i>
+              </FeatureIcon>
+              <FeatureText>
+                <strong>Guest Access</strong> - Time-limited access for temporary members and substitutes
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -67,14 +91,6 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Setlist Management</strong> - Create and organize setlists for shows
-              </FeatureText>
-            </FeatureItem>
-            <FeatureItem>
-              <FeatureIcon $coming>
-                <i className="bi bi-clock"></i>
-              </FeatureIcon>
-              <FeatureText>
                 <strong>Show Scheduling</strong> - Track gigs, venues, and performance history
               </FeatureText>
             </FeatureItem>
@@ -83,7 +99,7 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Guest Access</strong> - Invite temporary members with limited permissions
+                <strong>Email Notifications</strong> - Automatic email alerts for invitations and updates
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -91,7 +107,15 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Member Roles</strong> - Manage band members with different permission levels
+                <strong>File Attachments</strong> - Upload PDFs, images, and audio files to songs
+              </FeatureText>
+            </FeatureItem>
+            <FeatureItem>
+              <FeatureIcon $coming>
+                <i className="bi bi-clock"></i>
+              </FeatureIcon>
+              <FeatureText>
+                <strong>Advanced Search</strong> - Filter and search songs by key, tempo, and more
               </FeatureText>
             </FeatureItem>
           </FeatureList>
