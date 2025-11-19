@@ -48,35 +48,33 @@ export interface UpdateMemberRoleInput {
  * Get all members of a band
  */
 export async function getBandMembers(bandId: number): Promise<BandMember[]> {
+  // First, try using the RPC function
+  const { data: rpcData, error: rpcError } = await supabase.rpc("get_band_members_with_emails", {
+    band_id_param: bandId,
+  });
+
+  // If RPC function exists and works, use it
+  if (!rpcError && rpcData) {
+    return rpcData;
+  }
+
+  // Fallback: just get band_members without emails
+  console.warn("RPC function not available, fetching without emails:", rpcError);
   const { data, error } = await supabase
     .from("band_members")
-    .select(`
-      *,
-      user:user_id (
-        email,
-        raw_user_meta_data
-      )
-    `)
+    .select("*")
     .eq("band_id", bandId)
     .order("joined_at", { ascending: true });
 
   if (error) throw error;
 
-  // Transform the data to flatten user info
-  const members = (data || []).map((member: any) => ({
-    id: member.id,
-    band_id: member.band_id,
-    user_id: member.user_id,
-    role: member.role,
-    invited_by: member.invited_by,
-    joined_at: member.joined_at,
-    expires_at: member.expires_at,
-    created_at: member.created_at,
-    email: member.user?.email,
-    user_metadata: member.user?.raw_user_meta_data,
-  }));
+  // Get current user's email to at least show it for yourself
+  const { data: { user } } = await supabase.auth.getUser();
 
-  return members;
+  return (data || []).map((member: any) => ({
+    ...member,
+    email: member.user_id === user?.id ? user.email : `User ${member.user_id.substring(0, 8)}...`,
+  }));
 }
 
 /**
