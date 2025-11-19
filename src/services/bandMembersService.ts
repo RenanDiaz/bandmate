@@ -224,6 +224,19 @@ export async function createBandInvitation(
     .single();
 
   if (error) throw error;
+
+  // Send email via Edge Function (non-blocking)
+  // If this fails, invitation is still created (user can copy link manually)
+  try {
+    await supabase.functions.invoke("send-invitation-email", {
+      body: { invitationId: data.id },
+    });
+  } catch (emailError) {
+    console.warn("Failed to send invitation email:", emailError);
+    // Don't throw - invitation was created successfully
+    // User can still copy and share the link manually
+  }
+
   return data;
 }
 
