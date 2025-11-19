@@ -73,7 +73,7 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
 
   return (data || []).map((member: any) => ({
     ...member,
-    email: member.user_id === user?.id ? user.email : `User ${member.user_id.substring(0, 8)}...`,
+    email: member.user_id === user?.id ? user?.email : `User ${member.user_id.substring(0, 8)}...`,
   }));
 }
 
