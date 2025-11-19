@@ -4,12 +4,18 @@ import { theme } from "../theme";
 import { Logo } from "./Logo";
 import { useBandContext } from "../context/useBandContext";
 import { Link } from "react-router-dom";
+import { PendingInvitations } from "./PendingInvitations";
 
 const Home = () => {
-  const { user } = useBandContext();
+  const { user, refreshBands } = useBandContext();
 
   return (
     <HomeWrapper>
+      {user && (
+        <Container style={{ marginTop: theme.space[6] }}>
+          <PendingInvitations onInvitationAccepted={refreshBands} />
+        </Container>
+      )}
       <HeroSection>
         <Container>
           <HeroContent>

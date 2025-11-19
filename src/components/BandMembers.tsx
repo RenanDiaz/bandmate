@@ -9,8 +9,10 @@ import {
   removeBandMember,
   updateMemberRole,
   leaveBand,
+  getBandInvitations,
+  revokeInvitation,
 } from "../services/bandMembersService";
-import type { BandMember, BandRole } from "../services/bandMembersService";
+import type { BandMember, BandRole, BandInvitation } from "../services/bandMembersService";
 
 interface Props {
   band: Band;
@@ -21,6 +23,7 @@ interface Props {
 
 export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, onInviteClick }) => {
   const [members, setMembers] = useState<BandMember[]>([]);
+  const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isOwner = band.user_role === "owner";
@@ -28,7 +31,10 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
 
   useEffect(() => {
     loadMembers();
-  }, [band.id]);
+    if (isOwner) {
+      loadInvitations();
+    }
+  }, [band.id, isOwner]);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -39,6 +45,15 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       console.error("Failed to load members:", error);
     }
     setLoading(false);
+  };
+
+  const loadInvitations = async () => {
+    try {
+      const data = await getBandInvitations(band.id);
+      setInvitations(data.filter((inv) => inv.status === "pending"));
+    } catch (error) {
+      console.error("Failed to load invitations:", error);
+    }
   };
 
   const handleRemoveMember = async (member: BandMember) => {
@@ -127,6 +142,27 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
     return email.charAt(0).toUpperCase();
   };
 
+  const handleRevokeInvitation = async (invitation: BandInvitation) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to revoke the invitation for ${invitation.email}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await revokeInvitation(invitation.id);
+      await loadInvitations();
+    } catch (error) {
+      console.error("Failed to revoke invitation:", error);
+      alert("Failed to revoke invitation. Please try again.");
+    }
+  };
+
+  const copyInvitationLink = (invitation: BandInvitation) => {
+    const link = `${window.location.origin}/invite/accept?token=${invitation.token}`;
+    navigator.clipboard.writeText(link);
+    alert("Invitation link copied to clipboard!");
+  };
+
   if (loading) {
     return (
       <LoadingContainer>
@@ -213,6 +249,61 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
           );
         })}
       </MembersList>
+
+      {isOwner && invitations.length > 0 && (
+        <>
+          <Divider />
+          <InvitationsSection>
+            <SectionTitle>
+              <i className="bi bi-envelope"></i>
+              Pending Invitations ({invitations.length})
+            </SectionTitle>
+            <InvitationsList>
+              {invitations.map((invitation) => {
+                const isExpired = new Date(invitation.expires_at) < new Date();
+                const roleColors = getRoleBadgeColor(invitation.role as BandRole);
+
+                return (
+                  <InvitationCard key={invitation.id} $expired={isExpired}>
+                    <InvitationInfo>
+                      <InvitationIcon>
+                        <i className="bi bi-envelope-paper"></i>
+                      </InvitationIcon>
+                      <InvitationDetails>
+                        <InvitationEmail>{invitation.email}</InvitationEmail>
+                        <InvitationMeta>
+                          <RoleBadge $bg={roleColors.bg} $text={roleColors.text} $border={roleColors.border}>
+                            {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
+                          </RoleBadge>
+                          <span>
+                            <i className="bi bi-calendar"></i>
+                            Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                          </span>
+                          {isExpired && <ExpiredBadge>Expired</ExpiredBadge>}
+                        </InvitationMeta>
+                      </InvitationDetails>
+                    </InvitationInfo>
+                    <InvitationActions>
+                      <CopyLinkButton
+                        onClick={() => copyInvitationLink(invitation)}
+                        title="Copy invitation link"
+                      >
+                        <i className="bi bi-link-45deg"></i>
+                      </CopyLinkButton>
+                      <RevokeButton
+                        onClick={() => handleRevokeInvitation(invitation)}
+                        title="Revoke invitation"
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </RevokeButton>
+                    </InvitationActions>
+                  </InvitationCard>
+                );
+              })}
+            </InvitationsList>
+          </InvitationsSection>
+        </>
+      )}
     </Container>
   );
 };
@@ -515,5 +606,168 @@ const LoadingContainer = styled.div`
     font-size: ${theme.fontSizes.body};
     color: ${theme.colors.dark.text.secondary};
     margin: 0;
+  }
+`;
+
+const Divider = styled.div`
+  height: 1px;
+  background: ${theme.colors.dark.border.default};
+  margin: ${theme.space[6]} ${theme.space[5]};
+`;
+
+const InvitationsSection = styled.div`
+  padding: ${theme.space[5]};
+`;
+
+const SectionTitle = styled.h4`
+  font-size: ${theme.fontSizes.h4};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0 0 ${theme.space[4]} 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.h3};
+  }
+`;
+
+const InvitationsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const InvitationCard = styled.div<{ $expired: boolean }>`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${(props) =>
+    props.$expired ? theme.colors.dark.border.default : theme.colors.brand.primary};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[3]};
+  opacity: ${(props) => (props.$expired ? 0.6 : 1)};
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const InvitationInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  flex: 1;
+  min-width: 0;
+`;
+
+const InvitationIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.radius.base};
+  background: ${theme.colors.brand.primary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.bodyLg};
+  flex-shrink: 0;
+`;
+
+const InvitationDetails = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const InvitationEmail = styled.div`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.dark.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const InvitationMeta = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[1]};
+  flex-wrap: wrap;
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
+`;
+
+const ExpiredBadge = styled.span`
+  background: ${theme.colors.semantic.errorBgDark};
+  color: ${theme.colors.semantic.error};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const InvitationActions = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  flex-shrink: 0;
+`;
+
+const CopyLinkButton = styled.button`
+  background: ${theme.colors.brand.primary};
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.bodyLg};
+
+  &:hover {
+    background: ${theme.colors.brand.primaryHover};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const RevokeButton = styled.button`
+  background: transparent;
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.semantic.error};
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.semantic.errorBgDark};
+    border-color: ${theme.colors.semantic.error};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
