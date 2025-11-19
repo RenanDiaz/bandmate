@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createSong, type CreateSongInput } from "../services/songsService";
+import { spotifyService } from "../services/spotifyService";
 import styled from "styled-components";
 import { theme } from "../theme";
 
@@ -12,15 +13,64 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
+    album: "",
+    albumArt: "",
+    releaseDate: "",
+    spotifyUrl: "",
     lyrics: "",
     chords: "",
     key: "",
     tempo: "",
     duration: "",
+    timeSignature: "",
+    energy: "",
+    danceability: "",
     tags: "",
   });
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [metadataFetched, setMetadataFetched] = useState(false);
+
+  const handleFetchMetadata = async () => {
+    if (!formData.title.trim()) {
+      alert("Please enter a song title first");
+      return;
+    }
+
+    setIsFetchingMetadata(true);
+    try {
+      const metadata = await spotifyService.getSongMetadata(
+        formData.title.trim(),
+        formData.artist.trim() || undefined
+      );
+
+      if (metadata) {
+        setFormData((prev) => ({
+          ...prev,
+          artist: metadata.artist || prev.artist,
+          album: metadata.album || prev.album,
+          albumArt: metadata.albumArt || prev.albumArt,
+          releaseDate: metadata.releaseDate || prev.releaseDate,
+          spotifyUrl: metadata.spotifyUrl || prev.spotifyUrl,
+          key: metadata.key || prev.key,
+          tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
+          duration: metadata.duration ? metadata.duration.toString() : prev.duration,
+          timeSignature: metadata.timeSignature ? metadata.timeSignature.toString() : prev.timeSignature,
+          energy: metadata.energy ? metadata.energy.toString() : prev.energy,
+          danceability: metadata.danceability ? metadata.danceability.toString() : prev.danceability,
+        }));
+        setMetadataFetched(true);
+      } else {
+        alert("Song not found on Spotify. Try entering the artist name or check spelling.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error);
+      alert("Failed to fetch song metadata. Please try again or enter details manually.");
+    } finally {
+      setIsFetchingMetadata(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,17 +82,29 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         title: formData.title.trim(),
         band_id: bandId,
         artist: formData.artist.trim() || undefined,
+        album: formData.album.trim() || undefined,
+        album_art: formData.albumArt.trim() || undefined,
+        release_date: formData.releaseDate.trim() || undefined,
+        spotify_url: formData.spotifyUrl.trim() || undefined,
         lyrics: formData.lyrics.trim() || undefined,
         chords: formData.chords.trim() || undefined,
         key: formData.key.trim() || undefined,
         tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
         duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
+        time_signature: formData.timeSignature ? parseInt(formData.timeSignature, 10) : undefined,
+        energy: formData.energy ? parseFloat(formData.energy) : undefined,
+        danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
       };
 
       await createSong(songInput);
-      setFormData({ title: "", artist: "", lyrics: "", chords: "", key: "", tempo: "", duration: "", tags: "" });
+      setFormData({
+        title: "", artist: "", album: "", albumArt: "", releaseDate: "", spotifyUrl: "",
+        lyrics: "", chords: "", key: "", tempo: "", duration: "", timeSignature: "",
+        energy: "", danceability: "", tags: ""
+      });
       setIsExpanded(false);
+      setMetadataFetched(false);
       onSongCreated();
     } catch (error) {
       console.error("Failed to create song:", error);
@@ -100,11 +162,63 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               id="songArtist"
               placeholder="e.g., The Beatles"
               value={formData.artist}
-              onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, artist: e.target.value });
+                setMetadataFetched(false);
+              }}
               disabled={isSubmitting}
             />
           </FormGroup>
         </FormRow>
+
+        {spotifyService.isConfigured() && (
+          <MetadataSection>
+            <FetchButton
+              type="button"
+              onClick={handleFetchMetadata}
+              disabled={!formData.title.trim() || isFetchingMetadata || isSubmitting}
+            >
+              {isFetchingMetadata ? (
+                <>
+                  <Spinner />
+                  Fetching from Spotify...
+                </>
+              ) : metadataFetched ? (
+                <>
+                  <i className="bi bi-check-circle-fill"></i>
+                  Metadata Loaded
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-spotify"></i>
+                  Fetch Metadata from Spotify
+                </>
+              )}
+            </FetchButton>
+            {metadataFetched && (
+              <SuccessMessage>
+                <i className="bi bi-info-circle"></i>
+                Metadata successfully loaded! You can edit any field before saving.
+              </SuccessMessage>
+            )}
+          </MetadataSection>
+        )}
+
+        {formData.album && (
+          <FormGroup>
+            <Label htmlFor="songAlbum">
+              <i className="bi bi-disc"></i>
+              Album
+            </Label>
+            <Input
+              id="songAlbum"
+              value={formData.album}
+              onChange={(e) => setFormData({ ...formData, album: e.target.value })}
+              disabled={isSubmitting}
+              readOnly
+            />
+          </FormGroup>
+        )}
 
         <FormRow>
           <FormGroup>
@@ -566,5 +680,65 @@ const Spinner = styled.span`
     to {
       transform: rotate(360deg);
     }
+  }
+`;
+
+const MetadataSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[4]};
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+`;
+
+const FetchButton = styled.button`
+  background: #1DB954; /* Spotify green */
+  border: none;
+  color: white;
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+
+  &:hover:not(:disabled) {
+    background: #1ed760;
+    transform: translateY(-1px);
+    box-shadow: ${theme.shadows.sm};
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: ${theme.colors.dark.bg.elevated};
+    color: ${theme.colors.dark.text.disabled};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+const SuccessMessage = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  color: ${theme.colors.semantic.success};
+  font-size: ${theme.fontSizes.bodySm};
+  padding: ${theme.space[2]} 0;
+
+  i {
+    font-size: ${theme.fontSizes.body};
   }
 `;

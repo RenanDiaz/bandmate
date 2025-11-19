@@ -36,6 +36,11 @@ Bandmate will evolve into a full-featured collaboration platform for bands, incl
 - Bootstrap 5 + Reactstrap + Styled Components
 - React Router DOM v7
 - React Context API for state management
+- Spotify Web API for song metadata enrichment (optional)
+
+**External APIs**:
+- See [API_RESEARCH.md](API_RESEARCH.md) for comprehensive API evaluation
+- See [SPOTIFY_SETUP.md](SPOTIFY_SETUP.md) for Spotify integration setup
 
 ## Core Features
 
@@ -49,8 +54,11 @@ Bandmate will evolve into a full-featured collaboration platform for bands, incl
 
 ### 2. Songs Management
 - Register and organize songs with comprehensive metadata:
-  - Title, artist, key, tempo
+  - Title, artist, album, key, tempo
+  - Automatic metadata enrichment via Spotify API (see [SPOTIFY_SETUP.md](SPOTIFY_SETUP.md))
+  - Audio features: energy, danceability, time signature
   - Lyrics and chord charts
+  - Album artwork and Spotify links
   - PDF scores, images, or attachments
 - Group songs by band
 - Search and filter song library

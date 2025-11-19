@@ -6,11 +6,18 @@ export interface Song {
   band_id: number;
   title: string;
   artist?: string;
+  album?: string;
+  album_art?: string;
+  release_date?: string;
+  spotify_url?: string;
   lyrics?: string;
   chords?: string;
   key?: string;
   tempo?: number;
   duration?: number;
+  time_signature?: number;
+  energy?: number;
+  danceability?: number;
   tags?: string[];
   created_at: string;
 }
@@ -40,22 +47,36 @@ export interface CreateSongInput {
   title: string;
   band_id: number;
   artist?: string;
+  album?: string;
+  album_art?: string;
+  release_date?: string;
+  spotify_url?: string;
   lyrics?: string;
   chords?: string;
   key?: string;
   tempo?: number;
   duration?: number;
+  time_signature?: number;
+  energy?: number;
+  danceability?: number;
   tags?: string[];
 }
 
 export interface UpdateSongInput {
   title?: string;
   artist?: string;
+  album?: string;
+  album_art?: string;
+  release_date?: string;
+  spotify_url?: string;
   lyrics?: string;
   chords?: string;
   key?: string;
   tempo?: number;
   duration?: number;
+  time_signature?: number;
+  energy?: number;
+  danceability?: number;
   tags?: string[];
 }
 
