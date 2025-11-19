@@ -20,6 +20,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     tempo: "",
     duration: "",
     tags: "",
+    hasBackingTracks: false,
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,6 +35,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tempo: song.tempo?.toString() || "",
         duration: song.duration?.toString() || "",
         tags: song.tags?.join(", ") || "",
+        hasBackingTracks: song.hasBackingTracks || false,
       });
     }
   }, [song]);
@@ -53,6 +55,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
         duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        hasBackingTracks: formData.hasBackingTracks,
       });
       onClose();
     } catch (error) {
@@ -202,6 +205,22 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               disabled={isSaving}
             />
           </FormGroup>
+
+          <CheckboxGroup>
+            <CheckboxLabel htmlFor="editHasBackingTracks">
+              <CheckboxInput
+                type="checkbox"
+                id="editHasBackingTracks"
+                checked={formData.hasBackingTracks}
+                onChange={(e) => setFormData({ ...formData, hasBackingTracks: e.target.checked })}
+                disabled={isSaving}
+              />
+              <CheckboxText>
+                <i className="bi bi-headphones"></i>
+                This song has backing tracks or sequences
+              </CheckboxText>
+            </CheckboxLabel>
+          </CheckboxGroup>
 
           <FormGroup>
             <Label htmlFor="editSongChords">
@@ -592,5 +611,47 @@ const Spinner = styled.span`
     to {
       transform: rotate(360deg);
     }
+  }
+`;
+
+const CheckboxGroup = styled.div`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  cursor: pointer;
+  user-select: none;
+`;
+
+const CheckboxInput = styled.input`
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: ${theme.colors.brand.primary};
+  flex-shrink: 0;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const CheckboxText = styled.span`
+  color: ${theme.colors.dark.text.primary};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.bodyLg};
   }
 `;

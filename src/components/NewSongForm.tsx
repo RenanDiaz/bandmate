@@ -191,21 +191,21 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           </FormGroup>
         </FormRow>
 
-        <FormRow>
-          <FormGroup>
-            <Label htmlFor="hasBackingTracks">
-              <i className="bi bi-headphones"></i>
-              Backing Tracks / Sequences
-            </Label>
-            <input
+        <CheckboxGroup>
+          <CheckboxLabel htmlFor="hasBackingTracks">
+            <CheckboxInput
               type="checkbox"
               id="hasBackingTracks"
               checked={formData.hasBackingTracks}
               onChange={(e) => setFormData({ ...formData, hasBackingTracks: e.target.checked })}
               disabled={isSubmitting}
             />
-          </FormGroup>
-        </FormRow>
+            <CheckboxText>
+              <i className="bi bi-headphones"></i>
+              This song has backing tracks or sequences
+            </CheckboxText>
+          </CheckboxLabel>
+        </CheckboxGroup>
 
         {spotifyService.isConfigured() && (
           <MetadataSection>
@@ -777,5 +777,47 @@ const SuccessMessage = styled.div`
 
   i {
     font-size: ${theme.fontSizes.body};
+  }
+`;
+
+const CheckboxGroup = styled.div`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  cursor: pointer;
+  user-select: none;
+`;
+
+const CheckboxInput = styled.input`
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: ${theme.colors.brand.primary};
+  flex-shrink: 0;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const CheckboxText = styled.span`
+  color: ${theme.colors.dark.text.primary};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.bodyLg};
   }
 `;

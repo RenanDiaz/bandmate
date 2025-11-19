@@ -33,9 +33,16 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
           <SongCard key={song.id} $isExpanded={isExpanded}>
             <SongHeader>
               <SongClickArea onClick={() => hasDetails && toggleExpanded(song.id)}>
-                <SongIcon>
-                  <i className="bi bi-music-note-beamed"></i>
-                </SongIcon>
+                <SongIconWrapper>
+                  <SongIcon>
+                    <i className="bi bi-music-note-beamed"></i>
+                  </SongIcon>
+                  {song.hasBackingTracks && (
+                    <BackingTracksBadge title="Has Backing Tracks / Sequences">
+                      <i className="bi bi-headphones-fill"></i>
+                    </BackingTracksBadge>
+                  )}
+                </SongIconWrapper>
 
                 <SongInfo>
                   <SongTitle>{song.title}</SongTitle>
@@ -57,11 +64,6 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                       <MetadataBadge>
                         <i className="bi bi-clock"></i>
                         {formatDuration(song.duration)}
-                      </MetadataBadge>
-                    )}
-                    {song.hasBackingTracks && (
-                      <MetadataBadge title="Has Backing Tracks / Sequences">
-                        <i className="bi bi-headphones"></i> Backing Tracks
                       </MetadataBadge>
                     )}
                   </MetadataRow>
@@ -236,6 +238,11 @@ const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
   }
 `;
 
+const SongIconWrapper = styled.div`
+  position: relative;
+  flex-shrink: 0;
+`;
+
 const SongIcon = styled.div`
   width: 48px;
   height: 48px;
@@ -247,6 +254,28 @@ const SongIcon = styled.div`
   font-size: ${theme.fontSizes.h3};
   color: white;
   flex-shrink: 0;
+`;
+
+const BackingTracksBadge = styled.div`
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  background: ${theme.colors.semantic.success};
+  border: 2px solid ${theme.colors.dark.bg.secondary};
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  box-shadow: ${theme.shadows.sm};
+  transition: all ${theme.transitions.fast} ease;
+
+  ${SongCard}:hover & {
+    transform: scale(1.1);
+  }
 `;
 
 const SongInfo = styled.div`
