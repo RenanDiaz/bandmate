@@ -59,6 +59,11 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                         {formatDuration(song.duration)}
                       </MetadataBadge>
                     )}
+                    {song.hasBackingTracks && (
+                      <MetadataBadge title="Has Backing Tracks / Sequences">
+                        <i className="bi bi-headphones"></i> Backing Tracks
+                      </MetadataBadge>
+                    )}
                   </MetadataRow>
                   {song.tags && song.tags.length > 0 && (
                     <TagsRow>
