@@ -8,7 +8,20 @@ interface EmailRequest {
   invitationId: string
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: corsHeaders,
+    })
+  }
+
   try {
     // Parse request
     const { invitationId }: EmailRequest = await req.json()
@@ -243,7 +256,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ success: true, emailId: data.id }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
         status: 200,
       },
     )
@@ -251,7 +267,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: error.message }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
         status: 400,
       },
     )
