@@ -26,6 +26,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
     energy: "",
     danceability: "",
     tags: "",
+    hasBackingTracks: false,
   });
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,14 +99,33 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         time_signature: formData.timeSignature ? parseInt(formData.timeSignature, 10) : undefined,
         energy: formData.energy ? parseFloat(formData.energy) : undefined,
         danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
-        tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        tags: formData.tags.trim()
+          ? formData.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : undefined,
+        hasBackingTracks: formData.hasBackingTracks,
       };
 
       await createSong(songInput);
       setFormData({
-        title: "", artist: "", album: "", albumArt: "", releaseDate: "", spotifyUrl: "",
-        lyrics: "", chords: "", key: "", tempo: "", duration: "", timeSignature: "",
-        energy: "", danceability: "", tags: ""
+        title: "",
+        artist: "",
+        album: "",
+        albumArt: "",
+        releaseDate: "",
+        spotifyUrl: "",
+        lyrics: "",
+        chords: "",
+        key: "",
+        tempo: "",
+        duration: "",
+        timeSignature: "",
+        energy: "",
+        danceability: "",
+        tags: "",
+        hasBackingTracks: false,
       });
       setIsExpanded(false);
       setMetadataFetched(false);
@@ -166,6 +186,22 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
                 setFormData({ ...formData, artist: e.target.value });
                 setMetadataFetched(false);
               }}
+              disabled={isSubmitting}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="hasBackingTracks">
+              <i className="bi bi-headphones"></i>
+              Backing Tracks / Sequences
+            </Label>
+            <input
+              type="checkbox"
+              id="hasBackingTracks"
+              checked={formData.hasBackingTracks}
+              onChange={(e) => setFormData({ ...formData, hasBackingTracks: e.target.checked })}
               disabled={isSubmitting}
             />
           </FormGroup>
