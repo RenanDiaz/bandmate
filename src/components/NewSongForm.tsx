@@ -109,7 +109,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           : undefined,
         language: formData.language.trim() || undefined,
         country: formData.country.trim() || undefined,
-        hasBackingTracks: formData.hasBackingTracks,
+        has_backing_tracks: formData.hasBackingTracks,
       };
 
       await createSong(songInput);

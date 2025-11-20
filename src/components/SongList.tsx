@@ -37,7 +37,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                   <SongIcon>
                     <i className="bi bi-music-note-beamed"></i>
                   </SongIcon>
-                  {song.hasBackingTracks && (
+                  {song.has_backing_tracks && (
                     <BackingTracksBadge title="Has Backing Tracks / Sequences">
                       <i className="bi bi-headphones-fill"></i>
                     </BackingTracksBadge>

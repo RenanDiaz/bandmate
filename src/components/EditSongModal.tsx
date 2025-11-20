@@ -45,7 +45,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tags: song.tags?.join(", ") || "",
         language: song.language || "",
         country: song.country || "",
-        hasBackingTracks: song.hasBackingTracks || false,
+        hasBackingTracks: song.has_backing_tracks || false,
       });
     }
   }, [song]);
@@ -70,7 +70,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
         language: formData.language.trim() || undefined,
         country: formData.country.trim() || undefined,
-        hasBackingTracks: formData.hasBackingTracks,
+        has_backing_tracks: formData.hasBackingTracks,
       });
       onClose();
     } catch (error) {

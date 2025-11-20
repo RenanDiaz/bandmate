@@ -22,7 +22,7 @@ export interface Song {
   language?: string;
   country?: string;
   created_at: string;
-  hasBackingTracks?: boolean;
+  has_backing_tracks?: boolean;
 }
 
 export async function getMySongs(): Promise<Song[]> {
@@ -65,7 +65,7 @@ export interface CreateSongInput {
   tags?: string[];
   language?: string;
   country?: string;
-  hasBackingTracks?: boolean;
+  has_backing_tracks?: boolean;
 }
 
 export interface UpdateSongInput {
@@ -86,7 +86,7 @@ export interface UpdateSongInput {
   tags?: string[];
   language?: string;
   country?: string;
-  hasBackingTracks?: boolean;
+  has_backing_tracks?: boolean;
 }
 
 export async function createSong(song: CreateSongInput) {
