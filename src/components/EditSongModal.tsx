@@ -19,6 +19,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     key: "",
     tempo: "",
     duration: "",
+    releaseDate: "",
+    energy: "",
+    danceability: "",
     tags: "",
     hasBackingTracks: false,
   });
@@ -34,6 +37,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         key: song.key || "",
         tempo: song.tempo?.toString() || "",
         duration: song.duration?.toString() || "",
+        releaseDate: song.release_date || "",
+        energy: song.energy?.toString() || "",
+        danceability: song.danceability?.toString() || "",
         tags: song.tags?.join(", ") || "",
         hasBackingTracks: song.hasBackingTracks || false,
       });
@@ -54,6 +60,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         key: formData.key.trim() || undefined,
         tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
         duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
+        release_date: formData.releaseDate.trim() || undefined,
+        energy: formData.energy ? parseFloat(formData.energy) : undefined,
+        danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
         hasBackingTracks: formData.hasBackingTracks,
       });
@@ -111,6 +120,23 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
             </FormGroup>
           </FormRow>
 
+          {formData.releaseDate && (
+            <FormGroup>
+              <Label htmlFor="editSongReleaseYear">
+                <i className="bi bi-calendar"></i>
+                Release Year
+              </Label>
+              <Input
+                id="editSongReleaseYear"
+                value={formData.releaseDate}
+                onChange={(e) => setFormData({ ...formData, releaseDate: e.target.value })}
+                disabled={isSaving}
+              />
+            </FormGroup>
+          )}
+
+          <SectionDivider>Musical Details</SectionDivider>
+
           <FormRow>
             <FormGroup>
               <Label htmlFor="editSongKey">
@@ -123,38 +149,42 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
                 onChange={(e) => setFormData({ ...formData, key: e.target.value })}
                 disabled={isSaving}
               >
-                <option value="">Select key (optional)</option>
-                <option value="C">C Major</option>
-                <option value="C#">C# Major</option>
-                <option value="Db">Db Major</option>
-                <option value="D">D Major</option>
-                <option value="D#">D# Major</option>
-                <option value="Eb">Eb Major</option>
-                <option value="E">E Major</option>
-                <option value="F">F Major</option>
-                <option value="F#">F# Major</option>
-                <option value="Gb">Gb Major</option>
-                <option value="G">G Major</option>
-                <option value="G#">G# Major</option>
-                <option value="Ab">Ab Major</option>
-                <option value="A">A Major</option>
-                <option value="A#">A# Major</option>
-                <option value="Bb">Bb Major</option>
-                <option value="B">B Major</option>
-                <option value="Cm">C Minor</option>
-                <option value="C#m">C# Minor</option>
-                <option value="Dm">D Minor</option>
-                <option value="D#m">D# Minor</option>
-                <option value="Ebm">Eb Minor</option>
-                <option value="Em">E Minor</option>
-                <option value="Fm">F Minor</option>
-                <option value="F#m">F# Minor</option>
-                <option value="Gm">G Minor</option>
-                <option value="G#m">G# Minor</option>
-                <option value="Am">A Minor</option>
-                <option value="A#m">A# Minor</option>
-                <option value="Bbm">Bb Minor</option>
-                <option value="Bm">B Minor</option>
+                <option value="">Select key</option>
+                <optgroup label="Major Keys">
+                  <option value="C">C Major</option>
+                  <option value="C#">C# Major</option>
+                  <option value="Db">Db Major</option>
+                  <option value="D">D Major</option>
+                  <option value="D#">D# Major</option>
+                  <option value="Eb">Eb Major</option>
+                  <option value="E">E Major</option>
+                  <option value="F">F Major</option>
+                  <option value="F#">F# Major</option>
+                  <option value="Gb">Gb Major</option>
+                  <option value="G">G Major</option>
+                  <option value="G#">G# Major</option>
+                  <option value="Ab">Ab Major</option>
+                  <option value="A">A Major</option>
+                  <option value="A#">A# Major</option>
+                  <option value="Bb">Bb Major</option>
+                  <option value="B">B Major</option>
+                </optgroup>
+                <optgroup label="Minor Keys">
+                  <option value="Cm">C Minor</option>
+                  <option value="C#m">C# Minor</option>
+                  <option value="Dm">D Minor</option>
+                  <option value="D#m">D# Minor</option>
+                  <option value="Ebm">Eb Minor</option>
+                  <option value="Em">E Minor</option>
+                  <option value="Fm">F Minor</option>
+                  <option value="F#m">F# Minor</option>
+                  <option value="Gm">G Minor</option>
+                  <option value="G#m">G# Minor</option>
+                  <option value="Am">A Minor</option>
+                  <option value="A#m">A# Minor</option>
+                  <option value="Bbm">Bb Minor</option>
+                  <option value="Bm">B Minor</option>
+                </optgroup>
               </Select>
             </FormGroup>
 
@@ -189,6 +219,46 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
                 disabled={isSaving}
                 min="1"
               />
+            </FormGroup>
+          </FormRow>
+
+          <FormRow>
+            <FormGroup>
+              <Label htmlFor="editSongEnergy">
+                <i className="bi bi-lightning-charge"></i>
+                Energy
+              </Label>
+              <Input
+                id="editSongEnergy"
+                type="number"
+                step="0.01"
+                placeholder="0.0 - 1.0"
+                value={formData.energy}
+                onChange={(e) => setFormData({ ...formData, energy: e.target.value })}
+                disabled={isSaving}
+                min="0"
+                max="1"
+              />
+              <HelperText>Energy level from 0.0 (low) to 1.0 (high)</HelperText>
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="editSongDanceability">
+                <i className="bi bi-soundwave"></i>
+                Danceability
+              </Label>
+              <Input
+                id="editSongDanceability"
+                type="number"
+                step="0.01"
+                placeholder="0.0 - 1.0"
+                value={formData.danceability}
+                onChange={(e) => setFormData({ ...formData, danceability: e.target.value })}
+                disabled={isSaving}
+                min="0"
+                max="1"
+              />
+              <HelperText>Danceability from 0.0 (not suitable) to 1.0 (very danceable)</HelperText>
             </FormGroup>
           </FormRow>
 
@@ -654,4 +724,21 @@ const CheckboxText = styled.span`
     color: ${theme.colors.brand.primary};
     font-size: ${theme.fontSizes.bodyLg};
   }
+`;
+
+const HelperText = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  font-style: italic;
+`;
+
+const SectionDivider = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  padding: ${theme.space[3]} 0 ${theme.space[2]} 0;
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  margin-top: ${theme.space[2]};
 `;

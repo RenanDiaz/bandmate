@@ -240,21 +240,41 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           </MetadataSection>
         )}
 
-        {formData.album && (
-          <FormGroup>
-            <Label htmlFor="songAlbum">
-              <i className="bi bi-disc"></i>
-              Album
-            </Label>
-            <Input
-              id="songAlbum"
-              value={formData.album}
-              onChange={(e) => setFormData({ ...formData, album: e.target.value })}
-              disabled={isSubmitting}
-              readOnly
-            />
-          </FormGroup>
-        )}
+        <FormRow>
+          {formData.album && (
+            <FormGroup>
+              <Label htmlFor="songAlbum">
+                <i className="bi bi-disc"></i>
+                Album
+              </Label>
+              <Input
+                id="songAlbum"
+                value={formData.album}
+                onChange={(e) => setFormData({ ...formData, album: e.target.value })}
+                disabled={isSubmitting}
+                readOnly
+              />
+            </FormGroup>
+          )}
+
+          {formData.releaseDate && (
+            <FormGroup>
+              <Label htmlFor="songReleaseYear">
+                <i className="bi bi-calendar"></i>
+                Release Year
+              </Label>
+              <Input
+                id="songReleaseYear"
+                value={formData.releaseDate}
+                onChange={(e) => setFormData({ ...formData, releaseDate: e.target.value })}
+                disabled={isSubmitting}
+                readOnly
+              />
+            </FormGroup>
+          )}
+        </FormRow>
+
+        <SectionDivider>Musical Details</SectionDivider>
 
         <FormRow>
           <FormGroup>
@@ -268,38 +288,42 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               onChange={(e) => setFormData({ ...formData, key: e.target.value })}
               disabled={isSubmitting}
             >
-              <option value="">Select key (optional)</option>
-              <option value="C">C Major</option>
-              <option value="C#">C# Major</option>
-              <option value="Db">Db Major</option>
-              <option value="D">D Major</option>
-              <option value="D#">D# Major</option>
-              <option value="Eb">Eb Major</option>
-              <option value="E">E Major</option>
-              <option value="F">F Major</option>
-              <option value="F#">F# Major</option>
-              <option value="Gb">Gb Major</option>
-              <option value="G">G Major</option>
-              <option value="G#">G# Major</option>
-              <option value="Ab">Ab Major</option>
-              <option value="A">A Major</option>
-              <option value="A#">A# Major</option>
-              <option value="Bb">Bb Major</option>
-              <option value="B">B Major</option>
-              <option value="Cm">C Minor</option>
-              <option value="C#m">C# Minor</option>
-              <option value="Dm">D Minor</option>
-              <option value="D#m">D# Minor</option>
-              <option value="Ebm">Eb Minor</option>
-              <option value="Em">E Minor</option>
-              <option value="Fm">F Minor</option>
-              <option value="F#m">F# Minor</option>
-              <option value="Gm">G Minor</option>
-              <option value="G#m">G# Minor</option>
-              <option value="Am">A Minor</option>
-              <option value="A#m">A# Minor</option>
-              <option value="Bbm">Bb Minor</option>
-              <option value="Bm">B Minor</option>
+              <option value="">Select key</option>
+              <optgroup label="Major Keys">
+                <option value="C">C Major</option>
+                <option value="C#">C# Major</option>
+                <option value="Db">Db Major</option>
+                <option value="D">D Major</option>
+                <option value="D#">D# Major</option>
+                <option value="Eb">Eb Major</option>
+                <option value="E">E Major</option>
+                <option value="F">F Major</option>
+                <option value="F#">F# Major</option>
+                <option value="Gb">Gb Major</option>
+                <option value="G">G Major</option>
+                <option value="G#">G# Major</option>
+                <option value="Ab">Ab Major</option>
+                <option value="A">A Major</option>
+                <option value="A#">A# Major</option>
+                <option value="Bb">Bb Major</option>
+                <option value="B">B Major</option>
+              </optgroup>
+              <optgroup label="Minor Keys">
+                <option value="Cm">C Minor</option>
+                <option value="C#m">C# Minor</option>
+                <option value="Dm">D Minor</option>
+                <option value="D#m">D# Minor</option>
+                <option value="Ebm">Eb Minor</option>
+                <option value="Em">E Minor</option>
+                <option value="Fm">F Minor</option>
+                <option value="F#m">F# Minor</option>
+                <option value="Gm">G Minor</option>
+                <option value="G#m">G# Minor</option>
+                <option value="Am">A Minor</option>
+                <option value="A#m">A# Minor</option>
+                <option value="Bbm">Bb Minor</option>
+                <option value="Bm">B Minor</option>
+              </optgroup>
             </Select>
           </FormGroup>
 
@@ -334,7 +358,46 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               disabled={isSubmitting}
               min="1"
             />
-            <HelperText>Total song length in seconds</HelperText>
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="songEnergy">
+              <i className="bi bi-lightning-charge"></i>
+              Energy
+            </Label>
+            <Input
+              id="songEnergy"
+              type="number"
+              step="0.01"
+              placeholder="0.0 - 1.0"
+              value={formData.energy}
+              onChange={(e) => setFormData({ ...formData, energy: e.target.value })}
+              disabled={isSubmitting}
+              min="0"
+              max="1"
+            />
+            <HelperText>Energy level from 0.0 (low) to 1.0 (high)</HelperText>
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="songDanceability">
+              <i className="bi bi-soundwave"></i>
+              Danceability
+            </Label>
+            <Input
+              id="songDanceability"
+              type="number"
+              step="0.01"
+              placeholder="0.0 - 1.0"
+              value={formData.danceability}
+              onChange={(e) => setFormData({ ...formData, danceability: e.target.value })}
+              disabled={isSubmitting}
+              min="0"
+              max="1"
+            />
+            <HelperText>Danceability from 0.0 (not suitable) to 1.0 (very danceable)</HelperText>
           </FormGroup>
         </FormRow>
 
@@ -820,4 +883,15 @@ const CheckboxText = styled.span`
     color: ${theme.colors.brand.primary};
     font-size: ${theme.fontSizes.bodyLg};
   }
+`;
+
+const SectionDivider = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  padding: ${theme.space[3]} 0 ${theme.space[2]} 0;
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  margin-top: ${theme.space[2]};
 `;
