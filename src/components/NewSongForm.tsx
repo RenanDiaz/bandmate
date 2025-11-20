@@ -637,6 +637,8 @@ const Select = styled.select`
   transition: all ${theme.transitions.fast} ease;
   font-family: ${theme.fonts.sans};
   cursor: pointer;
+  height: 48px;
+  line-height: 1.5;
 
   &:focus {
     outline: none;
