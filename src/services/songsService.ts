@@ -19,6 +19,8 @@ export interface Song {
   energy?: number;
   danceability?: number;
   tags?: string[];
+  language?: string;
+  country?: string;
   created_at: string;
   hasBackingTracks?: boolean;
 }
@@ -61,6 +63,8 @@ export interface CreateSongInput {
   energy?: number;
   danceability?: number;
   tags?: string[];
+  language?: string;
+  country?: string;
   hasBackingTracks?: boolean;
 }
 
@@ -80,6 +84,8 @@ export interface UpdateSongInput {
   energy?: number;
   danceability?: number;
   tags?: string[];
+  language?: string;
+  country?: string;
   hasBackingTracks?: boolean;
 }
 

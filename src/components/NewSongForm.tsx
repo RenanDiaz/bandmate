@@ -26,6 +26,8 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
     energy: "",
     danceability: "",
     tags: "",
+    language: "",
+    country: "",
     hasBackingTracks: false,
   });
   const [isExpanded, setIsExpanded] = useState(false);
@@ -105,6 +107,8 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               .map((t) => t.trim())
               .filter(Boolean)
           : undefined,
+        language: formData.language.trim() || undefined,
+        country: formData.country.trim() || undefined,
         hasBackingTracks: formData.hasBackingTracks,
       };
 
@@ -125,6 +129,8 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         energy: "",
         danceability: "",
         tags: "",
+        language: "",
+        country: "",
         hasBackingTracks: false,
       });
       setIsExpanded(false);
@@ -415,6 +421,36 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           />
           <HelperText>Separate multiple tags with commas</HelperText>
         </FormGroup>
+
+        <FormRow>
+          <FormGroup>
+            <Label htmlFor="songLanguage">
+              <i className="bi bi-translate"></i>
+              Language
+            </Label>
+            <Input
+              id="songLanguage"
+              placeholder="e.g., English, Spanish, French"
+              value={formData.language}
+              onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+              disabled={isSubmitting}
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="songCountry">
+              <i className="bi bi-globe-americas"></i>
+              Country
+            </Label>
+            <Input
+              id="songCountry"
+              placeholder="e.g., USA, UK, Mexico"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              disabled={isSubmitting}
+            />
+          </FormGroup>
+        </FormRow>
 
         <FormGroup>
           <Label htmlFor="songChords">

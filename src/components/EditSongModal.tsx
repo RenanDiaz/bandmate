@@ -23,6 +23,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     energy: "",
     danceability: "",
     tags: "",
+    language: "",
+    country: "",
     hasBackingTracks: false,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -41,6 +43,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         energy: song.energy?.toString() || "",
         danceability: song.danceability?.toString() || "",
         tags: song.tags?.join(", ") || "",
+        language: song.language || "",
+        country: song.country || "",
         hasBackingTracks: song.hasBackingTracks || false,
       });
     }
@@ -64,6 +68,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         energy: formData.energy ? parseFloat(formData.energy) : undefined,
         danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        language: formData.language.trim() || undefined,
+        country: formData.country.trim() || undefined,
         hasBackingTracks: formData.hasBackingTracks,
       });
       onClose();
@@ -275,6 +281,36 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               disabled={isSaving}
             />
           </FormGroup>
+
+          <FormRow>
+            <FormGroup>
+              <Label htmlFor="editSongLanguage">
+                <i className="bi bi-translate"></i>
+                Language
+              </Label>
+              <Input
+                id="editSongLanguage"
+                placeholder="e.g., English, Spanish, French"
+                value={formData.language}
+                onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                disabled={isSaving}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label htmlFor="editSongCountry">
+                <i className="bi bi-globe-americas"></i>
+                Country
+              </Label>
+              <Input
+                id="editSongCountry"
+                placeholder="e.g., USA, UK, Mexico"
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                disabled={isSaving}
+              />
+            </FormGroup>
+          </FormRow>
 
           <CheckboxGroup>
             <CheckboxLabel htmlFor="editHasBackingTracks">
