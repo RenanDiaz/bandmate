@@ -34,9 +34,9 @@ const Home = () => {
 
             {!user && (
               <CTASection>
-                <CTAText>Get started by signing in with your GitHub account</CTAText>
-                <CTAButton>
-                  <i className="bi bi-github"></i>
+                <CTAText>Get started by creating your free account</CTAText>
+                <CTAButton as={Link} to="/login">
+                  <i className="bi bi-box-arrow-in-right"></i>
                   Sign in to continue
                 </CTAButton>
               </CTASection>
@@ -133,9 +133,9 @@ const Home = () => {
               Join musicians who are already using Bandmate to stay on top of their music
             </CTABottomSubtitle>
             {!user && (
-              <CTAButton>
-                <i className="bi bi-github"></i>
-                Sign in with GitHub
+              <CTAButton as={Link} to="/login">
+                <i className="bi bi-box-arrow-in-right"></i>
+                Get started for free
               </CTAButton>
             )}
           </CTAContent>

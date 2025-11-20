@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
+import { Login } from "./components/Login";
 import SongsView from "./components/SongsView";
 import SetlistsView from "./components/SetlistsView";
 import SetlistEditor from "./components/SetlistEditor";
@@ -131,6 +132,7 @@ const AppContent: FC = () => {
         ) : (
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/songs" element={<SongsView user={user} selectedBand={selectedBand} />} />
             <Route path="/setlists" element={<SetlistsView user={user} selectedBand={selectedBand} />} />
             <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
