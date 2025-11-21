@@ -220,7 +220,7 @@ const SetlistPerformanceView: FC = () => {
               title="Show Chords"
             >
               <i className="bi bi-music-note"></i>
-              <span>Chords</span>
+              Chords
             </ViewToggleButton>
             <ViewToggleButton
               onClick={() => setContentView("lyrics")}
@@ -228,7 +228,7 @@ const SetlistPerformanceView: FC = () => {
               title="Show Lyrics"
             >
               <i className="bi bi-mic"></i>
-              <span>Lyrics</span>
+              Lyrics
             </ViewToggleButton>
           </ViewToggleGroup>
           <IconButton
@@ -459,10 +459,7 @@ const ViewToggleGroup = styled.div`
   border: 1px solid ${theme.colors.dark.border.default};
 
   @media (max-width: ${theme.breakpoints.md}) {
-    background: transparent;
-    border: none;
-    padding: 0;
-    gap: ${theme.space[2]};
+    display: none;
   }
 `;
 
@@ -492,23 +489,6 @@ const ViewToggleButton = styled.button<{ $active: boolean }>`
     color: ${(props) =>
       props.$active ? "white" : theme.colors.brand.primary};
   }
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border: 1px solid ${(props) =>
-      props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
-    border-radius: ${theme.radius.base};
-
-    span {
-      display: none;
-    }
-
-    i {
-      font-size: ${theme.fontSizes.bodyLg};
-    }
-  }
 `;
 
 const IconButton = styled.button<{ $active?: boolean }>`
@@ -534,12 +514,6 @@ const IconButton = styled.button<{ $active?: boolean }>`
     border-color: ${theme.colors.brand.primary};
     color: ${(props) =>
       props.$active ? "white" : theme.colors.brand.primary};
-  }
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 48px;
-    height: 48px;
-    font-size: ${theme.fontSizes.h3};
   }
 `;
 
