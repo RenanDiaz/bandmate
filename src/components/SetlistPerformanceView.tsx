@@ -378,7 +378,7 @@ const PerformanceContainer = styled.div`
   background: ${theme.colors.dark.bg.primary};
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: ${theme.zIndex.modal};
 `;
 
 const TopBar = styled.div`
