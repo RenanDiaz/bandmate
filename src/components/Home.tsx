@@ -372,18 +372,6 @@ const FeatureDescription = styled.p`
   margin: 0;
 `;
 
-const ComingSoonBadge = styled.span`
-  display: inline-block;
-  background: ${theme.colors.brand.primary};
-  color: white;
-  font-size: ${theme.fontSizes.bodyXs};
-  font-weight: ${theme.fontWeights.semibold};
-  padding: ${theme.space[1]} ${theme.space[2]};
-  border-radius: ${theme.radius.base};
-  margin-top: ${theme.space[3]};
-  text-transform: uppercase;
-  letter-spacing: ${theme.letterSpacing.wide};
-`;
 
 const CTASectionBottom = styled.section`
   background: ${theme.colors.dark.bg.secondary};

@@ -369,7 +369,7 @@ const ActionButton = styled.button<{ $variant: "edit" | "perform" }>`
   &:hover:not(:disabled) {
     background: ${(props) =>
       props.$variant === "perform"
-        ? theme.colors.semantic.successHover
+        ? "#059669" // Darker green for hover (success hover)
         : theme.colors.brand.primaryHover};
     transform: translateY(-1px);
   }
