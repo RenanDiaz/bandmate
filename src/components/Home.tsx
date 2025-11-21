@@ -59,66 +59,63 @@ const Home = () => {
           <SectionTitle>Everything your band needs</SectionTitle>
 
           <FeaturesGrid>
-            <FeatureCard>
+            <FeatureCard as={user ? Link : "div"} to={user ? "/songs" : undefined} $clickable={!!user}>
               <FeatureIcon>
                 <i className="bi bi-music-note-list"></i>
               </FeatureIcon>
               <FeatureTitle>Song Library</FeatureTitle>
               <FeatureDescription>
-                Store and organize all your songs with lyrics, chords, and metadata in one place
+                Store and organize all your songs with lyrics, chords, and automatic metadata from Spotify
               </FeatureDescription>
             </FeatureCard>
 
-            <FeatureCard>
+            <FeatureCard $clickable={false}>
               <FeatureIcon>
                 <i className="bi bi-people"></i>
               </FeatureIcon>
               <FeatureTitle>Band Management</FeatureTitle>
               <FeatureDescription>
-                Create and manage multiple bands with different members and roles
+                Create multiple bands, invite members, and manage permissions with role-based access
               </FeatureDescription>
             </FeatureCard>
 
-            <FeatureCard>
+            <FeatureCard as={user ? Link : "div"} to={user ? "/setlists" : undefined} $clickable={!!user}>
               <FeatureIcon>
                 <i className="bi bi-list-ul"></i>
               </FeatureIcon>
               <FeatureTitle>Setlists</FeatureTitle>
               <FeatureDescription>
-                Build setlists for your shows and organize songs for any performance
+                Build setlists with drag-and-drop, add notes, and launch performance mode for shows
               </FeatureDescription>
-              <ComingSoonBadge>Coming Soon</ComingSoonBadge>
             </FeatureCard>
 
-            <FeatureCard>
+            <FeatureCard $clickable={false}>
               <FeatureIcon>
-                <i className="bi bi-calendar-event"></i>
+                <i className="bi bi-play-circle"></i>
               </FeatureIcon>
-              <FeatureTitle>Show Scheduling</FeatureTitle>
+              <FeatureTitle>Performance Mode</FeatureTitle>
               <FeatureDescription>
-                Track your gigs, venues, and performance history in one calendar
+                Full-screen performance view with lyrics/chords toggle, keyboard navigation, and song notes
               </FeatureDescription>
-              <ComingSoonBadge>Coming Soon</ComingSoonBadge>
             </FeatureCard>
 
-            <FeatureCard>
+            <FeatureCard $clickable={false}>
               <FeatureIcon>
-                <i className="bi bi-person-plus"></i>
+                <i className="bi bi-music-note-beamed"></i>
               </FeatureIcon>
-              <FeatureTitle>Guest Access</FeatureTitle>
+              <FeatureTitle>Music Intelligence</FeatureTitle>
               <FeatureDescription>
-                Invite temporary members with limited access for substitute musicians
+                Automatic song metadata, key detection, tempo, and lyrics from multiple music databases
               </FeatureDescription>
-              <ComingSoonBadge>Coming Soon</ComingSoonBadge>
             </FeatureCard>
 
-            <FeatureCard>
+            <FeatureCard $clickable={false}>
               <FeatureIcon>
                 <i className="bi bi-phone"></i>
               </FeatureIcon>
               <FeatureTitle>Mobile Ready</FeatureTitle>
               <FeatureDescription>
-                Access your band's information from any device, anywhere
+                Responsive design works perfectly on phones, tablets, and desktop devices
               </FeatureDescription>
             </FeatureCard>
           </FeaturesGrid>
@@ -323,18 +320,28 @@ const FeaturesGrid = styled.div`
   }
 `;
 
-const FeatureCard = styled.div`
+const FeatureCard = styled.div<{ $clickable?: boolean }>`
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
   transition: all ${theme.transitions.base} ease;
   position: relative;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
 
   &:hover {
     transform: translateY(-4px);
     box-shadow: ${theme.shadows.lg};
     border-color: ${theme.colors.brand.primary};
+
+    ${(props) =>
+      props.$clickable &&
+      `
+      background: ${theme.colors.dark.bg.elevated};
+    `}
   }
 `;
 
