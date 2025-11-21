@@ -56,6 +56,8 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           albumArt: metadata.albumArt || prev.albumArt,
           releaseDate: metadata.releaseDate || prev.releaseDate,
           spotifyUrl: metadata.spotifyUrl || prev.spotifyUrl,
+          country: metadata.country || prev.country,
+          lyrics: metadata.lyrics || prev.lyrics,
           key: metadata.key || prev.key,
           tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
           duration: metadata.duration ? metadata.duration.toString() : prev.duration,
@@ -73,10 +75,16 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         if (metadata.sources.basic === 'spotify') sources.push('Spotify');
         if (metadata.sources.basic === 'musicbrainz') sources.push('MusicBrainz');
         if (metadata.sources.audio === 'acousticbrainz') sources.push('AcousticBrainz');
+        if (metadata.sources.lyrics === 'lyricsovh') sources.push('Lyrics.ovh');
 
         if (sources.length > 0) {
           console.log(`✅ Metadata loaded from: ${sources.join(' + ')}`);
         }
+
+        // Show additional info about what was found
+        if (metadata.country) console.log(`🌍 Country: ${metadata.country}`);
+        if (metadata.lyrics) console.log(`📝 Lyrics: ${metadata.lyrics.length} characters`);
+        if (metadata.genre) console.log(`🎸 Genre: ${metadata.genre}`);
       } else {
         alert("Song not found. Try entering the artist name or check spelling.");
       }

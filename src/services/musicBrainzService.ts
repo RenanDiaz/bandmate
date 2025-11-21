@@ -30,6 +30,25 @@ interface MusicBrainzSearchResponse {
   recordings: MusicBrainzRecording[];
 }
 
+interface MusicBrainzArtist {
+  id: string;
+  name: string;
+  'sort-name': string;
+  country?: string;
+  area?: {
+    name: string;
+    'sort-name': string;
+  };
+  'begin-area'?: {
+    name: string;
+  };
+  type?: string; // 'Person' or 'Group'
+}
+
+interface MusicBrainzArtistSearchResponse {
+  artists: MusicBrainzArtist[];
+}
+
 interface AcousticBrainzHighLevel {
   danceability?: {
     all?: {
@@ -133,6 +152,14 @@ export interface MusicBrainzMetadata {
   recordingId?: string;
   artistId?: string;
   releaseId?: string;
+}
+
+export interface ArtistInfo {
+  name: string;
+  country?: string;
+  area?: string;        // City/region
+  type?: string;        // 'Person' or 'Group'
+  artistId?: string;
 }
 
 class MusicBrainzService {
@@ -364,21 +391,79 @@ class MusicBrainzService {
   }
 
   /**
+   * Get artist information including country
+   */
+  async getArtistInfo(artistName: string): Promise<ArtistInfo | null> {
+    await this.rateLimitWait();
+
+    try {
+      const query = `artist:"${artistName}"`;
+      const encodedQuery = encodeURIComponent(query);
+      const url = `${this.musicBrainzBaseUrl}/artist/?query=${encodedQuery}&fmt=json&limit=1`;
+
+      console.log('🔍 MusicBrainz Artist API Request:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': this.userAgent,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('MusicBrainz Artist API error:', response.status);
+        return null;
+      }
+
+      const data: MusicBrainzArtistSearchResponse = await response.json();
+
+      if (!data.artists || data.artists.length === 0) {
+        console.log('No artist found in MusicBrainz');
+        return null;
+      }
+
+      const artist = data.artists[0];
+
+      const artistInfo: ArtistInfo = {
+        name: artist.name,
+        country: artist.country,
+        area: artist.area?.name || artist['begin-area']?.name,
+        type: artist.type,
+        artistId: artist.id,
+      };
+
+      console.log('✅ Artist info found:', artistInfo);
+      return artistInfo;
+
+    } catch (error) {
+      console.error('Error fetching artist info from MusicBrainz:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get comprehensive metadata and audio features
    */
   async getSongData(title: string, artist?: string): Promise<{
     metadata: MusicBrainzMetadata | null;
     audioFeatures: AudioFeatures | null;
+    artistInfo: ArtistInfo | null;
   }> {
     const metadata = await this.searchRecording(title, artist);
 
     let audioFeatures: AudioFeatures | null = null;
+    let artistInfo: ArtistInfo | null = null;
 
     if (metadata?.recordingId) {
       audioFeatures = await this.getAudioFeatures(metadata.recordingId);
     }
 
-    return { metadata, audioFeatures };
+    // Fetch artist info if we have an artist name
+    if (artist || metadata?.artist) {
+      artistInfo = await this.getArtistInfo(artist || metadata!.artist);
+    }
+
+    return { metadata, audioFeatures, artistInfo };
   }
 }
 

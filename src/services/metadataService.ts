@@ -12,6 +12,7 @@
 
 import { spotifyService, type SongMetadata as SpotifySongMetadata } from './spotifyService';
 import { musicBrainzService } from './musicBrainzService';
+import { lyricsService } from './lyricsService';
 
 export interface CompleteSongMetadata {
   // Basic info
@@ -22,6 +23,12 @@ export interface CompleteSongMetadata {
   releaseDate?: string;
   spotifyUrl?: string;
   duration?: number;     // seconds
+
+  // Artist info (from MusicBrainz)
+  country?: string;      // Artist's country
+
+  // Lyrics (from Lyrics.ovh)
+  lyrics?: string;
 
   // Musical properties (from MusicBrainz/AcousticBrainz)
   key?: string;          // Human-readable (e.g., "C", "D minor")
@@ -47,6 +54,7 @@ export interface CompleteSongMetadata {
   sources: {
     basic: 'spotify' | 'musicbrainz' | 'none';
     audio: 'acousticbrainz' | 'none';
+    lyrics: 'lyricsovh' | 'none';
   };
 }
 
@@ -68,8 +76,15 @@ class MetadataService {
       console.log('⚠️  Spotify metadata failed, will try MusicBrainz');
     }
 
-    // Get MusicBrainz data (for audio features and fallback metadata)
+    // Get MusicBrainz data (for audio features, artist info, and fallback metadata)
     const mbData = await musicBrainzService.getSongData(title, artist);
+
+    // Get lyrics from Lyrics.ovh
+    let lyrics: string | null = null;
+    if (spotifyData?.artist || mbData.metadata?.artist || artist) {
+      const artistName = spotifyData?.artist || mbData.metadata?.artist || artist!;
+      lyrics = await lyricsService.getLyrics(artistName, title);
+    }
 
     // Build complete metadata
     const metadata: CompleteSongMetadata = {
@@ -83,6 +98,12 @@ class MetadataService {
       // Spotify-specific data
       albumArt: spotifyData?.albumArt,
       spotifyUrl: spotifyData?.spotifyUrl,
+
+      // Artist info from MusicBrainz
+      country: mbData.artistInfo?.country,
+
+      // Lyrics from Lyrics.ovh
+      lyrics: lyrics || undefined,
 
       // Audio features from AcousticBrainz
       key: mbData.audioFeatures?.key,
@@ -101,6 +122,7 @@ class MetadataService {
       sources: {
         basic: spotifyData ? 'spotify' : mbData.metadata ? 'musicbrainz' : 'none',
         audio: mbData.audioFeatures ? 'acousticbrainz' : 'none',
+        lyrics: lyrics ? 'lyricsovh' : 'none',
       },
     };
 
@@ -108,8 +130,11 @@ class MetadataService {
       title: metadata.title,
       artist: metadata.artist,
       album: metadata.album,
+      country: metadata.country,
       hasAlbumArt: !!metadata.albumArt,
       hasSpotifyUrl: !!metadata.spotifyUrl,
+      hasLyrics: !!metadata.lyrics,
+      lyricsLength: metadata.lyrics?.length,
       hasKey: !!metadata.key,
       hasTempo: !!metadata.tempo,
       genre: metadata.genre,
