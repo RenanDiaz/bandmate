@@ -12,6 +12,12 @@ import {
   type CreateBandInput,
   type UpdateBandInput,
 } from "../services/bandsService";
+import {
+  getMyInvitations,
+  acceptInvitation,
+  declineInvitation,
+  type BandInvitation,
+} from "../services/bandMembersService";
 import { BandList } from "./BandList";
 import { NewBandForm } from "./NewBandForm";
 import { EditBandModal } from "./EditBandModal";
@@ -27,6 +33,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   const [error, setError] = useState<string | null>(null);
   const [editingBand, setEditingBand] = useState<Band | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [invitations, setInvitations] = useState<BandInvitation[]>([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(true);
+  const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(null);
 
   const loadBands = async () => {
     setLoading(true);
@@ -42,6 +51,17 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       }
     }
     setLoading(false);
+  };
+
+  const loadInvitations = async () => {
+    setLoadingInvitations(true);
+    try {
+      const data = await getMyInvitations();
+      setInvitations(data);
+    } catch (error) {
+      console.error("Failed to load invitations:", error);
+    }
+    setLoadingInvitations(false);
   };
 
   const handleBandCreated = async (input: CreateBandInput) => {
@@ -94,8 +114,39 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
     }
   };
 
+  const handleAcceptInvitation = async (invitation: BandInvitation) => {
+    setProcessingInvitationId(invitation.id);
+    try {
+      await acceptInvitation(invitation.id);
+      await loadInvitations();
+      await loadBands();
+    } catch (error: any) {
+      console.error("Failed to accept invitation:", error);
+      alert(error.message || "Failed to accept invitation");
+    }
+    setProcessingInvitationId(null);
+  };
+
+  const handleDeclineInvitation = async (invitation: BandInvitation) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to decline this invitation?"
+    );
+    if (!confirmed) return;
+
+    setProcessingInvitationId(invitation.id);
+    try {
+      await declineInvitation(invitation.id);
+      await loadInvitations();
+    } catch (error) {
+      console.error("Failed to decline invitation:", error);
+      alert("Failed to decline invitation");
+    }
+    setProcessingInvitationId(null);
+  };
+
   useEffect(() => {
     loadBands();
+    loadInvitations();
   }, []);
 
   return (
@@ -114,6 +165,69 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
         </SelectorHeader>
 
         <ContentSection>
+          {/* Pending Invitations Section */}
+          {!loadingInvitations && invitations.length > 0 && (
+            <InvitationsSection>
+              <InvitationsHeader>
+                <InvitationsTitle>
+                  <i className="bi bi-envelope-heart"></i>
+                  Pending Invitations
+                </InvitationsTitle>
+                <InvitationsBadge>{invitations.length}</InvitationsBadge>
+              </InvitationsHeader>
+              <InvitationsList>
+                {invitations.map((invitation) => {
+                  const isProcessing = processingInvitationId === invitation.id;
+                  const isExpired = new Date(invitation.expires_at) < new Date();
+
+                  return (
+                    <InvitationCard key={invitation.id} $expired={isExpired}>
+                      <InvitationInfo>
+                        <InvitationIcon>
+                          <i className="bi bi-music-note-beamed"></i>
+                        </InvitationIcon>
+                        <InvitationDetails>
+                          <InvitationBandName>Band Invitation</InvitationBandName>
+                          <InvitationRole>
+                            Role: <RoleBadge $role={invitation.role}>
+                              {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
+                            </RoleBadge>
+                          </InvitationRole>
+                          {isExpired && <ExpiredLabel>Expired</ExpiredLabel>}
+                        </InvitationDetails>
+                      </InvitationInfo>
+                      <InvitationActions>
+                        {!isExpired && (
+                          <>
+                            <AcceptButton
+                              onClick={() => handleAcceptInvitation(invitation)}
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? (
+                                <Spinner size="sm" color="light" />
+                              ) : (
+                                <>
+                                  <i className="bi bi-check-lg"></i>
+                                  Accept
+                                </>
+                              )}
+                            </AcceptButton>
+                            <DeclineButton
+                              onClick={() => handleDeclineInvitation(invitation)}
+                              disabled={isProcessing}
+                            >
+                              <i className="bi bi-x-lg"></i>
+                            </DeclineButton>
+                          </>
+                        )}
+                      </InvitationActions>
+                    </InvitationCard>
+                  );
+                })}
+              </InvitationsList>
+            </InvitationsSection>
+          )}
+
           <NewBandForm onBandCreated={handleBandCreated} />
 
           {loading ? (
@@ -320,4 +434,202 @@ const EmptyText = styled.p`
   color: ${theme.colors.dark.text.secondary};
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
+`;
+
+// Invitations Styled Components
+
+const InvitationsSection = styled.div`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 2px solid ${theme.colors.brand.primary};
+  border-radius: ${theme.radius.lg};
+  overflow: hidden;
+  margin-bottom: ${theme.space[6]};
+`;
+
+const InvitationsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${theme.space[4]} ${theme.space[5]};
+  background: ${theme.colors.dark.bg.elevated};
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+`;
+
+const InvitationsTitle = styled.h3`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.h4};
+  }
+`;
+
+const InvitationsBadge = styled.div`
+  background: ${theme.colors.brand.primary};
+  color: white;
+  min-width: 24px;
+  height: 24px;
+  border-radius: ${theme.radius.full};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.bold};
+  padding: 0 ${theme.space[2]};
+`;
+
+const InvitationsList = styled.div`
+  padding: ${theme.space[3]};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+`;
+
+const InvitationCard = styled.div<{ $expired: boolean }>`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${(props) =>
+    props.$expired ? theme.colors.dark.border.default : theme.colors.brand.primary};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[3]};
+  opacity: ${(props) => (props.$expired ? 0.5 : 1)};
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const InvitationInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  flex: 1;
+`;
+
+const InvitationIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.radius.full};
+  background: ${theme.gradients.brandPrimary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h4};
+  flex-shrink: 0;
+`;
+
+const InvitationDetails = styled.div`
+  flex: 1;
+`;
+
+const InvitationBandName = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[1]};
+`;
+
+const InvitationRole = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const RoleBadge = styled.span<{ $role: string }>`
+  background: ${(props) =>
+    props.$role === "member"
+      ? theme.colors.dark.bg.tertiary
+      : theme.colors.semantic.warningBgDark};
+  color: ${(props) =>
+    props.$role === "member"
+      ? theme.colors.brand.primary
+      : theme.colors.semantic.warning};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-weight: ${theme.fontWeights.semibold};
+  font-size: ${theme.fontSizes.bodyXs};
+`;
+
+const ExpiredLabel = styled.span`
+  display: inline-block;
+  background: ${theme.colors.semantic.errorBgDark};
+  color: ${theme.colors.semantic.error};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-weight: ${theme.fontWeights.semibold};
+  font-size: ${theme.fontSizes.bodyXs};
+  margin-top: ${theme.space[1]};
+`;
+
+const InvitationActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 100%;
+  }
+`;
+
+const AcceptButton = styled.button`
+  background: ${theme.colors.brand.primary};
+  border: none;
+  color: white;
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  &:hover:not(:disabled) {
+    background: ${theme.colors.brand.primaryHover};
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const DeclineButton = styled.button`
+  background: transparent;
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.semantic.error};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+
+  &:hover:not(:disabled) {
+    background: ${theme.colors.semantic.errorBgDark};
+    border-color: ${theme.colors.semantic.error};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
