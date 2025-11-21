@@ -72,9 +72,6 @@ export interface SongMetadata {
   instrumentalness?: number;
 }
 
-// Key mapping (Pitch Class notation)
-const KEY_NAMES = ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B'];
-
 class SpotifyService {
   private clientId: string;
   private clientSecret: string;
@@ -141,17 +138,28 @@ class SpotifyService {
    */
   private async spotifyFetch<T>(endpoint: string): Promise<T> {
     const token = await this.getAccessToken();
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log('Spotify API Request:', url);
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
 
+    console.log('Spotify API Response status:', response.status);
+
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('Spotify API error body:', errorBody);
+
       if (response.status === 429) {
         throw new Error('Spotify API rate limit exceeded. Please try again later.');
       }
-      throw new Error(`Spotify API error: ${response.status}`);
+      if (response.status === 403) {
+        throw new Error(`Spotify API access forbidden (403). Check your app permissions and credentials.`);
+      }
+      throw new Error(`Spotify API error: ${response.status} - ${errorBody}`);
     }
 
     return response.json();
@@ -186,34 +194,42 @@ class SpotifyService {
 
   /**
    * Get audio features for a track
+   *
+   * NOTE: This endpoint requires user authentication in Development Mode.
+   * For now, we skip this and use MusicBrainz/AcousticBrainz instead.
+   *
+   * @deprecated Use musicBrainzService.getAudioFeatures() instead
    */
-  async getAudioFeatures(trackId: string): Promise<SpotifyAudioFeatures | null> {
+  async getAudioFeatures(_trackId: string): Promise<SpotifyAudioFeatures | null> {
+    console.warn('Spotify audio features require user authentication. Use MusicBrainz service instead.');
+    return null;
+
+    // Keeping original implementation commented for future OAuth implementation
+    /*
     if (!this.isConfigured()) {
       return null;
     }
 
     try {
+      console.log('Fetching audio features for track:', trackId);
       const data = await this.spotifyFetch<SpotifyAudioFeatures>(
         `/audio-features/${trackId}`
       );
+      console.log('Audio features received:', data);
       return data;
     } catch (error) {
       console.error('Error getting audio features:', error);
+      console.error('Track ID:', trackId);
       return null;
     }
-  }
-
-  /**
-   * Convert key number and mode to human-readable format
-   */
-  private formatKey(keyNumber: number, mode: number): string {
-    const keyName = KEY_NAMES[keyNumber] || 'Unknown';
-    const modeName = mode === 1 ? '' : ' minor';
-    return `${keyName}${modeName}`;
+    */
   }
 
   /**
    * Get comprehensive metadata for a song
+   *
+   * NOTE: Audio features (key, tempo, etc.) are NOT included from Spotify
+   * due to authentication requirements. Use the unified metadataService instead.
    */
   async getSongMetadata(title: string, artist?: string): Promise<SongMetadata | null> {
     if (!this.isConfigured()) {
@@ -228,10 +244,7 @@ class SpotifyService {
         return null;
       }
 
-      // Get audio features
-      const features = await this.getAudioFeatures(track.id);
-
-      // Build metadata object
+      // Build metadata object (without audio features)
       const metadata: SongMetadata = {
         title: track.name,
         artist: track.artists.map(a => a.name).join(', '),
@@ -242,19 +255,7 @@ class SpotifyService {
         duration: Math.round(track.duration_ms / 1000),
       };
 
-      // Add audio features if available
-      if (features) {
-        metadata.keyNumber = features.key;
-        metadata.mode = features.mode === 1 ? 'major' : 'minor';
-        metadata.key = this.formatKey(features.key, features.mode);
-        metadata.tempo = Math.round(features.tempo);
-        metadata.timeSignature = features.time_signature;
-        metadata.energy = Math.round(features.energy * 100) / 100;
-        metadata.danceability = Math.round(features.danceability * 100) / 100;
-        metadata.acousticness = Math.round(features.acousticness * 100) / 100;
-        metadata.instrumentalness = Math.round(features.instrumentalness * 100) / 100;
-      }
-
+      console.log('Spotify metadata retrieved (without audio features):', metadata);
       return metadata;
     } catch (error) {
       console.error('Error getting song metadata:', error);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createSong, type CreateSongInput } from "../services/songsService";
-import { spotifyService } from "../services/spotifyService";
+import { metadataService } from "../services/metadataService";
 import styled from "styled-components";
 import { theme } from "../theme";
 
@@ -43,7 +43,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
 
     setIsFetchingMetadata(true);
     try {
-      const metadata = await spotifyService.getSongMetadata(
+      const metadata = await metadataService.getSongMetadata(
         formData.title.trim(),
         formData.artist.trim() || undefined
       );
@@ -62,14 +62,23 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           timeSignature: metadata.timeSignature
             ? metadata.timeSignature.toString()
             : prev.timeSignature,
-          energy: metadata.energy ? metadata.energy.toString() : prev.energy,
           danceability: metadata.danceability
             ? metadata.danceability.toString()
             : prev.danceability,
         }));
         setMetadataFetched(true);
+
+        // Show user which sources were used
+        const sources = [];
+        if (metadata.sources.basic === 'spotify') sources.push('Spotify');
+        if (metadata.sources.basic === 'musicbrainz') sources.push('MusicBrainz');
+        if (metadata.sources.audio === 'acousticbrainz') sources.push('AcousticBrainz');
+
+        if (sources.length > 0) {
+          console.log(`✅ Metadata loaded from: ${sources.join(' + ')}`);
+        }
       } else {
-        alert("Song not found on Spotify. Try entering the artist name or check spelling.");
+        alert("Song not found. Try entering the artist name or check spelling.");
       }
     } catch (error) {
       console.error("Failed to fetch metadata:", error);
@@ -213,7 +222,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           </CheckboxLabel>
         </CheckboxGroup>
 
-        {spotifyService.isConfigured() && (
+        {metadataService.isAvailable() && (
           <MetadataSection>
             <FetchButton
               type="button"
@@ -223,7 +232,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               {isFetchingMetadata ? (
                 <>
                   <Spinner />
-                  Fetching from Spotify...
+                  Fetching metadata...
                 </>
               ) : metadataFetched ? (
                 <>
@@ -232,15 +241,15 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
                 </>
               ) : (
                 <>
-                  <i className="bi bi-spotify"></i>
-                  Fetch Metadata from Spotify
+                  <i className="bi bi-music-note-list"></i>
+                  Fetch Metadata (Spotify + MusicBrainz)
                 </>
               )}
             </FetchButton>
             {metadataFetched && (
               <SuccessMessage>
                 <i className="bi bi-info-circle"></i>
-                Metadata successfully loaded! You can edit any field before saving.
+                Metadata successfully loaded from multiple sources! You can edit any field before saving.
               </SuccessMessage>
             )}
           </MetadataSection>

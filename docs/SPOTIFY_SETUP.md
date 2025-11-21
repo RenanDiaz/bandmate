@@ -6,9 +6,10 @@ This guide will walk you through setting up Spotify API integration for automati
 
 With Spotify API integration, Bandmate can automatically fetch:
 - **Basic Info**: Artist name, album name, release date, album artwork
-- **Musical Properties**: Key, tempo (BPM), time signature, duration
-- **Audio Features**: Energy, danceability, acousticness, instrumentalness
+- **Duration**: Song length in seconds
 - **Spotify Link**: Direct link to the song on Spotify
+
+**Audio Features** (key, tempo, danceability) are fetched from **AcousticBrainz** instead of Spotify to avoid requiring user authentication. See [METADATA_APIS.md](METADATA_APIS.md) for details.
 
 ## Prerequisites
 
@@ -95,15 +96,15 @@ npm run dev
 1. Create a new song in Bandmate
 2. Enter the **Song Title** (required)
 3. Optionally enter the **Artist name** for more accurate results
-4. Click **"Fetch Metadata from Spotify"** button
+4. Click **"Fetch Metadata (Spotify + MusicBrainz)"** button
 5. Bandmate will automatically fill in:
    - Artist (if not already entered)
-   - Album
-   - Key (e.g., "C", "D minor")
-   - Tempo (BPM)
-   - Duration (seconds)
-   - Time signature (4/4, 3/4, etc.)
-   - Energy and danceability scores
+   - Album and release date
+   - Album artwork
+   - Spotify URL
+   - Duration
+   - Key and tempo (from AcousticBrainz)
+   - Danceability (from AcousticBrainz)
 6. Review and edit any fields as needed
 7. Click **"Save Song"**
 
@@ -117,18 +118,18 @@ npm run dev
 
 ## Troubleshooting
 
-### "Song not found on Spotify"
+### "Song not found"
 
 **Possible causes**:
 - Song title or artist name is misspelled
-- Song is not available on Spotify (rare or local artist)
-- Song has a different official title on Spotify
+- Song is not available on Spotify or MusicBrainz
+- Song has a different official title
 
 **Solutions**:
 1. Check spelling and try again
 2. Add or correct the artist name
-3. Search on Spotify web/app first to find the exact title
-4. Enter metadata manually if song isn't on Spotify
+3. Search on Spotify/MusicBrainz first to find the exact title
+4. Enter metadata manually if song isn't in databases
 
 ### "Failed to fetch metadata"
 
