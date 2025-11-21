@@ -32,6 +32,17 @@ export interface CompleteSongMetadata {
   danceability?: number; // 0.0-1.0
   acousticness?: number; // 0.0-1.0
 
+  // Genre and classification (from AcousticBrainz)
+  genre?: string;        // e.g., "Rock", "Pop", "Jazz"
+  isInstrumental?: boolean; // true if instrumental
+
+  // Mood/emotion (from AcousticBrainz)
+  mood?: {
+    happy?: number;      // 0.0-1.0
+    sad?: number;        // 0.0-1.0
+    aggressive?: number; // 0.0-1.0
+  };
+
   // Data sources (for debugging)
   sources: {
     basic: 'spotify' | 'musicbrainz' | 'none';
@@ -79,6 +90,13 @@ class MetadataService {
       danceability: mbData.audioFeatures?.danceability,
       acousticness: mbData.audioFeatures?.acousticness,
 
+      // Genre and classification from AcousticBrainz
+      genre: mbData.audioFeatures?.genre,
+      isInstrumental: mbData.audioFeatures?.isInstrumental,
+
+      // Mood from AcousticBrainz
+      mood: mbData.audioFeatures?.mood,
+
       // Track data sources
       sources: {
         basic: spotifyData ? 'spotify' : mbData.metadata ? 'musicbrainz' : 'none',
@@ -94,6 +112,9 @@ class MetadataService {
       hasSpotifyUrl: !!metadata.spotifyUrl,
       hasKey: !!metadata.key,
       hasTempo: !!metadata.tempo,
+      genre: metadata.genre,
+      isInstrumental: metadata.isInstrumental,
+      mood: metadata.mood,
       sources: metadata.sources,
     });
 

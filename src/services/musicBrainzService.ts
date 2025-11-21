@@ -36,11 +36,50 @@ interface AcousticBrainzHighLevel {
       danceable?: number;
       not_danceable?: number;
     };
+    value?: string;
   };
   mood_acoustic?: {
     all?: {
       acoustic?: number;
       not_acoustic?: number;
+    };
+  };
+  mood_happy?: {
+    all?: {
+      happy?: number;
+      not_happy?: number;
+    };
+  };
+  mood_sad?: {
+    all?: {
+      sad?: number;
+      not_sad?: number;
+    };
+  };
+  mood_aggressive?: {
+    all?: {
+      aggressive?: number;
+      not_aggressive?: number;
+    };
+  };
+  genre_rosamerica?: {
+    value?: string;  // 'roc', 'pop', 'jaz', etc.
+    all?: {
+      cla?: number;  // classical
+      dan?: number;  // dance
+      hip?: number;  // hip hop
+      jaz?: number;  // jazz
+      pop?: number;  // pop
+      rhy?: number;  // rhythm & blues
+      roc?: number;  // rock
+      spe?: number;  // speech
+    };
+  };
+  voice_instrumental?: {
+    value?: string;  // 'voice' or 'instrumental'
+    all?: {
+      instrumental?: number;
+      voice?: number;
     };
   };
 }
@@ -69,6 +108,17 @@ export interface AudioFeatures {
   // Audio characteristics
   danceability?: number; // 0.0-1.0
   acousticness?: number; // 0.0-1.0
+
+  // Genre and classification
+  genre?: string;        // e.g., "rock", "pop", "jazz"
+  isInstrumental?: boolean; // true if instrumental, false if vocals
+
+  // Mood/emotion
+  mood?: {
+    happy?: number;      // 0.0-1.0
+    sad?: number;        // 0.0-1.0
+    aggressive?: number; // 0.0-1.0
+  };
 }
 
 export interface MusicBrainzMetadata {
@@ -181,12 +231,16 @@ class MusicBrainzService {
 
   /**
    * Get audio features from AcousticBrainz
+   *
+   * NOTE: AcousticBrainz stopped accepting submissions in 2022.
+   * Only songs that were submitted before 2022 will have data available.
    */
   async getAudioFeatures(musicBrainzId: string): Promise<AudioFeatures | null> {
     try {
       const url = `${this.acousticBrainzBaseUrl}/${musicBrainzId}/low-level`;
 
-      console.log('AcousticBrainz API Request:', url);
+      console.log('🔍 AcousticBrainz API Request:', url);
+      console.log('ℹ️  Note: AcousticBrainz stopped accepting submissions in 2022. Limited data available.');
 
       const response = await fetch(url, {
         headers: {
@@ -195,17 +249,26 @@ class MusicBrainzService {
       });
 
       if (!response.ok) {
-        console.log('AcousticBrainz data not available for this recording');
+        const statusText = response.statusText;
+        console.log(`⚠️  AcousticBrainz: No data available (${response.status} ${statusText})`);
+        console.log('💡 Tip: Not all songs have AcousticBrainz data. Try a different song or enter values manually.');
         return null;
       }
 
       const data: AcousticBrainzData = await response.json();
+
+      console.log('📦 Raw AcousticBrainz data keys:', Object.keys(data));
+      console.log('🎵 Tonal data:', data.tonal);
+      console.log('🥁 Rhythm data:', data.rhythm);
 
       const features: AudioFeatures = {};
 
       // Extract tempo (BPM)
       if (data.rhythm?.bpm) {
         features.tempo = Math.round(data.rhythm.bpm);
+        console.log('✅ Tempo found:', features.tempo);
+      } else {
+        console.log('❌ No tempo data in response');
       }
 
       // Extract key and scale
@@ -213,31 +276,85 @@ class MusicBrainzService {
         const key = data.tonal.key_key;
         const scale = data.tonal.key_scale;
         features.key = scale === 'minor' ? `${key} minor` : key;
+        console.log('✅ Key found:', features.key);
+      } else {
+        console.log('❌ No key data in response');
+        console.log('   Available tonal fields:', data.tonal ? Object.keys(data.tonal) : 'none');
       }
 
       // Try to get high-level features
       try {
         const hlUrl = `${this.acousticBrainzBaseUrl}/${musicBrainzId}/high-level`;
+        console.log('🔍 Fetching high-level features...');
         const hlResponse = await fetch(hlUrl);
 
         if (hlResponse.ok) {
           const hlData: { highlevel: AcousticBrainzHighLevel } = await hlResponse.json();
+          const hl = hlData.highlevel;
+
+          console.log('📊 High-level data keys:', Object.keys(hl));
 
           // Extract danceability
-          if (hlData.highlevel?.danceability?.all?.danceable) {
-            features.danceability = Math.round(hlData.highlevel.danceability.all.danceable * 100) / 100;
+          if (hl?.danceability?.all?.danceable) {
+            features.danceability = Math.round(hl.danceability.all.danceable * 100) / 100;
+            console.log('✅ Danceability found:', features.danceability);
           }
 
           // Extract acousticness
-          if (hlData.highlevel?.mood_acoustic?.all?.acoustic) {
-            features.acousticness = Math.round(hlData.highlevel.mood_acoustic.all.acoustic * 100) / 100;
+          if (hl?.mood_acoustic?.all?.acoustic) {
+            features.acousticness = Math.round(hl.mood_acoustic.all.acoustic * 100) / 100;
+            console.log('✅ Acousticness found:', features.acousticness);
           }
+
+          // Extract genre
+          if (hl?.genre_rosamerica?.value) {
+            const genreMap: Record<string, string> = {
+              'roc': 'Rock',
+              'pop': 'Pop',
+              'jaz': 'Jazz',
+              'cla': 'Classical',
+              'dan': 'Dance',
+              'hip': 'Hip Hop',
+              'rhy': 'R&B',
+              'spe': 'Speech'
+            };
+            features.genre = genreMap[hl.genre_rosamerica.value] || hl.genre_rosamerica.value;
+            console.log('✅ Genre found:', features.genre);
+          }
+
+          // Extract voice/instrumental
+          if (hl?.voice_instrumental?.value) {
+            features.isInstrumental = hl.voice_instrumental.value === 'instrumental';
+            console.log('✅ Instrumental:', features.isInstrumental);
+          }
+
+          // Extract mood
+          const mood: { happy?: number; sad?: number; aggressive?: number } = {};
+
+          if (hl?.mood_happy?.all?.happy) {
+            mood.happy = Math.round(hl.mood_happy.all.happy * 100) / 100;
+          }
+
+          if (hl?.mood_sad?.all?.sad) {
+            mood.sad = Math.round(hl.mood_sad.all.sad * 100) / 100;
+          }
+
+          if (hl?.mood_aggressive?.all?.aggressive) {
+            mood.aggressive = Math.round(hl.mood_aggressive.all.aggressive * 100) / 100;
+          }
+
+          if (Object.keys(mood).length > 0) {
+            features.mood = mood;
+            console.log('✅ Mood found:', mood);
+          }
+        } else {
+          console.log('⚠️  High-level features not available');
         }
       } catch (hlError) {
-        console.log('High-level features not available');
+        console.log('❌ Error fetching high-level features:', hlError);
       }
 
-      console.log('AcousticBrainz features found:', features);
+      console.log('🎉 Final AcousticBrainz features:', features);
       return Object.keys(features).length > 0 ? features : null;
 
     } catch (error) {
