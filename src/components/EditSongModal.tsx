@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
 import type { Song, UpdateSongInput } from "../services/songsService";
+import { metadataService } from "../services/metadataService";
 
 interface Props {
   song: Song | null;
@@ -28,6 +29,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     hasBackingTracks: false,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [metadataFetched, setMetadataFetched] = useState(false);
 
   useEffect(() => {
     if (song) {
@@ -49,6 +52,61 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
       });
     }
   }, [song]);
+
+  const handleFetchMetadata = async () => {
+    if (!formData.title.trim()) {
+      alert("Please enter a song title first");
+      return;
+    }
+
+    setIsFetchingMetadata(true);
+    try {
+      const metadata = await metadataService.getSongMetadata(
+        formData.title.trim(),
+        formData.artist.trim() || undefined
+      );
+
+      if (metadata) {
+        setFormData((prev) => ({
+          ...prev,
+          artist: metadata.artist || prev.artist,
+          releaseDate: metadata.releaseDate || prev.releaseDate,
+          country: metadata.country || prev.country,
+          lyrics: metadata.lyrics || prev.lyrics,
+          key: metadata.key || prev.key,
+          tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
+          duration: metadata.duration ? metadata.duration.toString() : prev.duration,
+          danceability: metadata.danceability
+            ? metadata.danceability.toString()
+            : prev.danceability,
+        }));
+        setMetadataFetched(true);
+
+        // Show user which sources were used
+        const sources = [];
+        if (metadata.sources.basic === 'spotify') sources.push('Spotify');
+        if (metadata.sources.basic === 'musicbrainz') sources.push('MusicBrainz');
+        if (metadata.sources.audio === 'acousticbrainz') sources.push('AcousticBrainz');
+        if (metadata.sources.lyrics === 'lyricsovh') sources.push('Lyrics.ovh');
+
+        if (sources.length > 0) {
+          console.log(`✅ Metadata loaded from: ${sources.join(' + ')}`);
+        }
+
+        // Show additional info about what was found
+        if (metadata.country) console.log(`🌍 Country: ${metadata.country}`);
+        if (metadata.lyrics) console.log(`📝 Lyrics: ${metadata.lyrics.length} characters`);
+        if (metadata.genre) console.log(`🎸 Genre: ${metadata.genre}`);
+      } else {
+        alert("Song not found. Try entering the artist name or check spelling.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error);
+      alert("Failed to fetch song metadata. Please try again or enter details manually.");
+    } finally {
+      setIsFetchingMetadata(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +183,39 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               />
             </FormGroup>
           </FormRow>
+
+          {metadataService.isAvailable() && (
+            <MetadataSection>
+              <FetchButton
+                type="button"
+                onClick={handleFetchMetadata}
+                disabled={!formData.title.trim() || isFetchingMetadata || isSaving}
+              >
+                {isFetchingMetadata ? (
+                  <>
+                    <Spinner />
+                    Fetching metadata...
+                  </>
+                ) : metadataFetched ? (
+                  <>
+                    <i className="bi bi-check-circle-fill"></i>
+                    Metadata Loaded
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-music-note-list"></i>
+                    Fetch Metadata (Spotify + MusicBrainz)
+                  </>
+                )}
+              </FetchButton>
+              {metadataFetched && (
+                <SuccessMessage>
+                  <i className="bi bi-info-circle"></i>
+                  Metadata successfully loaded from multiple sources! You can edit any field before saving.
+                </SuccessMessage>
+              )}
+            </MetadataSection>
+          )}
 
           {formData.releaseDate && (
             <FormGroup>
@@ -779,4 +870,68 @@ const SectionDivider = styled.div`
   padding: ${theme.space[3]} 0 ${theme.space[2]} 0;
   border-bottom: 1px solid ${theme.colors.dark.border.default};
   margin-top: ${theme.space[2]};
+`;
+
+const MetadataSection = styled.div`
+  background: ${theme.colors.dark.bg.primary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const FetchButton = styled.button`
+  background: linear-gradient(135deg, ${theme.colors.brand.primary}, ${theme.colors.brand.primaryHover});
+  border: none;
+  color: white;
+  padding: ${theme.space[3]} ${theme.space[5]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[2]};
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+
+  i {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: ${theme.colors.dark.bg.elevated};
+    color: ${theme.colors.dark.text.disabled};
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+`;
+
+const SuccessMessage = styled.div`
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.space[3]};
+  color: ${theme.colors.semantic.success};
+  font-size: ${theme.fontSizes.bodySm};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+    flex-shrink: 0;
+  }
 `;
