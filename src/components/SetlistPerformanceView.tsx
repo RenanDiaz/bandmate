@@ -363,6 +363,12 @@ const SetlistPerformanceView: FC = () => {
           <i className="bi bi-chevron-right"></i>
         </NavButton>
       </BottomNav>
+
+      {/* Mobile Floating Toggle Button */}
+      <MobileToggleButton onClick={toggleContentView} $contentType={contentView}>
+        <i className={`bi bi-${contentView === "chords" ? "music-note" : "mic"}`}></i>
+        <MobileToggleLabel>{contentView === "chords" ? "Chords" : "Lyrics"}</MobileToggleLabel>
+      </MobileToggleButton>
     </PerformanceContainer>
   );
 };
@@ -937,6 +943,49 @@ const BackButton = styled.button`
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
   }
+`;
+
+const MobileToggleButton = styled.button<{ $contentType: "chords" | "lyrics" }>`
+  position: fixed;
+  bottom: 120px;
+  right: ${theme.space[4]};
+  width: 64px;
+  height: 64px;
+  border-radius: ${theme.radius.full};
+  background: ${(props) =>
+    props.$contentType === "chords"
+      ? theme.colors.brand.primary
+      : theme.colors.semantic.info};
+  border: none;
+  color: white;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[1]};
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all ${theme.transitions.fast} ease;
+  z-index: 10;
+
+  i {
+    font-size: ${theme.fontSizes.h3};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: flex;
+  }
+`;
+
+const MobileToggleLabel = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
 `;
 
 export default SetlistPerformanceView;
