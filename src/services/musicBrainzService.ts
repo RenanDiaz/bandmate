@@ -302,7 +302,8 @@ class MusicBrainzService {
       if (data.tonal?.key_key && data.tonal?.key_scale) {
         const key = data.tonal.key_key;
         const scale = data.tonal.key_scale;
-        features.key = scale === 'minor' ? `${key} minor` : key;
+        // Format to match dropdown options: "Cm" for minor, "C" for major
+        features.key = scale === 'minor' ? `${key}m` : key;
         console.log('✅ Key found:', features.key);
       } else {
         console.log('❌ No key data in response');
