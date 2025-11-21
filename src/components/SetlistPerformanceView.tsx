@@ -83,6 +83,14 @@ const SetlistPerformanceView: FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, songs.length, isFullscreen, navigate]);
 
+  // Scroll to top when song changes
+  useEffect(() => {
+    const songDisplay = document.querySelector('[data-song-display]');
+    if (songDisplay) {
+      songDisplay.scrollTop = 0;
+    }
+  }, [currentIndex]);
+
   const handlePrevSong = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
@@ -266,7 +274,7 @@ const SetlistPerformanceView: FC = () => {
         )}
 
         {/* Song Display */}
-        <SongDisplay>
+        <SongDisplay data-song-display>
           <SongHeader>
             <SongTitleLarge>{currentSong.title}</SongTitleLarge>
             {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
