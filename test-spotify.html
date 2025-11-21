@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify API Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      cursor: pointer;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>Spotify API Diagnostic Tool</h1>
+
+  <div>
+    <label>Client ID:</label>
+    <input type="text" id="clientId" value="bf0582d1168c4dd5b924265eea32af29" style="width: 400px;">
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label>Client Secret:</label>
+    <input type="password" id="clientSecret" value="c2c9c366ef624ea5bcdb0ae3e95f85b4" style="width: 400px;">
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button onclick="testAuth()">1. Test Authentication</button>
+    <button onclick="testSearch()">2. Test Search API</button>
+    <button onclick="testAudioFeatures()">3. Test Audio Features API</button>
+  </div>
+
+  <h2>Results:</h2>
+  <pre id="output">Click buttons above to run tests...</pre>
+
+  <script>
+    let accessToken = null;
+
+    function log(message, type = 'info') {
+      const output = document.getElementById('output');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+      output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+    }
+
+    function clearLog() {
+      document.getElementById('output').innerHTML = '';
+    }
+
+    async function testAuth() {
+      clearLog();
+      log('Testing authentication...');
+
+      const clientId = document.getElementById('clientId').value;
+      const clientSecret = document.getElementById('clientSecret').value;
+
+      try {
+        const credentials = btoa(`${clientId}:${clientSecret}`);
+        const response = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials',
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          log(`❌ Authentication failed: ${response.status}`, 'error');
+          log(`Error: ${error}`, 'error');
+          return;
+        }
+
+        const data = await response.json();
+        accessToken = data.access_token;
+        log('✅ Authentication successful!', 'success');
+        log(`Access Token: ${accessToken.substring(0, 50)}...`, 'success');
+        log(`Expires in: ${data.expires_in} seconds`, 'success');
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testSearch() {
+      if (!accessToken) {
+        log('❌ Please run authentication test first!', 'error');
+        return;
+      }
+
+      clearLog();
+      log('Testing search API with "Bohemian Rhapsody"...');
+
+      try {
+        const query = encodeURIComponent('track:Bohemian Rhapsody artist:Queen');
+        const response = await fetch(
+          `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        log(`Response status: ${response.status}`);
+
+        if (!response.ok) {
+          const error = await response.text();
+          log(`❌ Search failed: ${response.status}`, 'error');
+          log(`Error: ${error}`, 'error');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.tracks.items.length > 0) {
+          const track = data.tracks.items[0];
+          log('✅ Search successful!', 'success');
+          log(`Track ID: ${track.id}`, 'success');
+          log(`Track Name: ${track.name}`, 'success');
+          log(`Artist: ${track.artists[0].name}`, 'success');
+          log(`Album: ${track.album.name}`, 'success');
+
+          // Store track ID for audio features test
+          window.testTrackId = track.id;
+        } else {
+          log('❌ No tracks found', 'error');
+        }
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function testAudioFeatures() {
+      if (!accessToken) {
+        log('❌ Please run authentication test first!', 'error');
+        return;
+      }
+
+      if (!window.testTrackId) {
+        log('❌ Please run search test first to get a track ID!', 'error');
+        return;
+      }
+
+      clearLog();
+      log(`Testing audio features API for track: ${window.testTrackId}...`);
+
+      try {
+        const response = await fetch(
+          `https://api.spotify.com/v1/audio-features/${window.testTrackId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        log(`Response status: ${response.status}`);
+
+        if (!response.ok) {
+          const error = await response.text();
+          log(`❌ Audio Features request failed: ${response.status}`, 'error');
+          log(`Error body: ${error}`, 'error');
+
+          if (response.status === 403) {
+            log('', 'error');
+            log('🔍 Possible causes of 403 error:', 'error');
+            log('1. Your Spotify app is in Development Mode (limited to 25 users)', 'error');
+            log('2. Your app doesn\'t have the required permissions', 'error');
+            log('3. Your Client ID or Secret is invalid', 'error');
+            log('4. Your app quota has been exceeded', 'error');
+            log('', 'error');
+            log('📝 To fix:', 'error');
+            log('1. Go to https://developer.spotify.com/dashboard', 'error');
+            log('2. Check your app settings', 'error');
+            log('3. Verify the app is not in Development Mode restrictions', 'error');
+            log('4. Try regenerating your Client Secret', 'error');
+          }
+          return;
+        }
+
+        const data = await response.json();
+        log('✅ Audio Features retrieved successfully!', 'success');
+        log(`Key: ${data.key} (${['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][data.key]})`, 'success');
+        log(`Mode: ${data.mode === 1 ? 'Major' : 'Minor'}`, 'success');
+        log(`Tempo: ${Math.round(data.tempo)} BPM`, 'success');
+        log(`Time Signature: ${data.time_signature}/4`, 'success');
+        log(`Energy: ${data.energy}`, 'success');
+        log(`Danceability: ${data.danceability}`, 'success');
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

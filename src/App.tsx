@@ -7,6 +7,7 @@ import { Login } from "./components/Login";
 import SongsView from "./components/SongsView";
 import SetlistsView from "./components/SetlistsView";
 import SetlistEditor from "./components/SetlistEditor";
+import SetlistDetailView from "./components/SetlistDetailView";
 import SetlistPerformanceView from "./components/SetlistPerformanceView";
 import { BandSettings } from "./components/BandSettings";
 import { AcceptInvitation } from "./components/AcceptInvitation";
@@ -135,6 +136,7 @@ const AppContent: FC = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/songs" element={<SongsView user={user} selectedBand={selectedBand} />} />
             <Route path="/setlists" element={<SetlistsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/setlists/:setlistId" element={<SetlistDetailView />} />
             <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
             <Route path="/setlists/:setlistId/perform" element={<SetlistPerformanceView />} />
             <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
