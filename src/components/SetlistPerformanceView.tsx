@@ -19,6 +19,7 @@ const SetlistPerformanceView: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
+  const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
 
   useEffect(() => {
     if (!setlistId) return;
@@ -72,6 +73,9 @@ const SetlistPerformanceView: FC = () => {
       } else if (e.key === "l" || e.key === "L") {
         e.preventDefault();
         setShowSongList((prev) => !prev);
+      } else if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        toggleContentView();
       }
     };
 
@@ -110,6 +114,10 @@ const SetlistPerformanceView: FC = () => {
       document.exitFullscreen();
     }
     setIsFullscreen(false);
+  };
+
+  const toggleContentView = () => {
+    setContentView((prev) => (prev === "chords" ? "lyrics" : "chords"));
   };
 
   const formatDuration = (seconds: number): string => {
@@ -154,6 +162,31 @@ const SetlistPerformanceView: FC = () => {
   const currentSong = songs[currentIndex];
   const currentNotes = getSetlistSongNotes(currentSong.id);
 
+  // Determine what content to display with smart fallback
+  const getDisplayContent = (): { type: "chords" | "lyrics" | "none"; content: string } => {
+    const hasChords = Boolean(currentSong.chords);
+    const hasLyrics = Boolean(currentSong.lyrics);
+
+    if (contentView === "chords") {
+      if (hasChords) {
+        return { type: "chords", content: currentSong.chords! };
+      } else if (hasLyrics) {
+        return { type: "lyrics", content: currentSong.lyrics! };
+      }
+    } else {
+      // contentView === "lyrics"
+      if (hasLyrics) {
+        return { type: "lyrics", content: currentSong.lyrics! };
+      } else if (hasChords) {
+        return { type: "chords", content: currentSong.chords! };
+      }
+    }
+
+    return { type: "none", content: "" };
+  };
+
+  const displayContent = getDisplayContent();
+
   return (
     <PerformanceContainer>
       {/* Top Bar */}
@@ -172,6 +205,24 @@ const SetlistPerformanceView: FC = () => {
           <SongCounter>
             {currentIndex + 1} / {songs.length}
           </SongCounter>
+          <ViewToggleGroup>
+            <ViewToggleButton
+              onClick={() => setContentView("chords")}
+              $active={contentView === "chords"}
+              title="Show Chords"
+            >
+              <i className="bi bi-music-note"></i>
+              Chords
+            </ViewToggleButton>
+            <ViewToggleButton
+              onClick={() => setContentView("lyrics")}
+              $active={contentView === "lyrics"}
+              title="Show Lyrics"
+            >
+              <i className="bi bi-mic"></i>
+              Lyrics
+            </ViewToggleButton>
+          </ViewToggleGroup>
           <IconButton
             onClick={() => setShowSongList(!showSongList)}
             title="Song List (L)"
@@ -253,27 +304,27 @@ const SetlistPerformanceView: FC = () => {
           </SongHeader>
 
           <SongContent>
-            {currentSong.chords && (
+            {displayContent.type === "chords" && (
               <ContentSection>
                 <SectionLabel>
                   <i className="bi bi-music-note"></i>
                   Chords
                 </SectionLabel>
-                <ContentText>{currentSong.chords}</ContentText>
+                <ContentText>{displayContent.content}</ContentText>
               </ContentSection>
             )}
 
-            {currentSong.lyrics && (
+            {displayContent.type === "lyrics" && (
               <ContentSection>
                 <SectionLabel>
                   <i className="bi bi-mic"></i>
                   Lyrics
                 </SectionLabel>
-                <ContentText>{currentSong.lyrics}</ContentText>
+                <ContentText>{displayContent.content}</ContentText>
               </ContentSection>
             )}
 
-            {!currentSong.chords && !currentSong.lyrics && (
+            {displayContent.type === "none" && (
               <EmptyContent>
                 <i className="bi bi-music-note-beamed"></i>
                 <p>No chords or lyrics available for this song</p>
@@ -295,7 +346,7 @@ const SetlistPerformanceView: FC = () => {
             <ProgressFill $percent={((currentIndex + 1) / songs.length) * 100} />
           </ProgressBar>
           <KeyboardHint>
-            Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list
+            Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list • T to toggle view
           </KeyboardHint>
         </NavCenter>
 
@@ -389,6 +440,47 @@ const SongCounter = styled.div`
   padding: ${theme.space[2]} ${theme.space[4]};
   background: ${theme.colors.dark.bg.tertiary};
   border-radius: ${theme.radius.base};
+`;
+
+const ViewToggleGroup = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  background: ${theme.colors.dark.bg.tertiary};
+  padding: ${theme.space[1]};
+  border-radius: ${theme.radius.base};
+  border: 1px solid ${theme.colors.dark.border.default};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none;
+  }
+`;
+
+const ViewToggleButton = styled.button<{ $active: boolean }>`
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : "transparent"};
+  border: none;
+  color: ${(props) =>
+    props.$active ? "white" : theme.colors.dark.text.secondary};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+    color: ${(props) =>
+      props.$active ? "white" : theme.colors.brand.primary};
+  }
 `;
 
 const IconButton = styled.button<{ $active?: boolean }>`
