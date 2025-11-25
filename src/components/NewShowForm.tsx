@@ -17,11 +17,14 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
 
+  // Get today's date for default and min validation
+  const today = new Date().toISOString().split("T")[0];
+
   // Form state
   const [name, setName] = useState("");
   const [venue, setVenue] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState(today);
   const [eventTime, setEventTime] = useState("");
   const [doorsTime, setDoorsTime] = useState("");
   const [setlistId, setSetlistId] = useState("");
@@ -37,7 +40,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
     setName("");
     setVenue("");
     setVenueAddress("");
-    setEventDate("");
+    setEventDate(new Date().toISOString().split("T")[0]);
     setEventTime("");
     setDoorsTime("");
     setSetlistId("");
@@ -75,9 +78,6 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
     resetForm();
     setIsOpen(false);
   };
-
-  // Set default date to today
-  const today = new Date().toISOString().split("T")[0];
 
   return (
     <FormContainer>
