@@ -3,11 +3,98 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
 import styled from "styled-components";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import { getSetlist, updateSetlist } from "../services/setlistsService";
 import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+
+// Sortable song card component
+interface SortableSetlistSongCardProps {
+  setlistSong: SetlistSong;
+  index: number;
+  song: Song;
+  formatDuration: (seconds: number) => string;
+  onUpdateNotes: (position: number, notes: string) => void;
+  onRemove: (position: number) => void;
+  totalSongs: number;
+}
+
+const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
+  setlistSong,
+  index,
+  song,
+  formatDuration,
+  onUpdateNotes,
+  onRemove,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: setlistSong.song_id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <SetlistSongCard
+      ref={setNodeRef}
+      style={style}
+      $isDragging={isDragging}
+    >
+      <DragHandle {...attributes} {...listeners}>
+        <i className="bi bi-grip-vertical"></i>
+      </DragHandle>
+      <SongPosition>{index + 1}</SongPosition>
+      <SongDetails>
+        <SongTitle>{song.title}</SongTitle>
+        {song.artist && <SongArtist>{song.artist}</SongArtist>}
+        <SongMetadata>
+          {song.key && <MetaBadge>{song.key}</MetaBadge>}
+          {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
+          {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
+        </SongMetadata>
+        <NotesInput
+          placeholder="Add notes for this song..."
+          value={setlistSong.notes || ""}
+          onChange={(e) => onUpdateNotes(index, e.target.value)}
+        />
+      </SongDetails>
+      <SongActions>
+        <ActionButton
+          onClick={() => onRemove(index)}
+          title="Remove from setlist"
+          $variant="delete"
+        >
+          <i className="bi bi-trash"></i>
+        </ActionButton>
+      </SongActions>
+    </SetlistSongCard>
+  );
+};
 
 const SetlistEditor: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
@@ -19,6 +106,36 @@ const SetlistEditor: FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSelectedSongs((items) => {
+        const oldIndex = items.findIndex((item) => item.song_id === active.id);
+        const newIndex = items.findIndex((item) => item.song_id === over.id);
+
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        // Reindex positions
+        return reordered.map((song, index) => ({
+          ...song,
+          position: index,
+        }));
+      });
+    }
+  };
 
   useEffect(() => {
     if (!setlistId) return;
@@ -79,44 +196,6 @@ const SetlistEditor: FC = () => {
       ...song,
       position: index,
     }));
-    setSelectedSongs(reindexed);
-  };
-
-  const handleMoveSongUp = (position: number) => {
-    if (position === 0) return;
-
-    const newSongs = [...selectedSongs];
-    const index = newSongs.findIndex((s) => s.position === position);
-    if (index === -1) return;
-
-    // Swap with previous
-    [newSongs[index - 1], newSongs[index]] = [newSongs[index], newSongs[index - 1]];
-
-    // Reindex
-    const reindexed = newSongs.map((song, idx) => ({
-      ...song,
-      position: idx,
-    }));
-
-    setSelectedSongs(reindexed);
-  };
-
-  const handleMoveSongDown = (position: number) => {
-    if (position === selectedSongs.length - 1) return;
-
-    const newSongs = [...selectedSongs];
-    const index = newSongs.findIndex((s) => s.position === position);
-    if (index === -1) return;
-
-    // Swap with next
-    [newSongs[index], newSongs[index + 1]] = [newSongs[index + 1], newSongs[index]];
-
-    // Reindex
-    const reindexed = newSongs.map((song, idx) => ({
-      ...song,
-      position: idx,
-    }));
-
     setSelectedSongs(reindexed);
   };
 
@@ -305,53 +384,34 @@ const SetlistEditor: FC = () => {
                   <EmptyText>Add songs from the library on the left</EmptyText>
                 </EmptyState>
               ) : (
-                selectedSongs.map((setlistSong, index) => {
-                  const song = getSongById(setlistSong.song_id);
-                  if (!song) return null;
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={selectedSongs.map((s) => s.song_id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {selectedSongs.map((setlistSong, index) => {
+                      const song = getSongById(setlistSong.song_id);
+                      if (!song) return null;
 
-                  return (
-                    <SetlistSongCard key={`${setlistSong.song_id}-${index}`}>
-                      <SongPosition>{index + 1}</SongPosition>
-                      <SongDetails>
-                        <SongTitle>{song.title}</SongTitle>
-                        {song.artist && <SongArtist>{song.artist}</SongArtist>}
-                        <SongMetadata>
-                          {song.key && <MetaBadge>{song.key}</MetaBadge>}
-                          {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
-                          {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
-                        </SongMetadata>
-                        <NotesInput
-                          placeholder="Add notes for this song..."
-                          value={setlistSong.notes || ""}
-                          onChange={(e) => handleUpdateNotes(index, e.target.value)}
+                      return (
+                        <SortableSetlistSongCard
+                          key={setlistSong.song_id}
+                          setlistSong={setlistSong}
+                          index={index}
+                          song={song}
+                          formatDuration={formatDuration}
+                          onUpdateNotes={handleUpdateNotes}
+                          onRemove={handleRemoveSong}
+                          totalSongs={selectedSongs.length}
                         />
-                      </SongDetails>
-                      <SongActions>
-                        <ActionButton
-                          onClick={() => handleMoveSongUp(index)}
-                          disabled={index === 0}
-                          title="Move up"
-                        >
-                          <i className="bi bi-arrow-up"></i>
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => handleMoveSongDown(index)}
-                          disabled={index === selectedSongs.length - 1}
-                          title="Move down"
-                        >
-                          <i className="bi bi-arrow-down"></i>
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => handleRemoveSong(index)}
-                          title="Remove from setlist"
-                          $variant="delete"
-                        >
-                          <i className="bi bi-trash"></i>
-                        </ActionButton>
-                      </SongActions>
-                    </SetlistSongCard>
-                  );
-                })
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
               )}
             </SetlistSongsList>
           </SetlistPanel>
@@ -623,18 +683,49 @@ const LibrarySongCard = styled.div<{ $isAdded: boolean }>`
   }
 `;
 
-const SetlistSongCard = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
+  background: ${(props) =>
+    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+  border: 1px solid ${(props) =>
+    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   display: flex;
   align-items: flex-start;
   gap: ${theme.space[3]};
   transition: all ${theme.transitions.fast} ease;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const DragHandle = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.dark.text.tertiary};
+  width: 24px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+  font-size: ${theme.fontSizes.bodyLg};
+  padding: 0;
+  touch-action: none;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:active {
+    cursor: grabbing;
+    color: ${theme.colors.brand.primary};
   }
 `;
 
