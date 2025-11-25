@@ -9,6 +9,8 @@ import SetlistsView from "./components/SetlistsView";
 import SetlistEditor from "./components/SetlistEditor";
 import SetlistDetailView from "./components/SetlistDetailView";
 import SetlistPerformanceView from "./components/SetlistPerformanceView";
+import ShowsView from "./components/ShowsView";
+import ShowDetailView from "./components/ShowDetailView";
 import { BandSettings } from "./components/BandSettings";
 import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
@@ -84,10 +86,20 @@ const AppContent: FC = () => {
                 <StyledNavLink
                   as={Link}
                   to="/setlists"
-                  $active={location.pathname === "/setlists"}
+                  $active={location.pathname.startsWith("/setlists")}
                   $mode={mode}
                 >
                   Setlists
+                </StyledNavLink>
+              </NavItem>
+              <NavItem>
+                <StyledNavLink
+                  as={Link}
+                  to="/shows"
+                  $active={location.pathname.startsWith("/shows")}
+                  $mode={mode}
+                >
+                  Shows
                 </StyledNavLink>
               </NavItem>
               <NavItem>
@@ -139,6 +151,8 @@ const AppContent: FC = () => {
             <Route path="/setlists/:setlistId" element={<SetlistDetailView />} />
             <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
             <Route path="/setlists/:setlistId/perform" element={<SetlistPerformanceView />} />
+            <Route path="/shows" element={<ShowsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/shows/:showId" element={<ShowDetailView />} />
             <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
             <Route path="/invite/accept" element={<AcceptInvitation />} />
             <Route path="/about" element={<About />} />
