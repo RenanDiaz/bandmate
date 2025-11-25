@@ -66,9 +66,29 @@ const AppContent: FC = () => {
           <NavbarToggler onClick={toggleNavbar} />
 
           <Collapse isOpen={isOpen} navbar>
+            {selectedBand && (
+              <MobileBandInfo>
+                <MobileBandName>
+                  <i className="bi bi-music-note-beamed"></i>
+                  {selectedBand.name}
+                </MobileBandName>
+                <SwitchBandButton
+                  size="sm"
+                  onClick={() => {
+                    setShowBandSelector(true);
+                    setIsOpen(false);
+                  }}
+                  aria-label="Switch Band"
+                  title="Switch band"
+                >
+                  <i className="bi bi-arrow-left-right"></i>
+                  <span style={{ marginLeft: '6px' }}>Switch</span>
+                </SwitchBandButton>
+              </MobileBandInfo>
+            )}
             <StyledNav className="me-auto" navbar>
               <NavItem>
-                <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode}>
+                <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
                   Home
                 </StyledNavLink>
               </NavItem>
@@ -78,6 +98,7 @@ const AppContent: FC = () => {
                   to="/songs"
                   $active={location.pathname === "/songs"}
                   $mode={mode}
+                  onClick={() => setIsOpen(false)}
                 >
                   Songs
                 </StyledNavLink>
@@ -88,6 +109,7 @@ const AppContent: FC = () => {
                   to="/setlists"
                   $active={location.pathname.startsWith("/setlists")}
                   $mode={mode}
+                  onClick={() => setIsOpen(false)}
                 >
                   Setlists
                 </StyledNavLink>
@@ -98,6 +120,7 @@ const AppContent: FC = () => {
                   to="/shows"
                   $active={location.pathname.startsWith("/shows")}
                   $mode={mode}
+                  onClick={() => setIsOpen(false)}
                 >
                   Shows
                 </StyledNavLink>
@@ -108,6 +131,7 @@ const AppContent: FC = () => {
                   to="/about"
                   $active={location.pathname === "/about"}
                   $mode={mode}
+                  onClick={() => setIsOpen(false)}
                 >
                   About
                 </StyledNavLink>
@@ -207,6 +231,10 @@ const BandInfoContainer = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none;
+  }
 `;
 
 const BandDivider = styled.div`
@@ -214,19 +242,42 @@ const BandDivider = styled.div`
   height: 24px;
   background: ${theme.colors.dark.border.default};
   opacity: 0.5;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
-  }
 `;
 
 const BandName = styled.span`
   font-weight: ${theme.fontWeights.semibold};
   font-size: ${theme.fontSizes.bodySm};
   color: ${theme.colors.brand.primary};
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const MobileBandInfo = styled.div`
+  display: none;
+  padding: ${theme.space[3]} 0;
+  margin-bottom: ${theme.space[2]};
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
 
   @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${theme.space[3]};
+  }
+`;
+
+const MobileBandName = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  font-weight: ${theme.fontWeights.semibold};
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.brand.primary};
+
+  i {
+    font-size: ${theme.fontSizes.body};
   }
 `;
 

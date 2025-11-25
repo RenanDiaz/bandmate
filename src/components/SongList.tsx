@@ -204,6 +204,15 @@ const ActionButtons = styled.div`
   ${SongHeader}:hover & {
     opacity: 1;
   }
+
+  /* Always visible on touch devices */
+  @media (max-width: ${theme.breakpoints.md}) {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    opacity: 1;
+  }
 `;
 
 const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
@@ -235,6 +244,17 @@ const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
 
   &:active {
     transform: translateY(0);
+    background: ${(props) =>
+      props.$variant === "delete"
+        ? theme.colors.semantic.errorBgDark
+        : theme.colors.dark.bg.elevated};
+  }
+
+  /* Larger touch targets on mobile */
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 44px;
+    height: 44px;
+    font-size: ${theme.fontSizes.bodyLg};
   }
 `;
 

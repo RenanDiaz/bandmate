@@ -410,6 +410,15 @@ const ActionButtons = styled.div`
   ${ShowHeader}:hover & {
     opacity: 1;
   }
+
+  /* Always visible on touch devices */
+  @media (max-width: ${theme.breakpoints.md}) {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    opacity: 1;
+  }
 `;
 
 const ActionButton = styled.button<{
@@ -458,6 +467,19 @@ const ActionButton = styled.button<{
 
   &:active {
     transform: translateY(0);
+    background: ${(props) => {
+      if (props.$variant === "complete") return theme.colors.semantic.successBgDark;
+      if (props.$variant === "cancel") return theme.colors.semantic.warningBgDark;
+      if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
+      return theme.colors.dark.bg.elevated;
+    }};
+  }
+
+  /* Larger touch targets on mobile */
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 40px;
+    height: 40px;
+    font-size: ${theme.fontSizes.body};
   }
 `;
 
