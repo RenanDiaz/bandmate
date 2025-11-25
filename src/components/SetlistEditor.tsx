@@ -210,13 +210,27 @@ const SetlistEditor: FC = () => {
     return availableSongs.find((s) => s.id === songId);
   };
 
-  const filteredAvailableSongs = availableSongs.filter((song) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      song.title.toLowerCase().includes(query) ||
-      (song.artist && song.artist.toLowerCase().includes(query))
-    );
-  });
+  const filteredAvailableSongs = availableSongs
+    .filter((song) => {
+      // Hide songs already added to the setlist
+      const isAlreadyAdded = selectedSongs.some((s) => s.song_id === song.id);
+      if (isAlreadyAdded) return false;
+
+      // Filter by search query
+      const query = searchQuery.toLowerCase();
+      return (
+        song.title.toLowerCase().includes(query) ||
+        (song.artist && song.artist.toLowerCase().includes(query))
+      );
+    })
+    // Sort by artist then title
+    .sort((a, b) => {
+      const artistA = a.artist || "";
+      const artistB = b.artist || "";
+      const artistCompare = artistA.localeCompare(artistB, undefined, { sensitivity: "base" });
+      if (artistCompare !== 0) return artistCompare;
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    });
 
   const calculateTotalDuration = (): number => {
     return selectedSongs.reduce((total, setlistSong) => {
@@ -312,7 +326,7 @@ const SetlistEditor: FC = () => {
                 <i className="bi bi-music-note-beamed"></i>
                 Song Library
               </PanelTitle>
-              <PanelStats>{availableSongs.length} songs</PanelStats>
+              <PanelStats>{filteredAvailableSongs.length} available</PanelStats>
             </PanelHeader>
 
             <SearchBox>
@@ -328,36 +342,32 @@ const SetlistEditor: FC = () => {
             <SongLibraryList>
               {filteredAvailableSongs.length === 0 ? (
                 <EmptyMessage>
-                  {searchQuery ? "No songs match your search" : "No songs in library"}
+                  {searchQuery
+                    ? "No songs match your search"
+                    : selectedSongs.length === availableSongs.length
+                    ? "All songs added to setlist"
+                    : "No songs in library"}
                 </EmptyMessage>
               ) : (
-                filteredAvailableSongs.map((song) => {
-                  const isAdded = selectedSongs.some((s) => s.song_id === song.id);
-                  return (
-                    <LibrarySongCard key={song.id} $isAdded={isAdded}>
-                      <SongInfo>
-                        <SongTitle>{song.title}</SongTitle>
-                        {song.artist && <SongArtist>{song.artist}</SongArtist>}
-                        <SongMetadata>
-                          {song.key && <MetaBadge>{song.key}</MetaBadge>}
-                          {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
-                          {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
-                        </SongMetadata>
-                      </SongInfo>
-                      <AddButton
-                        onClick={() => handleAddSong(song)}
-                        disabled={isAdded}
-                        title={isAdded ? "Already in setlist" : "Add to setlist"}
-                      >
-                        {isAdded ? (
-                          <i className="bi bi-check-circle-fill"></i>
-                        ) : (
-                          <i className="bi bi-plus-circle"></i>
-                        )}
-                      </AddButton>
-                    </LibrarySongCard>
-                  );
-                })
+                filteredAvailableSongs.map((song) => (
+                  <LibrarySongCard key={song.id}>
+                    <SongInfo>
+                      <SongTitle>{song.title}</SongTitle>
+                      {song.artist && <SongArtist>{song.artist}</SongArtist>}
+                      <SongMetadata>
+                        {song.key && <MetaBadge>{song.key}</MetaBadge>}
+                        {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
+                        {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
+                      </SongMetadata>
+                    </SongInfo>
+                    <AddButton
+                      onClick={() => handleAddSong(song)}
+                      title="Add to setlist"
+                    >
+                      <i className="bi bi-plus-circle"></i>
+                    </AddButton>
+                  </LibrarySongCard>
+                ))
               )}
             </SongLibraryList>
           </SongLibraryPanel>
@@ -665,9 +675,8 @@ const SetlistSongsList = styled.div`
   gap: ${theme.space[3]};
 `;
 
-const LibrarySongCard = styled.div<{ $isAdded: boolean }>`
-  background: ${(props) =>
-    props.$isAdded ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+const LibrarySongCard = styled.div`
+  background: ${theme.colors.dark.bg.primary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
@@ -675,11 +684,9 @@ const LibrarySongCard = styled.div<{ $isAdded: boolean }>`
   align-items: center;
   gap: ${theme.space[3]};
   transition: all ${theme.transitions.fast} ease;
-  opacity: ${(props) => (props.$isAdded ? "0.6" : "1")};
 
   &:hover {
-    border-color: ${(props) =>
-      props.$isAdded ? theme.colors.dark.border.default : theme.colors.brand.primary};
+    border-color: ${theme.colors.brand.primary};
   }
 `;
 
@@ -822,8 +829,7 @@ const SongActions = styled.div`
 const AddButton = styled.button`
   background: transparent;
   border: 1px solid ${theme.colors.dark.border.default};
-  color: ${(props) =>
-    props.disabled ? theme.colors.semantic.success : theme.colors.dark.text.secondary};
+  color: ${theme.colors.dark.text.secondary};
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -835,15 +841,10 @@ const AddButton = styled.button`
   flex-shrink: 0;
   font-size: ${theme.fontSizes.bodyLg};
 
-  &:hover:not(:disabled) {
+  &:hover {
     background: ${theme.colors.dark.bg.elevated};
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    border-color: ${theme.colors.semantic.success};
   }
 `;
 
