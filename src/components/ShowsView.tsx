@@ -9,6 +9,7 @@ import { getBandShows, deleteShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { NewShowForm } from "./NewShowForm";
 import { ShowList } from "./ShowList";
+import { ShowCalendar } from "./ShowCalendar";
 import { EditShowModal } from "./EditShowModal";
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 type FilterType = "all" | "upcoming" | "past";
+type ViewMode = "list" | "calendar";
 
 const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const [shows, setShows] = useState<Show[]>([]);
@@ -24,6 +26,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const [editingShow, setEditingShow] = useState<Show | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [filter, setFilter] = useState<FilterType>("upcoming");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   const loadShows = async () => {
     if (!selectedBand) {
@@ -155,35 +158,56 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
         <ContentSection>
           <NewShowForm bandId={selectedBand.id} onShowCreated={loadShows} />
 
-          <FilterSection>
-            <FilterLabel>Filter:</FilterLabel>
-            <ButtonGroup>
-              <FilterButton
-                $active={filter === "upcoming"}
-                onClick={() => setFilter("upcoming")}
+          <ControlsSection>
+            <FilterSection>
+              <FilterLabel>Filter:</FilterLabel>
+              <ButtonGroup>
+                <FilterButton
+                  $active={filter === "upcoming"}
+                  onClick={() => setFilter("upcoming")}
+                >
+                  Upcoming ({upcomingCount})
+                </FilterButton>
+                <FilterButton
+                  $active={filter === "past"}
+                  onClick={() => setFilter("past")}
+                >
+                  Past ({pastCount})
+                </FilterButton>
+                <FilterButton
+                  $active={filter === "all"}
+                  onClick={() => setFilter("all")}
+                >
+                  All ({shows.length})
+                </FilterButton>
+              </ButtonGroup>
+            </FilterSection>
+
+            <ViewToggle>
+              <ViewToggleButton
+                $active={viewMode === "list"}
+                onClick={() => setViewMode("list")}
+                title="List view"
               >
-                Upcoming ({upcomingCount})
-              </FilterButton>
-              <FilterButton
-                $active={filter === "past"}
-                onClick={() => setFilter("past")}
+                <i className="bi bi-list-ul"></i>
+              </ViewToggleButton>
+              <ViewToggleButton
+                $active={viewMode === "calendar"}
+                onClick={() => setViewMode("calendar")}
+                title="Calendar view"
               >
-                Past ({pastCount})
-              </FilterButton>
-              <FilterButton
-                $active={filter === "all"}
-                onClick={() => setFilter("all")}
-              >
-                All ({shows.length})
-              </FilterButton>
-            </ButtonGroup>
-          </FilterSection>
+                <i className="bi bi-calendar3"></i>
+              </ViewToggleButton>
+            </ViewToggle>
+          </ControlsSection>
 
           {loading ? (
             <LoadingContainer>
               <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
               <LoadingText>Loading shows...</LoadingText>
             </LoadingContainer>
+          ) : viewMode === "calendar" ? (
+            <ShowCalendar shows={shows} onEdit={handleEditShow} />
           ) : filteredShows.length === 0 ? (
             <EmptyState>
               <EmptyIcon>
@@ -332,12 +356,58 @@ const ContentSection = styled.div`
   margin: 0 auto;
 `;
 
+const ControlsSection = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[4]};
+  margin-top: ${theme.space[6]};
+  margin-bottom: ${theme.space[4]};
+  flex-wrap: wrap;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
 const FilterSection = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[3]};
-  margin-top: ${theme.space[6]};
-  margin-bottom: ${theme.space[4]};
+`;
+
+const ViewToggle = styled.div`
+  display: flex;
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  overflow: hidden;
+`;
+
+const ViewToggleButton = styled.button<{ $active: boolean }>`
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : "transparent"};
+  border: none;
+  color: ${(props) =>
+    props.$active ? "white" : theme.colors.dark.text.secondary};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.tertiary};
+    color: ${(props) =>
+      props.$active ? "white" : theme.colors.brand.primary};
+  }
 `;
 
 const FilterLabel = styled.span`
