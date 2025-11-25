@@ -3,11 +3,98 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
 import styled from "styled-components";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist } from "../services/setlistsService";
-import type { Setlist } from "../services/setlistsService";
+import { getSetlist, updateSetlist } from "../services/setlistsService";
+import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+
+// Sortable song card component for reorder mode
+interface SortableSongCardProps {
+  song: Song;
+  index: number;
+  notes?: string;
+  formatDuration: (seconds: number) => string;
+}
+
+const SortableSongCard: FC<SortableSongCardProps> = ({
+  song,
+  index,
+  notes,
+  formatDuration,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: song.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <SongCard ref={setNodeRef} style={style} $isDragging={isDragging}>
+      <DragHandle {...attributes} {...listeners}>
+        <i className="bi bi-grip-vertical"></i>
+      </DragHandle>
+      <SongPosition>{index + 1}</SongPosition>
+      <SongInfo>
+        <SongTitle>{song.title}</SongTitle>
+        {song.artist && <SongArtist>{song.artist}</SongArtist>}
+        {notes && (
+          <SongNotes>
+            <NotesIcon>
+              <i className="bi bi-sticky"></i>
+            </NotesIcon>
+            {notes}
+          </SongNotes>
+        )}
+      </SongInfo>
+      <SongMetadata>
+        {song.key && (
+          <MetaBadge>
+            <i className="bi bi-music-note-beamed"></i>
+            {song.key}
+          </MetaBadge>
+        )}
+        {song.tempo && (
+          <MetaBadge>
+            <i className="bi bi-speedometer2"></i>
+            {song.tempo} BPM
+          </MetaBadge>
+        )}
+        {song.duration && (
+          <MetaBadge>
+            <i className="bi bi-clock"></i>
+            {formatDuration(song.duration)}
+          </MetaBadge>
+        )}
+      </SongMetadata>
+    </SongCard>
+  );
+};
 
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
@@ -16,6 +103,75 @@ const SetlistDetailView: FC = () => {
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSongs((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleSaveOrder = async () => {
+    if (!setlist) return;
+
+    setSaving(true);
+    try {
+      // Create updated setlist songs with new positions
+      const updatedSetlistSongs: SetlistSong[] = songs.map((song, index) => {
+        const existingSong = setlist.songs.find((s) => s.song_id === song.id);
+        return {
+          song_id: song.id,
+          position: index,
+          notes: existingSong?.notes || "",
+        };
+      });
+
+      await updateSetlist(setlist.id, { songs: updatedSetlistSongs });
+
+      // Update local setlist state
+      setSetlist({
+        ...setlist,
+        songs: updatedSetlistSongs,
+      });
+
+      setIsReorderMode(false);
+    } catch (error) {
+      console.error("Failed to save order:", error);
+      alert("Failed to save order. Please try again.");
+    }
+    setSaving(false);
+  };
+
+  const handleCancelReorder = () => {
+    // Restore original order from setlist
+    if (setlist) {
+      const orderedSongs = setlist.songs
+        .sort((a, b) => a.position - b.position)
+        .map((setlistSong) => songs.find((s) => s.id === setlistSong.song_id))
+        .filter((song): song is Song => song !== undefined);
+      setSongs(orderedSongs);
+    }
+    setIsReorderMode(false);
+  };
 
   useEffect(() => {
     if (!setlistId) return;
@@ -110,21 +266,62 @@ const SetlistDetailView: FC = () => {
               Back to Setlists
             </BackLink>
             <ActionButtons>
-              <ActionButton
-                onClick={() => navigate(`/setlists/${setlistId}/edit`)}
-                $variant="edit"
-              >
-                <i className="bi bi-pencil"></i>
-                Edit Setlist
-              </ActionButton>
-              <ActionButton
-                onClick={() => navigate(`/setlists/${setlistId}/perform`)}
-                $variant="perform"
-                disabled={songs.length === 0}
-              >
-                <i className="bi bi-play-circle"></i>
-                Start Performance
-              </ActionButton>
+              {isReorderMode ? (
+                <>
+                  <ActionButton
+                    onClick={handleCancelReorder}
+                    $variant="edit"
+                    disabled={saving}
+                  >
+                    <i className="bi bi-x-lg"></i>
+                    Cancel
+                  </ActionButton>
+                  <ActionButton
+                    onClick={handleSaveOrder}
+                    $variant="perform"
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Spinner size="sm" style={{ marginRight: "8px" }} />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-lg"></i>
+                        Save Order
+                      </>
+                    )}
+                  </ActionButton>
+                </>
+              ) : (
+                <>
+                  <ActionButton
+                    onClick={() => setIsReorderMode(true)}
+                    $variant="edit"
+                    disabled={songs.length < 2}
+                    title={songs.length < 2 ? "Need at least 2 songs to reorder" : "Reorder songs"}
+                  >
+                    <i className="bi bi-arrow-down-up"></i>
+                    Reorder
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => navigate(`/setlists/${setlistId}/edit`)}
+                    $variant="edit"
+                  >
+                    <i className="bi bi-pencil"></i>
+                    Edit Setlist
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => navigate(`/setlists/${setlistId}/perform`)}
+                    $variant="perform"
+                    disabled={songs.length === 0}
+                  >
+                    <i className="bi bi-play-circle"></i>
+                    Start Performance
+                  </ActionButton>
+                </>
+              )}
             </ActionButtons>
           </HeaderTop>
 
@@ -160,6 +357,13 @@ const SetlistDetailView: FC = () => {
           </MetadataBar>
         </Header>
 
+        {isReorderMode && (
+          <ReorderBanner>
+            <i className="bi bi-info-circle"></i>
+            Drag songs to reorder. Click "Save Order" when done.
+          </ReorderBanner>
+        )}
+
         {songs.length === 0 ? (
           <EmptyState>
             <EmptyIcon>
@@ -168,6 +372,29 @@ const SetlistDetailView: FC = () => {
             <EmptyTitle>No Songs Yet</EmptyTitle>
             <EmptyText>This setlist doesn't have any songs. Click "Edit Setlist" to add songs.</EmptyText>
           </EmptyState>
+        ) : isReorderMode ? (
+          <SongsList>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={songs.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {songs.map((song, index) => (
+                  <SortableSongCard
+                    key={song.id}
+                    song={song}
+                    index={index}
+                    notes={getSetlistSongNotes(song.id)}
+                    formatDuration={formatDuration}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          </SongsList>
         ) : (
           <SongsList>
             {songs.map((song, index) => {
@@ -459,21 +686,44 @@ const EmptyText = styled.p`
   margin: 0;
 `;
 
+const ReorderBanner = styled.div`
+  background: ${theme.colors.brand.primary}20;
+  border: 1px solid ${theme.colors.brand.primary};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  margin-bottom: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.brand.primary};
+  font-weight: ${theme.fontWeights.medium};
+
+  i {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+`;
+
 const SongsList = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[3]};
 `;
 
-const SongCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+const SongCard = styled.div<{ $isDragging?: boolean }>`
+  background: ${(props) =>
+    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.secondary};
+  border: 1px solid ${(props) =>
+    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[4]};
   display: flex;
   align-items: flex-start;
   gap: ${theme.space[4]};
   transition: all ${theme.transitions.fast} ease;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
@@ -483,6 +733,32 @@ const SongCard = styled.div`
   @media (max-width: ${theme.breakpoints.md}) {
     flex-direction: column;
     gap: ${theme.space[3]};
+  }
+`;
+
+const DragHandle = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.dark.text.tertiary};
+  width: 24px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+  font-size: ${theme.fontSizes.h3};
+  padding: 0;
+  touch-action: none;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:active {
+    cursor: grabbing;
+    color: ${theme.colors.brand.primary};
   }
 `;
 

@@ -3,11 +3,81 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist } from "../services/setlistsService";
-import type { Setlist } from "../services/setlistsService";
+import { getSetlist, updateSetlist } from "../services/setlistsService";
+import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+
+// Sortable song list item for reorder mode
+interface SortableSongListItemProps {
+  song: Song;
+  index: number;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const SortableSongListItem: FC<SortableSongListItemProps> = ({
+  song,
+  index,
+  isActive,
+  onClick,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: song.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <SongListItem
+      ref={setNodeRef}
+      style={style}
+      $active={isActive}
+      $isDragging={isDragging}
+      onClick={onClick}
+    >
+      <SongListDragHandle {...attributes} {...listeners} onClick={(e) => e.stopPropagation()}>
+        <i className="bi bi-grip-vertical"></i>
+      </SongListDragHandle>
+      <SongListPosition>{index + 1}</SongListPosition>
+      <SongListInfo>
+        <SongListTitle>{song.title}</SongListTitle>
+        {song.artist && <SongListArtist>{song.artist}</SongListArtist>}
+      </SongListInfo>
+      {isActive && (
+        <SongListIndicator>
+          <i className="bi bi-play-fill"></i>
+        </SongListIndicator>
+      )}
+    </SongListItem>
+  );
+};
 
 const SetlistPerformanceView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
@@ -20,6 +90,93 @@ const SetlistPerformanceView: FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSongs((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        const newSongs = arrayMove(items, oldIndex, newIndex);
+
+        // Adjust current index if needed
+        if (currentIndex === oldIndex) {
+          setCurrentIndex(newIndex);
+        } else if (oldIndex < currentIndex && newIndex >= currentIndex) {
+          setCurrentIndex(currentIndex - 1);
+        } else if (oldIndex > currentIndex && newIndex <= currentIndex) {
+          setCurrentIndex(currentIndex + 1);
+        }
+
+        return newSongs;
+      });
+    }
+  };
+
+  const handleSaveOrder = async () => {
+    if (!setlist) return;
+
+    setSaving(true);
+    try {
+      const updatedSetlistSongs: SetlistSong[] = songs.map((song, index) => {
+        const existingSong = setlist.songs.find((s) => s.song_id === song.id);
+        return {
+          song_id: song.id,
+          position: index,
+          notes: existingSong?.notes || "",
+        };
+      });
+
+      await updateSetlist(setlist.id, { songs: updatedSetlistSongs });
+
+      setSetlist({
+        ...setlist,
+        songs: updatedSetlistSongs,
+      });
+
+      setIsReorderMode(false);
+    } catch (error) {
+      console.error("Failed to save order:", error);
+      alert("Failed to save order. Please try again.");
+    }
+    setSaving(false);
+  };
+
+  const handleCancelReorder = () => {
+    if (setlist) {
+      const orderedSongs = setlist.songs
+        .sort((a, b) => a.position - b.position)
+        .map((setlistSong) => songs.find((s) => s.id === setlistSong.song_id))
+        .filter((song): song is Song => song !== undefined);
+      setSongs(orderedSongs);
+      setCurrentIndex(0);
+    }
+    setIsReorderMode(false);
+  };
+
+  const toggleReorderMode = () => {
+    if (isReorderMode) {
+      handleCancelReorder();
+    } else {
+      setShowSongList(true);
+      setIsReorderMode(true);
+    }
+  };
 
   useEffect(() => {
     if (!setlistId) return;
@@ -213,34 +370,66 @@ const SetlistPerformanceView: FC = () => {
           <SongCounter>
             {currentIndex + 1} / {songs.length}
           </SongCounter>
-          <ViewToggleGroup>
-            <ViewToggleButton
-              onClick={() => setContentView("chords")}
-              $active={contentView === "chords"}
-              title="Show Chords"
-            >
-              <i className="bi bi-music-note"></i>
-              Chords
-            </ViewToggleButton>
-            <ViewToggleButton
-              onClick={() => setContentView("lyrics")}
-              $active={contentView === "lyrics"}
-              title="Show Lyrics"
-            >
-              <i className="bi bi-mic"></i>
-              Lyrics
-            </ViewToggleButton>
-          </ViewToggleGroup>
-          <IconButton
-            onClick={() => setShowSongList(!showSongList)}
-            title="Song List (L)"
-            $active={showSongList}
-          >
-            <i className="bi bi-list-ul"></i>
-          </IconButton>
-          <IconButton onClick={toggleFullscreen} title="Fullscreen (F)">
-            <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
-          </IconButton>
+          {isReorderMode ? (
+            <ReorderActions>
+              <ReorderActionButton onClick={handleCancelReorder} $variant="cancel" disabled={saving}>
+                <i className="bi bi-x-lg"></i>
+                Cancel
+              </ReorderActionButton>
+              <ReorderActionButton onClick={handleSaveOrder} $variant="save" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Spinner size="sm" style={{ marginRight: "4px" }} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-lg"></i>
+                    Save
+                  </>
+                )}
+              </ReorderActionButton>
+            </ReorderActions>
+          ) : (
+            <>
+              <ViewToggleGroup>
+                <ViewToggleButton
+                  onClick={() => setContentView("chords")}
+                  $active={contentView === "chords"}
+                  title="Show Chords"
+                >
+                  <i className="bi bi-music-note"></i>
+                  Chords
+                </ViewToggleButton>
+                <ViewToggleButton
+                  onClick={() => setContentView("lyrics")}
+                  $active={contentView === "lyrics"}
+                  title="Show Lyrics"
+                >
+                  <i className="bi bi-mic"></i>
+                  Lyrics
+                </ViewToggleButton>
+              </ViewToggleGroup>
+              <IconButton
+                onClick={toggleReorderMode}
+                title="Reorder Songs (R)"
+                $active={false}
+                disabled={songs.length < 2}
+              >
+                <i className="bi bi-arrow-down-up"></i>
+              </IconButton>
+              <IconButton
+                onClick={() => setShowSongList(!showSongList)}
+                title="Song List (L)"
+                $active={showSongList}
+              >
+                <i className="bi bi-list-ul"></i>
+              </IconButton>
+              <IconButton onClick={toggleFullscreen} title="Fullscreen (F)">
+                <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
+              </IconButton>
+            </>
+          )}
         </TopBarRight>
       </TopBar>
 
@@ -249,26 +438,54 @@ const SetlistPerformanceView: FC = () => {
         {/* Song List Sidebar */}
         {showSongList && (
           <SongListSidebar>
-            <SidebarHeader>Setlist Songs</SidebarHeader>
+            <SidebarHeader>
+              {isReorderMode ? "Reorder Songs" : "Setlist Songs"}
+              {isReorderMode && (
+                <SidebarHint>Drag to reorder</SidebarHint>
+              )}
+            </SidebarHeader>
             <SongListItems>
-              {songs.map((song, index) => (
-                <SongListItem
-                  key={song.id}
-                  $active={index === currentIndex}
-                  onClick={() => handleGoToSong(index)}
+              {isReorderMode ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
                 >
-                  <SongListPosition>{index + 1}</SongListPosition>
-                  <SongListInfo>
-                    <SongListTitle>{song.title}</SongListTitle>
-                    {song.artist && <SongListArtist>{song.artist}</SongListArtist>}
-                  </SongListInfo>
-                  {index === currentIndex && (
-                    <SongListIndicator>
-                      <i className="bi bi-play-fill"></i>
-                    </SongListIndicator>
-                  )}
-                </SongListItem>
-              ))}
+                  <SortableContext
+                    items={songs.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {songs.map((song, index) => (
+                      <SortableSongListItem
+                        key={song.id}
+                        song={song}
+                        index={index}
+                        isActive={index === currentIndex}
+                        onClick={() => handleGoToSong(index)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                songs.map((song, index) => (
+                  <SongListItem
+                    key={song.id}
+                    $active={index === currentIndex}
+                    onClick={() => handleGoToSong(index)}
+                  >
+                    <SongListPosition>{index + 1}</SongListPosition>
+                    <SongListInfo>
+                      <SongListTitle>{song.title}</SongListTitle>
+                      {song.artist && <SongListArtist>{song.artist}</SongListArtist>}
+                    </SongListInfo>
+                    {index === currentIndex && (
+                      <SongListIndicator>
+                        <i className="bi bi-play-fill"></i>
+                      </SongListIndicator>
+                    )}
+                  </SongListItem>
+                ))
+              )}
             </SongListItems>
           </SongListSidebar>
         )}
@@ -514,12 +731,52 @@ const IconButton = styled.button<{ $active?: boolean }>`
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.bodyLg};
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${(props) =>
       props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
     border-color: ${theme.colors.brand.primary};
     color: ${(props) =>
       props.$active ? "white" : theme.colors.brand.primary};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ReorderActions = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+`;
+
+const ReorderActionButton = styled.button<{ $variant: "cancel" | "save" }>`
+  background: ${(props) =>
+    props.$variant === "save" ? theme.colors.semantic.success : "transparent"};
+  border: 1px solid ${(props) =>
+    props.$variant === "save" ? theme.colors.semantic.success : theme.colors.dark.border.default};
+  color: ${(props) =>
+    props.$variant === "save" ? "white" : theme.colors.dark.text.secondary};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+
+  &:hover:not(:disabled) {
+    background: ${(props) =>
+      props.$variant === "save" ? "#059669" : theme.colors.dark.bg.elevated};
+    border-color: ${(props) =>
+      props.$variant === "save" ? "#059669" : theme.colors.dark.border.strong};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
@@ -553,6 +810,18 @@ const SidebarHeader = styled.div`
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.dark.text.primary};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const SidebarHint = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.brand.primary};
+  background: ${theme.colors.brand.primary}20;
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
 `;
 
 const SongListItems = styled.div`
@@ -561,12 +830,16 @@ const SongListItems = styled.div`
   padding: ${theme.space[2]};
 `;
 
-const SongListItem = styled.button<{ $active: boolean }>`
+const SongListItem = styled.button<{ $active: boolean; $isDragging?: boolean }>`
   width: 100%;
   background: ${(props) =>
-    props.$active ? theme.colors.brand.primary : "transparent"};
+    props.$isDragging
+      ? theme.colors.dark.bg.elevated
+      : props.$active
+      ? theme.colors.brand.primary
+      : "transparent"};
   border: 1px solid ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$isDragging || props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
   color: ${(props) =>
     props.$active ? "white" : theme.colors.dark.text.primary};
   padding: ${theme.space[3]};
@@ -578,11 +851,36 @@ const SongListItem = styled.button<{ $active: boolean }>`
   transition: all ${theme.transitions.fast} ease;
   margin-bottom: ${theme.space[2]};
   text-align: left;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
 
   &:hover {
     background: ${(props) =>
       props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
     border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SongListDragHandle = styled.div`
+  color: ${theme.colors.dark.text.tertiary};
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+  font-size: ${theme.fontSizes.bodyLg};
+  touch-action: none;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:active {
+    cursor: grabbing;
+    color: ${theme.colors.brand.primary};
   }
 `;
 
