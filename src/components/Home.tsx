@@ -1,14 +1,274 @@
+import { useState, useEffect } from "react";
 import { Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
 import { Logo } from "./Logo";
 import { useBandContext } from "../context/useBandContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PendingInvitations } from "./PendingInvitations";
+import { getBandSongs } from "../services/songsService";
+import type { Song } from "../services/songsService";
+import { getBandSetlists } from "../services/setlistsService";
+import type { Setlist } from "../services/setlistsService";
+import { getUpcomingShows } from "../services/showsService";
+import type { Show } from "../services/showsService";
 
 const Home = () => {
-  const { user, refreshBands } = useBandContext();
+  const { user, selectedBand, refreshBands } = useBandContext();
+  const navigate = useNavigate();
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [setlists, setSetlists] = useState<Setlist[]>([]);
+  const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (user && selectedBand) {
+      setLoading(true);
+      Promise.all([
+        getBandSongs(selectedBand.id),
+        getBandSetlists(selectedBand.id),
+        getUpcomingShows(selectedBand.id),
+      ])
+        .then(([songsData, setlistsData, showsData]) => {
+          setSongs(songsData);
+          setSetlists(setlistsData);
+          setUpcomingShows(showsData);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [user, selectedBand]);
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString + "T00:00:00");
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (timeString: string): string => {
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const getDaysUntil = (eventDate: string): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const event = new Date(eventDate + "T00:00:00");
+    const diffTime = event.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays <= 7) return `In ${diffDays} days`;
+    return `In ${Math.ceil(diffDays / 7)} weeks`;
+  };
+
+  // Show dashboard for authenticated users with a selected band
+  if (user && selectedBand) {
+    return (
+      <HomeWrapper>
+        <Container style={{ marginTop: theme.space[6] }}>
+          <PendingInvitations onInvitationAccepted={refreshBands} />
+        </Container>
+
+        <DashboardSection>
+          <Container>
+            <DashboardHeader>
+              <WelcomeText>
+                <WelcomeTitle>Welcome back!</WelcomeTitle>
+                <BandNameText>
+                  <i className="bi bi-people-fill"></i> {selectedBand.name}
+                </BandNameText>
+              </WelcomeText>
+            </DashboardHeader>
+
+            {loading ? (
+              <LoadingState>
+                <span className="spinner-border spinner-border-sm me-2"></span>
+                Loading dashboard...
+              </LoadingState>
+            ) : (
+              <>
+                {/* Quick Stats */}
+                <StatsGrid>
+                  <StatCard as={Link} to="/songs">
+                    <StatIcon $color={theme.colors.brand.primary}>
+                      <i className="bi bi-music-note-list"></i>
+                    </StatIcon>
+                    <StatInfo>
+                      <StatNumber>{songs.length}</StatNumber>
+                      <StatLabel>Songs</StatLabel>
+                    </StatInfo>
+                  </StatCard>
+
+                  <StatCard as={Link} to="/setlists">
+                    <StatIcon $color={theme.colors.accent.cyan}>
+                      <i className="bi bi-list-ul"></i>
+                    </StatIcon>
+                    <StatInfo>
+                      <StatNumber>{setlists.length}</StatNumber>
+                      <StatLabel>Setlists</StatLabel>
+                    </StatInfo>
+                  </StatCard>
+
+                  <StatCard as={Link} to="/shows">
+                    <StatIcon $color={theme.colors.accent.amber}>
+                      <i className="bi bi-calendar-event"></i>
+                    </StatIcon>
+                    <StatInfo>
+                      <StatNumber>{upcomingShows.length}</StatNumber>
+                      <StatLabel>Upcoming Shows</StatLabel>
+                    </StatInfo>
+                  </StatCard>
+                </StatsGrid>
+
+                {/* Widgets Grid */}
+                <WidgetsGrid>
+                  {/* Upcoming Shows Widget */}
+                  <Widget>
+                    <WidgetHeader>
+                      <WidgetTitle>
+                        <i className="bi bi-calendar-event"></i>
+                        Upcoming Shows
+                      </WidgetTitle>
+                      <WidgetAction as={Link} to="/shows">
+                        View all <i className="bi bi-arrow-right"></i>
+                      </WidgetAction>
+                    </WidgetHeader>
+                    <WidgetContent>
+                      {upcomingShows.length === 0 ? (
+                        <EmptyState>
+                          <i className="bi bi-calendar-x"></i>
+                          <p>No upcoming shows scheduled</p>
+                          <EmptyStateAction as={Link} to="/shows">
+                            Schedule a show
+                          </EmptyStateAction>
+                        </EmptyState>
+                      ) : (
+                        <ShowsList>
+                          {upcomingShows.slice(0, 4).map((show) => (
+                            <ShowItem key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
+                              <ShowDate>
+                                <ShowDay>
+                                  {new Date(show.event_date + "T00:00:00").getDate()}
+                                </ShowDay>
+                                <ShowMonth>
+                                  {new Date(show.event_date + "T00:00:00").toLocaleDateString("en-US", {
+                                    month: "short",
+                                  })}
+                                </ShowMonth>
+                              </ShowDate>
+                              <ShowDetails>
+                                <ShowName>{show.name}</ShowName>
+                                {show.venue && <ShowVenue>{show.venue}</ShowVenue>}
+                                <ShowMeta>
+                                  <span>{formatDate(show.event_date)}</span>
+                                  {show.event_time && <span> at {formatTime(show.event_time)}</span>}
+                                  <CountdownBadge>{getDaysUntil(show.event_date)}</CountdownBadge>
+                                </ShowMeta>
+                              </ShowDetails>
+                            </ShowItem>
+                          ))}
+                        </ShowsList>
+                      )}
+                    </WidgetContent>
+                  </Widget>
+
+                  {/* Recent Songs Widget */}
+                  <Widget>
+                    <WidgetHeader>
+                      <WidgetTitle>
+                        <i className="bi bi-music-note-list"></i>
+                        Recent Songs
+                      </WidgetTitle>
+                      <WidgetAction as={Link} to="/songs">
+                        View all <i className="bi bi-arrow-right"></i>
+                      </WidgetAction>
+                    </WidgetHeader>
+                    <WidgetContent>
+                      {songs.length === 0 ? (
+                        <EmptyState>
+                          <i className="bi bi-music-note"></i>
+                          <p>No songs in your library yet</p>
+                          <EmptyStateAction as={Link} to="/songs">
+                            Add your first song
+                          </EmptyStateAction>
+                        </EmptyState>
+                      ) : (
+                        <SongsList>
+                          {songs.slice(0, 5).map((song) => (
+                            <SongItem key={song.id}>
+                              {song.album_art ? (
+                                <SongArt src={song.album_art} alt={song.title} />
+                              ) : (
+                                <SongArtPlaceholder>
+                                  <i className="bi bi-music-note"></i>
+                                </SongArtPlaceholder>
+                              )}
+                              <SongInfo>
+                                <SongTitle>{song.title}</SongTitle>
+                                {song.artist && <SongArtist>{song.artist}</SongArtist>}
+                              </SongInfo>
+                              {song.key && <SongKey>{song.key}</SongKey>}
+                            </SongItem>
+                          ))}
+                        </SongsList>
+                      )}
+                    </WidgetContent>
+                  </Widget>
+                </WidgetsGrid>
+
+                {/* Quick Actions */}
+                <QuickActionsSection>
+                  <SectionTitle>Quick Actions</SectionTitle>
+                  <QuickActionsGrid>
+                    <QuickAction as={Link} to="/songs">
+                      <QuickActionIcon $color={theme.colors.brand.primary}>
+                        <i className="bi bi-plus-circle"></i>
+                      </QuickActionIcon>
+                      <QuickActionText>Add Song</QuickActionText>
+                    </QuickAction>
+
+                    <QuickAction as={Link} to="/setlists">
+                      <QuickActionIcon $color={theme.colors.accent.cyan}>
+                        <i className="bi bi-list-ul"></i>
+                      </QuickActionIcon>
+                      <QuickActionText>Create Setlist</QuickActionText>
+                    </QuickAction>
+
+                    <QuickAction as={Link} to="/shows">
+                      <QuickActionIcon $color={theme.colors.accent.amber}>
+                        <i className="bi bi-calendar-plus"></i>
+                      </QuickActionIcon>
+                      <QuickActionText>Schedule Show</QuickActionText>
+                    </QuickAction>
+
+                    <QuickAction as={Link} to={`/bands/${selectedBand.id}/settings`}>
+                      <QuickActionIcon $color={theme.colors.semantic.info}>
+                        <i className="bi bi-gear"></i>
+                      </QuickActionIcon>
+                      <QuickActionText>Band Settings</QuickActionText>
+                    </QuickAction>
+                  </QuickActionsGrid>
+                </QuickActionsSection>
+              </>
+            )}
+          </Container>
+        </DashboardSection>
+      </HomeWrapper>
+    );
+  }
+
+  // Landing page for non-authenticated users
   return (
     <HomeWrapper>
       {user && (
@@ -409,6 +669,440 @@ const CTABottomSubtitle = styled.p`
   @media (max-width: ${theme.breakpoints.md}) {
     font-size: ${theme.fontSizes.body};
   }
+`;
+
+// Dashboard Styled Components
+
+const DashboardSection = styled.section`
+  flex: 1;
+  padding: ${theme.space[6]} 0 ${theme.space[12]};
+  background: ${theme.colors.dark.bg.primary};
+`;
+
+const DashboardHeader = styled.div`
+  margin-bottom: ${theme.space[8]};
+`;
+
+const WelcomeText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
+`;
+
+const WelcomeTitle = styled.h1`
+  font-size: ${theme.fontSizes.displayMd};
+  font-weight: ${theme.fontWeights.bold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.h1};
+  }
+`;
+
+const BandNameText = styled.span`
+  font-size: ${theme.fontSizes.bodyLg};
+  color: ${theme.colors.brand.primary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+`;
+
+const LoadingState = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.space[12]};
+  color: ${theme.colors.dark.text.secondary};
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${theme.space[4]};
+  margin-bottom: ${theme.space[8]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StatCard = styled.div`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[5]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  text-decoration: none;
+  color: inherit;
+  transition: all ${theme.transitions.base} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    transform: translateY(-2px);
+    box-shadow: ${theme.shadows.md};
+  }
+`;
+
+const StatIcon = styled.div<{ $color: string }>`
+  width: 48px;
+  height: 48px;
+  background: ${(props) => props.$color}20;
+  border-radius: ${theme.radius.md};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  color: ${(props) => props.$color};
+`;
+
+const StatInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const StatNumber = styled.span`
+  font-size: ${theme.fontSizes.h1};
+  font-weight: ${theme.fontWeights.bold};
+  color: ${theme.colors.dark.text.primary};
+  line-height: 1;
+`;
+
+const StatLabel = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+`;
+
+const WidgetsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: ${theme.space[6]};
+  margin-bottom: ${theme.space[8]};
+
+  @media (max-width: ${theme.breakpoints.lg}) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Widget = styled.div`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.lg};
+  overflow: hidden;
+`;
+
+const WidgetHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${theme.space[4]};
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: ${theme.colors.dark.bg.tertiary};
+`;
+
+const WidgetTitle = styled.h3`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const WidgetAction = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  text-decoration: none;
+  transition: color ${theme.transitions.fast} ease;
+
+  &:hover {
+    color: ${theme.colors.brand.primaryHover};
+  }
+`;
+
+const WidgetContent = styled.div`
+  padding: ${theme.space[4]};
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.space[8]} ${theme.space[4]};
+  text-align: center;
+
+  i {
+    font-size: ${theme.fontSizes.displayMd};
+    color: ${theme.colors.dark.text.disabled};
+    margin-bottom: ${theme.space[3]};
+  }
+
+  p {
+    color: ${theme.colors.dark.text.tertiary};
+    margin: 0 0 ${theme.space[3]} 0;
+    font-size: ${theme.fontSizes.bodySm};
+  }
+`;
+
+const EmptyStateAction = styled.button`
+  background: transparent;
+  border: 1px solid ${theme.colors.brand.primary};
+  color: ${theme.colors.brand.primary};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  text-decoration: none;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.brand.primary};
+    color: white;
+  }
+`;
+
+const ShowsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const ShowItem = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[3]};
+  background: ${theme.colors.dark.bg.tertiary};
+  border-radius: ${theme.radius.md};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.dark.bg.elevated};
+    transform: translateX(4px);
+  }
+`;
+
+const ShowDate = styled.div`
+  width: 48px;
+  height: 48px;
+  background: ${theme.gradients.brandPrimary};
+  border-radius: ${theme.radius.md};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
+const ShowDay = styled.span`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.bold};
+  color: white;
+  line-height: 1;
+`;
+
+const ShowMonth = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+`;
+
+const ShowDetails = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ShowName = styled.div`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[1]};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ShowVenue = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[1]};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ShowMeta = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  flex-wrap: wrap;
+`;
+
+const CountdownBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background: ${theme.colors.accent.amber}20;
+  color: ${theme.colors.accent.amber};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+`;
+
+const SongsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+`;
+
+const SongItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[2]};
+  border-radius: ${theme.radius.md};
+  transition: background ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.dark.bg.tertiary};
+  }
+`;
+
+const SongArt = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.radius.sm};
+  object-fit: cover;
+`;
+
+const SongArtPlaceholder = styled.div`
+  width: 40px;
+  height: 40px;
+  background: ${theme.colors.dark.bg.tertiary};
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${theme.colors.dark.text.disabled};
+`;
+
+const SongInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const SongTitle = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.dark.text.primary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const SongArtist = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const SongKey = styled.span`
+  background: ${theme.colors.dark.bg.tertiary};
+  color: ${theme.colors.dark.text.secondary};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+`;
+
+const QuickActionsSection = styled.div`
+  margin-top: ${theme.space[4]};
+`;
+
+const QuickActionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: ${theme.space[4]};
+
+  @media (max-width: ${theme.breakpoints.lg}) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const QuickAction = styled.button`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[5]};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${theme.space[3]};
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: all ${theme.transitions.base} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    transform: translateY(-2px);
+    box-shadow: ${theme.shadows.md};
+    background: ${theme.colors.dark.bg.elevated};
+  }
+`;
+
+const QuickActionIcon = styled.div<{ $color: string }>`
+  width: 48px;
+  height: 48px;
+  background: ${(props) => props.$color}20;
+  border-radius: ${theme.radius.md};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  color: ${(props) => props.$color};
+  transition: all ${theme.transitions.fast} ease;
+
+  ${QuickAction}:hover & {
+    background: ${(props) => props.$color};
+    color: white;
+  }
+`;
+
+const QuickActionText = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.dark.text.secondary};
 `;
 
 export default Home;
