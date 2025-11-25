@@ -313,6 +313,15 @@ const SetlistDetailView: FC = () => {
                     Edit Setlist
                   </ActionButton>
                   <ActionButton
+                    onClick={() => navigate(`/setlists/${setlistId}/print`)}
+                    $variant="edit"
+                    disabled={songs.length === 0}
+                    title="Print setlist"
+                  >
+                    <i className="bi bi-printer"></i>
+                    Print
+                  </ActionButton>
+                  <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
                     $variant="perform"
                     disabled={songs.length === 0}

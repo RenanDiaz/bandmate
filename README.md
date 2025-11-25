@@ -9,21 +9,26 @@
 
 ## ✨ Features
 
-### Current Implementation (Phase 1)
-- ✅ **Authentication** - GitHub OAuth integration via Supabase
-- ✅ **Band Management** - Create and switch between multiple bands
-- ✅ **Song Library** - Organize songs with title, artist, lyrics, and chords
+### Current Implementation
+- ✅ **Authentication** - GitHub and Google OAuth integration via Supabase
+- ✅ **Band Management** - Create, edit, delete bands with member invitations
+- ✅ **Song Library** - Full CRUD with title, artist, key, tempo, lyrics, chords, and Spotify metadata enrichment
+- ✅ **Setlists** - Create and organize setlists with drag-and-drop song ordering
+- ✅ **Setlist Detail View** - View setlist with song cards, reorder mode, and quick actions
+- ✅ **Performance Mode** - Full-screen distraction-free view for live performances with auto-scroll lyrics
+- ✅ **Reorder Mode** - Drag-and-drop song reordering in both detail and performance views
+- ✅ **Shows Management** - Schedule gigs with venue info, link setlists, calendar view
+- ✅ **Member Invitations** - Invite members to bands with pending invitation display
 - ✅ **State Management** - React Context API for centralized state
-- ✅ **Theme Support** - Dark and light mode toggle
+- ✅ **Theme Support** - Dark-first design optimized for stage environments
+- ✅ **Mobile Optimized** - Responsive design with touch-friendly controls
 - ✅ **Persistence** - LocalStorage for band selection across sessions
 
 ### Planned Features
-- 🎵 **Enhanced Song Management** - Key, tempo, attachments, version history
-- 📋 **Setlists** - Create and organize setlists with drag-and-drop
-- 📅 **Shows** - Schedule gigs and link them to setlists
-- 👥 **Collaboration** - Member roles (Owner, Admin, Member, Guest)
+- 🎵 **Song Attachments** - File uploads for scores and PDFs
+- 👥 **Member Roles** - Owner, Admin, Member, Guest permission levels
 - 🔗 **Guest Access** - Time-limited invitations for temporary members
-- 📱 **Mobile Optimized** - Responsive design for all devices
+- 📊 **Show History** - Track past performances and statistics
 
 ## 🚀 Tech Stack
 
@@ -32,6 +37,8 @@
 - **Backend:** Supabase (PostgreSQL, Authentication, Row Level Security)
 - **Routing:** React Router DOM v7
 - **State Management:** React Context API
+- **Drag & Drop:** @dnd-kit for sortable lists
+- **External APIs:** Spotify Web API for song metadata enrichment
 
 ## 📦 Installation
 
@@ -136,12 +143,17 @@ npm run lint         # Run ESLint
 bandmate/
 ├── src/
 │   ├── components/       # React components
-│   │   ├── About.tsx
 │   │   ├── BandList.tsx
 │   │   ├── BandSelector.tsx
 │   │   ├── Home.tsx
 │   │   ├── NewBandForm.tsx
 │   │   ├── NewSongForm.tsx
+│   │   ├── NewShowForm.tsx
+│   │   ├── SetlistEditor.tsx
+│   │   ├── SetlistDetailView.tsx
+│   │   ├── SetlistPerformanceView.tsx
+│   │   ├── SetlistsView.tsx
+│   │   ├── ShowsView.tsx
 │   │   ├── SongList.tsx
 │   │   └── SongsView.tsx
 │   ├── context/          # React Context
@@ -152,6 +164,8 @@ bandmate/
 │   │   └── supabaseClient.ts
 │   ├── services/         # API services
 │   │   ├── bandsService.ts
+│   │   ├── setlistsService.ts
+│   │   ├── showsService.ts
 │   │   └── songsService.ts
 │   ├── styles/           # Design tokens
 │   │   └── design-tokens.css
@@ -175,43 +189,51 @@ bandmate/
 
 ## 🗺️ Roadmap
 
-### Phase 1: Foundations ✅ (Current)
+### Phase 1: Foundations ✅
 - Project setup with React, TypeScript, and Vite
-- Authentication system
+- Authentication system (GitHub & Google OAuth)
 - Basic band and song management
 - Design system and documentation
 
-### Phase 2: Bands Module (In Progress)
-- Enhanced CRUD operations
-- Member roles and permissions
-- Band metadata (genre, location, etc.)
+### Phase 2: Bands Module ✅
+- Full CRUD operations for bands
+- Member invitation system
+- Pending invitations display in band selector
 
-### Phase 3: Songs Module Enhancement
+### Phase 3: Songs Module ✅
 - Extended metadata (key, tempo, genre)
-- File uploads for scores
-- Advanced search and filtering
+- Spotify API integration for metadata enrichment
+- Album artwork and external links
 
-### Phase 4: Setlists
-- Setlist creation with drag-and-drop
+### Phase 4: Setlists ✅
+- Setlist creation with drag-and-drop ordering
+- Setlist detail view with song cards
+- Reorder mode for quick adjustments
 - Link setlists to shows
-- Print/export functionality
 
-### Phase 5: Shows Management
-- Gig scheduling
-- Venue management
-- Calendar integration
+### Phase 5: Shows Management ✅
+- Gig scheduling with venue info
+- Calendar view with list/calendar toggle
+- Link shows to setlists
 
-### Phase 6: Guests & Invitations
-- Temporary access system
+### Phase 6: Performance Mode ✅
+- Full-screen distraction-free view
+- Auto-scroll lyrics with adjustable speed
+- Song navigation with keyboard shortcuts
+- Mobile-optimized controls
+- Reorder mode during performance
+
+### Phase 7: UI/UX Enhancements ✅
+- Mobile-first responsive design
+- Touch-friendly controls and targets
+- Dark-first theme for stage environments
+
+### Phase 8: Collaboration (In Progress)
+- Member roles and permissions
+- Guest access system
 - Time-limited invitations
-- Permission management
 
-### Phase 7: UI/UX Enhancements
-- Dashboard view
-- Mobile optimization
-- Accessibility improvements
-
-### Phase 8: Polish & Deploy
+### Phase 9: Polish & Deploy
 - Comprehensive testing
 - Production deployment
 - User onboarding

@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import type { Song } from "../services/songsService";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -20,6 +21,7 @@ interface Props {
 }
 
 const SongsView: FC<Props> = ({ user, selectedBand }) => {
+  const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
@@ -138,12 +140,20 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
               Manage all your songs with lyrics, chords, and metadata
             </PageSubtitle>
           </HeaderContent>
-          <StatsCard>
-            <StatItem>
-              <StatValue>{songs.length}</StatValue>
-              <StatLabel>Songs</StatLabel>
-            </StatItem>
-          </StatsCard>
+          <HeaderActions>
+            <StatsCard>
+              <StatItem>
+                <StatValue>{songs.length}</StatValue>
+                <StatLabel>Songs</StatLabel>
+              </StatItem>
+            </StatsCard>
+            {songs.length > 0 && (
+              <PrintButton onClick={() => navigate("/songs/print")}>
+                <i className="bi bi-printer"></i>
+                Print Songbook
+              </PrintButton>
+            )}
+          </HeaderActions>
         </PageHeader>
 
         <ContentSection>
@@ -233,6 +243,45 @@ const PageHeader = styled.div`
 
 const HeaderContent = styled.div`
   flex: 1;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: ${theme.space[3]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+`;
+
+const PrintButton = styled.button`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.secondary};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  transition: all ${theme.transitions.fast} ease;
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${theme.colors.dark.bg.tertiary};
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
 `;
 
 const BandBadge = styled.div`
