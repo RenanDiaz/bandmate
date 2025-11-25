@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { theme } from "../theme";
 
 export type SortOption =
+  | "artist_title_asc"
   | "date_desc"
   | "date_asc"
   | "title_asc"
@@ -75,12 +76,13 @@ export const SongSearchFilter = ({
 
         <ControlsGroup>
           <SortSelect value={sortBy} onChange={(e) => onSortChange(e.target.value as SortOption)}>
-            <option value="date_desc">Newest First</option>
-            <option value="date_asc">Oldest First</option>
+            <option value="artist_title_asc">Artist & Title (A-Z)</option>
             <option value="title_asc">Title (A-Z)</option>
             <option value="title_desc">Title (Z-A)</option>
             <option value="artist_asc">Artist (A-Z)</option>
             <option value="artist_desc">Artist (Z-A)</option>
+            <option value="date_desc">Newest First</option>
+            <option value="date_asc">Oldest First</option>
             <option value="tempo_asc">Tempo (Slow to Fast)</option>
             <option value="tempo_desc">Tempo (Fast to Slow)</option>
             <option value="duration_asc">Duration (Short to Long)</option>

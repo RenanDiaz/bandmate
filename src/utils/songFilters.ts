@@ -56,6 +56,15 @@ export function sortSongs(songs: Song[], sortBy: SortOption): Song[] {
   const sorted = [...songs];
 
   switch (sortBy) {
+    case "artist_title_asc":
+      return sorted.sort((a, b) => {
+        const artistA = a.artist || "";
+        const artistB = b.artist || "";
+        const artistCompare = artistA.localeCompare(artistB, undefined, { sensitivity: "base" });
+        if (artistCompare !== 0) return artistCompare;
+        return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+      });
+
     case "date_desc":
       return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

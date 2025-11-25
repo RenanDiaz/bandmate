@@ -29,7 +29,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("date_desc");
+  const [sortBy, setSortBy] = useState<SortOption>("artist_title_asc");
   const [filters, setFilters] = useState<FilterOptions>({
     hasChords: false,
     hasLyrics: false,
