@@ -18,7 +18,7 @@ import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
-import { Container, Navbar, Nav, NavItem, Button, NavbarToggler, Collapse } from "reactstrap";
+import { Container, Navbar, Nav, NavItem, Button, Collapse } from "reactstrap";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
@@ -45,27 +45,30 @@ const AppContent: FC = () => {
     <AppWrapper>
       <StyledNavbar expand="md" $mode={mode}>
         <Container className="px-3">
-          <NavBrandContainer>
-            <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-              <Logo size={32} variant="full" theme={mode} />
-            </Link>
-            {selectedBand && (
-              <BandInfoContainer>
-                <BandDivider />
-                <BandName>{selectedBand.name}</BandName>
-                <SwitchBandButton
-                  size="sm"
-                  onClick={() => setShowBandSelector(true)}
-                  aria-label="Switch Band"
-                  title="Switch band"
-                >
-                  <i className="bi bi-arrow-left-right"></i>
-                </SwitchBandButton>
-              </BandInfoContainer>
-            )}
-          </NavBrandContainer>
-
-          <NavbarToggler onClick={toggleNavbar} />
+          <NavbarHeader>
+            <StyledNavbarToggler onClick={toggleNavbar} aria-label="Toggle navigation">
+              <i className={isOpen ? "bi bi-x-lg" : "bi bi-list"}></i>
+            </StyledNavbarToggler>
+            <NavBrandContainer>
+              <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+                <Logo size={32} variant="full" theme={mode} />
+              </Link>
+              {selectedBand && (
+                <BandInfoContainer>
+                  <BandDivider />
+                  <BandName>{selectedBand.name}</BandName>
+                  <SwitchBandButton
+                    size="sm"
+                    onClick={() => setShowBandSelector(true)}
+                    aria-label="Switch Band"
+                    title="Switch band"
+                  >
+                    <i className="bi bi-arrow-left-right"></i>
+                  </SwitchBandButton>
+                </BandInfoContainer>
+              )}
+            </NavBrandContainer>
+          </NavbarHeader>
 
           <Collapse isOpen={isOpen} navbar>
             {selectedBand && (
@@ -223,6 +226,38 @@ const StyledNavbar = styled(Navbar)<{ $mode: "light" | "dark" }>`
   z-index: ${theme.zIndex.sticky};
   backdrop-filter: blur(10px);
   transition: all ${theme.transitions.base} ease;
+`;
+
+const NavbarHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+`;
+
+const StyledNavbarToggler = styled.button`
+  display: none;
+  background: transparent;
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.primary};
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.radius.base};
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.h4};
+  padding: 0;
+
+  &:hover {
+    background: ${theme.colors.dark.bg.tertiary};
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: flex;
+  }
 `;
 
 const NavBrandContainer = styled.div`
