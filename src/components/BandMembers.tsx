@@ -272,9 +272,15 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
                       <InvitationDetails>
                         <InvitationEmail>{invitation.email}</InvitationEmail>
                         <InvitationMeta>
+                          <span>
+                            <i className="bi bi-person"></i>
+                            Invited by {invitation.inviter_name || "Unknown"}
+                          </span>
                           <RoleBadge $bg={roleColors.bg} $text={roleColors.text} $border={roleColors.border}>
                             {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
                           </RoleBadge>
+                        </InvitationMeta>
+                        <InvitationMeta>
                           <span>
                             <i className="bi bi-calendar"></i>
                             Expires {new Date(invitation.expires_at).toLocaleDateString()}

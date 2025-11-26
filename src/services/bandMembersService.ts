@@ -257,7 +257,29 @@ export async function getBandInvitations(bandId: number): Promise<BandInvitation
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+
+  // Fetch inviter names
+  const invitations = data || [];
+  const inviterIds = [...new Set(invitations.map((inv) => inv.invited_by))];
+
+  const inviterNames: Record<string, string> = {};
+  for (const inviterId of inviterIds) {
+    try {
+      const { data: inviterData } = await supabase.rpc("get_user_display_name", {
+        user_id_param: inviterId,
+      });
+      if (inviterData) {
+        inviterNames[inviterId] = inviterData;
+      }
+    } catch {
+      // Function may not exist, use fallback
+    }
+  }
+
+  return invitations.map((inv) => ({
+    ...inv,
+    inviter_name: inviterNames[inv.invited_by] || "Unknown",
+  }));
 }
 
 /**
