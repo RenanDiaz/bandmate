@@ -101,7 +101,13 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
                   <i className="bi bi-music-note-beamed"></i>
                 </InvitationIcon>
                 <InvitationDetails>
-                  <InvitationTitle>Band Invitation</InvitationTitle>
+                  <InvitationTitle>
+                    {invitation.band?.name || "Band Invitation"}
+                  </InvitationTitle>
+                  <InvitationMeta>
+                    <i className="bi bi-person"></i>
+                    Invited by {invitation.inviter_name || "A band member"}
+                  </InvitationMeta>
                   <InvitationMeta>
                     Role:{" "}
                     <RoleBadge $role={invitation.role}>

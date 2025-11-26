@@ -31,6 +31,12 @@ export interface BandInvitation {
   expires_at: string;
   created_at: string;
   updated_at: string;
+  // Joined data
+  band?: {
+    id: number;
+    name: string;
+  };
+  inviter_name?: string;
 }
 
 export interface CreateInvitationInput {
@@ -263,13 +269,42 @@ export async function getMyInvitations(): Promise<BandInvitation[]> {
 
   const { data, error } = await supabase
     .from("band_invitations")
-    .select("*")
+    .select(`
+      *,
+      band:bands (
+        id,
+        name
+      )
+    `)
     .eq("email", user.email)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+
+  // Fetch inviter names using a separate query since we can't join auth.users directly
+  const invitations = data || [];
+  const inviterIds = [...new Set(invitations.map((inv) => inv.invited_by))];
+
+  // Try to get inviter names via RPC function (if available)
+  const inviterNames: Record<string, string> = {};
+  for (const inviterId of inviterIds) {
+    try {
+      const { data: inviterData } = await supabase.rpc("get_user_display_name", {
+        user_id_param: inviterId,
+      });
+      if (inviterData) {
+        inviterNames[inviterId] = inviterData;
+      }
+    } catch {
+      // Function may not exist, use fallback
+    }
+  }
+
+  return invitations.map((inv) => ({
+    ...inv,
+    inviter_name: inviterNames[inv.invited_by] || "A band member",
+  }));
 }
 
 /**
