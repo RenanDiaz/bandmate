@@ -64,8 +64,8 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
     return rpcData;
   }
 
-  // Fallback: just get band_members without emails
-  console.warn("RPC function not available, fetching without emails:", rpcError);
+  // Fallback: get band_members and fetch display names individually
+  console.warn("RPC function not available, fetching with individual lookups:", rpcError);
   const { data, error } = await supabase
     .from("band_members")
     .select("*")
@@ -74,12 +74,26 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
 
   if (error) throw error;
 
-  // Get current user's email to at least show it for yourself
-  const { data: { user } } = await supabase.auth.getUser();
+  const members = data || [];
 
-  return (data || []).map((member: any) => ({
+  // Fetch display names for all members using the RPC function
+  const displayNames: Record<string, string> = {};
+  for (const member of members) {
+    try {
+      const { data: displayName } = await supabase.rpc("get_user_display_name", {
+        user_id_param: member.user_id,
+      });
+      if (displayName) {
+        displayNames[member.user_id] = displayName;
+      }
+    } catch {
+      // Function may not exist
+    }
+  }
+
+  return members.map((member: any) => ({
     ...member,
-    email: member.user_id === user?.id ? user?.email : `User ${member.user_id.substring(0, 8)}...`,
+    email: displayNames[member.user_id] || "Band member",
   }));
 }
 
