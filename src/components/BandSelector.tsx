@@ -187,7 +187,13 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
                           <i className="bi bi-music-note-beamed"></i>
                         </InvitationIcon>
                         <InvitationDetails>
-                          <InvitationBandName>Band Invitation</InvitationBandName>
+                          <InvitationBandName>
+                            {invitation.band?.name || "Band Invitation"}
+                          </InvitationBandName>
+                          <InvitationMeta>
+                            <i className="bi bi-person"></i>
+                            Invited by {invitation.inviter_name || "A band member"}
+                          </InvitationMeta>
                           <InvitationRole>
                             Role: <RoleBadge $role={invitation.role}>
                               {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
@@ -538,6 +544,19 @@ const InvitationBandName = styled.div`
   font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.dark.text.primary};
   margin-bottom: ${theme.space[1]};
+`;
+
+const InvitationMeta = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  margin-bottom: ${theme.space[1]};
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
 `;
 
 const InvitationRole = styled.div`
