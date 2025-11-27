@@ -4,9 +4,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Container, Spinner, Button } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
-import { getShow, deleteShow, markShowCompleted, markShowCancelled } from "../services/showsService";
+import { getShow, deleteShow, markShowCompleted, markShowCancelled, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
-import { getSetlist } from "../services/setlistsService";
+import { getSetlist, getBandSetlists } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -54,8 +54,10 @@ const ShowDetailView: FC = () => {
   const [show, setShow] = useState<Show | null>(null);
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
+  const [availableSetlists, setAvailableSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [linkingSetlist, setLinkingSetlist] = useState(false);
 
   useEffect(() => {
     const loadShow = async () => {
@@ -69,15 +71,19 @@ const ShowDetailView: FC = () => {
         const showData = await getShow(showId);
         setShow(showData);
 
-        // Load linked setlist and songs if exists
+        // Load available setlists for the band
+        if (showData.band_id) {
+          const setlistsData = await getBandSetlists(showData.band_id);
+          setAvailableSetlists(setlistsData);
+
+          const songsData = await getBandSongs(showData.band_id);
+          setSongs(songsData);
+        }
+
+        // Load linked setlist if exists
         if (showData.setlist_id) {
           const setlistData = await getSetlist(showData.setlist_id);
           setSetlist(setlistData);
-
-          if (showData.band_id) {
-            const songsData = await getBandSongs(showData.band_id);
-            setSongs(songsData);
-          }
         }
       } catch (err) {
         console.error("Failed to load show:", err);
@@ -135,6 +141,24 @@ const ShowDetailView: FC = () => {
     if (setlist) {
       navigate(`/setlists/${setlist.id}/perform`);
     }
+  };
+
+  const handleLinkSetlist = async (setlistId: string) => {
+    if (!show) return;
+
+    setLinkingSetlist(true);
+    try {
+      const updated = await updateShow(show.id, { setlist_id: setlistId });
+      setShow(updated);
+
+      // Load the newly linked setlist
+      const setlistData = await getSetlist(setlistId);
+      setSetlist(setlistData);
+    } catch (err) {
+      console.error("Failed to link setlist:", err);
+      alert("Failed to link setlist. Please try again.");
+    }
+    setLinkingSetlist(false);
   };
 
   if (loading) {
@@ -338,9 +362,40 @@ const ShowDetailView: FC = () => {
                   <i className="bi bi-music-note-list"></i>
                 </NoSetlistIcon>
                 <NoSetlistText>No setlist linked to this show</NoSetlistText>
-                <NoSetlistHint>
-                  Edit this show to link a setlist for the performance
-                </NoSetlistHint>
+                {availableSetlists.length > 0 ? (
+                  <>
+                    <NoSetlistHint>
+                      Select an existing setlist to link to this show:
+                    </NoSetlistHint>
+                    <SetlistSelector
+                      disabled={linkingSetlist}
+                      onChange={(e) => handleLinkSetlist(e.target.value)}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Choose a setlist...</option>
+                      {availableSetlists.map((sl) => (
+                        <option key={sl.id} value={sl.id}>
+                          {sl.name} ({sl.songs?.length || 0} songs)
+                        </option>
+                      ))}
+                    </SetlistSelector>
+                    <SetlistLinkDivider>or</SetlistLinkDivider>
+                    <CreateSetlistButton onClick={() => navigate("/setlists")}>
+                      <i className="bi bi-plus-circle"></i>
+                      Create New Setlist
+                    </CreateSetlistButton>
+                  </>
+                ) : (
+                  <>
+                    <NoSetlistHint>
+                      Create a setlist first to link it to this show
+                    </NoSetlistHint>
+                    <CreateSetlistButton onClick={() => navigate("/setlists")}>
+                      <i className="bi bi-plus-circle"></i>
+                      Create Your First Setlist
+                    </CreateSetlistButton>
+                  </>
+                )}
               </NoSetlistCard>
             )}
           </MainContent>
@@ -803,9 +858,80 @@ const NoSetlistText = styled.p`
 `;
 
 const NoSetlistHint = styled.p`
-  margin: 0;
+  margin: 0 0 ${theme.space[4]} 0;
   font-size: ${theme.fontSizes.bodySm};
   color: ${theme.colors.dark.text.tertiary};
+`;
+
+const SetlistSelector = styled.select`
+  width: 100%;
+  max-width: 400px;
+  padding: ${theme.space[3]} ${theme.space[4]};
+  background: ${theme.colors.dark.bg.tertiary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  color: ${theme.colors.dark.text.primary};
+  font-size: ${theme.fontSizes.body};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover:not(:disabled) {
+    border-color: ${theme.colors.brand.primary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: 0 0 0 3px ${theme.colors.brand.primary}20;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const SetlistLinkDivider = styled.div`
+  margin: ${theme.space[4]} 0;
+  color: ${theme.colors.dark.text.tertiary};
+  font-size: ${theme.fontSizes.bodySm};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  position: relative;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: ${theme.colors.dark.border.default};
+  }
+
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+  }
+`;
+
+const CreateSetlistButton = styled(Button)`
+  background: ${theme.colors.brand.primary} !important;
+  border: none !important;
+  color: white !important;
+  padding: ${theme.space[3]} ${theme.space[4]} !important;
+  font-size: ${theme.fontSizes.body} !important;
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[2]};
+
+  &:hover {
+    background: ${theme.colors.brand.primary}dd !important;
+  }
 `;
 
 const QuickInfoCard = styled.div`
