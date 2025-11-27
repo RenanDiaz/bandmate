@@ -25,7 +25,7 @@ BEGIN
     bm.joined_at,
     bm.expires_at,
     bm.created_at,
-    u.email,
+    u.email::TEXT,
     u.raw_user_meta_data as user_metadata
   FROM band_members bm
   LEFT JOIN auth.users u ON u.id = bm.user_id
