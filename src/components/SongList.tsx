@@ -156,10 +156,13 @@ const SongCard = styled.div<{ $isExpanded: boolean }>`
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
+  cursor: pointer;
 
   &:hover {
+    background: ${theme.colors.dark.bg.tertiary};
     border-color: ${theme.colors.brand.primary};
     box-shadow: ${theme.shadows.md};
+    transform: translateY(-2px);
   }
 
   ${(props) =>
@@ -184,15 +187,7 @@ const SongClickArea = styled.div`
   align-items: center;
   gap: ${theme.space[3]};
   flex: 1;
-  cursor: pointer;
   min-width: 0;
-
-  &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
-    margin: -${theme.space[4]};
-    padding: ${theme.space[4]};
-    border-radius: ${theme.radius.md};
-  }
 `;
 
 const ActionButtons = styled.div`

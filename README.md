@@ -29,6 +29,10 @@
 - 👥 **Member Roles** - Owner, Admin, Member, Guest permission levels
 - 🔗 **Guest Access** - Time-limited invitations for temporary members
 - 📊 **Show History** - Track past performances and statistics
+- 🗳️ **Setlist Proposals** - Bandmates can approve, decline, or propose changes to setlists
+- 🎵 **Song Proposals** - New songs require approval; declined proposals are discarded
+- 🔗 **Link Setlist to Show** - Ability to link setlists to shows from the setlist view
+- 🎤 **Song Card Improvements** - Enhanced song cards in songs view with single song performance preview
 
 ## 🚀 Tech Stack
 
