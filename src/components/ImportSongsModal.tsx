@@ -40,11 +40,9 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
   const [errors, setErrors] = useState<ImportError[]>([]);
   const [successCount, setSuccessCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
+  const parseFile = (selectedFile: File) => {
     setFile(selectedFile);
     setErrors([]);
     setParsedSongs([]);
@@ -63,6 +61,41 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
         setErrors([{ row: 0, message: `Parse error: ${error.message}` }]);
       },
     });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    parseFile(selectedFile);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (!droppedFile) return;
+
+    // Check if it's a CSV file
+    if (!droppedFile.name.endsWith('.csv') && !droppedFile.name.endsWith('.tsv')) {
+      setErrors([{ row: 0, message: 'Please drop a CSV or TSV file' }]);
+      return;
+    }
+
+    parseFile(droppedFile);
   };
 
   const parseDuration = (duration: string): number | undefined => {
@@ -260,9 +293,25 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
         </Instructions>
 
         <FileInputWrapper>
-          <FileLabel htmlFor="csv-file">
+          <FileLabel
+            htmlFor="csv-file"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            $isDragging={isDragging}
+          >
             <i className="bi bi-file-earmark-arrow-up"></i>
-            {file ? file.name : "Choose CSV file"}
+            <div>
+              {file ? (
+                <strong>{file.name}</strong>
+              ) : isDragging ? (
+                <strong>Drop CSV file here</strong>
+              ) : (
+                <>
+                  <strong>Drop CSV file here</strong> or click to browse
+                </>
+              )}
+            </div>
           </FileLabel>
           <FileInput
             id="csv-file"
@@ -434,24 +483,42 @@ const FileInput = styled.input`
   display: none;
 `;
 
-const FileLabel = styled.label`
+const FileLabel = styled.label<{ $isDragging: boolean }>`
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: ${theme.space[3]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 2px dashed ${theme.colors.dark.border.default};
+  background: ${props => props.$isDragging
+    ? theme.colors.dark.bg.tertiary
+    : theme.colors.dark.bg.secondary};
+  border: 2px dashed ${props => props.$isDragging
+    ? theme.colors.brand.primary
+    : theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[8]} ${theme.space[4]};
-  color: ${theme.colors.dark.text.secondary};
+  color: ${props => props.$isDragging
+    ? theme.colors.dark.text.primary
+    : theme.colors.dark.text.secondary};
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
+  text-align: center;
 
   i {
     font-size: ${theme.fontSizes.h2};
     color: ${theme.colors.brand.primary};
+    transition: transform ${theme.transitions.fast} ease;
+    ${props => props.$isDragging && `
+      transform: scale(1.1);
+    `}
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: ${theme.space[1]};
   }
 
   &:hover {
