@@ -53,6 +53,12 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
     Papa.parse(selectedFile, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (header: string) => {
+        // Normalize headers to match our expected format
+        const normalized = header.toLowerCase().trim();
+        if (normalized === 'release year') return 'releaseYear';
+        return normalized;
+      },
       complete: (results) => {
         const songs = results.data as ParsedSong[];
         setParsedSongs(songs);
@@ -271,14 +277,14 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
             CSV Format Instructions
           </InstructionTitle>
           <InstructionText>
-            Your CSV file should have these columns (column names must match exactly):
+            Your CSV file should have these columns (case-insensitive):
           </InstructionText>
           <ColumnList>
             <li><code>Title</code> (required)</li>
             <li><code>Artist</code></li>
             <li><code>Language</code></li>
             <li><code>Country</code></li>
-            <li><code>Release year</code></li>
+            <li><code>Release year</code> (or <code>Release Year</code>)</li>
             <li><code>Duration</code> (format: MM:SS, e.g., "3:35")</li>
             <li><code>Tempo</code> (format: "120 BPM" or just "120")</li>
             <li><code>Key</code> (note, e.g., "C", "Am")</li>
@@ -287,6 +293,9 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
             <li><code>Acoustic</code> (checkbox: TRUE/FALSE)</li>
             <li><code>Sequence</code> (checkbox: TRUE/FALSE for backing track)</li>
           </ColumnList>
+          <InstructionText>
+            Extra columns in your CSV will be ignored.
+          </InstructionText>
           <InstructionText>
             Export your Google Sheet as CSV: <strong>File → Download → Comma Separated Values (.csv)</strong>
           </InstructionText>
