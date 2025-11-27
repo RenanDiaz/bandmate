@@ -12,6 +12,7 @@ import type { UpdateSongInput } from "../services/songsService";
 import { NewSongForm } from "./NewSongForm";
 import { SongList } from "./SongList";
 import { EditSongModal } from "./EditSongModal";
+import { ImportSongsModal } from "./ImportSongsModal";
 import { SongSearchFilter, type SortOption, type FilterOptions } from "./SongSearchFilter";
 import { processSongs } from "../utils/songFilters";
 
@@ -26,6 +27,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const [loading, setLoading] = useState(true);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -147,12 +149,18 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                 <StatLabel>Songs</StatLabel>
               </StatItem>
             </StatsCard>
-            {songs.length > 0 && (
-              <PrintButton onClick={() => navigate("/songs/print")}>
-                <i className="bi bi-printer"></i>
-                Print Songbook
-              </PrintButton>
-            )}
+            <ActionButtons>
+              <ActionButton onClick={() => setIsImportModalOpen(true)}>
+                <i className="bi bi-file-earmark-arrow-up"></i>
+                Import CSV
+              </ActionButton>
+              {songs.length > 0 && (
+                <ActionButton onClick={() => navigate("/songs/print")}>
+                  <i className="bi bi-printer"></i>
+                  Print Songbook
+                </ActionButton>
+              )}
+            </ActionButtons>
           </HeaderActions>
         </PageHeader>
 
@@ -210,6 +218,13 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveSong}
         />
+
+        <ImportSongsModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImportComplete={loadSongs}
+          bandId={selectedBand.id}
+        />
       </Container>
     </PageWrapper>
   );
@@ -259,7 +274,16 @@ const HeaderActions = styled.div`
   }
 `;
 
-const PrintButton = styled.button`
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex-wrap: wrap;
+  }
+`;
+
+const ActionButton = styled.button`
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   color: ${theme.colors.dark.text.secondary};
@@ -272,6 +296,7 @@ const PrintButton = styled.button`
   align-items: center;
   gap: ${theme.space[2]};
   transition: all ${theme.transitions.fast} ease;
+  white-space: nowrap;
 
   i {
     font-size: ${theme.fontSizes.body};
