@@ -226,6 +226,10 @@ const StyledNavbar = styled(Navbar)<{ $mode: "light" | "dark" }>`
   z-index: ${theme.zIndex.sticky};
   backdrop-filter: blur(10px);
   transition: all ${theme.transitions.base} ease;
+
+  @media print {
+    display: none !important;
+  }
 `;
 
 const NavbarHeader = styled.div`
