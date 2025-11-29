@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FC, ReactNode } from "react";
 import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
@@ -59,13 +60,14 @@ export const CustomOffcanvas: FC<CustomOffcanvasProps> = ({
 
   if (!shouldRender) return null;
 
-  return (
+  return createPortal(
     <>
       <Backdrop onClick={onClose} $isClosing={isClosing} />
       <OffcanvasContainer $isClosing={isClosing} $mode={mode}>
         {children}
       </OffcanvasContainer>
-    </>
+    </>,
+    document.body
   );
 };
 

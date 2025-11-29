@@ -18,7 +18,7 @@ import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
-import { Container, Navbar, Nav, NavItem, Button } from "reactstrap";
+import { Navbar, Nav, NavItem, Button } from "reactstrap";
 import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/CustomOffcanvas";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
@@ -45,7 +45,7 @@ const AppContent: FC = () => {
   return (
     <AppWrapper>
       <StyledNavbar expand="md" $mode={mode}>
-        <Container className="px-3">
+        <NavbarContainer>
           <NavBrandContainer>
             <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
               <Logo size={32} variant="full" theme={mode} />
@@ -66,7 +66,7 @@ const AppContent: FC = () => {
             )}
           </NavBrandContainer>
 
-          <DesktopNav className="me-auto" navbar>
+          <DesktopNav navbar>
             <NavItem>
               <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode}>
                 Home
@@ -133,115 +133,115 @@ const AppContent: FC = () => {
           <StyledNavbarToggler onClick={toggleNavbar} aria-label="Toggle navigation">
             <i className={isOpen ? "bi bi-x-lg" : "bi bi-list"}></i>
           </StyledNavbarToggler>
-
-          <CustomOffcanvas
-            isOpen={isOpen}
-            onClose={toggleNavbar}
-            mode={mode}
-          >
-            <OffcanvasHeader onClose={toggleNavbar} mode={mode}>
-              <Logo size={28} variant="full" theme={mode} />
-            </OffcanvasHeader>
-            <OffcanvasBody mode={mode}>
-              {selectedBand && (
-                <MobileBandInfo>
-                  <MobileBandName>
-                    <i className="bi bi-music-note-beamed"></i>
-                    {selectedBand.name}
-                  </MobileBandName>
-                  <SwitchBandButton
-                    size="sm"
-                    onClick={() => {
-                      setShowBandSelector(true);
-                      setIsOpen(false);
-                    }}
-                    aria-label="Switch Band"
-                    title="Switch band"
-                  >
-                    <i className="bi bi-arrow-left-right"></i>
-                    <span style={{ marginLeft: '6px' }}>Switch</span>
-                  </SwitchBandButton>
-                </MobileBandInfo>
-              )}
-              <StyledNav navbar>
-                <NavItem>
-                  <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
-                    <i className="bi bi-house-door"></i>
-                    <span>Home</span>
-                  </StyledNavLink>
-                </NavItem>
-                <NavItem>
-                  <StyledNavLink
-                    as={Link}
-                    to="/songs"
-                    $active={location.pathname === "/songs"}
-                    $mode={mode}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <i className="bi bi-music-note-list"></i>
-                    <span>Songs</span>
-                  </StyledNavLink>
-                </NavItem>
-                <NavItem>
-                  <StyledNavLink
-                    as={Link}
-                    to="/setlists"
-                    $active={location.pathname.startsWith("/setlists")}
-                    $mode={mode}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <i className="bi bi-collection"></i>
-                    <span>Setlists</span>
-                  </StyledNavLink>
-                </NavItem>
-                <NavItem>
-                  <StyledNavLink
-                    as={Link}
-                    to="/shows"
-                    $active={location.pathname.startsWith("/shows")}
-                    $mode={mode}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <i className="bi bi-calendar-event"></i>
-                    <span>Shows</span>
-                  </StyledNavLink>
-                </NavItem>
-                <NavItem>
-                  <StyledNavLink
-                    as={Link}
-                    to="/about"
-                    $active={location.pathname === "/about"}
-                    $mode={mode}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <i className="bi bi-info-circle"></i>
-                    <span>About</span>
-                  </StyledNavLink>
-                </NavItem>
-              </StyledNav>
-
-              <NavActions>
-                <ThemeToggleButton
-                  onClick={toggleMode}
-                  aria-label="Toggle color mode"
-                  title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                  $mode={mode}
-                >
-                  {mode === "dark" ? (
-                    <i className="bi bi-sun-fill"></i>
-                  ) : (
-                    <i className="bi bi-moon-fill"></i>
-                  )}
-                  <span style={{ marginLeft: '8px' }}>
-                    {mode === "dark" ? "Light Mode" : "Dark Mode"}
-                  </span>
-                </ThemeToggleButton>
-                <AuthButton />
-              </NavActions>
-            </OffcanvasBody>
-          </CustomOffcanvas>
-        </Container>
+        </NavbarContainer>
       </StyledNavbar>
+
+      <CustomOffcanvas
+        isOpen={isOpen}
+        onClose={toggleNavbar}
+        mode={mode}
+      >
+        <OffcanvasHeader onClose={toggleNavbar} mode={mode}>
+          <Logo size={28} variant="full" theme={mode} />
+        </OffcanvasHeader>
+        <OffcanvasBody mode={mode}>
+          {selectedBand && (
+            <MobileBandInfo>
+              <MobileBandName>
+                <i className="bi bi-music-note-beamed"></i>
+                {selectedBand.name}
+              </MobileBandName>
+              <SwitchBandButton
+                size="sm"
+                onClick={() => {
+                  setShowBandSelector(true);
+                  setIsOpen(false);
+                }}
+                aria-label="Switch Band"
+                title="Switch band"
+              >
+                <i className="bi bi-arrow-left-right"></i>
+                <span style={{ marginLeft: '6px' }}>Switch</span>
+              </SwitchBandButton>
+            </MobileBandInfo>
+          )}
+          <StyledNav navbar>
+            <NavItem>
+              <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
+                <i className="bi bi-house-door"></i>
+                <span>Home</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/songs"
+                $active={location.pathname === "/songs"}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-music-note-list"></i>
+                <span>Songs</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/setlists"
+                $active={location.pathname.startsWith("/setlists")}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-collection"></i>
+                <span>Setlists</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/shows"
+                $active={location.pathname.startsWith("/shows")}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-calendar-event"></i>
+                <span>Shows</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/about"
+                $active={location.pathname === "/about"}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-info-circle"></i>
+                <span>About</span>
+              </StyledNavLink>
+            </NavItem>
+          </StyledNav>
+
+          <NavActions>
+            <ThemeToggleButton
+              onClick={toggleMode}
+              aria-label="Toggle color mode"
+              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              $mode={mode}
+            >
+              {mode === "dark" ? (
+                <i className="bi bi-sun-fill"></i>
+              ) : (
+                <i className="bi bi-moon-fill"></i>
+              )}
+              <span style={{ marginLeft: '8px' }}>
+                {mode === "dark" ? "Light Mode" : "Dark Mode"}
+              </span>
+            </ThemeToggleButton>
+            <AuthButton />
+          </NavActions>
+        </OffcanvasBody>
+      </CustomOffcanvas>
 
       <MainContent>
         {user && (!selectedBand || showBandSelector) ? (
@@ -313,10 +313,21 @@ const StyledNavbar = styled(Navbar)<{ $mode: "light" | "dark" }>`
   }
 `;
 
+const NavbarContainer = styled.div`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 ${theme.space[3]};
+  gap: ${theme.space[4]};
+`;
+
 const NavBrandContainer = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[4]};
+  flex-shrink: 0;
 `;
 
 const StyledNavbarToggler = styled.button`
@@ -420,6 +431,8 @@ const SwitchBandButton = styled(Button)`
 const DesktopNav = styled(Nav)`
   gap: ${theme.space[2]};
   display: flex !important;
+  flex: 1;
+  justify-content: center;
 
   @media (max-width: ${theme.breakpoints.md}) {
     display: none !important;
