@@ -454,7 +454,6 @@ const MetaLabel = styled.span`
 
 const SongGroup = styled.div`
   margin-bottom: ${theme.space[6]};
-  page-break-inside: avoid;
 
   @media print {
     margin-bottom: 12pt;
@@ -477,7 +476,6 @@ const GroupHeader = styled.h3`
     padding-bottom: 4pt;
     border-bottom-color: #333;
     page-break-after: avoid;
-    page-break-inside: avoid;
   }
 `;
 
