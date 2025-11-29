@@ -8,6 +8,7 @@ import { getSetlist } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { SEO } from "./SEO";
 
 const PrintableSetlist: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
@@ -96,6 +97,10 @@ const PrintableSetlist: FC = () => {
 
   return (
     <PageWrapper>
+      <SEO
+        title={`${setlist.name} - Print`}
+        description={`Printable setlist for ${setlist.name}. ${songs.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
+      />
       {/* Screen-only controls */}
       <ControlBar className="no-print">
         <BackButton onClick={handleBack}>

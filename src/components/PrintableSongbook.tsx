@@ -7,6 +7,7 @@ import { theme } from "../theme";
 import { useBandContext } from "../context/useBandContext";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { SEO } from "./SEO";
 
 type SortOption = "title" | "artist" | "key" | "tempo";
 
@@ -101,6 +102,10 @@ const PrintableSongbook: FC = () => {
 
   return (
     <PageWrapper>
+      <SEO
+        title={`${selectedBand.name} Songbook - Print`}
+        description={`Printable songbook for ${selectedBand.name}. Complete catalog of ${songs.length} songs sorted by ${sortBy}.`}
+      />
       {/* Screen-only controls */}
       <ControlBar className="no-print">
         <BackButton onClick={handleBack}>
