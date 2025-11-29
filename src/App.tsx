@@ -18,7 +18,8 @@ import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
-import { Container, Navbar, Nav, NavItem, Button, Offcanvas, OffcanvasHeader, OffcanvasBody } from "reactstrap";
+import { Container, Navbar, Nav, NavItem, Button } from "reactstrap";
+import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/CustomOffcanvas";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
@@ -133,16 +134,15 @@ const AppContent: FC = () => {
             <i className={isOpen ? "bi bi-x-lg" : "bi bi-list"}></i>
           </StyledNavbarToggler>
 
-          <StyledOffcanvas
+          <CustomOffcanvas
             isOpen={isOpen}
-            toggle={toggleNavbar}
-            direction="end"
-            $mode={mode}
+            onClose={toggleNavbar}
+            mode={mode}
           >
-            <StyledOffcanvasHeader toggle={toggleNavbar} $mode={mode}>
+            <OffcanvasHeader onClose={toggleNavbar} mode={mode}>
               <Logo size={28} variant="full" theme={mode} />
-            </StyledOffcanvasHeader>
-            <StyledOffcanvasBody $mode={mode}>
+            </OffcanvasHeader>
+            <OffcanvasBody mode={mode}>
               {selectedBand && (
                 <MobileBandInfo>
                   <MobileBandName>
@@ -238,8 +238,8 @@ const AppContent: FC = () => {
                 </ThemeToggleButton>
                 <AuthButton />
               </NavActions>
-            </StyledOffcanvasBody>
-          </StyledOffcanvas>
+            </OffcanvasBody>
+          </CustomOffcanvas>
         </Container>
       </StyledNavbar>
 
@@ -574,51 +574,6 @@ const MainContent = styled.main`
   flex: 1;
   display: flex;
   flex-direction: column;
-`;
-
-const StyledOffcanvas = styled(Offcanvas)<{ $mode: "light" | "dark" }>`
-  background: ${(props) =>
-    props.$mode === "dark"
-      ? theme.colors.dark.bg.primary
-      : theme.colors.light.bg.primary} !important;
-  border-left: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default} !important;
-  width: 320px !important;
-  max-width: 85vw !important;
-
-  .offcanvas-backdrop {
-    backdrop-filter: blur(4px);
-  }
-`;
-
-const StyledOffcanvasHeader = styled(OffcanvasHeader)<{ $mode: "light" | "dark" }>`
-  border-bottom: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default};
-  padding: ${theme.space[4]} !important;
-
-  .btn-close {
-    filter: ${(props) => (props.$mode === "dark" ? "invert(1)" : "none")};
-    opacity: 0.7;
-    transition: all ${theme.transitions.fast} ease;
-
-    &:hover {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-  }
-`;
-
-const StyledOffcanvasBody = styled(OffcanvasBody)<{ $mode: "light" | "dark" }>`
-  padding: ${theme.space[4]} !important;
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.space[4]};
 `;
 
 export default App;
