@@ -25,6 +25,7 @@ import { getSetlist, updateSetlist } from "../services/setlistsService";
 import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { SEO } from "./SEO";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -354,6 +355,10 @@ const SetlistPerformanceView: FC = () => {
 
   return (
     <PerformanceContainer>
+      <SEO
+        title={`${setlist.name} - Performance Mode`}
+        description={`Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances with ${songs.length} songs.`}
+      />
       {/* Top Bar */}
       <TopBar>
         <TopBarLeft>

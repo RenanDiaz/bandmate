@@ -25,6 +25,7 @@ import { getSetlist, updateSetlist } from "../services/setlistsService";
 import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { SEO } from "./SEO";
 
 // Sortable song card component for reorder mode
 interface SortableSongCardProps {
@@ -258,6 +259,10 @@ const SetlistDetailView: FC = () => {
 
   return (
     <ViewContainer>
+      <SEO
+        title={setlist.name}
+        description={`View and manage the ${setlist.name} setlist. ${songs.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
+      />
       <StyledContainer>
         <Header>
           <HeaderTop>

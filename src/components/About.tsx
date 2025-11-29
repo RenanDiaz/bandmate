@@ -2,9 +2,14 @@ import { Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
 import { Logo } from "./Logo";
+import { SEO } from "./SEO";
 
 const About = () => (
   <PageWrapper>
+    <SEO
+      title="About"
+      description="Learn about Bandmate - a comprehensive platform for bands to manage songs, setlists, shows, and collaborate with members. Built for musicians by musicians."
+    />
     <Container>
       <AboutHeader>
         <Logo size={64} variant="icon" theme="dark" />

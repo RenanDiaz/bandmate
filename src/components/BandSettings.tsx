@@ -8,6 +8,7 @@ import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import { BandMembers } from "./BandMembers";
 import { InviteMemberModal } from "./InviteMemberModal";
+import { SEO } from "./SEO";
 
 interface Props {
   user: { id: string; email?: string } | null;
@@ -87,6 +88,10 @@ export const BandSettings: FC<Props> = ({ user }) => {
 
   return (
     <PageWrapper>
+      <SEO
+        title={`${band.name} Settings`}
+        description={`Manage settings, members, and permissions for ${band.name}. Invite new members and configure band details.`}
+      />
       <Container>
         <Header>
           <HeaderLeft>

@@ -10,6 +10,7 @@ import { getSetlist, getBandSetlists } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { SEO } from "./SEO";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString + "T00:00:00");
@@ -206,6 +207,10 @@ const ShowDetailView: FC = () => {
 
   return (
     <PageWrapper>
+      <SEO
+        title={show.name}
+        description={`${show.name} at ${show.venue || "TBD"} on ${formatDate(show.event_date)}${show.event_time ? ` at ${formatTime(show.event_time)}` : ""}. ${setlist ? `Setlist: ${setlist.name}` : "No setlist linked yet."}`}
+      />
       <Container>
         <BackLink to="/shows">
           <i className="bi bi-arrow-left"></i>
