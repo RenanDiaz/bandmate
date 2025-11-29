@@ -11,6 +11,7 @@ import { NewShowForm } from "./NewShowForm";
 import { ShowList } from "./ShowList";
 import { ShowCalendar } from "./ShowCalendar";
 import { EditShowModal } from "./EditShowModal";
+import { SEO } from "./SEO";
 
 interface Props {
   user: User | null;
@@ -130,6 +131,10 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
 
   return (
     <PageWrapper>
+      <SEO
+        title="Shows"
+        description="Schedule and manage your band's gigs and performances. Track upcoming shows, venue information, and link setlists to each performance."
+      />
       <Container>
         <PageHeader>
           <HeaderContent>

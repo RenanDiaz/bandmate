@@ -12,6 +12,7 @@ import { getBandSetlists } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getUpcomingShows } from "../services/showsService";
 import type { Show } from "../services/showsService";
+import { SEO } from "./SEO";
 
 const Home = () => {
   const { user, selectedBand, refreshBands } = useBandContext();
@@ -76,6 +77,10 @@ const Home = () => {
   if (user && selectedBand) {
     return (
       <HomeWrapper>
+        <SEO
+          title={`${selectedBand.name} Dashboard`}
+          description={`Manage songs, setlists, and shows for ${selectedBand.name}. View upcoming gigs, organize your repertoire, and collaborate with your band.`}
+        />
         <Container style={{ marginTop: theme.space[6] }}>
           <PendingInvitations onInvitationAccepted={refreshBands} />
         </Container>
@@ -271,6 +276,7 @@ const Home = () => {
   // Landing page for non-authenticated users
   return (
     <HomeWrapper>
+      <SEO />
       {user && (
         <Container style={{ marginTop: theme.space[6] }}>
           <PendingInvitations onInvitationAccepted={refreshBands} />

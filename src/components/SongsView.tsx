@@ -15,6 +15,7 @@ import { EditSongModal } from "./EditSongModal";
 import { ImportSongsModal } from "./ImportSongsModal";
 import { SongSearchFilter, type SortOption, type FilterOptions } from "./SongSearchFilter";
 import { processSongs } from "../utils/songFilters";
+import { SEO } from "./SEO";
 
 interface Props {
   user: User | null;
@@ -130,6 +131,10 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
 
   return (
     <PageWrapper>
+      <SEO
+        title="Songs"
+        description={`Manage your band's song library. View, edit, and organize songs with lyrics, chords, keys, and tempo information.`}
+      />
       <Container>
         <PageHeader>
           <HeaderContent>

@@ -10,6 +10,7 @@ import type { Setlist } from "../services/setlistsService";
 import { NewSetlistForm } from "./NewSetlistForm";
 import { SetlistList } from "./SetlistList";
 import { EditSetlistModal } from "./EditSetlistModal";
+import { SEO } from "./SEO";
 
 interface Props {
   user: User | null;
@@ -103,6 +104,10 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
 
   return (
     <PageWrapper>
+      <SEO
+        title="Setlists"
+        description="Create and manage setlists for performances and rehearsals. Organize songs with drag-and-drop, add notes, and link setlists to shows."
+      />
       <Container>
         <PageHeader>
           <HeaderContent>
