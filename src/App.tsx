@@ -45,30 +45,93 @@ const AppContent: FC = () => {
     <AppWrapper>
       <StyledNavbar expand="md" $mode={mode}>
         <Container className="px-3">
-          <NavbarHeader>
-            <StyledNavbarToggler onClick={toggleNavbar} aria-label="Toggle navigation">
-              <i className={isOpen ? "bi bi-x-lg" : "bi bi-list"}></i>
-            </StyledNavbarToggler>
-            <NavBrandContainer>
-              <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-                <Logo size={32} variant="full" theme={mode} />
-              </Link>
-              {selectedBand && (
-                <BandInfoContainer>
-                  <BandDivider />
-                  <BandName>{selectedBand.name}</BandName>
-                  <SwitchBandButton
-                    size="sm"
-                    onClick={() => setShowBandSelector(true)}
-                    aria-label="Switch Band"
-                    title="Switch band"
-                  >
-                    <i className="bi bi-arrow-left-right"></i>
-                  </SwitchBandButton>
-                </BandInfoContainer>
+          <NavBrandContainer>
+            <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+              <Logo size={32} variant="full" theme={mode} />
+            </Link>
+            {selectedBand && (
+              <BandInfoContainer>
+                <BandDivider />
+                <BandName>{selectedBand.name}</BandName>
+                <SwitchBandButton
+                  size="sm"
+                  onClick={() => setShowBandSelector(true)}
+                  aria-label="Switch Band"
+                  title="Switch band"
+                >
+                  <i className="bi bi-arrow-left-right"></i>
+                </SwitchBandButton>
+              </BandInfoContainer>
+            )}
+          </NavBrandContainer>
+
+          <DesktopNav className="me-auto" navbar>
+            <NavItem>
+              <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode}>
+                Home
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/songs"
+                $active={location.pathname === "/songs"}
+                $mode={mode}
+              >
+                Songs
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/setlists"
+                $active={location.pathname.startsWith("/setlists")}
+                $mode={mode}
+              >
+                Setlists
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/shows"
+                $active={location.pathname.startsWith("/shows")}
+                $mode={mode}
+              >
+                Shows
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/about"
+                $active={location.pathname === "/about"}
+                $mode={mode}
+              >
+                About
+              </StyledNavLink>
+            </NavItem>
+          </DesktopNav>
+
+          <DesktopNavActions>
+            <ThemeToggleButton
+              onClick={toggleMode}
+              aria-label="Toggle color mode"
+              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              $mode={mode}
+            >
+              {mode === "dark" ? (
+                <i className="bi bi-sun-fill"></i>
+              ) : (
+                <i className="bi bi-moon-fill"></i>
               )}
-            </NavBrandContainer>
-          </NavbarHeader>
+            </ThemeToggleButton>
+            <AuthButton />
+          </DesktopNavActions>
+
+          <StyledNavbarToggler onClick={toggleNavbar} aria-label="Toggle navigation">
+            <i className={isOpen ? "bi bi-x-lg" : "bi bi-list"}></i>
+          </StyledNavbarToggler>
 
           <StyledOffcanvas
             isOpen={isOpen}
@@ -250,10 +313,10 @@ const StyledNavbar = styled(Navbar)<{ $mode: "light" | "dark" }>`
   }
 `;
 
-const NavbarHeader = styled.div`
+const NavBrandContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[3]};
+  gap: ${theme.space[4]};
 `;
 
 const StyledNavbarToggler = styled.button`
@@ -270,6 +333,7 @@ const StyledNavbarToggler = styled.button`
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.h4};
   padding: 0;
+  margin-left: auto;
 
   &:hover {
     background: ${theme.colors.dark.bg.tertiary};
@@ -280,12 +344,6 @@ const StyledNavbarToggler = styled.button`
   @media (max-width: ${theme.breakpoints.md}) {
     display: flex;
   }
-`;
-
-const NavBrandContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[4]};
 `;
 
 const BandInfoContainer = styled.div`
@@ -359,6 +417,15 @@ const SwitchBandButton = styled(Button)`
   }
 `;
 
+const DesktopNav = styled(Nav)`
+  gap: ${theme.space[2]};
+  display: flex !important;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none !important;
+  }
+`;
+
 const StyledNav = styled(Nav)`
   gap: ${theme.space[2]};
   flex-direction: column;
@@ -375,8 +442,8 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   text-decoration: none !important;
   font-weight: ${(props) =>
     props.$active ? theme.fontWeights.semibold : theme.fontWeights.medium};
-  font-size: ${theme.fontSizes.body};
-  padding: ${theme.space[3]} ${theme.space[4]} !important;
+  font-size: ${theme.fontSizes.bodySm};
+  padding: ${theme.space[2]} ${theme.space[3]} !important;
   border-radius: ${theme.radius.base};
   transition: all ${theme.transitions.fast} ease;
   position: relative;
@@ -384,19 +451,42 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   align-items: center;
   gap: ${theme.space[3]};
 
-  i {
-    font-size: ${theme.fontSizes.h5};
-    width: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  /* Desktop styles - no icons, smaller padding */
+  @media (min-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodySm};
+    padding: ${theme.space[2]} ${theme.space[3]} !important;
+
+    i {
+      display: none;
+    }
+
+    &:hover {
+      color: ${theme.colors.brand.primary} !important;
+      background: ${(props) =>
+        props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+      transform: none;
+    }
   }
 
-  &:hover {
-    color: ${theme.colors.brand.primary} !important;
-    background: ${(props) =>
-      props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
-    transform: translateX(4px);
+  /* Mobile offcanvas styles - with icons, larger padding */
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.body};
+    padding: ${theme.space[3]} ${theme.space[4]} !important;
+
+    i {
+      font-size: ${theme.fontSizes.h5};
+      width: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &:hover {
+      color: ${theme.colors.brand.primary} !important;
+      background: ${(props) =>
+        props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+      transform: translateX(4px);
+    }
   }
 
   ${(props) =>
@@ -449,6 +539,34 @@ const ThemeToggleButton = styled.button<{ $mode: "light" | "dark" }>`
 
   &:active {
     transform: translateX(0);
+  }
+`;
+
+const DesktopNavActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none !important;
+  }
+
+  ${ThemeToggleButton} {
+    width: 40px;
+    height: 40px;
+    transform: none;
+
+    span {
+      display: none;
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
   }
 `;
 
