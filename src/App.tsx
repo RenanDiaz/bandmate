@@ -18,7 +18,7 @@ import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
-import { Container, Navbar, Nav, NavItem, Button, Collapse } from "reactstrap";
+import { Container, Navbar, Nav, NavItem, Button, Offcanvas, OffcanvasHeader, OffcanvasBody } from "reactstrap";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
@@ -70,95 +70,113 @@ const AppContent: FC = () => {
             </NavBrandContainer>
           </NavbarHeader>
 
-          <Collapse isOpen={isOpen} navbar>
-            {selectedBand && (
-              <MobileBandInfo>
-                <MobileBandName>
-                  <i className="bi bi-music-note-beamed"></i>
-                  {selectedBand.name}
-                </MobileBandName>
-                <SwitchBandButton
-                  size="sm"
-                  onClick={() => {
-                    setShowBandSelector(true);
-                    setIsOpen(false);
-                  }}
-                  aria-label="Switch Band"
-                  title="Switch band"
-                >
-                  <i className="bi bi-arrow-left-right"></i>
-                  <span style={{ marginLeft: '6px' }}>Switch</span>
-                </SwitchBandButton>
-              </MobileBandInfo>
-            )}
-            <StyledNav className="me-auto" navbar>
-              <NavItem>
-                <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
-                  Home
-                </StyledNavLink>
-              </NavItem>
-              <NavItem>
-                <StyledNavLink
-                  as={Link}
-                  to="/songs"
-                  $active={location.pathname === "/songs"}
-                  $mode={mode}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Songs
-                </StyledNavLink>
-              </NavItem>
-              <NavItem>
-                <StyledNavLink
-                  as={Link}
-                  to="/setlists"
-                  $active={location.pathname.startsWith("/setlists")}
-                  $mode={mode}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Setlists
-                </StyledNavLink>
-              </NavItem>
-              <NavItem>
-                <StyledNavLink
-                  as={Link}
-                  to="/shows"
-                  $active={location.pathname.startsWith("/shows")}
-                  $mode={mode}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Shows
-                </StyledNavLink>
-              </NavItem>
-              <NavItem>
-                <StyledNavLink
-                  as={Link}
-                  to="/about"
-                  $active={location.pathname === "/about"}
-                  $mode={mode}
-                  onClick={() => setIsOpen(false)}
-                >
-                  About
-                </StyledNavLink>
-              </NavItem>
-            </StyledNav>
+          <StyledOffcanvas
+            isOpen={isOpen}
+            toggle={toggleNavbar}
+            direction="end"
+            $mode={mode}
+          >
+            <StyledOffcanvasHeader toggle={toggleNavbar} $mode={mode}>
+              <Logo size={28} variant="full" theme={mode} />
+            </StyledOffcanvasHeader>
+            <StyledOffcanvasBody $mode={mode}>
+              {selectedBand && (
+                <MobileBandInfo>
+                  <MobileBandName>
+                    <i className="bi bi-music-note-beamed"></i>
+                    {selectedBand.name}
+                  </MobileBandName>
+                  <SwitchBandButton
+                    size="sm"
+                    onClick={() => {
+                      setShowBandSelector(true);
+                      setIsOpen(false);
+                    }}
+                    aria-label="Switch Band"
+                    title="Switch band"
+                  >
+                    <i className="bi bi-arrow-left-right"></i>
+                    <span style={{ marginLeft: '6px' }}>Switch</span>
+                  </SwitchBandButton>
+                </MobileBandInfo>
+              )}
+              <StyledNav navbar>
+                <NavItem>
+                  <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
+                    <i className="bi bi-house-door"></i>
+                    <span>Home</span>
+                  </StyledNavLink>
+                </NavItem>
+                <NavItem>
+                  <StyledNavLink
+                    as={Link}
+                    to="/songs"
+                    $active={location.pathname === "/songs"}
+                    $mode={mode}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <i className="bi bi-music-note-list"></i>
+                    <span>Songs</span>
+                  </StyledNavLink>
+                </NavItem>
+                <NavItem>
+                  <StyledNavLink
+                    as={Link}
+                    to="/setlists"
+                    $active={location.pathname.startsWith("/setlists")}
+                    $mode={mode}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <i className="bi bi-collection"></i>
+                    <span>Setlists</span>
+                  </StyledNavLink>
+                </NavItem>
+                <NavItem>
+                  <StyledNavLink
+                    as={Link}
+                    to="/shows"
+                    $active={location.pathname.startsWith("/shows")}
+                    $mode={mode}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <i className="bi bi-calendar-event"></i>
+                    <span>Shows</span>
+                  </StyledNavLink>
+                </NavItem>
+                <NavItem>
+                  <StyledNavLink
+                    as={Link}
+                    to="/about"
+                    $active={location.pathname === "/about"}
+                    $mode={mode}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <i className="bi bi-info-circle"></i>
+                    <span>About</span>
+                  </StyledNavLink>
+                </NavItem>
+              </StyledNav>
 
-            <NavActions>
-              <ThemeToggleButton
-                onClick={toggleMode}
-                aria-label="Toggle color mode"
-                title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                $mode={mode}
-              >
-                {mode === "dark" ? (
-                  <i className="bi bi-sun-fill"></i>
-                ) : (
-                  <i className="bi bi-moon-fill"></i>
-                )}
-              </ThemeToggleButton>
-              <AuthButton />
-            </NavActions>
-          </Collapse>
+              <NavActions>
+                <ThemeToggleButton
+                  onClick={toggleMode}
+                  aria-label="Toggle color mode"
+                  title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  $mode={mode}
+                >
+                  {mode === "dark" ? (
+                    <i className="bi bi-sun-fill"></i>
+                  ) : (
+                    <i className="bi bi-moon-fill"></i>
+                  )}
+                  <span style={{ marginLeft: '8px' }}>
+                    {mode === "dark" ? "Light Mode" : "Dark Mode"}
+                  </span>
+                </ThemeToggleButton>
+                <AuthButton />
+              </NavActions>
+            </StyledOffcanvasBody>
+          </StyledOffcanvas>
         </Container>
       </StyledNavbar>
 
@@ -343,6 +361,8 @@ const SwitchBandButton = styled(Button)`
 
 const StyledNav = styled(Nav)`
   gap: ${theme.space[2]};
+  flex-direction: column;
+  width: 100%;
 `;
 
 const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
@@ -355,16 +375,28 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   text-decoration: none !important;
   font-weight: ${(props) =>
     props.$active ? theme.fontWeights.semibold : theme.fontWeights.medium};
-  font-size: ${theme.fontSizes.bodySm};
-  padding: ${theme.space[2]} ${theme.space[3]} !important;
+  font-size: ${theme.fontSizes.body};
+  padding: ${theme.space[3]} ${theme.space[4]} !important;
   border-radius: ${theme.radius.base};
   transition: all ${theme.transitions.fast} ease;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+
+  i {
+    font-size: ${theme.fontSizes.h5};
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   &:hover {
     color: ${theme.colors.brand.primary} !important;
     background: ${(props) =>
       props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+    transform: translateX(4px);
   }
 
   ${(props) =>
@@ -378,13 +410,12 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
 
 const NavActions = styled.div`
   display: flex;
-  align-items: center;
-  gap: ${theme.space[3]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    margin-top: ${theme.space[3]};
-    justify-content: flex-start;
-  }
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  width: 100%;
+  margin-top: auto;
+  padding-top: ${theme.space[4]};
+  border-top: 1px solid ${theme.colors.dark.border.default};
 `;
 
 const ThemeToggleButton = styled.button<{ $mode: "light" | "dark" }>`
@@ -396,26 +427,28 @@ const ThemeToggleButton = styled.button<{ $mode: "light" | "dark" }>`
         : theme.colors.light.border.default};
   color: ${(props) =>
     props.$mode === "dark" ? theme.colors.dark.text.primary : theme.colors.light.text.primary};
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  height: 48px;
   border-radius: ${theme.radius.base};
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: ${theme.space[2]};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
 
   &:hover {
     background: ${(props) =>
       props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
-    transform: translateY(-1px);
+    transform: translateX(4px);
   }
 
   &:active {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 `;
 
@@ -423,6 +456,51 @@ const MainContent = styled.main`
   flex: 1;
   display: flex;
   flex-direction: column;
+`;
+
+const StyledOffcanvas = styled(Offcanvas)<{ $mode: "light" | "dark" }>`
+  background: ${(props) =>
+    props.$mode === "dark"
+      ? theme.colors.dark.bg.primary
+      : theme.colors.light.bg.primary} !important;
+  border-left: 1px solid
+    ${(props) =>
+      props.$mode === "dark"
+        ? theme.colors.dark.border.default
+        : theme.colors.light.border.default} !important;
+  width: 320px !important;
+  max-width: 85vw !important;
+
+  .offcanvas-backdrop {
+    backdrop-filter: blur(4px);
+  }
+`;
+
+const StyledOffcanvasHeader = styled(OffcanvasHeader)<{ $mode: "light" | "dark" }>`
+  border-bottom: 1px solid
+    ${(props) =>
+      props.$mode === "dark"
+        ? theme.colors.dark.border.default
+        : theme.colors.light.border.default};
+  padding: ${theme.space[4]} !important;
+
+  .btn-close {
+    filter: ${(props) => (props.$mode === "dark" ? "invert(1)" : "none")};
+    opacity: 0.7;
+    transition: all ${theme.transitions.fast} ease;
+
+    &:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+`;
+
+const StyledOffcanvasBody = styled(OffcanvasBody)<{ $mode: "light" | "dark" }>`
+  padding: ${theme.space[4]} !important;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[4]};
 `;
 
 export default App;
