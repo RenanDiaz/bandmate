@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { Helmet } from "react-helmet-async";
 
 interface SEOProps {
   title?: string;
@@ -23,7 +22,7 @@ export const SEO: FC<SEOProps> = ({
   const fullTitle = title ? `${title} | Bandmate` : DEFAULT_TITLE;
 
   return (
-    <Helmet>
+    <>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
@@ -47,6 +46,6 @@ export const SEO: FC<SEOProps> = ({
       <meta name="apple-mobile-web-app-title" content="Bandmate" />
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="theme-color" content="#8B5CF6" />
-    </Helmet>
+    </>
   );
 };
