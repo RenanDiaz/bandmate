@@ -457,7 +457,9 @@ const SongGroup = styled.div`
   page-break-inside: avoid;
 
   @media print {
-    margin-bottom: 18pt;
+    margin-bottom: 12pt;
+    page-break-before: auto;
+    page-break-after: auto;
   }
 `;
 
@@ -474,6 +476,8 @@ const GroupHeader = styled.h3`
     margin-bottom: 8pt;
     padding-bottom: 4pt;
     border-bottom-color: #333;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 `;
 
@@ -549,6 +553,9 @@ const TableRow = styled.tr`
   }
 
   @media print {
+    page-break-inside: avoid;
+    page-break-after: auto;
+
     &:nth-child(even) {
       background: #f5f5f5;
     }
