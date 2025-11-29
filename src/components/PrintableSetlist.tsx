@@ -425,6 +425,8 @@ const TableRow = styled.tr<{ $hasNotes?: boolean }>`
   }
 
   @media print {
+    page-break-inside: avoid;
+
     &:nth-child(even) {
       background: #f5f5f5;
     }
