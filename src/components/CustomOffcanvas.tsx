@@ -1,4 +1,5 @@
-import { FC, ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FC, ReactNode } from "react";
 import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
 
