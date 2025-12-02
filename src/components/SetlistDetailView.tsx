@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Container, Spinner } from "reactstrap";
+import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
 import styled from "styled-components";
 import {
   DndContext,
@@ -106,6 +106,19 @@ const SetlistDetailView: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    includeDescription: true,
+    includeVenue: true,
+    includeDate: true,
+    includeSongCount: true,
+    includeTotalDuration: true,
+    includeArtist: true,
+    includeKey: true,
+    includeTempo: true,
+    includeDuration: true,
+    includeNotes: true,
+  });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -230,6 +243,91 @@ const SetlistDetailView: FC = () => {
     return setlistSong?.notes;
   };
 
+  const handleExportAsText = () => {
+    if (!setlist) return;
+
+    // Build the text content
+    let textContent = `${setlist.name}\n`;
+    textContent += "=".repeat(setlist.name.length) + "\n\n";
+
+    if (exportOptions.includeDescription && setlist.description) {
+      textContent += `${setlist.description}\n\n`;
+    }
+
+    if (exportOptions.includeVenue && setlist.venue) {
+      textContent += `Venue: ${setlist.venue}\n`;
+    }
+
+    if (exportOptions.includeDate && setlist.event_date) {
+      textContent += `Date: ${formatDate(setlist.event_date)}\n`;
+    }
+
+    if ((exportOptions.includeVenue && setlist.venue) || (exportOptions.includeDate && setlist.event_date)) {
+      textContent += "\n";
+    }
+
+    if (exportOptions.includeSongCount) {
+      textContent += `Songs: ${songs.length}\n`;
+    }
+
+    const totalDuration = calculateTotalDuration();
+    if (exportOptions.includeTotalDuration && totalDuration > 0) {
+      textContent += `Total Duration: ${formatDuration(totalDuration)}\n`;
+    }
+
+    if (exportOptions.includeSongCount || (exportOptions.includeTotalDuration && totalDuration > 0)) {
+      textContent += "\n";
+    }
+
+    textContent += "SETLIST\n";
+    textContent += "-".repeat(50) + "\n\n";
+
+    songs.forEach((song, index) => {
+      textContent += `${index + 1}. ${song.title}`;
+      if (exportOptions.includeArtist && song.artist) {
+        textContent += ` - ${song.artist}`;
+      }
+      textContent += "\n";
+
+      const metadata = [];
+      if (exportOptions.includeKey && song.key) metadata.push(`Key: ${song.key}`);
+      if (exportOptions.includeTempo && song.tempo) metadata.push(`Tempo: ${song.tempo} BPM`);
+      if (exportOptions.includeDuration && song.duration) metadata.push(`Duration: ${formatDuration(song.duration)}`);
+
+      if (metadata.length > 0) {
+        textContent += `   ${metadata.join(" | ")}\n`;
+      }
+
+      const notes = getSetlistSongNotes(song.id);
+      if (exportOptions.includeNotes && notes) {
+        textContent += `   Note: ${notes}\n`;
+      }
+
+      textContent += "\n";
+    });
+
+    // Create a blob and download it
+    const blob = new Blob([textContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${setlist.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Close the modal
+    setShowExportModal(false);
+  };
+
+  const toggleExportOption = (option: keyof typeof exportOptions) => {
+    setExportOptions((prev) => ({
+      ...prev,
+      [option]: !prev[option],
+    }));
+  };
+
   if (loading) {
     return (
       <LoadingContainer>
@@ -325,6 +423,15 @@ const SetlistDetailView: FC = () => {
                   >
                     <i className="bi bi-printer"></i>
                     Print
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => setShowExportModal(true)}
+                    $variant="edit"
+                    disabled={songs.length === 0}
+                    title="Export as text file"
+                  >
+                    <i className="bi bi-file-text"></i>
+                    Export
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
@@ -454,6 +561,150 @@ const SetlistDetailView: FC = () => {
           </SongsList>
         )}
       </StyledContainer>
+
+      {/* Export Options Modal */}
+      <Modal isOpen={showExportModal} toggle={() => setShowExportModal(false)} size="lg">
+        <ModalHeader toggle={() => setShowExportModal(false)}>
+          Export Setlist Options
+        </ModalHeader>
+        <ModalBody>
+          <ExportOptionsContainer>
+            <OptionSection>
+              <SectionTitle>Setlist Information</SectionTitle>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeDescription"
+                  checked={exportOptions.includeDescription}
+                  onChange={() => toggleExportOption("includeDescription")}
+                  disabled={!setlist?.description}
+                />
+                <Label check for="includeDescription">
+                  Include description
+                  {!setlist?.description && <DisabledNote>(no description)</DisabledNote>}
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeVenue"
+                  checked={exportOptions.includeVenue}
+                  onChange={() => toggleExportOption("includeVenue")}
+                  disabled={!setlist?.venue}
+                />
+                <Label check for="includeVenue">
+                  Include venue
+                  {!setlist?.venue && <DisabledNote>(no venue)</DisabledNote>}
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeDate"
+                  checked={exportOptions.includeDate}
+                  onChange={() => toggleExportOption("includeDate")}
+                  disabled={!setlist?.event_date}
+                />
+                <Label check for="includeDate">
+                  Include event date
+                  {!setlist?.event_date && <DisabledNote>(no date)</DisabledNote>}
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeSongCount"
+                  checked={exportOptions.includeSongCount}
+                  onChange={() => toggleExportOption("includeSongCount")}
+                />
+                <Label check for="includeSongCount">
+                  Include song count
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeTotalDuration"
+                  checked={exportOptions.includeTotalDuration}
+                  onChange={() => toggleExportOption("includeTotalDuration")}
+                  disabled={calculateTotalDuration() === 0}
+                />
+                <Label check for="includeTotalDuration">
+                  Include total duration
+                  {calculateTotalDuration() === 0 && <DisabledNote>(no durations)</DisabledNote>}
+                </Label>
+              </FormGroup>
+            </OptionSection>
+
+            <OptionSection>
+              <SectionTitle>Song Details</SectionTitle>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeArtist"
+                  checked={exportOptions.includeArtist}
+                  onChange={() => toggleExportOption("includeArtist")}
+                />
+                <Label check for="includeArtist">
+                  Include artist names
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeKey"
+                  checked={exportOptions.includeKey}
+                  onChange={() => toggleExportOption("includeKey")}
+                />
+                <Label check for="includeKey">
+                  Include song keys
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeTempo"
+                  checked={exportOptions.includeTempo}
+                  onChange={() => toggleExportOption("includeTempo")}
+                />
+                <Label check for="includeTempo">
+                  Include tempo (BPM)
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeDuration"
+                  checked={exportOptions.includeDuration}
+                  onChange={() => toggleExportOption("includeDuration")}
+                />
+                <Label check for="includeDuration">
+                  Include song durations
+                </Label>
+              </FormGroup>
+              <FormGroup check>
+                <Input
+                  type="checkbox"
+                  id="includeNotes"
+                  checked={exportOptions.includeNotes}
+                  onChange={() => toggleExportOption("includeNotes")}
+                />
+                <Label check for="includeNotes">
+                  Include song notes
+                </Label>
+              </FormGroup>
+            </OptionSection>
+          </ExportOptionsContainer>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={() => setShowExportModal(false)}>
+            Cancel
+          </Button>
+          <Button color="primary" onClick={handleExportAsText}>
+            <i className="bi bi-download"></i> Export
+          </Button>
+        </ModalFooter>
+      </Modal>
     </ViewContainer>
   );
 };
@@ -856,6 +1107,38 @@ const MetaBadge = styled.span`
     font-size: ${theme.fontSizes.bodySm};
     color: ${theme.colors.brand.primary};
   }
+`;
+
+const ExportOptionsContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${theme.space[6]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const OptionSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const SectionTitle = styled.h3`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: 0 0 ${theme.space[2]} 0;
+  padding-bottom: ${theme.space[2]};
+  border-bottom: 1px solid ${theme.colors.dark.border.default};
+`;
+
+const DisabledNote = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  font-style: italic;
+  margin-left: ${theme.space[2]};
 `;
 
 export default SetlistDetailView;
