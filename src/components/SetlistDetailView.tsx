@@ -27,6 +27,169 @@ import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 
+// Forward declare styled components used in SortableSongCard
+const SongCard = styled.div<{ $isDragging?: boolean }>`
+  background: ${(props) =>
+    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.secondary};
+  border: 1px solid ${(props) =>
+    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[4]};
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.space[4]};
+  transition: all ${theme.transitions.fast} ease;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: ${theme.shadows.sm};
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex-direction: column;
+    gap: ${theme.space[3]};
+  }
+`;
+
+const DragHandle = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.dark.text.tertiary};
+  width: 24px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+  font-size: ${theme.fontSizes.h3};
+  padding: 0;
+  touch-action: none;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:active {
+    cursor: grabbing;
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SongPositionWrapper = styled.div`
+  position: relative;
+  flex-shrink: 0;
+`;
+
+const SongPosition = styled.div`
+  width: 36px;
+  height: 36px;
+  background: ${theme.gradients.brandPrimary};
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.bold};
+  color: white;
+  flex-shrink: 0;
+`;
+
+const BackingTracksBadge = styled.div`
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: ${theme.colors.semantic.success};
+  border: 2px solid ${theme.colors.dark.bg.secondary};
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  box-shadow: ${theme.shadows.sm};
+  transition: all ${theme.transitions.fast} ease;
+  cursor: help;
+
+  ${SongCard}:hover & {
+    transform: scale(1.1);
+  }
+`;
+
+const SongInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const SongTitle = styled.div`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[1]};
+`;
+
+const SongArtist = styled.div`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const SongNotes = styled.div`
+  background: ${theme.colors.semantic.warningBgDark};
+  border: 1px solid ${theme.colors.semantic.warning};
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.primary};
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[2]};
+`;
+
+const NotesIcon = styled.div`
+  color: ${theme.colors.semantic.warning};
+  font-size: ${theme.fontSizes.body};
+  flex-shrink: 0;
+  margin-top: 2px;
+`;
+
+const SongMetadata = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${theme.space[2]};
+  align-items: center;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 100%;
+  }
+`;
+
+const MetaBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  background: ${theme.colors.dark.bg.tertiary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  color: ${theme.colors.dark.text.secondary};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
+
+  i {
+    font-size: ${theme.fontSizes.bodySm};
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
 // Sortable song card component for reorder mode
 interface SortableSongCardProps {
   song: Song;
@@ -60,7 +223,14 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
       <DragHandle {...attributes} {...listeners}>
         <i className="bi bi-grip-vertical"></i>
       </DragHandle>
-      <SongPosition>{index + 1}</SongPosition>
+      <SongPositionWrapper>
+        <SongPosition>{index + 1}</SongPosition>
+        {song.has_backing_tracks && (
+          <BackingTracksBadge title="Has Backing Tracks / Sequences">
+            <i className="bi bi-headphones-fill"></i>
+          </BackingTracksBadge>
+        )}
+      </SongPositionWrapper>
       <SongInfo>
         <SongTitle>{song.title}</SongTitle>
         {song.artist && <SongArtist>{song.artist}</SongArtist>}
@@ -522,7 +692,14 @@ const SetlistDetailView: FC = () => {
               const notes = getSetlistSongNotes(song.id);
               return (
                 <SongCard key={song.id}>
-                  <SongPosition>{index + 1}</SongPosition>
+                  <SongPositionWrapper>
+                    <SongPosition>{index + 1}</SongPosition>
+                    {song.has_backing_tracks && (
+                      <BackingTracksBadge title="Has Backing Tracks / Sequences">
+                        <i className="bi bi-headphones-fill"></i>
+                      </BackingTracksBadge>
+                    )}
+                  </SongPositionWrapper>
                   <SongInfo>
                     <SongTitle>{song.title}</SongTitle>
                     {song.artist && <SongArtist>{song.artist}</SongArtist>}
@@ -973,140 +1150,6 @@ const SongsList = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[3]};
-`;
-
-const SongCard = styled.div<{ $isDragging?: boolean }>`
-  background: ${(props) =>
-    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.secondary};
-  border: 1px solid ${(props) =>
-    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
-  border-radius: ${theme.radius.lg};
-  padding: ${theme.space[4]};
-  display: flex;
-  align-items: flex-start;
-  gap: ${theme.space[4]};
-  transition: all ${theme.transitions.fast} ease;
-  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
-  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
-  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
-
-  &:hover {
-    border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.sm};
-  }
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    flex-direction: column;
-    gap: ${theme.space[3]};
-  }
-`;
-
-const DragHandle = styled.button`
-  background: transparent;
-  border: none;
-  color: ${theme.colors.dark.text.tertiary};
-  width: 24px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  transition: all ${theme.transitions.fast} ease;
-  flex-shrink: 0;
-  font-size: ${theme.fontSizes.h3};
-  padding: 0;
-  touch-action: none;
-
-  &:hover {
-    color: ${theme.colors.brand.primary};
-  }
-
-  &:active {
-    cursor: grabbing;
-    color: ${theme.colors.brand.primary};
-  }
-`;
-
-const SongPosition = styled.div`
-  width: 36px;
-  height: 36px;
-  background: ${theme.gradients.brandPrimary};
-  border-radius: ${theme.radius.base};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: ${theme.fontSizes.body};
-  font-weight: ${theme.fontWeights.bold};
-  color: white;
-  flex-shrink: 0;
-`;
-
-const SongInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const SongTitle = styled.div`
-  font-size: ${theme.fontSizes.bodyLg};
-  font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
-  margin-bottom: ${theme.space[1]};
-`;
-
-const SongArtist = styled.div`
-  font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
-  margin-bottom: ${theme.space[2]};
-`;
-
-const SongNotes = styled.div`
-  background: ${theme.colors.semantic.warningBgDark};
-  border: 1px solid ${theme.colors.semantic.warning};
-  border-radius: ${theme.radius.sm};
-  padding: ${theme.space[2]} ${theme.space[3]};
-  font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
-  display: flex;
-  align-items: flex-start;
-  gap: ${theme.space[2]};
-  margin-top: ${theme.space[2]};
-`;
-
-const NotesIcon = styled.div`
-  color: ${theme.colors.semantic.warning};
-  font-size: ${theme.fontSizes.body};
-  flex-shrink: 0;
-  margin-top: 2px;
-`;
-
-const SongMetadata = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${theme.space[2]};
-  align-items: center;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 100%;
-  }
-`;
-
-const MetaBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: ${theme.space[1]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
-  padding: ${theme.space[1]} ${theme.space[2]};
-  border-radius: ${theme.radius.sm};
-  font-size: ${theme.fontSizes.bodyXs};
-  font-weight: ${theme.fontWeights.medium};
-  white-space: nowrap;
-
-  i {
-    font-size: ${theme.fontSizes.bodySm};
-    color: ${theme.colors.brand.primary};
-  }
 `;
 
 const ExportOptionsContainer = styled.div`
