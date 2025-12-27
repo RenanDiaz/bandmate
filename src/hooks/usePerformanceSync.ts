@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabaseClient";
 import {
   createSession,
   endSession,
-  getActiveSessionForSetlist,
-  getSessionByCode,
+  getActiveSessionForBand,
   subscribeToSession,
   unsubscribeFromSession,
   updateSongIndex,
@@ -29,12 +29,13 @@ export interface UsePerformanceSyncReturn {
 
   // Actions
   startHosting: () => Promise<void>;
-  joinSession: (code: string) => Promise<boolean>;
+  joinExistingSession: () => Promise<boolean>;
   leaveSession: () => Promise<void>;
   syncSongIndex: (index: number) => Promise<void>;
 
   // Session info
-  sessionCode: string | null;
+  hasActiveSession: boolean;
+  activeSessionSetlistId: string | null;
 }
 
 export function usePerformanceSync({
@@ -47,6 +48,8 @@ export function usePerformanceSync({
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingSession, setExistingSession] =
+    useState<PerformanceSession | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const onSongIndexChangeRef = useRef(onSongIndexChange);
@@ -71,6 +74,7 @@ export function usePerformanceSync({
         setRole(null);
         setIsConnected(false);
         setSession(null);
+        setExistingSession(null);
         if (channelRef.current) {
           unsubscribeFromSession(channelRef.current);
           channelRef.current = null;
@@ -101,6 +105,7 @@ export function usePerformanceSync({
 
       setSession(newSession);
       setRole("host");
+      setExistingSession(newSession);
       subscribeToUpdates(newSession);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear sesión");
@@ -110,45 +115,48 @@ export function usePerformanceSync({
     }
   }, [setlistId, bandId, subscribeToUpdates]);
 
-  // Join an existing session by code
-  const joinSession = useCallback(
-    async (code: string): Promise<boolean> => {
-      setIsLoading(true);
-      setError(null);
+  // Join existing session for the band (auto-join)
+  const joinExistingSession = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const existingSession = await getSessionByCode(code);
+    try {
+      const activeSession = await getActiveSessionForBand(bandId);
 
-        if (!existingSession) {
-          setError("Sesión no encontrada o ya no está activa");
-          return false;
-        }
-
-        // Verify it's for the same setlist
-        if (existingSession.setlist_id !== setlistId) {
-          setError("Esta sesión es para otro setlist");
-          return false;
-        }
-
-        setSession(existingSession);
-        setRole("viewer");
-        subscribeToUpdates(existingSession);
-
-        // Immediately sync to current position
-        if (onSongIndexChangeRef.current) {
-          onSongIndexChangeRef.current(existingSession.current_song_index);
-        }
-
-        return true;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al unirse");
+      if (!activeSession) {
+        setError("No hay sesión activa para esta banda");
         return false;
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [setlistId, subscribeToUpdates]
-  );
+
+      // Get current user to check if they're the host
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData.user?.id;
+
+      setSession(activeSession);
+      setExistingSession(activeSession);
+
+      // If the current user is the host, set role as host
+      if (currentUserId && activeSession.host_user_id === currentUserId) {
+        setRole("host");
+      } else {
+        setRole("viewer");
+      }
+
+      subscribeToUpdates(activeSession);
+
+      // Immediately sync to current position
+      if (onSongIndexChangeRef.current) {
+        onSongIndexChangeRef.current(activeSession.current_song_index);
+      }
+
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al unirse");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [bandId, subscribeToUpdates]);
 
   // Leave/end session
   const leaveSession = useCallback(async () => {
@@ -169,6 +177,7 @@ export function usePerformanceSync({
       setSession(null);
       setRole(null);
       setIsConnected(false);
+      setExistingSession(null);
     } catch (err) {
       console.error("Error leaving session:", err);
     }
@@ -192,10 +201,9 @@ export function usePerformanceSync({
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        const existingSession = await getActiveSessionForSetlist(setlistId);
-        if (existingSession) {
-          // There's an active session - user can choose to join
-          // We don't auto-join, just make it available
+        const activeSession = await getActiveSessionForBand(bandId);
+        if (activeSession) {
+          setExistingSession(activeSession);
         }
       } catch {
         // Ignore errors on initial check
@@ -203,7 +211,7 @@ export function usePerformanceSync({
     };
 
     checkExistingSession();
-  }, [setlistId]);
+  }, [bandId]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -221,9 +229,10 @@ export function usePerformanceSync({
     isLoading,
     error,
     startHosting,
-    joinSession,
+    joinExistingSession,
     leaveSession,
     syncSongIndex,
-    sessionCode: session?.session_code ?? null,
+    hasActiveSession: existingSession !== null && existingSession.is_active,
+    activeSessionSetlistId: existingSession?.setlist_id ?? null,
   };
 }
