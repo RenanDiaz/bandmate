@@ -5,11 +5,17 @@ import { Spinner } from "reactstrap";
 import { supabase } from "./lib/supabaseClient";
 import styled from "styled-components";
 import { theme } from "./theme";
+import { useTranslation } from "react-i18next";
 
 export const AuthButton: FC = () => {
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -46,7 +52,7 @@ export const AuthButton: FC = () => {
       <SignInContainer>
         <SignInButton onClick={redirectToLogin}>
           <i className="bi bi-box-arrow-in-right"></i>
-          <span>Sign in</span>
+          <span>{t('auth.signIn')}</span>
         </SignInButton>
       </SignInContainer>
     );
@@ -60,7 +66,7 @@ export const AuthButton: FC = () => {
       <UserButton
         onClick={() => setShowUserMenu(!showUserMenu)}
         disabled={loading}
-        aria-label="User menu"
+        aria-label={t('auth.userMenu')}
       >
         <UserAvatar>{userInitial}</UserAvatar>
         <UserEmail>{userEmail}</UserEmail>
@@ -70,20 +76,41 @@ export const AuthButton: FC = () => {
       {showUserMenu && (
         <UserDropdown>
           <UserInfo>
-            <UserInfoLabel>Signed in as</UserInfoLabel>
+            <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
             <UserInfoEmail>{userEmail}</UserInfoEmail>
           </UserInfo>
+          <DropdownDivider />
+          <LanguageSection>
+            <LanguageLabel>
+              <i className="bi bi-globe"></i>
+              {t('settings.language')}
+            </LanguageLabel>
+            <LanguageButtons>
+              <LanguageButton
+                $active={i18n.language === 'en' || i18n.language.startsWith('en-')}
+                onClick={() => changeLanguage('en')}
+              >
+                EN
+              </LanguageButton>
+              <LanguageButton
+                $active={i18n.language === 'es' || i18n.language.startsWith('es-')}
+                onClick={() => changeLanguage('es')}
+              >
+                ES
+              </LanguageButton>
+            </LanguageButtons>
+          </LanguageSection>
           <DropdownDivider />
           <DropdownItem onClick={logout} disabled={loading}>
             {loading ? (
               <>
                 <Spinner size="sm" />
-                <span>Signing out...</span>
+                <span>{t('auth.signingOut')}</span>
               </>
             ) : (
               <>
                 <i className="bi bi-box-arrow-right"></i>
-                <span>Sign out</span>
+                <span>{t('auth.signOut')}</span>
               </>
             )}
           </DropdownItem>
@@ -291,5 +318,53 @@ const DropdownItem = styled.button`
 
   &:first-of-type {
     border-radius: 0 0 ${theme.radius.md} ${theme.radius.md};
+  }
+`;
+
+const LanguageSection = styled.div`
+  padding: ${theme.space[3]} ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const LanguageLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.primary};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+    color: ${theme.colors.dark.text.secondary};
+  }
+`;
+
+const LanguageButtons = styled.div`
+  display: flex;
+  gap: ${theme.space[1]};
+`;
+
+const LanguageButton = styled.button<{ $active: boolean }>`
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : theme.colors.dark.bg.tertiary};
+  color: ${(props) =>
+    props.$active ? 'white' : theme.colors.dark.text.secondary};
+  border: 1px solid ${(props) =>
+    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+    border-color: ${theme.colors.brand.primary};
+    color: ${(props) =>
+      props.$active ? 'white' : theme.colors.brand.primary};
   }
 `;

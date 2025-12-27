@@ -3,8 +3,12 @@ import styled from "styled-components";
 import { theme } from "../theme";
 import { Logo } from "./Logo";
 import { SEO } from "./SEO";
+import { useTranslation } from "react-i18next";
 
-const About = () => (
+const About = () => {
+  const { t } = useTranslation();
+
+  return (
   <PageWrapper>
     <SEO
       title="About"
@@ -13,28 +17,26 @@ const About = () => (
     <Container>
       <AboutHeader>
         <Logo size={64} variant="icon" theme="dark" />
-        <Title>About Bandmate</Title>
+        <Title>{t('about.title')}</Title>
       </AboutHeader>
 
       <ContentSection>
         <Card>
-          <CardTitle>What is Bandmate?</CardTitle>
+          <CardTitle>{t('about.whatIsBandmate')}</CardTitle>
           <CardText>
-            Bandmate is a comprehensive web application designed to help bands manage their
-            songs, setlists, shows, and members in one centralized platform. Built with modern
-            web technologies, it helps musicians stay organized and collaborate efficiently.
+            {t('about.whatIsBandmateDesc')}
           </CardText>
         </Card>
 
         <Card>
-          <CardTitle>Current Features</CardTitle>
+          <CardTitle>{t('about.currentFeatures')}</CardTitle>
           <FeatureList>
             <FeatureItem>
               <FeatureIcon>
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>OAuth Authentication</strong> - Secure sign-in with GitHub or Google accounts
+                <strong>{t('about.oauthAuth')}</strong> - {t('about.oauthAuthDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -42,7 +44,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Band Management</strong> - Create and manage multiple bands with different members
+                <strong>{t('about.bandManagementFeature')}</strong> - {t('about.bandManagementFeatureDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -50,7 +52,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Member Roles & Invitations</strong> - Invite members and guests with role-based permissions
+                <strong>{t('about.memberRoles')}</strong> - {t('about.memberRolesDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -58,7 +60,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Song Library</strong> - Store songs with titles, artists, lyrics, and chords
+                <strong>{t('about.songLibraryFeature')}</strong> - {t('about.songLibraryFeatureDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -66,7 +68,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Setlist Management</strong> - Create, edit, and perform setlists with full-screen view
+                <strong>{t('about.setlistManagement')}</strong> - {t('about.setlistManagementDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -74,7 +76,7 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Guest Access</strong> - Time-limited access for temporary members and substitutes
+                <strong>{t('about.guestAccess')}</strong> - {t('about.guestAccessDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -82,21 +84,21 @@ const About = () => (
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Dark & Light Themes</strong> - Toggle between themes for comfortable viewing
+                <strong>{t('about.themes')}</strong> - {t('about.themesDesc')}
               </FeatureText>
             </FeatureItem>
           </FeatureList>
         </Card>
 
         <Card>
-          <CardTitle>Coming Soon</CardTitle>
+          <CardTitle>{t('about.comingSoon')}</CardTitle>
           <FeatureList>
             <FeatureItem>
               <FeatureIcon $coming>
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Show Scheduling</strong> - Track gigs, venues, and performance history
+                <strong>{t('about.showScheduling')}</strong> - {t('about.showSchedulingDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -104,7 +106,7 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Email Notifications</strong> - Automatic email alerts for invitations and updates
+                <strong>{t('about.emailNotifications')}</strong> - {t('about.emailNotificationsDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -112,7 +114,7 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>File Attachments</strong> - Upload PDFs, images, and audio files to songs
+                <strong>{t('about.fileAttachments')}</strong> - {t('about.fileAttachmentsDesc')}
               </FeatureText>
             </FeatureItem>
             <FeatureItem>
@@ -120,14 +122,14 @@ const About = () => (
                 <i className="bi bi-clock"></i>
               </FeatureIcon>
               <FeatureText>
-                <strong>Advanced Search</strong> - Filter and search songs by key, tempo, and more
+                <strong>{t('about.advancedSearch')}</strong> - {t('about.advancedSearchDesc')}
               </FeatureText>
             </FeatureItem>
           </FeatureList>
         </Card>
 
         <Card>
-          <CardTitle>Technology Stack</CardTitle>
+          <CardTitle>{t('about.techStack')}</CardTitle>
           <TechGrid>
             <TechItem>React 19</TechItem>
             <TechItem>TypeScript</TechItem>
@@ -140,14 +142,14 @@ const About = () => (
 
         <FooterCard>
           <FooterText>
-            Bandmate is in active development. We're constantly adding new features and
-            improvements to help musicians collaborate better.
+            {t('about.footerText')}
           </FooterText>
         </FooterCard>
       </ContentSection>
     </Container>
   </PageWrapper>
-);
+  );
+};
 
 // Styled Components
 
