@@ -104,14 +104,15 @@ const SetlistPerformanceView: FC = () => {
   // Performance sync hook
   const {
     role: syncRole,
-    sessionCode,
     isConnected: isSyncConnected,
     isLoading: isSyncLoading,
     error: syncError,
     startHosting,
-    joinSession,
+    joinExistingSession,
     leaveSession,
     syncSongIndex,
+    hasActiveSession,
+    activeSessionSetlistId,
   } = usePerformanceSync({
     setlistId: setlistId || "",
     bandId: setlist?.band_id || 0,
@@ -446,12 +447,14 @@ const SetlistPerformanceView: FC = () => {
             <>
               <SyncControls
                 role={syncRole}
-                sessionCode={sessionCode}
                 isConnected={isSyncConnected}
                 isLoading={isSyncLoading}
                 error={syncError}
+                hasActiveSession={hasActiveSession}
+                activeSessionSetlistId={activeSessionSetlistId}
+                currentSetlistId={setlistId || ""}
                 onStartHosting={startHosting}
-                onJoinSession={joinSession}
+                onJoinSession={joinExistingSession}
                 onLeaveSession={leaveSession}
               />
               <ViewToggleGroup>

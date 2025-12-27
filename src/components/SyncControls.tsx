@@ -7,52 +7,45 @@ import type { SyncRole } from "../hooks/usePerformanceSync";
 
 interface SyncControlsProps {
   role: SyncRole;
-  sessionCode: string | null;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
+  hasActiveSession: boolean;
+  activeSessionSetlistId: string | null;
+  currentSetlistId: string;
   onStartHosting: () => Promise<void>;
-  onJoinSession: (code: string) => Promise<boolean>;
+  onJoinSession: () => Promise<boolean>;
   onLeaveSession: () => Promise<void>;
 }
 
 export const SyncControls: FC<SyncControlsProps> = ({
   role,
-  sessionCode,
   isConnected,
   isLoading,
   error,
+  hasActiveSession,
+  activeSessionSetlistId,
+  currentSetlistId,
   onStartHosting,
   onJoinSession,
   onLeaveSession,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
-  const [codeCopied, setCodeCopied] = useState(false);
-
-  const handleCopyCode = async () => {
-    if (sessionCode) {
-      await navigator.clipboard.writeText(sessionCode);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    }
-  };
-
-  const handleJoin = async () => {
-    if (joinCode.trim()) {
-      const success = await onJoinSession(joinCode.trim().toUpperCase());
-      if (success) {
-        setJoinCode("");
-        setIsOpen(false);
-      }
-    }
-  };
 
   const handleStartHosting = async () => {
     await onStartHosting();
     setIsOpen(false);
   };
+
+  const handleJoinSession = async () => {
+    await onJoinSession();
+    setIsOpen(false);
+  };
+
+  // Check if active session is for a different setlist
+  const isSessionOnDifferentSetlist =
+    hasActiveSession && activeSessionSetlistId !== currentSetlistId;
 
   // Render active session indicator
   if (role && isConnected) {
@@ -67,13 +60,6 @@ export const SyncControls: FC<SyncControlsProps> = ({
               : t("performanceSync.following")}
           </span>
         </SessionBadge>
-
-        {role === "host" && sessionCode && (
-          <CodeDisplay onClick={handleCopyCode} title={t("performanceSync.copyCode")}>
-            <code>{sessionCode}</code>
-            <i className={codeCopied ? "bi bi-check" : "bi bi-clipboard"} />
-          </CodeDisplay>
-        )}
 
         <LeaveButton onClick={onLeaveSession}>
           <i className="bi bi-x-lg" />
@@ -90,9 +76,18 @@ export const SyncControls: FC<SyncControlsProps> = ({
   // Render sync button and dropdown
   return (
     <SyncContainer>
-      <SyncButton onClick={() => setIsOpen(!isOpen)} $isOpen={isOpen}>
+      <SyncButton
+        onClick={() => setIsOpen(!isOpen)}
+        $isOpen={isOpen}
+        $hasSession={hasActiveSession}
+      >
         <i className="bi bi-broadcast" />
-        <span>{t("performanceSync.sync")}</span>
+        <span>
+          {hasActiveSession
+            ? t("performanceSync.sessionActive")
+            : t("performanceSync.sync")}
+        </span>
+        {hasActiveSession && <PulseDot />}
         <i className={`bi bi-chevron-${isOpen ? "up" : "down"}`} />
       </SyncButton>
 
@@ -102,57 +97,53 @@ export const SyncControls: FC<SyncControlsProps> = ({
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
 
-          <DropdownSection>
-            <SectionTitle>
-              <i className="bi bi-broadcast" />
-              {t("performanceSync.startHosting")}
-            </SectionTitle>
-            <SectionDescription>
-              {t("performanceSync.startHostingDesc")}
-            </SectionDescription>
-            <ActionButton onClick={handleStartHosting} disabled={isLoading}>
-              {isLoading ? (
-                <i className="bi bi-arrow-repeat spinning" />
-              ) : (
-                <i className="bi bi-play-fill" />
-              )}
-              {t("performanceSync.startHosting")}
-            </ActionButton>
-          </DropdownSection>
-
-          <Divider />
-
-          <DropdownSection>
-            <SectionTitle>
-              <i className="bi bi-person-plus" />
-              {t("performanceSync.joinSession")}
-            </SectionTitle>
-            <SectionDescription>
-              {t("performanceSync.joinSessionDesc")}
-            </SectionDescription>
-            <JoinForm
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleJoin();
-              }}
-            >
-              <CodeInput
-                type="text"
-                placeholder={t("performanceSync.enterCode")}
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                maxLength={6}
+          {hasActiveSession ? (
+            <DropdownSection>
+              <SectionTitle>
+                <i className="bi bi-broadcast" />
+                {t("performanceSync.activeSessionFound")}
+              </SectionTitle>
+              <SectionDescription>
+                {isSessionOnDifferentSetlist
+                  ? t("performanceSync.sessionOnDifferentSetlist")
+                  : t("performanceSync.joinToFollow")}
+              </SectionDescription>
+              <ActionButton
+                onClick={handleJoinSession}
                 disabled={isLoading}
-              />
-              <JoinButton type="submit" disabled={!joinCode.trim() || isLoading}>
+                $variant="success"
+              >
                 {isLoading ? (
                   <i className="bi bi-arrow-repeat spinning" />
                 ) : (
-                  t("performanceSync.join")
+                  <i className="bi bi-person-plus" />
                 )}
-              </JoinButton>
-            </JoinForm>
-          </DropdownSection>
+                {t("performanceSync.joinSession")}
+              </ActionButton>
+            </DropdownSection>
+          ) : (
+            <DropdownSection>
+              <SectionTitle>
+                <i className="bi bi-broadcast" />
+                {t("performanceSync.startHosting")}
+              </SectionTitle>
+              <SectionDescription>
+                {t("performanceSync.startHostingDesc")}
+              </SectionDescription>
+              <ActionButton
+                onClick={handleStartHosting}
+                disabled={isLoading}
+                $variant="primary"
+              >
+                {isLoading ? (
+                  <i className="bi bi-arrow-repeat spinning" />
+                ) : (
+                  <i className="bi bi-play-fill" />
+                )}
+                {t("performanceSync.startHosting")}
+              </ActionButton>
+            </DropdownSection>
+          )}
         </SyncDropdown>
       )}
     </SyncContainer>
@@ -164,14 +155,26 @@ const SyncContainer = styled.div`
   position: relative;
 `;
 
-const SyncButton = styled.button<{ $isOpen: boolean }>`
+const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
   background: ${(props) =>
-    props.$isOpen ? theme.colors.brand.primary : "transparent"};
+    props.$isOpen
+      ? theme.colors.brand.primary
+      : props.$hasSession
+        ? theme.colors.semantic.success + "20"
+        : "transparent"};
   border: 1px solid
     ${(props) =>
-      props.$isOpen ? theme.colors.brand.primary : theme.colors.dark.border.default};
+      props.$isOpen
+        ? theme.colors.brand.primary
+        : props.$hasSession
+          ? theme.colors.semantic.success
+          : theme.colors.dark.border.default};
   color: ${(props) =>
-    props.$isOpen ? "white" : theme.colors.dark.text.secondary};
+    props.$isOpen
+      ? "white"
+      : props.$hasSession
+        ? theme.colors.semantic.success
+        : theme.colors.dark.text.secondary};
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   display: flex;
@@ -184,9 +187,41 @@ const SyncButton = styled.button<{ $isOpen: boolean }>`
 
   &:hover {
     background: ${(props) =>
-      props.$isOpen ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
-    border-color: ${theme.colors.brand.primary};
-    color: ${(props) => (props.$isOpen ? "white" : theme.colors.brand.primary)};
+      props.$isOpen
+        ? theme.colors.brand.primaryHover
+        : props.$hasSession
+          ? theme.colors.semantic.success + "30"
+          : theme.colors.dark.bg.elevated};
+    border-color: ${(props) =>
+      props.$hasSession
+        ? theme.colors.semantic.success
+        : theme.colors.brand.primary};
+    color: ${(props) =>
+      props.$isOpen
+        ? "white"
+        : props.$hasSession
+          ? theme.colors.semantic.success
+          : theme.colors.brand.primary};
+  }
+`;
+
+const PulseDot = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${theme.colors.semantic.success};
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
   }
 `;
 
@@ -238,9 +273,12 @@ const SectionDescription = styled.div`
   margin-bottom: ${theme.space[3]};
 `;
 
-const ActionButton = styled.button`
+const ActionButton = styled.button<{ $variant?: "primary" | "success" }>`
   width: 100%;
-  background: ${theme.colors.brand.primary};
+  background: ${(props) =>
+    props.$variant === "success"
+      ? theme.colors.semantic.success
+      : theme.colors.brand.primary};
   border: none;
   color: white;
   padding: ${theme.space[3]};
@@ -255,7 +293,8 @@ const ActionButton = styled.button`
   gap: ${theme.space[2]};
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.brand.primaryHover};
+    background: ${(props) =>
+      props.$variant === "success" ? "#059669" : theme.colors.brand.primaryHover};
   }
 
   &:disabled {
@@ -274,71 +313,6 @@ const ActionButton = styled.button`
     to {
       transform: rotate(360deg);
     }
-  }
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${theme.colors.dark.border.default};
-  margin: 0 ${theme.space[4]};
-`;
-
-const JoinForm = styled.form`
-  display: flex;
-  gap: ${theme.space[2]};
-`;
-
-const CodeInput = styled.input`
-  flex: 1;
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
-  padding: ${theme.space[3]};
-  border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.body};
-  font-family: ${theme.fonts.mono};
-  text-transform: uppercase;
-  letter-spacing: ${theme.letterSpacing.wider};
-  text-align: center;
-
-  &::placeholder {
-    color: ${theme.colors.dark.text.disabled};
-    text-transform: none;
-    letter-spacing: normal;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: ${theme.colors.brand.primary};
-  }
-
-  &:disabled {
-    opacity: 0.6;
-  }
-`;
-
-const JoinButton = styled.button`
-  background: ${theme.colors.semantic.success};
-  border: none;
-  color: white;
-  padding: ${theme.space[3]} ${theme.space[4]};
-  border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.bodySm};
-  font-weight: ${theme.fontWeights.medium};
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-
-  &:hover:not(:disabled) {
-    background: #059669;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .spinning {
-    animation: spin 1s linear infinite;
   }
 `;
 
@@ -397,38 +371,6 @@ const StatusDot = styled.div<{ $connected: boolean }>`
     }
     50% {
       opacity: 0.5;
-    }
-  }
-`;
-
-const CodeDisplay = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-  padding: ${theme.space[2]} ${theme.space[3]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  border-radius: ${theme.radius.base};
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-
-  code {
-    font-family: ${theme.fonts.mono};
-    font-size: ${theme.fontSizes.body};
-    color: ${theme.colors.dark.text.primary};
-    letter-spacing: ${theme.letterSpacing.wider};
-  }
-
-  i {
-    color: ${theme.colors.dark.text.tertiary};
-    font-size: ${theme.fontSizes.bodySm};
-  }
-
-  &:hover {
-    border-color: ${theme.colors.brand.primary};
-
-    i {
-      color: ${theme.colors.brand.primary};
     }
   }
 `;

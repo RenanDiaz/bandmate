@@ -1,6 +1,7 @@
 -- Performance Sessions Migration
 -- Run this in Supabase SQL Editor
 -- Enables real-time sync for setlist performance mode
+-- Sessions are per-band (only one active session per band at a time)
 
 -- Create performance_sessions table
 CREATE TABLE IF NOT EXISTS performance_sessions (
@@ -9,7 +10,6 @@ CREATE TABLE IF NOT EXISTS performance_sessions (
   band_id BIGINT NOT NULL REFERENCES bands(id) ON DELETE CASCADE,
   host_user_id UUID NOT NULL REFERENCES auth.users(id),
   current_song_index INTEGER NOT NULL DEFAULT 0,
-  session_code TEXT NOT NULL UNIQUE,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS performance_sessions (
 -- Create indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_performance_sessions_setlist_id ON performance_sessions(setlist_id);
 CREATE INDEX IF NOT EXISTS idx_performance_sessions_band_id ON performance_sessions(band_id);
-CREATE INDEX IF NOT EXISTS idx_performance_sessions_session_code ON performance_sessions(session_code);
 CREATE INDEX IF NOT EXISTS idx_performance_sessions_is_active ON performance_sessions(is_active);
+CREATE INDEX IF NOT EXISTS idx_performance_sessions_band_active ON performance_sessions(band_id, is_active) WHERE is_active = true;
 
 -- Enable RLS
 ALTER TABLE performance_sessions ENABLE ROW LEVEL SECURITY;
@@ -75,21 +75,6 @@ CREATE TRIGGER performance_sessions_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_performance_sessions_updated_at();
 
--- Function to generate a short session code
-CREATE OR REPLACE FUNCTION generate_session_code()
-RETURNS TEXT AS $$
-DECLARE
-  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  result TEXT := '';
-  i INTEGER;
-BEGIN
-  FOR i IN 1..6 LOOP
-    result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
-  END LOOP;
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Function to cleanup old inactive sessions (older than 24 hours)
 CREATE OR REPLACE FUNCTION cleanup_old_performance_sessions()
 RETURNS void AS $$
@@ -117,3 +102,16 @@ BEGIN
   RAISE NOTICE 'IMPORTANT: Enable Realtime for performance_sessions table in Supabase Dashboard';
   RAISE NOTICE 'Go to: Database > Replication > Enable for performance_sessions';
 END $$;
+
+
+-- ============================================================
+-- MIGRATION FOR EXISTING TABLES (run if you already have the table)
+-- ============================================================
+-- If you already ran the previous migration with session_code,
+-- run this to update your table:
+--
+-- ALTER TABLE performance_sessions DROP COLUMN IF EXISTS session_code;
+-- DROP INDEX IF EXISTS idx_performance_sessions_session_code;
+-- DROP FUNCTION IF EXISTS generate_session_code();
+-- CREATE INDEX IF NOT EXISTS idx_performance_sessions_band_active
+--   ON performance_sessions(band_id, is_active) WHERE is_active = true;
