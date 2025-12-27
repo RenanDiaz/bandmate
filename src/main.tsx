@@ -7,6 +7,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import theme from "./theme";
 import { registerSW } from 'virtual:pwa-register';
+import './i18n';
 
 // Register service worker for PWA functionality
 registerSW({

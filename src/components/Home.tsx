@@ -13,14 +13,18 @@ import type { Setlist } from "../services/setlistsService";
 import { getUpcomingShows } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
+import { useTranslation } from "react-i18next";
 
 const Home = () => {
+  const { t, i18n } = useTranslation();
   const { user, selectedBand, refreshBands } = useBandContext();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const currentLocale = i18n.language.startsWith('es') ? 'es-ES' : 'en-US';
 
   useEffect(() => {
     if (user && selectedBand) {
@@ -42,7 +46,7 @@ const Home = () => {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString + "T00:00:00");
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(currentLocale, {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -53,7 +57,7 @@ const Home = () => {
     const [hours, minutes] = timeString.split(":");
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes));
-    return date.toLocaleTimeString("en-US", {
+    return date.toLocaleTimeString(currentLocale, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -67,10 +71,10 @@ const Home = () => {
     const diffTime = event.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    if (diffDays <= 7) return `In ${diffDays} days`;
-    return `In ${Math.ceil(diffDays / 7)} weeks`;
+    if (diffDays === 0) return t('home.today');
+    if (diffDays === 1) return t('home.tomorrow');
+    if (diffDays <= 7) return t('home.inDays', { count: diffDays });
+    return t('home.inWeeks', { count: Math.ceil(diffDays / 7) });
   };
 
   // Show dashboard for authenticated users with a selected band
@@ -89,7 +93,7 @@ const Home = () => {
           <Container>
             <DashboardHeader>
               <WelcomeText>
-                <WelcomeTitle>Welcome back!</WelcomeTitle>
+                <WelcomeTitle>{t('home.welcomeBack')}</WelcomeTitle>
                 <BandNameText>
                   <i className="bi bi-people-fill"></i> {selectedBand.name}
                 </BandNameText>
@@ -99,7 +103,7 @@ const Home = () => {
             {loading ? (
               <LoadingState>
                 <span className="spinner-border spinner-border-sm me-2"></span>
-                Loading dashboard...
+                {t('home.loadingDashboard')}
               </LoadingState>
             ) : (
               <>
@@ -111,7 +115,7 @@ const Home = () => {
                     </StatIcon>
                     <StatInfo>
                       <StatNumber>{songs.length}</StatNumber>
-                      <StatLabel>Songs</StatLabel>
+                      <StatLabel>{t('nav.songs')}</StatLabel>
                     </StatInfo>
                   </StatCard>
 
@@ -121,7 +125,7 @@ const Home = () => {
                     </StatIcon>
                     <StatInfo>
                       <StatNumber>{setlists.length}</StatNumber>
-                      <StatLabel>Setlists</StatLabel>
+                      <StatLabel>{t('nav.setlists')}</StatLabel>
                     </StatInfo>
                   </StatCard>
 
@@ -131,7 +135,7 @@ const Home = () => {
                     </StatIcon>
                     <StatInfo>
                       <StatNumber>{upcomingShows.length}</StatNumber>
-                      <StatLabel>Upcoming Shows</StatLabel>
+                      <StatLabel>{t('home.upcomingShows')}</StatLabel>
                     </StatInfo>
                   </StatCard>
                 </StatsGrid>
@@ -143,19 +147,19 @@ const Home = () => {
                     <WidgetHeader>
                       <WidgetTitle>
                         <i className="bi bi-calendar-event"></i>
-                        Upcoming Shows
+                        {t('home.upcomingShows')}
                       </WidgetTitle>
                       <WidgetAction as={Link} to="/shows">
-                        View all <i className="bi bi-arrow-right"></i>
+                        {t('common.viewAll')} <i className="bi bi-arrow-right"></i>
                       </WidgetAction>
                     </WidgetHeader>
                     <WidgetContent>
                       {upcomingShows.length === 0 ? (
                         <EmptyState>
                           <i className="bi bi-calendar-x"></i>
-                          <p>No upcoming shows scheduled</p>
+                          <p>{t('home.noUpcomingShows')}</p>
                           <EmptyStateAction as={Link} to="/shows">
-                            Schedule a show
+                            {t('home.scheduleShow')}
                           </EmptyStateAction>
                         </EmptyState>
                       ) : (
@@ -167,7 +171,7 @@ const Home = () => {
                                   {new Date(show.event_date + "T00:00:00").getDate()}
                                 </ShowDay>
                                 <ShowMonth>
-                                  {new Date(show.event_date + "T00:00:00").toLocaleDateString("en-US", {
+                                  {new Date(show.event_date + "T00:00:00").toLocaleDateString(currentLocale, {
                                     month: "short",
                                   })}
                                 </ShowMonth>
@@ -177,7 +181,7 @@ const Home = () => {
                                 {show.venue && <ShowVenue>{show.venue}</ShowVenue>}
                                 <ShowMeta>
                                   <span>{formatDate(show.event_date)}</span>
-                                  {show.event_time && <span> at {formatTime(show.event_time)}</span>}
+                                  {show.event_time && <span> {t('home.at')} {formatTime(show.event_time)}</span>}
                                   <CountdownBadge>{getDaysUntil(show.event_date)}</CountdownBadge>
                                 </ShowMeta>
                               </ShowDetails>
@@ -193,19 +197,19 @@ const Home = () => {
                     <WidgetHeader>
                       <WidgetTitle>
                         <i className="bi bi-music-note-list"></i>
-                        Recent Songs
+                        {t('home.recentSongs')}
                       </WidgetTitle>
                       <WidgetAction as={Link} to="/songs">
-                        View all <i className="bi bi-arrow-right"></i>
+                        {t('common.viewAll')} <i className="bi bi-arrow-right"></i>
                       </WidgetAction>
                     </WidgetHeader>
                     <WidgetContent>
                       {songs.length === 0 ? (
                         <EmptyState>
                           <i className="bi bi-music-note"></i>
-                          <p>No songs in your library yet</p>
+                          <p>{t('home.noSongsYet')}</p>
                           <EmptyStateAction as={Link} to="/songs">
-                            Add your first song
+                            {t('home.addFirstSong')}
                           </EmptyStateAction>
                         </EmptyState>
                       ) : (
@@ -234,34 +238,34 @@ const Home = () => {
 
                 {/* Quick Actions */}
                 <QuickActionsSection>
-                  <SectionTitle>Quick Actions</SectionTitle>
+                  <SectionTitle>{t('home.quickActions')}</SectionTitle>
                   <QuickActionsGrid>
                     <QuickAction as={Link} to="/songs">
                       <QuickActionIcon $color={theme.colors.brand.primary}>
                         <i className="bi bi-plus-circle"></i>
                       </QuickActionIcon>
-                      <QuickActionText>Add Song</QuickActionText>
+                      <QuickActionText>{t('home.addSong')}</QuickActionText>
                     </QuickAction>
 
                     <QuickAction as={Link} to="/setlists">
                       <QuickActionIcon $color={theme.colors.accent.cyan}>
                         <i className="bi bi-list-ul"></i>
                       </QuickActionIcon>
-                      <QuickActionText>Create Setlist</QuickActionText>
+                      <QuickActionText>{t('home.createSetlist')}</QuickActionText>
                     </QuickAction>
 
                     <QuickAction as={Link} to="/shows">
                       <QuickActionIcon $color={theme.colors.accent.amber}>
                         <i className="bi bi-calendar-plus"></i>
                       </QuickActionIcon>
-                      <QuickActionText>Schedule Show</QuickActionText>
+                      <QuickActionText>{t('home.scheduleShowAction')}</QuickActionText>
                     </QuickAction>
 
                     <QuickAction as={Link} to={`/bands/${selectedBand.id}/settings`}>
                       <QuickActionIcon $color={theme.colors.semantic.info}>
                         <i className="bi bi-gear"></i>
                       </QuickActionIcon>
-                      <QuickActionText>Band Settings</QuickActionText>
+                      <QuickActionText>{t('home.bandSettings')}</QuickActionText>
                     </QuickAction>
                   </QuickActionsGrid>
                 </QuickActionsSection>
@@ -290,20 +294,19 @@ const Home = () => {
             </LogoWrapper>
 
             <HeroTitle>
-              Welcome to <BrandName>Bandmate</BrandName>
+              {t('home.welcomeToBandmate').split('Bandmate')[0]}<BrandName>Bandmate</BrandName>
             </HeroTitle>
 
             <HeroSubtitle>
-              Your all-in-one platform to manage songs, setlists, shows, and collaborate with your
-              band members
+              {t('home.heroSubtitle')}
             </HeroSubtitle>
 
             {!user && (
               <CTASection>
-                <CTAText>Get started by creating your free account</CTAText>
+                <CTAText>{t('home.getStarted')}</CTAText>
                 <CTAButton as={Link} to="/login">
                   <i className="bi bi-box-arrow-in-right"></i>
-                  Sign in to continue
+                  {t('home.signInToContinue')}
                 </CTAButton>
               </CTASection>
             )}
@@ -312,7 +315,7 @@ const Home = () => {
               <CTASection>
                 <CTAButton as={Link} to="/songs">
                   <i className="bi bi-music-note-list"></i>
-                  Go to your songs
+                  {t('home.goToYourSongs')}
                 </CTAButton>
               </CTASection>
             )}
@@ -322,16 +325,16 @@ const Home = () => {
 
       <FeaturesSection>
         <Container>
-          <SectionTitle>Everything your band needs</SectionTitle>
+          <SectionTitle>{t('home.everythingYourBandNeeds')}</SectionTitle>
 
           <FeaturesGrid>
             <FeatureCard as={user ? Link : "div"} to={user ? "/songs" : undefined} $clickable={!!user}>
               <FeatureIcon>
                 <i className="bi bi-music-note-list"></i>
               </FeatureIcon>
-              <FeatureTitle>Song Library</FeatureTitle>
+              <FeatureTitle>{t('features.songLibrary')}</FeatureTitle>
               <FeatureDescription>
-                Store and organize all your songs with lyrics, chords, and automatic metadata from Spotify
+                {t('features.songLibraryDesc')}
               </FeatureDescription>
             </FeatureCard>
 
@@ -339,9 +342,9 @@ const Home = () => {
               <FeatureIcon>
                 <i className="bi bi-people"></i>
               </FeatureIcon>
-              <FeatureTitle>Band Management</FeatureTitle>
+              <FeatureTitle>{t('features.bandManagement')}</FeatureTitle>
               <FeatureDescription>
-                Create multiple bands, invite members, and manage permissions with role-based access
+                {t('features.bandManagementDesc')}
               </FeatureDescription>
             </FeatureCard>
 
@@ -349,9 +352,9 @@ const Home = () => {
               <FeatureIcon>
                 <i className="bi bi-list-ul"></i>
               </FeatureIcon>
-              <FeatureTitle>Setlists</FeatureTitle>
+              <FeatureTitle>{t('features.setlists')}</FeatureTitle>
               <FeatureDescription>
-                Build setlists with drag-and-drop, add notes, and launch performance mode for shows
+                {t('features.setlistsDesc')}
               </FeatureDescription>
             </FeatureCard>
 
@@ -359,9 +362,9 @@ const Home = () => {
               <FeatureIcon>
                 <i className="bi bi-play-circle"></i>
               </FeatureIcon>
-              <FeatureTitle>Performance Mode</FeatureTitle>
+              <FeatureTitle>{t('features.performanceMode')}</FeatureTitle>
               <FeatureDescription>
-                Full-screen performance view with lyrics/chords toggle, keyboard navigation, and song notes
+                {t('features.performanceModeDesc')}
               </FeatureDescription>
             </FeatureCard>
 
@@ -369,9 +372,9 @@ const Home = () => {
               <FeatureIcon>
                 <i className="bi bi-music-note-beamed"></i>
               </FeatureIcon>
-              <FeatureTitle>Music Intelligence</FeatureTitle>
+              <FeatureTitle>{t('features.musicIntelligence')}</FeatureTitle>
               <FeatureDescription>
-                Automatic song metadata, key detection, tempo, and lyrics from multiple music databases
+                {t('features.musicIntelligenceDesc')}
               </FeatureDescription>
             </FeatureCard>
 
@@ -379,9 +382,9 @@ const Home = () => {
               <FeatureIcon>
                 <i className="bi bi-phone"></i>
               </FeatureIcon>
-              <FeatureTitle>Mobile Ready</FeatureTitle>
+              <FeatureTitle>{t('features.mobileReady')}</FeatureTitle>
               <FeatureDescription>
-                Responsive design works perfectly on phones, tablets, and desktop devices
+                {t('features.mobileReadyDesc')}
               </FeatureDescription>
             </FeatureCard>
           </FeaturesGrid>
@@ -391,14 +394,14 @@ const Home = () => {
       <CTASectionBottom>
         <Container>
           <CTAContent>
-            <CTABottomTitle>Ready to get organized?</CTABottomTitle>
+            <CTABottomTitle>{t('home.readyToGetOrganized')}</CTABottomTitle>
             <CTABottomSubtitle>
-              Join musicians who are already using Bandmate to stay on top of their music
+              {t('home.joinMusicians')}
             </CTABottomSubtitle>
             {!user && (
               <CTAButton as={Link} to="/login">
                 <i className="bi bi-box-arrow-in-right"></i>
-                Get started for free
+                {t('home.getStartedFree')}
               </CTAButton>
             )}
           </CTAContent>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useTranslation } from "react-i18next";
 import {
   createBand,
   getMyBands,
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
+  const { t } = useTranslation();
   const [bands, setBands] = useState<Band[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
 
   const handleDeleteBand = async (band: Band) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${band.name}"? This action cannot be undone.`
+      t('bands.confirmDeleteBand', { name: band.name })
     );
     if (!confirmed) return;
 
@@ -129,7 +131,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
 
   const handleDeclineInvitation = async (invitation: BandInvitation) => {
     const confirmed = window.confirm(
-      "Are you sure you want to decline this invitation?"
+      t('bands.declineInvitationConfirm')
     );
     if (!confirmed) return;
 
@@ -157,9 +159,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
             <i className="bi bi-music-note-beamed"></i>
           </HeaderIcon>
           <HeaderContent>
-            <HeaderTitle>Select Your Band</HeaderTitle>
+            <HeaderTitle>{t('bands.selectYourBand')}</HeaderTitle>
             <HeaderSubtitle>
-              Choose a band to manage songs and collaborate with your members
+              {t('bands.selectBandSubtitle')}
             </HeaderSubtitle>
           </HeaderContent>
         </SelectorHeader>
@@ -171,7 +173,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
               <InvitationsHeader>
                 <InvitationsTitle>
                   <i className="bi bi-envelope-heart"></i>
-                  Pending Invitations
+                  {t('bands.pendingInvitations')}
                 </InvitationsTitle>
                 <InvitationsBadge>{invitations.length}</InvitationsBadge>
               </InvitationsHeader>
@@ -192,14 +194,14 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
                           </InvitationBandName>
                           <InvitationMeta>
                             <i className="bi bi-person"></i>
-                            Invited by {invitation.inviter_name || "A band member"}
+                            {t('bands.invitedBy')} {invitation.inviter_name || t('bands.aBandMember')}
                           </InvitationMeta>
                           <InvitationRole>
-                            Role: <RoleBadge $role={invitation.role}>
-                              {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
+                            {t('bands.role')}: <RoleBadge $role={invitation.role}>
+                              {t(`bands.${invitation.role}`)}
                             </RoleBadge>
                           </InvitationRole>
-                          {isExpired && <ExpiredLabel>Expired</ExpiredLabel>}
+                          {isExpired && <ExpiredLabel>{t('bands.expired')}</ExpiredLabel>}
                         </InvitationDetails>
                       </InvitationInfo>
                       <InvitationActions>
@@ -214,7 +216,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
                               ) : (
                                 <>
                                   <i className="bi bi-check-lg"></i>
-                                  Accept
+                                  {t('bands.accept')}
                                 </>
                               )}
                             </AcceptButton>
@@ -239,7 +241,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
           {loading ? (
             <LoadingContainer>
               <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} />
-              <LoadingText>Loading your bands...</LoadingText>
+              <LoadingText>{t('bands.loadingBands')}</LoadingText>
             </LoadingContainer>
           ) : error ? (
             <ErrorContainer>
@@ -249,7 +251,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
               <ErrorText>{error}</ErrorText>
               <RetryButton onClick={loadBands}>
                 <i className="bi bi-arrow-clockwise"></i>
-                Try again
+                {t('bands.tryAgain')}
               </RetryButton>
             </ErrorContainer>
           ) : bands.length === 0 ? (
@@ -257,9 +259,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
               <EmptyIcon>
                 <i className="bi bi-music-note-list"></i>
               </EmptyIcon>
-              <EmptyTitle>No bands yet</EmptyTitle>
+              <EmptyTitle>{t('bands.noBandsYet')}</EmptyTitle>
               <EmptyText>
-                Create your first band above to start managing your songs and setlists
+                {t('bands.noBandsYetDesc')}
               </EmptyText>
             </EmptyState>
           ) : (

@@ -5,8 +5,10 @@ import styled from "styled-components";
 import { theme } from "../theme";
 import { Logo } from "./Logo";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export const Login = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -31,7 +33,7 @@ export const Login = () => {
           },
         });
         if (error) throw error;
-        setMessage("Check your email for the confirmation link!");
+        setMessage(t('auth.checkEmailConfirmation'));
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -71,18 +73,18 @@ export const Login = () => {
           <LogoSection>
             <Logo size={60} variant="icon" />
             <BrandTitle>Bandmate</BrandTitle>
-            <BrandSubtitle>Manage your band like a pro</BrandSubtitle>
+            <BrandSubtitle>{t('auth.manageYourBand')}</BrandSubtitle>
           </LogoSection>
 
           <FormSection>
-            <FormTitle>{isSignUp ? "Create your account" : "Welcome back"}</FormTitle>
+            <FormTitle>{isSignUp ? t('auth.createAccount') : t('auth.welcomeBack')}</FormTitle>
 
             {error && <ErrorMessage><i className="bi bi-exclamation-circle"></i> {error}</ErrorMessage>}
             {message && <SuccessMessage><i className="bi bi-check-circle"></i> {message}</SuccessMessage>}
 
             <Form onSubmit={handleEmailAuth}>
               <FormGroup>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -96,7 +98,7 @@ export const Login = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -108,41 +110,41 @@ export const Login = () => {
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   minLength={6}
                 />
-                {isSignUp && <HelperText>Must be at least 6 characters</HelperText>}
+                {isSignUp && <HelperText>{t('auth.passwordMinLength')}</HelperText>}
               </FormGroup>
 
               <SubmitButton type="submit" disabled={loading}>
                 {loading ? (
                   <>
                     <Spinner />
-                    {isSignUp ? "Creating account..." : "Signing in..."}
+                    {isSignUp ? t('auth.signingUp') : t('auth.signingIn')}
                   </>
                 ) : (
-                  <>{isSignUp ? "Sign up" : "Sign in"}</>
+                  <>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</>
                 )}
               </SubmitButton>
             </Form>
 
             <Divider>
               <DividerLine />
-              <DividerText>or</DividerText>
+              <DividerText>{t('common.or')}</DividerText>
               <DividerLine />
             </Divider>
 
             <GoogleButton onClick={handleGoogleLogin} disabled={loading}>
               <i className="bi bi-google"></i>
-              Continue with Google
+              {t('auth.continueWithGoogle')}
             </GoogleButton>
 
             <ToggleText>
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+              {isSignUp ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{" "}
               <ToggleLink onClick={() => setIsSignUp(!isSignUp)}>
-                {isSignUp ? "Sign in" : "Sign up"}
+                {isSignUp ? t('auth.signIn') : t('auth.signUp')}
               </ToggleLink>
             </ToggleText>
 
             <BackLink to="/">
-              <i className="bi bi-arrow-left"></i> Back to home
+              <i className="bi bi-arrow-left"></i> {t('auth.backToHome')}
             </BackLink>
           </FormSection>
         </LoginCard>

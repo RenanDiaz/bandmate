@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
 import { Login } from "./components/Login";
@@ -26,6 +27,7 @@ import { useBandContext } from "./context/useBandContext";
 import { theme } from "./theme";
 
 const AppContent: FC = () => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -57,8 +59,8 @@ const AppContent: FC = () => {
                 <SwitchBandButton
                   size="sm"
                   onClick={() => setShowBandSelector(true)}
-                  aria-label="Switch Band"
-                  title="Switch band"
+                  aria-label={t('nav.switchBand')}
+                  title={t('nav.switchBand')}
                 >
                   <i className="bi bi-arrow-left-right"></i>
                 </SwitchBandButton>
@@ -69,7 +71,7 @@ const AppContent: FC = () => {
           <DesktopNav navbar>
             <NavItem>
               <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode}>
-                Home
+                {t('nav.home')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -79,7 +81,7 @@ const AppContent: FC = () => {
                 $active={location.pathname === "/songs"}
                 $mode={mode}
               >
-                Songs
+                {t('nav.songs')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -89,7 +91,7 @@ const AppContent: FC = () => {
                 $active={location.pathname.startsWith("/setlists")}
                 $mode={mode}
               >
-                Setlists
+                {t('nav.setlists')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -99,7 +101,7 @@ const AppContent: FC = () => {
                 $active={location.pathname.startsWith("/shows")}
                 $mode={mode}
               >
-                Shows
+                {t('nav.shows')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -109,7 +111,7 @@ const AppContent: FC = () => {
                 $active={location.pathname === "/about"}
                 $mode={mode}
               >
-                About
+                {t('nav.about')}
               </StyledNavLink>
             </NavItem>
           </DesktopNav>
@@ -118,7 +120,7 @@ const AppContent: FC = () => {
             <ThemeToggleButton
               onClick={toggleMode}
               aria-label="Toggle color mode"
-              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={mode === "dark" ? t('nav.switchToLightMode') : t('nav.switchToDarkMode')}
               $mode={mode}
             >
               {mode === "dark" ? (
@@ -157,11 +159,11 @@ const AppContent: FC = () => {
                   setShowBandSelector(true);
                   setIsOpen(false);
                 }}
-                aria-label="Switch Band"
-                title="Switch band"
+                aria-label={t('nav.switchBand')}
+                title={t('nav.switchBand')}
               >
                 <i className="bi bi-arrow-left-right"></i>
-                <span style={{ marginLeft: '6px' }}>Switch</span>
+                <span style={{ marginLeft: '6px' }}>{t('bands.switchBand')}</span>
               </SwitchBandButton>
             </MobileBandInfo>
           )}
@@ -169,7 +171,7 @@ const AppContent: FC = () => {
             <NavItem>
               <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
                 <i className="bi bi-house-door"></i>
-                <span>Home</span>
+                <span>{t('nav.home')}</span>
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -181,7 +183,7 @@ const AppContent: FC = () => {
                 onClick={() => setIsOpen(false)}
               >
                 <i className="bi bi-music-note-list"></i>
-                <span>Songs</span>
+                <span>{t('nav.songs')}</span>
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -193,7 +195,7 @@ const AppContent: FC = () => {
                 onClick={() => setIsOpen(false)}
               >
                 <i className="bi bi-collection"></i>
-                <span>Setlists</span>
+                <span>{t('nav.setlists')}</span>
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -205,7 +207,7 @@ const AppContent: FC = () => {
                 onClick={() => setIsOpen(false)}
               >
                 <i className="bi bi-calendar-event"></i>
-                <span>Shows</span>
+                <span>{t('nav.shows')}</span>
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -217,7 +219,7 @@ const AppContent: FC = () => {
                 onClick={() => setIsOpen(false)}
               >
                 <i className="bi bi-info-circle"></i>
-                <span>About</span>
+                <span>{t('nav.about')}</span>
               </StyledNavLink>
             </NavItem>
           </StyledNav>
@@ -226,7 +228,7 @@ const AppContent: FC = () => {
             <ThemeToggleButton
               onClick={toggleMode}
               aria-label="Toggle color mode"
-              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={mode === "dark" ? t('nav.switchToLightMode') : t('nav.switchToDarkMode')}
               $mode={mode}
             >
               {mode === "dark" ? (
@@ -235,7 +237,7 @@ const AppContent: FC = () => {
                 <i className="bi bi-moon-fill"></i>
               )}
               <span style={{ marginLeft: '8px' }}>
-                {mode === "dark" ? "Light Mode" : "Dark Mode"}
+                {mode === "dark" ? t('nav.lightMode') : t('nav.darkMode')}
               </span>
             </ThemeToggleButton>
             <AuthButton />
