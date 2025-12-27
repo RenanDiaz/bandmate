@@ -310,5 +310,29 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "yesterday": "Yesterday"
+  },
+  "performanceSync": {
+    "sync": "Sync",
+    "syncSession": "Sync Session",
+    "startHosting": "Start Hosting",
+    "startHostingDesc": "Control the setlist for everyone",
+    "joinSession": "Join Session",
+    "joinSessionDesc": "Follow along with the host",
+    "sessionCode": "Session Code",
+    "enterCode": "Enter code",
+    "join": "Join",
+    "hosting": "Hosting",
+    "following": "Following",
+    "endSession": "End Session",
+    "leaveSession": "Leave",
+    "copyCode": "Copy code",
+    "codeCopied": "Code copied!",
+    "sessionNotFound": "Session not found or no longer active",
+    "wrongSetlist": "This session is for a different setlist",
+    "connectionError": "Connection error",
+    "connected": "Connected",
+    "viewerCount": "{{count}} viewing",
+    "hostControls": "Only you control navigation",
+    "viewerInfo": "Host controls navigation"
   }
 }

@@ -310,5 +310,29 @@
     "today": "Hoy",
     "tomorrow": "Mañana",
     "yesterday": "Ayer"
+  },
+  "performanceSync": {
+    "sync": "Sincronizar",
+    "syncSession": "Sesión de Sincronización",
+    "startHosting": "Iniciar como Host",
+    "startHostingDesc": "Controla el setlist para todos",
+    "joinSession": "Unirse a Sesión",
+    "joinSessionDesc": "Sigue al host",
+    "sessionCode": "Código de Sesión",
+    "enterCode": "Ingresa el código",
+    "join": "Unirse",
+    "hosting": "Host",
+    "following": "Siguiendo",
+    "endSession": "Terminar Sesión",
+    "leaveSession": "Salir",
+    "copyCode": "Copiar código",
+    "codeCopied": "¡Código copiado!",
+    "sessionNotFound": "Sesión no encontrada o ya no está activa",
+    "wrongSetlist": "Esta sesión es para otro setlist",
+    "connectionError": "Error de conexión",
+    "connected": "Conectado",
+    "viewerCount": "{{count}} viendo",
+    "hostControls": "Solo tú controlas la navegación",
+    "viewerInfo": "El host controla la navegación"
   }
 }

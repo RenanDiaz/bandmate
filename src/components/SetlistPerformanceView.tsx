@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -26,6 +26,8 @@ import type { Setlist, SetlistSong } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
+import { SyncControls } from "./SyncControls";
+import { usePerformanceSync } from "../hooks/usePerformanceSync";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -93,6 +95,28 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Handle sync index updates from viewers
+  const handleSyncIndexChange = useCallback((index: number) => {
+    setCurrentIndex(index);
+  }, []);
+
+  // Performance sync hook
+  const {
+    role: syncRole,
+    sessionCode,
+    isConnected: isSyncConnected,
+    isLoading: isSyncLoading,
+    error: syncError,
+    startHosting,
+    joinSession,
+    leaveSession,
+    syncSongIndex,
+  } = usePerformanceSync({
+    setlistId: setlistId || "",
+    bandId: setlist?.band_id || 0,
+    onSongIndexChange: handleSyncIndexChange,
+  });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -250,20 +274,43 @@ const SetlistPerformanceView: FC = () => {
   }, [currentIndex]);
 
   const handlePrevSong = () => {
+    // Viewers can't control navigation
+    if (syncRole === "viewer") return;
+
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
+      // Sync to other devices if hosting
+      if (syncRole === "host") {
+        syncSongIndex(newIndex);
+      }
     }
   };
 
   const handleNextSong = () => {
+    // Viewers can't control navigation
+    if (syncRole === "viewer") return;
+
     if (currentIndex < songs.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+      // Sync to other devices if hosting
+      if (syncRole === "host") {
+        syncSongIndex(newIndex);
+      }
     }
   };
 
   const handleGoToSong = (index: number) => {
+    // Viewers can't control navigation
+    if (syncRole === "viewer") return;
+
     setCurrentIndex(index);
     setShowSongList(false);
+    // Sync to other devices if hosting
+    if (syncRole === "host") {
+      syncSongIndex(index);
+    }
   };
 
   const toggleFullscreen = () => {
@@ -397,6 +444,16 @@ const SetlistPerformanceView: FC = () => {
             </ReorderActions>
           ) : (
             <>
+              <SyncControls
+                role={syncRole}
+                sessionCode={sessionCode}
+                isConnected={isSyncConnected}
+                isLoading={isSyncLoading}
+                error={syncError}
+                onStartHosting={startHosting}
+                onJoinSession={joinSession}
+                onLeaveSession={leaveSession}
+              />
               <ViewToggleGroup>
                 <ViewToggleButton
                   onClick={() => setContentView("chords")}
@@ -419,7 +476,7 @@ const SetlistPerformanceView: FC = () => {
                 onClick={toggleReorderMode}
                 title="Reorder Songs (R)"
                 $active={false}
-                disabled={songs.length < 2}
+                disabled={songs.length < 2 || syncRole === "viewer"}
               >
                 <i className="bi bi-arrow-down-up"></i>
               </IconButton>
@@ -566,7 +623,10 @@ const SetlistPerformanceView: FC = () => {
 
       {/* Bottom Navigation */}
       <BottomNav>
-        <NavButton onClick={handlePrevSong} disabled={currentIndex === 0}>
+        <NavButton
+          onClick={handlePrevSong}
+          disabled={currentIndex === 0 || syncRole === "viewer"}
+        >
           <i className="bi bi-chevron-left"></i>
           <span>Previous</span>
         </NavButton>
@@ -576,11 +636,16 @@ const SetlistPerformanceView: FC = () => {
             <ProgressFill $percent={((currentIndex + 1) / songs.length) * 100} />
           </ProgressBar>
           <KeyboardHint>
-            Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list • T to toggle view
+            {syncRole === "viewer"
+              ? "Following host • ESC to exit • F for fullscreen • L for list"
+              : "Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list • T to toggle view"}
           </KeyboardHint>
         </NavCenter>
 
-        <NavButton onClick={handleNextSong} disabled={currentIndex === songs.length - 1}>
+        <NavButton
+          onClick={handleNextSong}
+          disabled={currentIndex === songs.length - 1 || syncRole === "viewer"}
+        >
           <span>Next</span>
           <i className="bi bi-chevron-right"></i>
         </NavButton>
