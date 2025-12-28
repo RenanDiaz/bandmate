@@ -147,7 +147,7 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
       <HiddenFileInput
         ref={fileInputRef}
         type="file"
-        accept="audio/*"
+        accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm"
         onChange={handleFileSelect}
       />
 
