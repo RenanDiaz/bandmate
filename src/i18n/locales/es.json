@@ -327,7 +327,14 @@
     "leaveSession": "Salir",
     "noActiveSession": "No hay sesión activa para esta banda",
     "connectionError": "Error de conexión",
-    "connected": "Conectado"
+    "connected": "Conectado",
+    "hoursAgo": "hace {{count}}h",
+    "minutesAgo": "hace {{count}}m",
+    "justNow": "Ahora mismo",
+    "sessionManagement": "Gestión de Sesión",
+    "orphanedSessionHint": "Si el host salió sin cerrar la sesión, puedes tomar control o cerrarla.",
+    "takeOver": "Tomar Control",
+    "forceEnd": "Cerrar Sesión"
   },
   "backingTrack": {
     "title": "Pista de Acompañamiento",

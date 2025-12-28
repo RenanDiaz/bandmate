@@ -13,9 +13,14 @@ interface SyncControlsProps {
   hasActiveSession: boolean;
   activeSessionSetlistId: string | null;
   currentSetlistId: string;
+  hostDisplayName: string | null;
+  sessionCreatedAt: string | null;
+  canManageOrphanedSession: boolean;
   onStartHosting: () => Promise<void>;
   onJoinSession: () => Promise<boolean>;
   onLeaveSession: () => Promise<void>;
+  onForceEndSession: () => Promise<void>;
+  onTakeOverSession: () => Promise<void>;
 }
 
 export const SyncControls: FC<SyncControlsProps> = ({
@@ -26,12 +31,35 @@ export const SyncControls: FC<SyncControlsProps> = ({
   hasActiveSession,
   activeSessionSetlistId,
   currentSetlistId,
+  hostDisplayName,
+  sessionCreatedAt,
+  canManageOrphanedSession,
   onStartHosting,
   onJoinSession,
   onLeaveSession,
+  onForceEndSession,
+  onTakeOverSession,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Calculate how long the session has been active
+  const getSessionDuration = () => {
+    if (!sessionCreatedAt) return null;
+    const created = new Date(sessionCreatedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - created.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+
+    if (diffHours > 0) {
+      return t("performanceSync.hoursAgo", { count: diffHours });
+    }
+    if (diffMins > 0) {
+      return t("performanceSync.minutesAgo", { count: diffMins });
+    }
+    return t("performanceSync.justNow");
+  };
 
   const handleStartHosting = async () => {
     await onStartHosting();
@@ -43,9 +71,21 @@ export const SyncControls: FC<SyncControlsProps> = ({
     setIsOpen(false);
   };
 
+  const handleForceEndSession = async () => {
+    await onForceEndSession();
+    setIsOpen(false);
+  };
+
+  const handleTakeOverSession = async () => {
+    await onTakeOverSession();
+    setIsOpen(false);
+  };
+
   // Check if active session is for a different setlist
   const isSessionOnDifferentSetlist =
     hasActiveSession && activeSessionSetlistId !== currentSetlistId;
+
+  const sessionDuration = getSessionDuration();
 
   // Render active session indicator
   if (role && isConnected) {
@@ -103,6 +143,21 @@ export const SyncControls: FC<SyncControlsProps> = ({
                 <i className="bi bi-broadcast" />
                 {t("performanceSync.activeSessionFound")}
               </SectionTitle>
+
+              {/* Host info */}
+              {hostDisplayName && (
+                <HostInfo>
+                  <i className="bi bi-person-fill" />
+                  <span>{hostDisplayName}</span>
+                  {sessionDuration && (
+                    <SessionTime>
+                      <i className="bi bi-clock" />
+                      {sessionDuration}
+                    </SessionTime>
+                  )}
+                </HostInfo>
+              )}
+
               <SectionDescription>
                 {isSessionOnDifferentSetlist
                   ? t("performanceSync.sessionOnDifferentSetlist")
@@ -120,6 +175,46 @@ export const SyncControls: FC<SyncControlsProps> = ({
                 )}
                 {t("performanceSync.joinSession")}
               </ActionButton>
+
+              {/* Owner controls for orphaned sessions */}
+              {canManageOrphanedSession && (
+                <OrphanedSessionControls>
+                  <Divider />
+                  <SectionTitle>
+                    <i className="bi bi-gear" />
+                    {t("performanceSync.sessionManagement")}
+                  </SectionTitle>
+                  <SectionDescription>
+                    {t("performanceSync.orphanedSessionHint")}
+                  </SectionDescription>
+                  <ButtonRow>
+                    <ActionButton
+                      onClick={handleTakeOverSession}
+                      disabled={isLoading}
+                      $variant="primary"
+                    >
+                      {isLoading ? (
+                        <i className="bi bi-arrow-repeat spinning" />
+                      ) : (
+                        <i className="bi bi-box-arrow-in-right" />
+                      )}
+                      {t("performanceSync.takeOver")}
+                    </ActionButton>
+                    <ActionButton
+                      onClick={handleForceEndSession}
+                      disabled={isLoading}
+                      $variant="danger"
+                    >
+                      {isLoading ? (
+                        <i className="bi bi-arrow-repeat spinning" />
+                      ) : (
+                        <i className="bi bi-x-circle" />
+                      )}
+                      {t("performanceSync.forceEnd")}
+                    </ActionButton>
+                  </ButtonRow>
+                </OrphanedSessionControls>
+              )}
             </DropdownSection>
           ) : (
             <DropdownSection>
@@ -286,12 +381,16 @@ const SectionDescription = styled.div`
   margin-bottom: ${theme.space[3]};
 `;
 
-const ActionButton = styled.button<{ $variant?: "primary" | "success" }>`
+const ActionButton = styled.button<{
+  $variant?: "primary" | "success" | "danger";
+}>`
   width: 100%;
   background: ${(props) =>
     props.$variant === "success"
       ? theme.colors.semantic.success
-      : theme.colors.brand.primary};
+      : props.$variant === "danger"
+        ? theme.colors.semantic.error
+        : theme.colors.brand.primary};
   border: none;
   color: white;
   padding: ${theme.space[3]};
@@ -307,7 +406,11 @@ const ActionButton = styled.button<{ $variant?: "primary" | "success" }>`
 
   &:hover:not(:disabled) {
     background: ${(props) =>
-      props.$variant === "success" ? "#059669" : theme.colors.brand.primaryHover};
+      props.$variant === "success"
+        ? "#059669"
+        : props.$variant === "danger"
+          ? "#b91c1c"
+          : theme.colors.brand.primaryHover};
   }
 
   &:disabled {
@@ -326,6 +429,54 @@ const ActionButton = styled.button<{ $variant?: "primary" | "success" }>`
     to {
       transform: rotate(360deg);
     }
+  }
+`;
+
+const HostInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: ${theme.colors.dark.bg.elevated};
+  border-radius: ${theme.radius.base};
+  margin-bottom: ${theme.space[3]};
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SessionTime = styled.span`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  margin-left: auto;
+  color: ${theme.colors.dark.text.tertiary};
+  font-size: ${theme.fontSizes.bodyXs};
+
+  i {
+    color: ${theme.colors.dark.text.tertiary};
+  }
+`;
+
+const OrphanedSessionControls = styled.div`
+  margin-top: ${theme.space[3]};
+`;
+
+const Divider = styled.div`
+  height: 1px;
+  background: ${theme.colors.dark.border.default};
+  margin-bottom: ${theme.space[3]};
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+
+  > button {
+    flex: 1;
   }
 `;
 
