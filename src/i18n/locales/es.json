@@ -328,5 +328,19 @@
     "noActiveSession": "No hay sesión activa para esta banda",
     "connectionError": "Error de conexión",
     "connected": "Conectado"
+  },
+  "backingTrack": {
+    "title": "Pista de Acompañamiento",
+    "load": "Cargar Archivo",
+    "reload": "Recargar Archivo",
+    "reloadHint": "Archivo cargado anteriormente - clic para recargar",
+    "noTrack": "Sin pista cargada",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "stop": "Detener",
+    "change": "Cambiar archivo",
+    "remove": "Quitar",
+    "expand": "Expandir controles",
+    "collapse": "Contraer controles"
   }
 }

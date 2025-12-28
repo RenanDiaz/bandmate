@@ -328,5 +328,19 @@
     "noActiveSession": "No active session for this band",
     "connectionError": "Connection error",
     "connected": "Connected"
+  },
+  "backingTrack": {
+    "title": "Backing Track",
+    "load": "Load File",
+    "reload": "Reload File",
+    "reloadHint": "File was loaded previously - click to reload",
+    "noTrack": "No backing track loaded",
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "change": "Change file",
+    "remove": "Remove",
+    "expand": "Expand controls",
+    "collapse": "Collapse controls"
   }
 }
