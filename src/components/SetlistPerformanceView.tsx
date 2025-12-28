@@ -420,20 +420,23 @@ const SetlistPerformanceView: FC = () => {
       />
       {/* Top Bar */}
       <TopBar>
-        <TopBarLeft>
-          <ExitButton onClick={() => navigate("/setlists")} title="Exit (ESC)">
-            <i className="bi bi-x-lg"></i>
-          </ExitButton>
-          <SetlistInfo>
-            <SetlistName>{setlist.name}</SetlistName>
-            {setlist.venue && <VenueName>{setlist.venue}</VenueName>}
-          </SetlistInfo>
-        </TopBarLeft>
+        <TopBarRow>
+          <TopBarLeft>
+            <ExitButton onClick={() => navigate("/setlists")} title="Exit (ESC)">
+              <i className="bi bi-x-lg"></i>
+            </ExitButton>
+            <SetlistInfo>
+              <SetlistName>{setlist.name}</SetlistName>
+              {setlist.venue && <VenueName>{setlist.venue}</VenueName>}
+            </SetlistInfo>
+          </TopBarLeft>
 
-        <TopBarRight>
           <SongCounter>
             {currentIndex + 1} / {songs.length}
           </SongCounter>
+        </TopBarRow>
+
+        <TopBarControls>
           {isReorderMode ? (
             <ReorderActions>
               <ReorderActionButton onClick={handleCancelReorder} $variant="cancel" disabled={saving}>
@@ -506,7 +509,7 @@ const SetlistPerformanceView: FC = () => {
               </IconButton>
             </>
           )}
-        </TopBarRight>
+        </TopBarControls>
       </TopBar>
 
       {/* Main Content Area */}
@@ -703,24 +706,58 @@ const PerformanceContainer = styled.div`
 
 const TopBar = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: ${theme.space[3]};
   padding: ${theme.space[4]} ${theme.space[6]};
   background: ${theme.colors.dark.bg.secondary};
   border-bottom: 1px solid ${theme.colors.dark.border.default};
   flex-shrink: 0;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${theme.space[4]};
+  }
+`;
+
+const TopBarRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[4]};
+  min-width: 0;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    flex: 1;
+    justify-content: flex-start;
+  }
 `;
 
 const TopBarLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[4]};
+  gap: ${theme.space[3]};
+  min-width: 0;
+  flex: 1;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    gap: ${theme.space[4]};
+    flex: unset;
+  }
 `;
 
-const TopBarRight = styled.div`
+const TopBarControls = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[3]};
+  gap: ${theme.space[2]};
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    gap: ${theme.space[3]};
+    flex-wrap: nowrap;
+  }
 `;
 
 const ExitButton = styled.button`
@@ -748,17 +785,33 @@ const SetlistInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[1]};
+  min-width: 0;
+  flex: 1;
 `;
 
 const SetlistName = styled.div`
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.dark.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
 `;
 
 const VenueName = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
+  font-size: ${theme.fontSizes.bodyXs};
   color: ${theme.colors.dark.text.secondary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodySm};
+  }
 `;
 
 const SongCounter = styled.div`
