@@ -175,7 +175,7 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
       : props.$hasSession
         ? theme.colors.semantic.success
         : theme.colors.dark.text.secondary};
-  padding: ${theme.space[2]} ${theme.space[4]};
+  padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   display: flex;
   align-items: center;
@@ -184,6 +184,19 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
+
+  /* Hide text on mobile, show only icons */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    padding: ${theme.space[2]} ${theme.space[4]};
+
+    > span {
+      display: inline;
+    }
+  }
 
   &:hover {
     background: ${(props) =>
@@ -354,6 +367,17 @@ const SessionBadge = styled.div<{ $role: SyncRole }>`
       : theme.colors.semantic.success};
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
+
+  /* Hide text on mobile */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    > span {
+      display: inline;
+    }
+  }
 `;
 
 const StatusDot = styled.div<{ $connected: boolean }>`
@@ -387,6 +411,17 @@ const LeaveButton = styled.button`
   font-size: ${theme.fontSizes.bodySm};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
+
+  /* Hide text on mobile */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    > span {
+      display: inline;
+    }
+  }
 
   &:hover {
     background: ${theme.colors.semantic.errorBgDark};
