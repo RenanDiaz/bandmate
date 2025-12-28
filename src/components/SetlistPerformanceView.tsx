@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -97,6 +97,7 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const songListRef = useRef<HTMLDivElement>(null);
 
   // Handle sync index updates from viewers
   const handleSyncIndexChange = useCallback((index: number) => {
@@ -289,6 +290,16 @@ const SetlistPerformanceView: FC = () => {
       songDisplay.scrollTop = 0;
     }
   }, [currentIndex]);
+
+  // Auto-scroll to active song when song list opens
+  useEffect(() => {
+    if (showSongList && songListRef.current) {
+      const activeItem = songListRef.current.querySelector('[data-active="true"]');
+      if (activeItem) {
+        activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  }, [showSongList]);
 
   const handlePrevSong = () => {
     // Viewers can't control navigation
@@ -526,6 +537,8 @@ const SetlistPerformanceView: FC = () => {
       <MainContent>
         {/* Song List Sidebar */}
         {showSongList && (
+          <>
+          <SongListBackdrop onClick={() => setShowSongList(false)} />
           <SongListSidebar>
             <SidebarHeader>
               {isReorderMode ? "Reorder Songs" : "Setlist Songs"}
@@ -533,7 +546,7 @@ const SetlistPerformanceView: FC = () => {
                 <SidebarHint>Drag to reorder</SidebarHint>
               )}
             </SidebarHeader>
-            <SongListItems>
+            <SongListItems ref={songListRef}>
               {isReorderMode ? (
                 <DndContext
                   sensors={sensors}
@@ -560,6 +573,7 @@ const SetlistPerformanceView: FC = () => {
                   <SongListItem
                     key={song.id}
                     $active={index === currentIndex}
+                    data-active={index === currentIndex}
                     onClick={() => handleGoToSong(index)}
                   >
                     <SongListPosition>{index + 1}</SongListPosition>
@@ -577,6 +591,7 @@ const SetlistPerformanceView: FC = () => {
               )}
             </SongListItems>
           </SongListSidebar>
+          </>
         )}
 
         {/* Song Display */}
@@ -946,6 +961,18 @@ const MainContent = styled.div`
   overflow: hidden;
 `;
 
+const SongListBackdrop = styled.div`
+  display: none;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10;
+  }
+`;
+
 const SongListSidebar = styled.div`
   width: 320px;
   background: ${theme.colors.dark.bg.secondary};
@@ -955,12 +982,19 @@ const SongListSidebar = styled.div`
   flex-shrink: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    position: absolute;
+    position: fixed;
     left: 0;
-    top: 65px;
-    bottom: 80px;
-    z-index: 10;
-    box-shadow: ${theme.shadows.lg};
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    max-height: 60vh;
+    border-right: none;
+    border-top: 1px solid ${theme.colors.dark.border.default};
+    border-radius: ${theme.radius.lg} ${theme.radius.lg} 0 0;
+    z-index: 11;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 `;
 
@@ -973,6 +1007,23 @@ const SidebarHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    padding-top: ${theme.space[5]};
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: ${theme.space[2]};
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 4px;
+      background: ${theme.colors.dark.border.strong};
+      border-radius: ${theme.radius.full};
+    }
+  }
 `;
 
 const SidebarHint = styled.span`
@@ -1015,6 +1066,12 @@ const SongListItem = styled.button<{ $active: boolean; $isDragging?: boolean }>`
   box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
   z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
 
+  @media (max-width: ${theme.breakpoints.md}) {
+    padding: ${theme.space[2]} ${theme.space[3]};
+    gap: ${theme.space[2]};
+    margin-bottom: ${theme.space[1]};
+  }
+
   &:hover {
     background: ${(props) =>
       props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
@@ -1055,6 +1112,12 @@ const SongListPosition = styled.div`
   font-weight: ${theme.fontWeights.semibold};
   font-size: ${theme.fontSizes.bodySm};
   flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 24px;
+    height: 24px;
+    font-size: ${theme.fontSizes.bodyXs};
+  }
 `;
 
 const SongListInfo = styled.div`
@@ -1068,6 +1131,10 @@ const SongListTitle = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodySm};
+  }
 `;
 
 const SongListArtist = styled.div`
@@ -1077,6 +1144,11 @@ const SongListArtist = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-top: ${theme.space[1]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodyXs};
+    margin-top: 0;
+  }
 `;
 
 const SongListIndicator = styled.div`
