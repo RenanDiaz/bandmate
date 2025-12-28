@@ -113,8 +113,13 @@ const SetlistPerformanceView: FC = () => {
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    forceEndSession,
+    takeOverSession,
     hasActiveSession,
     activeSessionSetlistId,
+    hostDisplayName,
+    sessionCreatedAt,
+    canManageOrphanedSession,
   } = usePerformanceSync({
     setlistId: setlistId || "",
     bandId: setlist?.band_id || 0,
@@ -467,9 +472,14 @@ const SetlistPerformanceView: FC = () => {
                 hasActiveSession={hasActiveSession}
                 activeSessionSetlistId={activeSessionSetlistId}
                 currentSetlistId={setlistId || ""}
+                hostDisplayName={hostDisplayName}
+                sessionCreatedAt={sessionCreatedAt}
+                canManageOrphanedSession={canManageOrphanedSession}
                 onStartHosting={startHosting}
                 onJoinSession={joinExistingSession}
                 onLeaveSession={leaveSession}
+                onForceEndSession={forceEndSession}
+                onTakeOverSession={takeOverSession}
               />
               <ViewToggleGroup>
                 <ViewToggleButton

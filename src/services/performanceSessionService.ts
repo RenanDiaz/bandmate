@@ -10,6 +10,8 @@ export interface PerformanceSession {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Populated via join or separate query
+  host_display_name?: string;
 }
 
 export interface CreateSessionInput {
@@ -162,4 +164,75 @@ export async function isSessionHost(sessionId: string): Promise<boolean> {
     .single();
 
   return data?.host_user_id === user.id;
+}
+
+/**
+ * Get the display name of a session host
+ */
+export async function getHostDisplayName(
+  hostUserId: string
+): Promise<string | null> {
+  try {
+    const { data } = await supabase.rpc("get_user_display_name", {
+      user_id_param: hostUserId,
+    });
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get active session for a band with host display name
+ */
+export async function getActiveSessionWithHost(
+  bandId: number
+): Promise<PerformanceSession | null> {
+  const session = await getActiveSessionForBand(bandId);
+  if (!session) return null;
+
+  const hostName = await getHostDisplayName(session.host_user_id);
+  return {
+    ...session,
+    host_display_name: hostName || undefined,
+  };
+}
+
+/**
+ * Force end a session (for band owners to close orphaned sessions)
+ */
+export async function forceEndSession(sessionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("performance_sessions")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+/**
+ * Take over an existing session (become the new host)
+ */
+export async function takeOverSession(
+  sessionId: string
+): Promise<PerformanceSession> {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (!user) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase
+    .from("performance_sessions")
+    .update({
+      host_user_id: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sessionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }

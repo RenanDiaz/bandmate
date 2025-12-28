@@ -4,12 +4,16 @@ import { supabase } from "../lib/supabaseClient";
 import {
   createSession,
   endSession,
-  getActiveSessionForBand,
+  getActiveSessionWithHost,
   subscribeToSession,
   unsubscribeFromSession,
   updateSongIndex,
+  forceEndSession as forceEndSessionService,
+  takeOverSession as takeOverSessionService,
+  getHostDisplayName,
 } from "../services/performanceSessionService";
 import type { PerformanceSession } from "../services/performanceSessionService";
+import { getUserBandRole } from "../services/bandMembersService";
 
 export type SyncRole = "host" | "viewer" | null;
 
@@ -33,9 +37,16 @@ export interface UsePerformanceSyncReturn {
   leaveSession: () => Promise<void>;
   syncSongIndex: (index: number) => Promise<void>;
 
+  // Orphaned session management (for band owners)
+  forceEndSession: () => Promise<void>;
+  takeOverSession: () => Promise<void>;
+
   // Session info
   hasActiveSession: boolean;
   activeSessionSetlistId: string | null;
+  hostDisplayName: string | null;
+  sessionCreatedAt: string | null;
+  canManageOrphanedSession: boolean;
 }
 
 export function usePerformanceSync({
@@ -50,9 +61,18 @@ export function usePerformanceSync({
   const [error, setError] = useState<string | null>(null);
   const [existingSession, setExistingSession] =
     useState<PerformanceSession | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const onSongIndexChangeRef = useRef(onSongIndexChange);
+  const sessionRef = useRef<PerformanceSession | null>(null);
+  const roleRef = useRef<SyncRole>(null);
+
+  // Keep refs updated for beforeunload handler
+  useEffect(() => {
+    sessionRef.current = session;
+    roleRef.current = role;
+  }, [session, role]);
 
   // Keep callback ref updated
   useEffect(() => {
@@ -121,7 +141,7 @@ export function usePerformanceSync({
     setError(null);
 
     try {
-      const activeSession = await getActiveSessionForBand(bandId);
+      const activeSession = await getActiveSessionWithHost(bandId);
 
       if (!activeSession) {
         setError("No hay sesión activa para esta banda");
@@ -197,11 +217,67 @@ export function usePerformanceSync({
     [session, role]
   );
 
-  // Check for existing active session on mount
+  // Force end orphaned session (for band owners)
+  const forceEndSession = useCallback(async () => {
+    if (!existingSession) return;
+
+    setIsLoading(true);
+    try {
+      await forceEndSessionService(existingSession.id);
+      setExistingSession(null);
+      setSession(null);
+      setRole(null);
+      setIsConnected(false);
+      if (channelRef.current) {
+        await unsubscribeFromSession(channelRef.current);
+        channelRef.current = null;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cerrar sesión");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [existingSession]);
+
+  // Take over orphaned session (become the new host)
+  const takeOverSession = useCallback(async () => {
+    if (!existingSession) return;
+
+    setIsLoading(true);
+    try {
+      const updatedSession = await takeOverSessionService(existingSession.id);
+      // Get our display name for the updated session
+      const { data: userData } = await supabase.auth.getUser();
+      const hostName = userData.user?.id
+        ? await getHostDisplayName(userData.user.id)
+        : null;
+
+      const sessionWithHost = {
+        ...updatedSession,
+        host_display_name: hostName || undefined,
+      };
+
+      setSession(sessionWithHost);
+      setExistingSession(sessionWithHost);
+      setRole("host");
+      subscribeToUpdates(sessionWithHost);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al tomar control");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [existingSession, subscribeToUpdates]);
+
+  // Check for existing active session and user role on mount
   useEffect(() => {
-    const checkExistingSession = async () => {
+    const initialize = async () => {
       try {
-        const activeSession = await getActiveSessionForBand(bandId);
+        // Check user's role in the band
+        const userRole = await getUserBandRole(bandId);
+        setIsOwner(userRole === "owner");
+
+        // Check for active session with host info
+        const activeSession = await getActiveSessionWithHost(bandId);
         if (activeSession) {
           setExistingSession(activeSession);
         }
@@ -210,8 +286,33 @@ export function usePerformanceSync({
       }
     };
 
-    checkExistingSession();
+    initialize();
   }, [bandId]);
+
+  // Cleanup on beforeunload (attempt to end session if host)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Use refs because state may not be current in event handler
+      if (sessionRef.current && roleRef.current === "host") {
+        // Use sendBeacon for reliable delivery on page unload
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/performance_sessions?id=eq.${sessionRef.current.id}`;
+        const body = JSON.stringify({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        });
+
+        navigator.sendBeacon(
+          url,
+          new Blob([body], { type: "application/json" })
+        );
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -221,6 +322,14 @@ export function usePerformanceSync({
       }
     };
   }, []);
+
+  // Determine if user can manage orphaned session
+  // User can manage if: they are owner AND there's an active session AND they are NOT the host
+  const canManageOrphanedSession =
+    isOwner &&
+    existingSession !== null &&
+    existingSession.is_active &&
+    role !== "host";
 
   return {
     session,
@@ -232,7 +341,12 @@ export function usePerformanceSync({
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    forceEndSession,
+    takeOverSession,
     hasActiveSession: existingSession !== null && existingSession.is_active,
     activeSessionSetlistId: existingSession?.setlist_id ?? null,
+    hostDisplayName: existingSession?.host_display_name ?? null,
+    sessionCreatedAt: existingSession?.created_at ?? null,
+    canManageOrphanedSession,
   };
 }
