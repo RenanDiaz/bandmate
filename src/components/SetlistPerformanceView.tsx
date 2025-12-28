@@ -28,6 +28,8 @@ import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
+import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
+import { BackingTrackPlayer } from "./BackingTrackPlayer";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -118,6 +120,15 @@ const SetlistPerformanceView: FC = () => {
     bandId: setlist?.band_id || 0,
     onSongIndexChange: handleSyncIndexChange,
   });
+
+  // Local backing tracks hook
+  const {
+    loadTrack,
+    removeTrack,
+    getTrackUrl,
+    getTrackInfo,
+    hadTrackPreviously,
+  } = useLocalBackingTracks(setlistId || "");
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -590,6 +601,19 @@ const SetlistPerformanceView: FC = () => {
                 </NotesLabel>
                 <NotesText>{currentNotes}</NotesText>
               </NotesBox>
+            )}
+
+            {/* Backing Track Player - only visible to host or when not in sync mode */}
+            {(syncRole === "host" || syncRole === null) && (
+              <BackingTrackPlayer
+                songId={currentSong.id}
+                trackUrl={getTrackUrl(currentSong.id)}
+                trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
+                hadTrackPreviously={hadTrackPreviously(currentSong.id)}
+                onLoadTrack={loadTrack}
+                onRemoveTrack={removeTrack}
+                isHost={syncRole === "host" || syncRole === null}
+              />
             )}
           </SongHeader>
 
