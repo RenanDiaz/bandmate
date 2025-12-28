@@ -132,7 +132,9 @@ export const SyncControls: FC<SyncControlsProps> = ({
       </SyncButton>
 
       {isOpen && (
-        <SyncDropdown>
+        <>
+          <Backdrop onClick={() => setIsOpen(false)} />
+          <SyncDropdown>
           <DropdownHeader>{t("performanceSync.syncSession")}</DropdownHeader>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -240,6 +242,7 @@ export const SyncControls: FC<SyncControlsProps> = ({
             </DropdownSection>
           )}
         </SyncDropdown>
+        </>
       )}
     </SyncContainer>
   );
@@ -248,6 +251,18 @@ export const SyncControls: FC<SyncControlsProps> = ({
 // Styled Components
 const SyncContainer = styled.div`
   position: relative;
+`;
+
+const Backdrop = styled.div`
+  display: none;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: ${theme.zIndex.dropdown - 1};
+  }
 `;
 
 const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
