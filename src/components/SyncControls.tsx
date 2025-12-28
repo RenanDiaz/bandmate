@@ -338,12 +338,26 @@ const SyncDropdown = styled.div`
   top: calc(100% + ${theme.space[2]});
   right: 0;
   width: 320px;
+  max-width: calc(100vw - ${theme.space[4]});
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.md};
   box-shadow: ${theme.shadows.lg};
   z-index: ${theme.zIndex.dropdown};
   overflow: hidden;
+
+  /* Fix overflow on mobile - use bottom sheet pattern */
+  @media (max-width: ${theme.breakpoints.sm}) {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: ${theme.radius.lg} ${theme.radius.lg} 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 `;
 
 const DropdownHeader = styled.div`
