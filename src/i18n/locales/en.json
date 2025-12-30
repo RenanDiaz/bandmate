@@ -361,5 +361,23 @@
     "noContent": "Add lyrics or chords to define sections",
     "defineSections": "Define Sections",
     "sectionsHelp": "Organize your song into sections for easier navigation and sync"
+  },
+  "timingSync": {
+    "title": "Sync Timing",
+    "loadAudioPrompt": "Load an audio file to sync section timings",
+    "loadAudio": "Load Audio",
+    "sections": "Sections",
+    "synced": "synced",
+    "clearAll": "Clear All",
+    "noSections": "No sections defined. Add sections in the song editor first.",
+    "hint": "Click a section to jump to its time. Times are saved automatically.",
+    "playPause": "Play/Pause",
+    "markTime": "Mark time",
+    "navigateSections": "Navigate",
+    "markCurrentTime": "Mark current time",
+    "clearTime": "Clear time",
+    "clickToEdit": "Click to edit time manually",
+    "syncTiming": "Sync Timing",
+    "syncTimingHint": "Assign audio timestamps to each section"
   }
 }

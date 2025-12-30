@@ -361,5 +361,23 @@
     "noContent": "Agrega letra o acordes para definir secciones",
     "defineSections": "Definir Secciones",
     "sectionsHelp": "Organiza tu canción en secciones para facilitar la navegación y sincronización"
+  },
+  "timingSync": {
+    "title": "Sincronizar Tiempos",
+    "loadAudioPrompt": "Carga un archivo de audio para sincronizar los tiempos de las secciones",
+    "loadAudio": "Cargar Audio",
+    "sections": "Secciones",
+    "synced": "sincronizadas",
+    "clearAll": "Limpiar Todo",
+    "noSections": "No hay secciones definidas. Agrega secciones en el editor primero.",
+    "hint": "Haz clic en una sección para saltar a su tiempo. Los tiempos se guardan automáticamente.",
+    "playPause": "Reproducir/Pausar",
+    "markTime": "Marcar tiempo",
+    "navigateSections": "Navegar",
+    "markCurrentTime": "Marcar tiempo actual",
+    "clearTime": "Limpiar tiempo",
+    "clickToEdit": "Clic para editar tiempo manualmente",
+    "syncTiming": "Sincronizar Tiempos",
+    "syncTimingHint": "Asigna marcas de tiempo de audio a cada sección"
   }
 }

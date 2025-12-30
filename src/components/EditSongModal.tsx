@@ -4,6 +4,7 @@ import { theme } from "../theme";
 import type { Song, UpdateSongInput, SectionTiming } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
 import { SectionEditor } from "./SectionEditor";
+import { TimingSyncModal } from "./TimingSyncModal";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -35,6 +36,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [metadataFetched, setMetadataFetched] = useState(false);
+  const [isTimingSyncOpen, setIsTimingSyncOpen] = useState(false);
 
   useEffect(() => {
     if (song) {
@@ -477,6 +479,19 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
                 onSectionsChange={setSections}
                 disabled={isSaving}
               />
+
+              {/* Timing Sync Button - shown when there are sections */}
+              {sections.length > 0 && (
+                <TimingSyncButton
+                  type="button"
+                  onClick={() => setIsTimingSyncOpen(true)}
+                  disabled={isSaving}
+                >
+                  <i className="bi bi-stopwatch"></i>
+                  {t("timingSync.syncTiming")}
+                  <TimingSyncHint>{t("timingSync.syncTimingHint")}</TimingSyncHint>
+                </TimingSyncButton>
+              )}
             </>
           )}
 
@@ -500,6 +515,15 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
           </FormActions>
         </Form>
       </ModalContainer>
+
+      {/* Timing Sync Modal */}
+      <TimingSyncModal
+        isOpen={isTimingSyncOpen}
+        onClose={() => setIsTimingSyncOpen(false)}
+        sections={sections}
+        onSectionsChange={setSections}
+        songTitle={formData.title}
+      />
     </>
   );
 };
@@ -978,4 +1002,42 @@ const SectionEditorHelp = styled.div`
   i {
     color: ${theme.colors.brand.primary};
   }
+`;
+
+const TimingSyncButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: linear-gradient(135deg, ${theme.colors.dark.bg.tertiary} 0%, ${theme.colors.dark.bg.secondary} 100%);
+  border: 1px solid ${theme.colors.brand.primary}40;
+  color: ${theme.colors.dark.text.primary};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  margin-top: ${theme.space[3]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${theme.colors.brand.primary};
+    background: linear-gradient(135deg, ${theme.colors.brand.primary}15 0%, ${theme.colors.dark.bg.tertiary} 100%);
+    box-shadow: 0 0 12px ${theme.colors.brand.primary}20;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const TimingSyncHint = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  margin-left: auto;
 `;
