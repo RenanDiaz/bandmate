@@ -50,6 +50,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         country: song.country || "",
         hasBackingTracks: song.has_backing_tracks || false,
       });
+      // Reset metadata button state when switching songs
+      setMetadataFetched(false);
+      setIsFetchingMetadata(false);
     }
   }, [song]);
 
