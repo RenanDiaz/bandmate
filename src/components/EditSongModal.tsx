@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
-import type { Song, UpdateSongInput } from "../services/songsService";
+import type { Song, UpdateSongInput, SectionTiming } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
+import { SectionEditor } from "./SectionEditor";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   song: Song | null;
@@ -12,6 +14,7 @@ interface Props {
 }
 
 export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -28,6 +31,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     country: "",
     hasBackingTracks: false,
   });
+  const [sections, setSections] = useState<SectionTiming[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [metadataFetched, setMetadataFetched] = useState(false);
@@ -50,6 +54,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         country: song.country || "",
         hasBackingTracks: song.has_backing_tracks || false,
       });
+      setSections(song.timing_data?.sectionTimings || []);
     }
   }, [song]);
 
@@ -114,6 +119,14 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
 
     setIsSaving(true);
     try {
+      // Build timing_data, preserving existing lineTimings if any
+      const timingData = sections.length > 0 || song.timing_data?.lineTimings
+        ? {
+            sectionTimings: sections.length > 0 ? sections : undefined,
+            lineTimings: song.timing_data?.lineTimings,
+          }
+        : null;
+
       await onSave(song.id, {
         title: formData.title.trim(),
         artist: formData.artist.trim() || undefined,
@@ -129,6 +142,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         language: formData.language.trim() || undefined,
         country: formData.country.trim() || undefined,
         has_backing_tracks: formData.hasBackingTracks,
+        timing_data: timingData,
       });
       onClose();
     } catch (error) {
@@ -448,6 +462,23 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               disabled={isSaving}
             />
           </FormGroup>
+
+          {/* Section Editor - shown when there's lyrics or chords */}
+          {(formData.lyrics.trim() || formData.chords.trim()) && (
+            <>
+              <SectionDivider>{t("sectionEditor.defineSections")}</SectionDivider>
+              <SectionEditorHelp>
+                <i className="bi bi-info-circle"></i>
+                {t("sectionEditor.sectionsHelp")}
+              </SectionEditorHelp>
+              <SectionEditor
+                text={formData.chords.trim() || formData.lyrics.trim()}
+                sections={sections}
+                onSectionsChange={setSections}
+                disabled={isSaving}
+              />
+            </>
+          )}
 
           <FormActions>
             <CancelButton type="button" onClick={onClose} disabled={isSaving}>
@@ -933,5 +964,18 @@ const SuccessMessage = styled.div`
   i {
     font-size: ${theme.fontSizes.body};
     flex-shrink: 0;
+  }
+`;
+
+const SectionEditorHelp = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.tertiary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-bottom: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
   }
 `;

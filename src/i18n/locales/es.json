@@ -349,5 +349,17 @@
     "remove": "Quitar",
     "expand": "Expandir controles",
     "collapse": "Contraer controles"
+  },
+  "sectionEditor": {
+    "title": "Secciones de la Canción",
+    "hint": "Haz clic en las líneas para seleccionar un rango, luego nombra la sección",
+    "lines": "Líneas",
+    "selectedLines": "Seleccionado: Líneas {{start}}-{{end}}",
+    "sectionNamePlaceholder": "Nombre de sección (ej., Verso 1, Coro)",
+    "addSection": "Agregar",
+    "overlapError": "Las secciones no pueden superponerse. Por favor selecciona líneas diferentes.",
+    "noContent": "Agrega letra o acordes para definir secciones",
+    "defineSections": "Definir Secciones",
+    "sectionsHelp": "Organiza tu canción en secciones para facilitar la navegación y sincronización"
   }
 }

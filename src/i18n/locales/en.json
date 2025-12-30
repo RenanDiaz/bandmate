@@ -349,5 +349,17 @@
     "remove": "Remove",
     "expand": "Expand controls",
     "collapse": "Collapse controls"
+  },
+  "sectionEditor": {
+    "title": "Song Sections",
+    "hint": "Click on lines to select a range, then name the section",
+    "lines": "Lines",
+    "selectedLines": "Selected: Lines {{start}}-{{end}}",
+    "sectionNamePlaceholder": "Section name (e.g., Verse 1, Chorus)",
+    "addSection": "Add",
+    "overlapError": "Sections cannot overlap. Please select different lines.",
+    "noContent": "Add lyrics or chords to define sections",
+    "defineSections": "Define Sections",
+    "sectionsHelp": "Organize your song into sections for easier navigation and sync"
   }
 }
