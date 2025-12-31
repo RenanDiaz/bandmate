@@ -31,6 +31,7 @@ import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
+import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -100,6 +101,8 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
@@ -130,16 +133,26 @@ const SetlistPerformanceView: FC = () => {
     setCurrentIndex(index);
   }, []);
 
+  // Handle sync playback updates from host (for viewers)
+  const handleSyncPlaybackChange = useCallback((timeMs: number, isPlaying: boolean) => {
+    // Convert ms to seconds for the display
+    setAudioCurrentTime(timeMs / 1000);
+    setIsAudioPlaying(isPlaying);
+  }, []);
+
   // Performance sync hook
   const {
     role: syncRole,
     isConnected: isSyncConnected,
     isLoading: isSyncLoading,
     error: syncError,
+    playbackTimeMs: syncedPlaybackTimeMs,
+    isAudioPlaying: syncedIsAudioPlaying,
     startHosting,
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    syncPlaybackState,
     forceEndSession,
     takeOverSession,
     hasActiveSession,
@@ -151,6 +164,7 @@ const SetlistPerformanceView: FC = () => {
     setlistId: setlistId || "",
     bandId: setlist?.band_id || 0,
     onSongIndexChange: handleSyncIndexChange,
+    onPlaybackChange: handleSyncPlaybackChange,
   });
 
   // Local backing tracks hook
@@ -309,13 +323,39 @@ const SetlistPerformanceView: FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, setlistItems.length, isFullscreen, navigate]);
 
-  // Scroll to top when song changes
+  // Scroll to top and reset audio time when song changes
   useEffect(() => {
     const songDisplay = document.querySelector('[data-song-display]');
     if (songDisplay) {
       songDisplay.scrollTop = 0;
     }
+    // Reset audio tracking state
+    setAudioCurrentTime(0);
+    setIsAudioPlaying(false);
   }, [currentIndex]);
+
+  // Handle audio time update (host syncs to viewers)
+  const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
+    setAudioCurrentTime(timeInSeconds);
+    // Sync to viewers every 500ms to reduce network traffic
+    if (syncRole === "host") {
+      const timeMs = Math.round(timeInSeconds * 1000);
+      syncPlaybackState(timeMs, isAudioPlaying);
+    }
+  }, [syncRole, isAudioPlaying, syncPlaybackState]);
+
+  // Handle audio playing state change (host syncs to viewers)
+  const handleAudioPlayingChange = useCallback((playing: boolean) => {
+    setIsAudioPlaying(playing);
+    if (syncRole === "host") {
+      const timeMs = Math.round(audioCurrentTime * 1000);
+      syncPlaybackState(timeMs, playing);
+    }
+  }, [syncRole, audioCurrentTime, syncPlaybackState]);
+
+  // Use synced values for viewers
+  const displayAudioTime = syncRole === "viewer" ? syncedPlaybackTimeMs / 1000 : audioCurrentTime;
+  const displayIsPlaying = syncRole === "viewer" ? syncedIsAudioPlaying : isAudioPlaying;
 
   const handlePrevSong = () => {
     // Viewers can't control navigation
@@ -705,36 +745,51 @@ const SetlistPerformanceView: FC = () => {
                     onLoadTrack={loadTrack}
                     onRemoveTrack={removeTrack}
                     isHost={syncRole === "host" || syncRole === null}
+                    onTimeUpdate={handleAudioTimeUpdate}
+                    onPlayingChange={handleAudioPlayingChange}
                   />
                 )}
               </SongHeader>
 
               <SongContent>
-                {displayContent.type === "chords" && (
-                  <ContentSection>
-                    <SectionLabel>
-                      <i className="bi bi-music-note"></i>
-                      Chords
-                    </SectionLabel>
-                    <ContentText>{displayContent.content}</ContentText>
-                  </ContentSection>
-                )}
+                {displayContent.type !== "none" && (currentSong.timing_data?.sectionTimings?.length || currentSong.timing_data?.lineTimings?.length) ? (
+                  <SyncedLyricsDisplay
+                    content={displayContent.content}
+                    contentType={displayContent.type}
+                    sections={currentSong.timing_data?.sectionTimings || []}
+                    lineTimings={currentSong.timing_data?.lineTimings}
+                    currentTime={displayAudioTime}
+                    isPlaying={displayIsPlaying}
+                  />
+                ) : (
+                  <>
+                    {displayContent.type === "chords" && (
+                      <ContentSection>
+                        <SectionLabel>
+                          <i className="bi bi-music-note"></i>
+                          Chords
+                        </SectionLabel>
+                        <ContentText>{displayContent.content}</ContentText>
+                      </ContentSection>
+                    )}
 
-                {displayContent.type === "lyrics" && (
-                  <ContentSection>
-                    <SectionLabel>
-                      <i className="bi bi-mic"></i>
-                      Lyrics
-                    </SectionLabel>
-                    <ContentText>{displayContent.content}</ContentText>
-                  </ContentSection>
-                )}
+                    {displayContent.type === "lyrics" && (
+                      <ContentSection>
+                        <SectionLabel>
+                          <i className="bi bi-mic"></i>
+                          Lyrics
+                        </SectionLabel>
+                        <ContentText>{displayContent.content}</ContentText>
+                      </ContentSection>
+                    )}
 
-                {displayContent.type === "none" && (
-                  <EmptyContent>
-                    <i className="bi bi-music-note-beamed"></i>
-                    <p>No chords or lyrics available for this song</p>
-                  </EmptyContent>
+                    {displayContent.type === "none" && (
+                      <EmptyContent>
+                        <i className="bi bi-music-note-beamed"></i>
+                        <p>No chords or lyrics available for this song</p>
+                      </EmptyContent>
+                    )}
+                  </>
                 )}
               </SongContent>
             </>

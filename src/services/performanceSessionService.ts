@@ -10,6 +10,10 @@ export interface PerformanceSession {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Audio sync fields
+  current_time_ms: number;
+  is_playing: boolean;
+  playback_updated_at: string | null;
   // Populated via join or separate query
   host_display_name?: string;
 }
@@ -92,6 +96,27 @@ export async function updateSongIndex(
     .update({
       current_song_index: songIndex,
       updated_at: new Date().toISOString(),
+    })
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+/**
+ * Update audio playback state (host only)
+ * Used to sync audio position and play/pause state to viewers
+ */
+export async function updatePlaybackState(
+  sessionId: string,
+  currentTimeMs: number,
+  isPlaying: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from("performance_sessions")
+    .update({
+      current_time_ms: currentTimeMs,
+      is_playing: isPlaying,
+      playback_updated_at: new Date().toISOString(),
     })
     .eq("id", sessionId);
 

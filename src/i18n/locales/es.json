@@ -370,5 +370,50 @@
     "remove": "Quitar",
     "expand": "Expandir controles",
     "collapse": "Contraer controles"
+  },
+  "sectionEditor": {
+    "title": "Secciones de la Canción",
+    "hint": "Haz clic en las líneas para seleccionar un rango, luego nombra la sección",
+    "lines": "Líneas",
+    "selectedLines": "Seleccionado: Líneas {{start}}-{{end}}",
+    "sectionNamePlaceholder": "Nombre de sección (ej., Verso 1, Coro)",
+    "addSection": "Agregar",
+    "overlapError": "Las secciones no pueden superponerse. Por favor selecciona líneas diferentes.",
+    "noContent": "Agrega letra o acordes para definir secciones",
+    "defineSections": "Definir Secciones",
+    "sectionsHelp": "Organiza tu canción en secciones para facilitar la navegación y sincronización"
+  },
+  "timingSync": {
+    "title": "Sincronizar Tiempos",
+    "loadAudioPrompt": "Carga un archivo de audio para sincronizar los tiempos de las secciones",
+    "loadAudio": "Cargar Audio",
+    "sections": "Secciones",
+    "synced": "sincronizadas",
+    "clearAll": "Limpiar Todo",
+    "noSections": "No hay secciones definidas. Agrega secciones en el editor primero.",
+    "hint": "Haz clic en una sección para saltar a su tiempo. Los tiempos se guardan automáticamente.",
+    "playPause": "Reproducir/Pausar",
+    "markTime": "Marcar tiempo",
+    "navigateSections": "Navegar",
+    "markCurrentTime": "Marcar tiempo actual",
+    "clearTime": "Limpiar tiempo",
+    "clickToEdit": "Clic para editar tiempo manualmente",
+    "syncTiming": "Sincronizar Tiempos",
+    "syncTimingHint": "Asigna marcas de tiempo de audio a cada sección"
+  },
+  "syncedLyrics": {
+    "nowPlaying": "Reproduciendo",
+    "syncedWithHost": "Sincronizado con el anfitrión",
+    "followingAudio": "Siguiendo el audio del anfitrión"
+  },
+  "lineSync": {
+    "title": "Sincronización Línea por Línea",
+    "syncLines": "Sincronizar Líneas",
+    "syncLinesHint": "Marca tiempos para cada línea",
+    "linesSynced": "{{count}} líneas sincronizadas",
+    "lines": "Líneas",
+    "markLine": "Marcar línea",
+    "navigateLines": "Navegar líneas",
+    "hint": "Reproduce el audio y presiona Enter o M para marcar el inicio de cada línea"
   }
 }
