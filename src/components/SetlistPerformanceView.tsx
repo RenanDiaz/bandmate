@@ -106,16 +106,26 @@ const SetlistPerformanceView: FC = () => {
     setCurrentIndex(index);
   }, []);
 
+  // Handle sync playback updates from host (for viewers)
+  const handleSyncPlaybackChange = useCallback((timeMs: number, isPlaying: boolean) => {
+    // Convert ms to seconds for the display
+    setAudioCurrentTime(timeMs / 1000);
+    setIsAudioPlaying(isPlaying);
+  }, []);
+
   // Performance sync hook
   const {
     role: syncRole,
     isConnected: isSyncConnected,
     isLoading: isSyncLoading,
     error: syncError,
+    playbackTimeMs: syncedPlaybackTimeMs,
+    isAudioPlaying: syncedIsAudioPlaying,
     startHosting,
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    syncPlaybackState,
     forceEndSession,
     takeOverSession,
     hasActiveSession,
@@ -127,6 +137,7 @@ const SetlistPerformanceView: FC = () => {
     setlistId: setlistId || "",
     bandId: setlist?.band_id || 0,
     onSongIndexChange: handleSyncIndexChange,
+    onPlaybackChange: handleSyncPlaybackChange,
   });
 
   // Local backing tracks hook
@@ -295,6 +306,29 @@ const SetlistPerformanceView: FC = () => {
     setAudioCurrentTime(0);
     setIsAudioPlaying(false);
   }, [currentIndex]);
+
+  // Handle audio time update (host syncs to viewers)
+  const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
+    setAudioCurrentTime(timeInSeconds);
+    // Sync to viewers every 500ms to reduce network traffic
+    if (syncRole === "host") {
+      const timeMs = Math.round(timeInSeconds * 1000);
+      syncPlaybackState(timeMs, isAudioPlaying);
+    }
+  }, [syncRole, isAudioPlaying, syncPlaybackState]);
+
+  // Handle audio playing state change (host syncs to viewers)
+  const handleAudioPlayingChange = useCallback((playing: boolean) => {
+    setIsAudioPlaying(playing);
+    if (syncRole === "host") {
+      const timeMs = Math.round(audioCurrentTime * 1000);
+      syncPlaybackState(timeMs, playing);
+    }
+  }, [syncRole, audioCurrentTime, syncPlaybackState]);
+
+  // Use synced values for viewers
+  const displayAudioTime = syncRole === "viewer" ? syncedPlaybackTimeMs / 1000 : audioCurrentTime;
+  const displayIsPlaying = syncRole === "viewer" ? syncedIsAudioPlaying : isAudioPlaying;
 
   const handlePrevSong = () => {
     // Viewers can't control navigation
@@ -632,8 +666,8 @@ const SetlistPerformanceView: FC = () => {
                 onLoadTrack={loadTrack}
                 onRemoveTrack={removeTrack}
                 isHost={syncRole === "host" || syncRole === null}
-                onTimeUpdate={setAudioCurrentTime}
-                onPlayingChange={setIsAudioPlaying}
+                onTimeUpdate={handleAudioTimeUpdate}
+                onPlayingChange={handleAudioPlayingChange}
               />
             )}
           </SongHeader>
@@ -644,8 +678,8 @@ const SetlistPerformanceView: FC = () => {
                 content={displayContent.content}
                 contentType={displayContent.type}
                 sections={currentSong.timing_data.sectionTimings}
-                currentTime={audioCurrentTime}
-                isPlaying={isAudioPlaying}
+                currentTime={displayAudioTime}
+                isPlaying={displayIsPlaying}
               />
             ) : (
               <>

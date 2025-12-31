@@ -381,6 +381,8 @@
     "syncTimingHint": "Asigna marcas de tiempo de audio a cada sección"
   },
   "syncedLyrics": {
-    "nowPlaying": "Reproduciendo"
+    "nowPlaying": "Reproduciendo",
+    "syncedWithHost": "Sincronizado con el anfitrión",
+    "followingAudio": "Siguiendo el audio del anfitrión"
   }
 }

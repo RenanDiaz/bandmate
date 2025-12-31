@@ -381,6 +381,8 @@
     "syncTimingHint": "Assign audio timestamps to each section"
   },
   "syncedLyrics": {
-    "nowPlaying": "Now playing"
+    "nowPlaying": "Now playing",
+    "syncedWithHost": "Synced with host",
+    "followingAudio": "Following host's audio"
   }
 }
