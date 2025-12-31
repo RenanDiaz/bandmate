@@ -61,6 +61,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
       });
       setSections(song.timing_data?.sectionTimings || []);
       setLineTimings(song.timing_data?.lineTimings || []);
+      // Reset metadata button state when switching songs
+      setMetadataFetched(false);
+      setIsFetchingMetadata(false);
     }
   }, [song]);
 

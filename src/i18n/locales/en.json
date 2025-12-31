@@ -172,6 +172,27 @@
     "placeholders": {
       "name": "e.g., Friday Night Set",
       "description": "e.g., Main set for club gigs"
+    },
+    "items": {
+      "song": "Song",
+      "break": "Break",
+      "section": "Section",
+      "note": "Note",
+      "addBreak": "Add Break",
+      "addSection": "Add Section",
+      "addNote": "Add Note",
+      "addSpecialItem": "Add Item",
+      "breakLabel": "Break Label",
+      "sectionLabel": "Section Label",
+      "noteLabel": "Note Text",
+      "duration": "Duration (minutes)",
+      "upNext": "Up next",
+      "endOfSetlist": "End of setlist",
+      "placeholders": {
+        "break": "e.g., 15 min intermission",
+        "section": "e.g., Set 2, Encore",
+        "note": "e.g., Tune to Drop D"
+      }
     }
   },
   "shows": {
