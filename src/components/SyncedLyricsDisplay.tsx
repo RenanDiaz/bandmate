@@ -1,16 +1,18 @@
 import React, { useEffect, useRef, useMemo } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
-import type { SectionTiming } from "../services/songsService";
+import type { SectionTiming, LineTiming } from "../services/songsService";
 import { useTranslation } from "react-i18next";
 
 interface Props {
   content: string;
   contentType: "chords" | "lyrics";
   sections: SectionTiming[];
+  lineTimings?: LineTiming[];
   currentTime: number;
   isPlaying: boolean;
   onSectionClick?: (startTime: number) => void;
+  onLineClick?: (startTime: number) => void;
 }
 
 const SECTION_COLORS = [
@@ -28,16 +30,23 @@ export const SyncedLyricsDisplay = ({
   content,
   contentType,
   sections,
+  lineTimings = [],
   currentTime,
   isPlaying,
   onSectionClick,
+  onLineClick,
 }: Props) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const activeSectionRef = useRef<HTMLDivElement>(null);
+  const activeLineRef = useRef<HTMLDivElement>(null);
   const lastScrolledSectionRef = useRef<number | null>(null);
+  const lastScrolledLineRef = useRef<number | null>(null);
 
   const lines = useMemo(() => content.split("\n"), [content]);
+
+  // Check if we have line-level sync
+  const hasLineSync = lineTimings.length > 0;
 
   // Find current section based on time
   const currentSectionIndex = useMemo(() => {
@@ -55,6 +64,31 @@ export const SyncedLyricsDisplay = ({
     return activeIndex;
   }, [sections, currentTime]);
 
+  // Find current line based on time (for line-level sync)
+  const currentLineIndex = useMemo(() => {
+    if (!hasLineSync || currentTime === 0) return -1;
+
+    // Sort by lineIndex to process in order
+    const sortedTimings = [...lineTimings].sort((a, b) => a.lineIndex - b.lineIndex);
+
+    // Find the last line whose startTime is <= currentTime
+    let activeIndex = -1;
+    for (const timing of sortedTimings) {
+      if (timing.startTime > 0 && timing.startTime <= currentTime) {
+        activeIndex = timing.lineIndex;
+      } else if (timing.startTime > currentTime) {
+        break;
+      }
+    }
+    return activeIndex;
+  }, [lineTimings, currentTime, hasLineSync]);
+
+  // Get timing for a specific line
+  const getLineTiming = (lineIndex: number): number => {
+    const timing = lineTimings.find((lt) => lt.lineIndex === lineIndex);
+    return timing?.startTime ?? 0;
+  };
+
   // Get section info for a line
   const getSectionForLine = (lineIndex: number): { index: number; section: SectionTiming } | null => {
     const idx = sections.findIndex(
@@ -71,7 +105,8 @@ export const SyncedLyricsDisplay = ({
       currentSectionIndex !== lastScrolledSectionRef.current &&
       activeSectionRef.current &&
       containerRef.current &&
-      isPlaying
+      isPlaying &&
+      !hasLineSync // Don't scroll by section if we have line sync
     ) {
       lastScrolledSectionRef.current = currentSectionIndex;
 
@@ -81,11 +116,32 @@ export const SyncedLyricsDisplay = ({
         block: "center",
       });
     }
-  }, [currentSectionIndex, isPlaying]);
+  }, [currentSectionIndex, isPlaying, hasLineSync]);
+
+  // Auto-scroll to active line when it changes (for line-level sync)
+  useEffect(() => {
+    if (
+      hasLineSync &&
+      currentLineIndex >= 0 &&
+      currentLineIndex !== lastScrolledLineRef.current &&
+      activeLineRef.current &&
+      containerRef.current &&
+      isPlaying
+    ) {
+      lastScrolledLineRef.current = currentLineIndex;
+
+      // Smooth scroll to active line
+      activeLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [currentLineIndex, isPlaying, hasLineSync]);
 
   // Reset scroll tracking when song changes (content changes)
   useEffect(() => {
     lastScrolledSectionRef.current = null;
+    lastScrolledLineRef.current = null;
   }, [content]);
 
   // Check if we have any synced sections
@@ -136,11 +192,30 @@ export const SyncedLyricsDisplay = ({
               )}
             </SectionHeader>
             <SectionContent $contentType={contentType}>
-              {sectionLines.map(({ line, lineIndex }) => (
-                <Line key={lineIndex} $isEmpty={line.trim() === ""}>
-                  {line || " "}
-                </Line>
-              ))}
+              {sectionLines.map(({ line, lineIndex }) => {
+                const isCurrentLine = hasLineSync && lineIndex === currentLineIndex;
+                const lineTiming = getLineTiming(lineIndex);
+                const lineIsSynced = lineTiming > 0;
+
+                return (
+                  <SyncedLine
+                    key={lineIndex}
+                    ref={isCurrentLine ? activeLineRef : null}
+                    $isEmpty={line.trim() === ""}
+                    $isActive={isCurrentLine}
+                    $isSynced={lineIsSynced}
+                    $hasLineSync={hasLineSync}
+                    onClick={(e) => {
+                      if (lineIsSynced && onLineClick) {
+                        e.stopPropagation();
+                        onLineClick(lineTiming);
+                      }
+                    }}
+                  >
+                    {line || " "}
+                  </SyncedLine>
+                );
+              })}
             </SectionContent>
           </SectionBlock>
         );
@@ -148,11 +223,29 @@ export const SyncedLyricsDisplay = ({
         // Lines not in any section (before first section or between sections)
         elements.push(
           <UnsectionedBlock key={`unsectioned-${elements.length}`}>
-            {sectionLines.map(({ line, lineIndex }) => (
-              <Line key={lineIndex} $isEmpty={line.trim() === ""}>
-                {line || " "}
-              </Line>
-            ))}
+            {sectionLines.map(({ line, lineIndex }) => {
+              const isCurrentLine = hasLineSync && lineIndex === currentLineIndex;
+              const lineTiming = getLineTiming(lineIndex);
+              const lineIsSynced = lineTiming > 0;
+
+              return (
+                <SyncedLine
+                  key={lineIndex}
+                  ref={isCurrentLine ? activeLineRef : null}
+                  $isEmpty={line.trim() === ""}
+                  $isActive={isCurrentLine}
+                  $isSynced={lineIsSynced}
+                  $hasLineSync={hasLineSync}
+                  onClick={() => {
+                    if (lineIsSynced && onLineClick) {
+                      onLineClick(lineTiming);
+                    }
+                  }}
+                >
+                  {line || " "}
+                </SyncedLine>
+              );
+            })}
           </UnsectionedBlock>
         );
       }
@@ -344,10 +437,40 @@ const SectionContent = styled.div<{ $contentType: "chords" | "lyrics" }>`
   line-height: ${theme.lineHeights.loose};
 `;
 
-const Line = styled.div<{ $isEmpty: boolean }>`
+const SyncedLine = styled.div<{
+  $isEmpty: boolean;
+  $isActive: boolean;
+  $isSynced: boolean;
+  $hasLineSync: boolean;
+}>`
   min-height: 1.5em;
-  color: ${(props) =>
-    props.$isEmpty ? theme.colors.dark.text.tertiary : "inherit"};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  margin: 0 -${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  transition: all 0.2s ease;
+  cursor: ${(props) => (props.$isSynced ? "pointer" : "default")};
+
+  ${(props) => props.$isEmpty && `
+    color: ${theme.colors.dark.text.tertiary};
+  `}
+
+  ${(props) => props.$isActive && `
+    background: ${theme.colors.brand.primary}30;
+    color: ${theme.colors.brand.primary};
+    font-weight: ${theme.fontWeights.semibold};
+    transform: scale(1.02);
+    box-shadow: 0 0 20px ${theme.colors.brand.primary}20;
+  `}
+
+  ${(props) => props.$hasLineSync && props.$isSynced && !props.$isActive && `
+    &:hover {
+      background: ${theme.colors.dark.bg.elevated};
+    }
+  `}
+
+  ${(props) => props.$hasLineSync && !props.$isSynced && !props.$isEmpty && `
+    opacity: 0.5;
+  `}
 `;
 
 const UnsectionedBlock = styled.div`

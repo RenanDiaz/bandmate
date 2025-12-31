@@ -673,11 +673,12 @@ const SetlistPerformanceView: FC = () => {
           </SongHeader>
 
           <SongContent>
-            {displayContent.type !== "none" && currentSong.timing_data?.sectionTimings?.length ? (
+            {displayContent.type !== "none" && (currentSong.timing_data?.sectionTimings?.length || currentSong.timing_data?.lineTimings?.length) ? (
               <SyncedLyricsDisplay
                 content={displayContent.content}
                 contentType={displayContent.type}
-                sections={currentSong.timing_data.sectionTimings}
+                sections={currentSong.timing_data?.sectionTimings || []}
+                lineTimings={currentSong.timing_data?.lineTimings}
                 currentTime={displayAudioTime}
                 isPlaying={displayIsPlaying}
               />

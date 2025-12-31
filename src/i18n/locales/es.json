@@ -384,5 +384,15 @@
     "nowPlaying": "Reproduciendo",
     "syncedWithHost": "Sincronizado con el anfitrión",
     "followingAudio": "Siguiendo el audio del anfitrión"
+  },
+  "lineSync": {
+    "title": "Sincronización Línea por Línea",
+    "syncLines": "Sincronizar Líneas",
+    "syncLinesHint": "Marca tiempos para cada línea",
+    "linesSynced": "{{count}} líneas sincronizadas",
+    "lines": "Líneas",
+    "markLine": "Marcar línea",
+    "navigateLines": "Navegar líneas",
+    "hint": "Reproduce el audio y presiona Enter o M para marcar el inicio de cada línea"
   }
 }

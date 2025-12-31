@@ -384,5 +384,15 @@
     "nowPlaying": "Now playing",
     "syncedWithHost": "Synced with host",
     "followingAudio": "Following host's audio"
+  },
+  "lineSync": {
+    "title": "Line-by-Line Sync",
+    "syncLines": "Sync Lines",
+    "syncLinesHint": "Mark timestamps for each line",
+    "linesSynced": "{{count}} lines synced",
+    "lines": "Lines",
+    "markLine": "Mark line",
+    "navigateLines": "Navigate lines",
+    "hint": "Play the audio and press Enter or M to mark each line's start time"
   }
 }
