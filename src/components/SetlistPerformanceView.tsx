@@ -21,8 +21,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist } from "../services/setlistsService";
-import type { Setlist, SetlistSong } from "../services/setlistsService";
+import { getSetlist, updateSetlist, isSongItem } from "../services/setlistsService";
+import type { Setlist, SetlistSongItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
@@ -175,9 +175,11 @@ const SetlistPerformanceView: FC = () => {
 
     setSaving(true);
     try {
-      const updatedSetlistSongs: SetlistSong[] = songs.map((song, index) => {
-        const existingSong = setlist.songs.find((s) => s.song_id === song.id);
+      const songItems = setlist.songs.filter(isSongItem);
+      const updatedSetlistSongs: SetlistSongItem[] = songs.map((song, index) => {
+        const existingSong = songItems.find((s) => s.song_id === song.id);
         return {
+          type: "song" as const,
           song_id: song.id,
           position: index,
           notes: existingSong?.notes || "",
@@ -202,6 +204,7 @@ const SetlistPerformanceView: FC = () => {
   const handleCancelReorder = () => {
     if (setlist) {
       const orderedSongs = setlist.songs
+        .filter(isSongItem)
         .sort((a, b) => a.position - b.position)
         .map((setlistSong) => songs.find((s) => s.id === setlistSong.song_id))
         .filter((song): song is Song => song !== undefined);
@@ -234,6 +237,7 @@ const SetlistPerformanceView: FC = () => {
 
         // Map setlist songs to full song objects in order
         const orderedSongs = setlistData.songs
+          .filter(isSongItem)
           .sort((a, b) => a.position - b.position)
           .map((setlistSong) => allSongs.find((s) => s.id === setlistSong.song_id))
           .filter((song): song is Song => song !== undefined);
@@ -358,7 +362,9 @@ const SetlistPerformanceView: FC = () => {
 
   const getSetlistSongNotes = (songId: string): string | undefined => {
     if (!setlist) return undefined;
-    const setlistSong = setlist.songs.find((s) => s.song_id === songId);
+    const setlistSong = setlist.songs
+      .filter(isSongItem)
+      .find((s) => s.song_id === songId);
     return setlistSong?.notes;
   };
 

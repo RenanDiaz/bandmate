@@ -172,6 +172,27 @@
     "placeholders": {
       "name": "ej., Set del Viernes",
       "description": "ej., Set principal para shows en clubes"
+    },
+    "items": {
+      "song": "Canción",
+      "break": "Pausa",
+      "section": "Sección",
+      "note": "Nota",
+      "addBreak": "Agregar Pausa",
+      "addSection": "Agregar Sección",
+      "addNote": "Agregar Nota",
+      "addSpecialItem": "Agregar Item",
+      "breakLabel": "Etiqueta de Pausa",
+      "sectionLabel": "Etiqueta de Sección",
+      "noteLabel": "Texto de Nota",
+      "duration": "Duración (minutos)",
+      "upNext": "A continuación",
+      "endOfSetlist": "Fin del setlist",
+      "placeholders": {
+        "break": "ej., Intermedio de 15 min",
+        "section": "ej., Set 2, Encore",
+        "note": "ej., Afinar a Drop D"
+      }
     }
   },
   "shows": {

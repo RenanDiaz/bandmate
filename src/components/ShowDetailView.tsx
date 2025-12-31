@@ -6,7 +6,7 @@ import styled from "styled-components";
 import { theme } from "../theme";
 import { getShow, deleteShow, markShowCompleted, markShowCancelled, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
-import { getSetlist, getBandSetlists } from "../services/setlistsService";
+import { getSetlist, getBandSetlists, isSongItem } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -199,8 +199,8 @@ const ShowDetailView: FC = () => {
   const isUpcoming = show.status === "upcoming" && !countdown.isPast;
   const isCancelled = show.status === "cancelled";
 
-  // Get song details for setlist
-  const setlistSongs = setlist?.songs?.map((s) => {
+  // Get song details for setlist (only song items, not breaks/sections/notes)
+  const setlistSongs = setlist?.songs?.filter(isSongItem).map((s) => {
     const song = songs.find((song) => song.id === s.song_id);
     return { ...s, song };
   }) || [];

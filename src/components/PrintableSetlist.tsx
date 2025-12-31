@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
-import { getSetlist } from "../services/setlistsService";
+import { getSetlist, isSongItem } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -31,6 +31,7 @@ const PrintableSetlist: FC = () => {
         const allSongs = await getBandSongs(setlistData.band_id);
 
         const orderedSongs = setlistData.songs
+          .filter(isSongItem)
           .sort((a, b) => a.position - b.position)
           .map((setlistSong) => allSongs.find((s) => s.id === setlistSong.song_id))
           .filter((song): song is Song => song !== undefined);
@@ -76,7 +77,9 @@ const PrintableSetlist: FC = () => {
 
   const getSetlistSongNotes = (songId: string): string | undefined => {
     if (!setlist) return undefined;
-    const setlistSong = setlist.songs.find((s) => s.song_id === songId);
+    const setlistSong = setlist.songs
+      .filter(isSongItem)
+      .find((s) => s.song_id === songId);
     return setlistSong?.notes;
   };
 

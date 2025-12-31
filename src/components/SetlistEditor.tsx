@@ -21,14 +21,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist } from "../services/setlistsService";
-import type { Setlist, SetlistSong } from "../services/setlistsService";
+import { getSetlist, updateSetlist, getSongItems } from "../services/setlistsService";
+import type { Setlist, SetlistSongItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 
 // Sortable song card component
 interface SortableSetlistSongCardProps {
-  setlistSong: SetlistSong;
+  setlistSong: SetlistSongItem;
   index: number;
   song: Song;
   formatDuration: (seconds: number) => string;
@@ -102,7 +102,7 @@ const SetlistEditor: FC = () => {
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
-  const [selectedSongs, setSelectedSongs] = useState<SetlistSong[]>([]);
+  const [selectedSongs, setSelectedSongs] = useState<SetlistSongItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -145,7 +145,8 @@ const SetlistEditor: FC = () => {
       try {
         const setlistData = await getSetlist(setlistId);
         setSetlist(setlistData);
-        setSelectedSongs(setlistData.songs || []);
+        // Only load song items for the editor (special items will be handled in future phases)
+        setSelectedSongs(getSongItems(setlistData.songs || []));
 
         const songsData = await getBandSongs(setlistData.band_id);
         setAvailableSongs(songsData);
@@ -180,7 +181,8 @@ const SetlistEditor: FC = () => {
     const isAlreadyAdded = selectedSongs.some((s) => s.song_id === song.id);
     if (isAlreadyAdded) return;
 
-    const newSong: SetlistSong = {
+    const newSong: SetlistSongItem = {
+      type: "song",
       song_id: song.id,
       position: selectedSongs.length,
       notes: "",
