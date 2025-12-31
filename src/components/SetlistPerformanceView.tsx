@@ -432,7 +432,6 @@ const SetlistPerformanceView: FC = () => {
             </ExitButton>
             <SetlistInfo>
               <SetlistName>{setlist.name}</SetlistName>
-              {setlist.venue && <VenueName>{setlist.venue}</VenueName>}
             </SetlistInfo>
           </TopBarLeft>
 
@@ -809,18 +808,6 @@ const SetlistName = styled.div`
 
   @media (min-width: ${theme.breakpoints.md}) {
     font-size: ${theme.fontSizes.bodyLg};
-  }
-`;
-
-const VenueName = styled.div`
-  font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  @media (min-width: ${theme.breakpoints.md}) {
-    font-size: ${theme.fontSizes.bodySm};
   }
 `;
 

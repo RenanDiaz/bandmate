@@ -286,17 +286,6 @@ const SetlistEditor: FC = () => {
             </BackButton>
             <HeaderInfo>
               <SetlistTitle>{setlist.name}</SetlistTitle>
-              {setlist.venue && (
-                <SetlistMeta>
-                  <i className="bi bi-geo-alt"></i> {setlist.venue}
-                </SetlistMeta>
-              )}
-              {setlist.event_date && (
-                <SetlistMeta>
-                  <i className="bi bi-calendar-event"></i>{" "}
-                  {new Date(setlist.event_date).toLocaleDateString()}
-                </SetlistMeta>
-              )}
             </HeaderInfo>
           </HeaderLeft>
           <HeaderActions>
@@ -494,18 +483,6 @@ const SetlistTitle = styled.h1`
   color: ${theme.colors.dark.text.primary};
   margin: 0;
   line-height: ${theme.lineHeights.tight};
-`;
-
-const SetlistMeta = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[1]};
-
-  i {
-    color: ${theme.colors.brand.primary};
-  }
 `;
 
 const HeaderActions = styled.div`

@@ -12,8 +12,6 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    event_date: "",
-    venue: "",
   });
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,13 +26,11 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
         name: formData.name.trim(),
         band_id: bandId,
         description: formData.description.trim() || undefined,
-        event_date: formData.event_date || undefined,
-        venue: formData.venue.trim() || undefined,
         songs: [],
       };
 
       await createSetlist(setlistInput);
-      setFormData({ name: "", description: "", event_date: "", venue: "" });
+      setFormData({ name: "", description: "" });
       setIsExpanded(false);
       onSetlistCreated();
     } catch (error) {
@@ -71,50 +67,20 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       </FormHeader>
 
       <Form onSubmit={handleSubmit}>
-        <FormRow>
-          <FormGroup>
-            <Label htmlFor="setlistName">
-              Setlist Name <Required>*</Required>
-            </Label>
-            <Input
-              id="setlistName"
-              placeholder="e.g., Summer Festival 2025"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              autoFocus
-              disabled={isSubmitting}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="setlistVenue">
-              <i className="bi bi-geo-alt"></i>
-              Venue
-            </Label>
-            <Input
-              id="setlistVenue"
-              placeholder="e.g., Madison Square Garden"
-              value={formData.venue}
-              onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-              disabled={isSubmitting}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="setlistDate">
-              <i className="bi bi-calendar-event"></i>
-              Event Date
-            </Label>
-            <Input
-              id="setlistDate"
-              type="date"
-              value={formData.event_date}
-              onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-              disabled={isSubmitting}
-            />
-          </FormGroup>
-        </FormRow>
+        <FormGroup>
+          <Label htmlFor="setlistName">
+            Setlist Name <Required>*</Required>
+          </Label>
+          <Input
+            id="setlistName"
+            placeholder="e.g., Summer Festival 2025"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+            autoFocus
+            disabled={isSubmitting}
+          />
+        </FormGroup>
 
         <FormGroup>
           <Label htmlFor="setlistDescription">
@@ -245,16 +211,6 @@ const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[4]};
-`;
-
-const FormRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${theme.space[4]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 const FormGroup = styled.div`
