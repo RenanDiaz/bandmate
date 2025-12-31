@@ -4,20 +4,28 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
-import { getSetlist } from "../services/setlistsService";
-import type { Setlist } from "../services/setlistsService";
+import { getSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
+import { useTranslation } from "react-i18next";
 
 const PrintableSetlist: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper to get song by ID
+  const getSongById = (songId: string): Song | undefined => {
+    return allSongs.find((s) => s.id === songId);
+  };
 
   useEffect(() => {
     if (!setlistId) return;
@@ -28,14 +36,12 @@ const PrintableSetlist: FC = () => {
         const setlistData = await getSetlist(setlistId);
         setSetlist(setlistData);
 
-        const allSongs = await getBandSongs(setlistData.band_id);
+        const songsData = await getBandSongs(setlistData.band_id);
+        setAllSongs(songsData);
 
-        const orderedSongs = setlistData.songs
-          .sort((a, b) => a.position - b.position)
-          .map((setlistSong) => allSongs.find((s) => s.id === setlistSong.song_id))
-          .filter((song): song is Song => song !== undefined);
-
-        setSongs(orderedSongs);
+        // Load all items in order
+        const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
+        setSetlistItems(orderedItems);
       } catch (error) {
         console.error("Failed to load setlist:", error);
         navigate("/setlists");
@@ -60,25 +66,24 @@ const PrintableSetlist: FC = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-  };
-
   const calculateTotalDuration = (): number => {
-    return songs.reduce((total, song) => total + (song.duration || 0), 0);
+    return setlistItems
+      .filter(isSongItem)
+      .map((item) => getSongById(item.song_id))
+      .filter((song): song is Song => song !== undefined)
+      .reduce((total, song) => total + (song.duration || 0), 0);
   };
 
   const getSetlistSongNotes = (songId: string): string | undefined => {
     if (!setlist) return undefined;
-    const setlistSong = setlist.songs.find((s) => s.song_id === songId);
+    const setlistSong = setlist.songs
+      .filter(isSongItem)
+      .find((s) => s.song_id === songId);
     return setlistSong?.notes;
   };
+
+  // Get only song items for count
+  const songItems = setlistItems.filter(isSongItem);
 
   if (loading) {
     return (
@@ -99,7 +104,7 @@ const PrintableSetlist: FC = () => {
     <PageWrapper>
       <SEO
         title={`${setlist.name} - Print`}
-        description={`Printable setlist for ${setlist.name}. ${songs.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
+        description={`Printable setlist for ${setlist.name}. ${songItems.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
       />
       {/* Screen-only controls */}
       <ControlBar className="no-print">
@@ -121,18 +126,8 @@ const PrintableSetlist: FC = () => {
             <SetlistDescription>{setlist.description}</SetlistDescription>
           )}
           <MetaRow>
-            {setlist.venue && (
-              <MetaItem>
-                <MetaLabel>Venue:</MetaLabel> {setlist.venue}
-              </MetaItem>
-            )}
-            {setlist.event_date && (
-              <MetaItem>
-                <MetaLabel>Date:</MetaLabel> {formatDate(setlist.event_date)}
-              </MetaItem>
-            )}
             <MetaItem>
-              <MetaLabel>Songs:</MetaLabel> {songs.length}
+              <MetaLabel>Songs:</MetaLabel> {songItems.length}
             </MetaItem>
             {totalDuration > 0 && (
               <MetaItem>
@@ -154,24 +149,52 @@ const PrintableSetlist: FC = () => {
             </tr>
           </thead>
           <tbody>
-            {songs.map((song, index) => {
-              const notes = getSetlistSongNotes(song.id);
-              return (
-                <TableRow key={song.id} $hasNotes={!!notes}>
-                  <TableCell className="num">{index + 1}</TableCell>
-                  <TableCell className="title">
-                    <SongTitle>{song.title}</SongTitle>
-                    {notes && <SongNotes>{notes}</SongNotes>}
-                  </TableCell>
-                  <TableCell className="artist">{song.artist || "-"}</TableCell>
-                  <TableCell className="key">{song.key || "-"}</TableCell>
-                  <TableCell className="tempo">{song.tempo || "-"}</TableCell>
-                  <TableCell className="duration">
-                    {song.duration ? formatDuration(song.duration) : "-"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {(() => {
+              let songNumber = 0;
+              return setlistItems.map((item, index) => {
+                if (isSongItem(item)) {
+                  const song = getSongById(item.song_id);
+                  if (!song) return null;
+                  songNumber++;
+                  const notes = getSetlistSongNotes(song.id);
+                  return (
+                    <TableRow key={`song-${item.song_id}`} $hasNotes={!!notes}>
+                      <TableCell className="num">{songNumber}</TableCell>
+                      <TableCell className="title">
+                        <SongTitle>{song.title}</SongTitle>
+                        {notes && <SongNotes>{notes}</SongNotes>}
+                      </TableCell>
+                      <TableCell className="artist">{song.artist || "-"}</TableCell>
+                      <TableCell className="key">{song.key || "-"}</TableCell>
+                      <TableCell className="tempo">{song.tempo || "-"}</TableCell>
+                      <TableCell className="duration">
+                        {song.duration ? formatDuration(song.duration) : "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                } else {
+                  // Special item (break, section, note)
+                  const typeLabel = isBreakItem(item)
+                    ? t("setlists.items.break")
+                    : isSectionItem(item)
+                    ? t("setlists.items.section")
+                    : t("setlists.items.note");
+                  return (
+                    <SpecialItemRow key={`special-${index}`} $type={item.type}>
+                      <SpecialItemCell colSpan={6}>
+                        <SpecialItemContent>
+                          <SpecialItemType>{typeLabel}:</SpecialItemType>
+                          <SpecialItemLabel>{item.label}</SpecialItemLabel>
+                          {isBreakItem(item) && item.duration && (
+                            <SpecialItemDuration>({item.duration} min)</SpecialItemDuration>
+                          )}
+                        </SpecialItemContent>
+                      </SpecialItemCell>
+                    </SpecialItemRow>
+                  );
+                }
+              });
+            })()}
           </tbody>
           <tfoot>
             <TableRow>
@@ -533,6 +556,90 @@ const FooterText = styled.span`
 
   @media print {
     font-size: 8pt;
+  }
+`;
+
+// Special item row styles for print
+const SpecialItemRow = styled.tr<{ $type: string }>`
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return "#fff7ed";
+      case "section":
+        return "#eff6ff";
+      case "note":
+        return "#f0fdf4";
+      default:
+        return "#f5f5f5";
+    }
+  }};
+  border-bottom: 1px solid #ddd;
+
+  @media print {
+    background: ${(props) => {
+      switch (props.$type) {
+        case "break":
+          return "#fff7ed";
+        case "section":
+          return "#eff6ff";
+        case "note":
+          return "#f0fdf4";
+        default:
+          return "#f5f5f5";
+      }
+    }};
+    page-break-inside: avoid;
+  }
+`;
+
+const SpecialItemCell = styled.td`
+  padding: ${theme.space[3]} ${theme.space[2]};
+
+  @media print {
+    padding: 8pt 4pt;
+  }
+`;
+
+const SpecialItemContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  justify-content: center;
+
+  @media print {
+    gap: 8pt;
+  }
+`;
+
+const SpecialItemType = styled.span`
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+
+  @media print {
+    font-size: 9pt;
+  }
+`;
+
+const SpecialItemLabel = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+
+  @media print {
+    font-size: 10pt;
+  }
+`;
+
+const SpecialItemDuration = styled.span`
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+
+  @media print {
+    font-size: 9pt;
   }
 `;
 

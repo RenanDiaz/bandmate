@@ -8,6 +8,7 @@ import {
   subscribeToSession,
   unsubscribeFromSession,
   updateSongIndex,
+  updatePlaybackState,
   forceEndSession as forceEndSessionService,
   takeOverSession as takeOverSessionService,
   getHostDisplayName,
@@ -21,6 +22,7 @@ export interface UsePerformanceSyncOptions {
   setlistId: string;
   bandId: number;
   onSongIndexChange?: (index: number) => void;
+  onPlaybackChange?: (timeMs: number, isPlaying: boolean) => void;
 }
 
 export interface UsePerformanceSyncReturn {
@@ -31,11 +33,16 @@ export interface UsePerformanceSyncReturn {
   isLoading: boolean;
   error: string | null;
 
+  // Audio playback state (for viewers)
+  playbackTimeMs: number;
+  isAudioPlaying: boolean;
+
   // Actions
   startHosting: () => Promise<void>;
   joinExistingSession: () => Promise<boolean>;
   leaveSession: () => Promise<void>;
   syncSongIndex: (index: number) => Promise<void>;
+  syncPlaybackState: (timeMs: number, isPlaying: boolean) => Promise<void>;
 
   // Orphaned session management (for band owners)
   forceEndSession: () => Promise<void>;
@@ -53,6 +60,7 @@ export function usePerformanceSync({
   setlistId,
   bandId,
   onSongIndexChange,
+  onPlaybackChange,
 }: UsePerformanceSyncOptions): UsePerformanceSyncReturn {
   const [session, setSession] = useState<PerformanceSession | null>(null);
   const [role, setRole] = useState<SyncRole>(null);
@@ -62,9 +70,12 @@ export function usePerformanceSync({
   const [existingSession, setExistingSession] =
     useState<PerformanceSession | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [playbackTimeMs, setPlaybackTimeMs] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const onSongIndexChangeRef = useRef(onSongIndexChange);
+  const onPlaybackChangeRef = useRef(onPlaybackChange);
   const sessionRef = useRef<PerformanceSession | null>(null);
   const roleRef = useRef<SyncRole>(null);
 
@@ -74,10 +85,14 @@ export function usePerformanceSync({
     roleRef.current = role;
   }, [session, role]);
 
-  // Keep callback ref updated
+  // Keep callback refs updated
   useEffect(() => {
     onSongIndexChangeRef.current = onSongIndexChange;
   }, [onSongIndexChange]);
+
+  useEffect(() => {
+    onPlaybackChangeRef.current = onPlaybackChange;
+  }, [onPlaybackChange]);
 
   // Subscribe to session updates
   const subscribeToUpdates = useCallback((sessionData: PerformanceSession) => {
@@ -105,6 +120,16 @@ export function usePerformanceSync({
       // Notify about song index change (for viewers)
       if (onSongIndexChangeRef.current) {
         onSongIndexChangeRef.current(updatedSession.current_song_index);
+      }
+
+      // Notify about playback state change (for viewers)
+      setPlaybackTimeMs(updatedSession.current_time_ms);
+      setIsAudioPlaying(updatedSession.is_playing);
+      if (onPlaybackChangeRef.current) {
+        onPlaybackChangeRef.current(
+          updatedSession.current_time_ms,
+          updatedSession.is_playing
+        );
       }
     });
 
@@ -212,6 +237,20 @@ export function usePerformanceSync({
         await updateSongIndex(session.id, index);
       } catch (err) {
         console.error("Error syncing song index:", err);
+      }
+    },
+    [session, role]
+  );
+
+  // Sync audio playback state (host only)
+  const syncPlaybackState = useCallback(
+    async (timeMs: number, isPlaying: boolean) => {
+      if (!session || role !== "host") return;
+
+      try {
+        await updatePlaybackState(session.id, timeMs, isPlaying);
+      } catch (err) {
+        console.error("Error syncing playback state:", err);
       }
     },
     [session, role]
@@ -337,10 +376,13 @@ export function usePerformanceSync({
     isConnected,
     isLoading,
     error,
+    playbackTimeMs,
+    isAudioPlaying,
     startHosting,
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    syncPlaybackState,
     forceEndSession,
     takeOverSession,
     hasActiveSession: existingSession !== null && existingSession.is_active,

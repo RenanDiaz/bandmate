@@ -12,6 +12,8 @@ interface BackingTrackPlayerProps {
   onLoadTrack: (songId: string, file: File) => void;
   onRemoveTrack: (songId: string) => void;
   isHost: boolean;
+  onTimeUpdate?: (time: number) => void;
+  onPlayingChange?: (isPlaying: boolean) => void;
 }
 
 export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
@@ -22,6 +24,8 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
   onLoadTrack,
   onRemoveTrack,
   isHost,
+  onTimeUpdate,
+  onPlayingChange,
 }) => {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -49,11 +53,23 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      onTimeUpdate?.(audio.currentTime);
+    };
     const handleDurationChange = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      onPlayingChange?.(false);
+    };
+    const handlePlay = () => {
+      setIsPlaying(true);
+      onPlayingChange?.(true);
+    };
+    const handlePause = () => {
+      setIsPlaying(false);
+      onPlayingChange?.(false);
+    };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("durationchange", handleDurationChange);
@@ -68,7 +84,7 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [trackUrl]);
+  }, [trackUrl, onTimeUpdate, onPlayingChange]);
 
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {

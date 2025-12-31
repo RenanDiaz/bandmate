@@ -44,18 +44,6 @@ export const EditSetlistModal = ({ setlist, isOpen, onClose }: Props) => {
 
         <ModalContent>
           <InfoSection>
-            {setlist.venue && (
-              <InfoRow>
-                <InfoLabel><i className="bi bi-geo-alt"></i> Venue:</InfoLabel>
-                <InfoValue>{setlist.venue}</InfoValue>
-              </InfoRow>
-            )}
-            {setlist.event_date && (
-              <InfoRow>
-                <InfoLabel><i className="bi bi-calendar-event"></i> Date:</InfoLabel>
-                <InfoValue>{new Date(setlist.event_date).toLocaleDateString()}</InfoValue>
-              </InfoRow>
-            )}
             {setlist.description && (
               <InfoRow>
                 <InfoLabel><i className="bi bi-card-text"></i> Description:</InfoLabel>

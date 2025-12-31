@@ -172,6 +172,27 @@
     "placeholders": {
       "name": "e.g., Friday Night Set",
       "description": "e.g., Main set for club gigs"
+    },
+    "items": {
+      "song": "Song",
+      "break": "Break",
+      "section": "Section",
+      "note": "Note",
+      "addBreak": "Add Break",
+      "addSection": "Add Section",
+      "addNote": "Add Note",
+      "addSpecialItem": "Add Item",
+      "breakLabel": "Break Label",
+      "sectionLabel": "Section Label",
+      "noteLabel": "Note Text",
+      "duration": "Duration (minutes)",
+      "upNext": "Up next",
+      "endOfSetlist": "End of setlist",
+      "placeholders": {
+        "break": "e.g., 15 min intermission",
+        "section": "e.g., Set 2, Encore",
+        "note": "e.g., Tune to Drop D"
+      }
     }
   },
   "shows": {
@@ -349,5 +370,50 @@
     "remove": "Remove",
     "expand": "Expand controls",
     "collapse": "Collapse controls"
+  },
+  "sectionEditor": {
+    "title": "Song Sections",
+    "hint": "Click on lines to select a range, then name the section",
+    "lines": "Lines",
+    "selectedLines": "Selected: Lines {{start}}-{{end}}",
+    "sectionNamePlaceholder": "Section name (e.g., Verse 1, Chorus)",
+    "addSection": "Add",
+    "overlapError": "Sections cannot overlap. Please select different lines.",
+    "noContent": "Add lyrics or chords to define sections",
+    "defineSections": "Define Sections",
+    "sectionsHelp": "Organize your song into sections for easier navigation and sync"
+  },
+  "timingSync": {
+    "title": "Sync Timing",
+    "loadAudioPrompt": "Load an audio file to sync section timings",
+    "loadAudio": "Load Audio",
+    "sections": "Sections",
+    "synced": "synced",
+    "clearAll": "Clear All",
+    "noSections": "No sections defined. Add sections in the song editor first.",
+    "hint": "Click a section to jump to its time. Times are saved automatically.",
+    "playPause": "Play/Pause",
+    "markTime": "Mark time",
+    "navigateSections": "Navigate",
+    "markCurrentTime": "Mark current time",
+    "clearTime": "Clear time",
+    "clickToEdit": "Click to edit time manually",
+    "syncTiming": "Sync Timing",
+    "syncTimingHint": "Assign audio timestamps to each section"
+  },
+  "syncedLyrics": {
+    "nowPlaying": "Now playing",
+    "syncedWithHost": "Synced with host",
+    "followingAudio": "Following host's audio"
+  },
+  "lineSync": {
+    "title": "Line-by-Line Sync",
+    "syncLines": "Sync Lines",
+    "syncLinesHint": "Mark timestamps for each line",
+    "linesSynced": "{{count}} lines synced",
+    "lines": "Lines",
+    "markLine": "Mark line",
+    "navigateLines": "Navigate lines",
+    "hint": "Play the audio and press Enter or M to mark each line's start time"
   }
 }

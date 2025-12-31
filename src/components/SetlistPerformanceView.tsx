@@ -21,15 +21,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist } from "../services/setlistsService";
-import type { Setlist, SetlistSong } from "../services/setlistsService";
+import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
+import { useTranslation } from "react-i18next";
 import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
+import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -87,9 +89,11 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
 const SetlistPerformanceView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -97,11 +101,44 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const songListRef = useRef<HTMLDivElement>(null);
+
+  // Helper to get song by ID
+  const getSongById = (songId: string): Song | undefined => {
+    return allSongs.find((s) => s.id === songId);
+  };
+
+  // Get info about the next item for "Up Next" display
+  const getNextItemInfo = (): { type: "song" | "break" | "section" | "note" | "end"; label: string } | null => {
+    if (currentIndex >= setlistItems.length - 1) {
+      return { type: "end", label: t("setlists.items.endOfSetlist") };
+    }
+
+    const nextItem = setlistItems[currentIndex + 1];
+    if (isSongItem(nextItem)) {
+      const song = getSongById(nextItem.song_id);
+      return { type: "song", label: song?.title || "Unknown Song" };
+    } else if (isBreakItem(nextItem)) {
+      return { type: "break", label: nextItem.label };
+    } else if (isSectionItem(nextItem)) {
+      return { type: "section", label: nextItem.label };
+    } else {
+      return { type: "note", label: nextItem.label };
+    }
+  };
 
   // Handle sync index updates from viewers
   const handleSyncIndexChange = useCallback((index: number) => {
     setCurrentIndex(index);
+  }, []);
+
+  // Handle sync playback updates from host (for viewers)
+  const handleSyncPlaybackChange = useCallback((timeMs: number, isPlaying: boolean) => {
+    // Convert ms to seconds for the display
+    setAudioCurrentTime(timeMs / 1000);
+    setIsAudioPlaying(isPlaying);
   }, []);
 
   // Performance sync hook
@@ -110,10 +147,13 @@ const SetlistPerformanceView: FC = () => {
     isConnected: isSyncConnected,
     isLoading: isSyncLoading,
     error: syncError,
+    playbackTimeMs: syncedPlaybackTimeMs,
+    isAudioPlaying: syncedIsAudioPlaying,
     startHosting,
     joinExistingSession,
     leaveSession,
     syncSongIndex,
+    syncPlaybackState,
     forceEndSession,
     takeOverSession,
     hasActiveSession,
@@ -125,6 +165,7 @@ const SetlistPerformanceView: FC = () => {
     setlistId: setlistId || "",
     bandId: setlist?.band_id || 0,
     onSongIndexChange: handleSyncIndexChange,
+    onPlaybackChange: handleSyncPlaybackChange,
   });
 
   // Local backing tracks hook
@@ -152,22 +193,29 @@ const SetlistPerformanceView: FC = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setSongs((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        const newSongs = arrayMove(items, oldIndex, newIndex);
+      // Only reorder song items
+      const songItems = setlistItems.filter(isSongItem);
+      const oldIndex = songItems.findIndex((item) => getSongById(item.song_id)?.id === active.id);
+      const newIndex = songItems.findIndex((item) => getSongById(item.song_id)?.id === over.id);
 
-        // Adjust current index if needed
-        if (currentIndex === oldIndex) {
-          setCurrentIndex(newIndex);
-        } else if (oldIndex < currentIndex && newIndex >= currentIndex) {
-          setCurrentIndex(currentIndex - 1);
-        } else if (oldIndex > currentIndex && newIndex <= currentIndex) {
-          setCurrentIndex(currentIndex + 1);
-        }
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newSongItems = arrayMove(songItems, oldIndex, newIndex);
 
-        return newSongs;
-      });
+        // Rebuild setlistItems maintaining special items in their positions
+        // For simplicity, just update song order - positions will be recalculated on save
+        const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
+        const newItems: SetlistItem[] = newSongItems.map((item, index) => ({
+          ...item,
+          position: index,
+        }));
+
+        // Append non-song items at the end (simplified for reorder mode)
+        nonSongItems.forEach((item, index) => {
+          newItems.push({ ...item, position: newSongItems.length + index });
+        });
+
+        setSetlistItems(newItems);
+      }
     }
   };
 
@@ -176,22 +224,20 @@ const SetlistPerformanceView: FC = () => {
 
     setSaving(true);
     try {
-      const updatedSetlistSongs: SetlistSong[] = songs.map((song, index) => {
-        const existingSong = setlist.songs.find((s) => s.song_id === song.id);
-        return {
-          song_id: song.id,
-          position: index,
-          notes: existingSong?.notes || "",
-        };
-      });
+      // Update positions for all items
+      const updatedItems = setlistItems.map((item, index) => ({
+        ...item,
+        position: index,
+      }));
 
-      await updateSetlist(setlist.id, { songs: updatedSetlistSongs });
+      await updateSetlist(setlist.id, { songs: updatedItems });
 
       setSetlist({
         ...setlist,
-        songs: updatedSetlistSongs,
+        songs: updatedItems,
       });
 
+      setSetlistItems(updatedItems);
       setIsReorderMode(false);
     } catch (error) {
       console.error("Failed to save order:", error);
@@ -202,11 +248,9 @@ const SetlistPerformanceView: FC = () => {
 
   const handleCancelReorder = () => {
     if (setlist) {
-      const orderedSongs = setlist.songs
-        .sort((a, b) => a.position - b.position)
-        .map((setlistSong) => songs.find((s) => s.id === setlistSong.song_id))
-        .filter((song): song is Song => song !== undefined);
-      setSongs(orderedSongs);
+      // Reset to original order from setlist
+      const orderedItems = [...(setlist.songs || [])].sort((a, b) => a.position - b.position);
+      setSetlistItems(orderedItems);
       setCurrentIndex(0);
     }
     setIsReorderMode(false);
@@ -231,15 +275,12 @@ const SetlistPerformanceView: FC = () => {
         setSetlist(setlistData);
 
         // Load all songs for the band
-        const allSongs = await getBandSongs(setlistData.band_id);
+        const songsData = await getBandSongs(setlistData.band_id);
+        setAllSongs(songsData);
 
-        // Map setlist songs to full song objects in order
-        const orderedSongs = setlistData.songs
-          .sort((a, b) => a.position - b.position)
-          .map((setlistSong) => allSongs.find((s) => s.id === setlistSong.song_id))
-          .filter((song): song is Song => song !== undefined);
-
-        setSongs(orderedSongs);
+        // Store all items in order (songs and special items)
+        const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
+        setSetlistItems(orderedItems);
       } catch (error) {
         console.error("Failed to load setlist:", error);
         alert("Failed to load setlist. Please try again.");
@@ -281,14 +322,17 @@ const SetlistPerformanceView: FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, songs.length, isFullscreen, navigate]);
+  }, [currentIndex, setlistItems.length, isFullscreen, navigate]);
 
-  // Scroll to top when song changes
+  // Scroll to top and reset audio time when song changes
   useEffect(() => {
     const songDisplay = document.querySelector('[data-song-display]');
     if (songDisplay) {
       songDisplay.scrollTop = 0;
     }
+    // Reset audio tracking state
+    setAudioCurrentTime(0);
+    setIsAudioPlaying(false);
   }, [currentIndex]);
 
   // Auto-scroll to active song when song list opens
@@ -300,6 +344,29 @@ const SetlistPerformanceView: FC = () => {
       }
     }
   }, [showSongList]);
+
+  // Handle audio time update (host syncs to viewers)
+  const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
+    setAudioCurrentTime(timeInSeconds);
+    // Sync to viewers every 500ms to reduce network traffic
+    if (syncRole === "host") {
+      const timeMs = Math.round(timeInSeconds * 1000);
+      syncPlaybackState(timeMs, isAudioPlaying);
+    }
+  }, [syncRole, isAudioPlaying, syncPlaybackState]);
+
+  // Handle audio playing state change (host syncs to viewers)
+  const handleAudioPlayingChange = useCallback((playing: boolean) => {
+    setIsAudioPlaying(playing);
+    if (syncRole === "host") {
+      const timeMs = Math.round(audioCurrentTime * 1000);
+      syncPlaybackState(timeMs, playing);
+    }
+  }, [syncRole, audioCurrentTime, syncPlaybackState]);
+
+  // Use synced values for viewers
+  const displayAudioTime = syncRole === "viewer" ? syncedPlaybackTimeMs / 1000 : audioCurrentTime;
+  const displayIsPlaying = syncRole === "viewer" ? syncedIsAudioPlaying : isAudioPlaying;
 
   const handlePrevSong = () => {
     // Viewers can't control navigation
@@ -319,7 +386,7 @@ const SetlistPerformanceView: FC = () => {
     // Viewers can't control navigation
     if (syncRole === "viewer") return;
 
-    if (currentIndex < songs.length - 1) {
+    if (currentIndex < setlistItems.length - 1) {
       const newIndex = currentIndex + 1;
       setCurrentIndex(newIndex);
       // Sync to other devices if hosting
@@ -369,7 +436,9 @@ const SetlistPerformanceView: FC = () => {
 
   const getSetlistSongNotes = (songId: string): string | undefined => {
     if (!setlist) return undefined;
-    const setlistSong = setlist.songs.find((s) => s.song_id === songId);
+    const setlistSong = setlist.songs
+      .filter(isSongItem)
+      .find((s) => s.song_id === songId);
     return setlistSong?.notes;
   };
 
@@ -382,7 +451,7 @@ const SetlistPerformanceView: FC = () => {
     );
   }
 
-  if (!setlist || songs.length === 0) {
+  if (!setlist || setlistItems.length === 0) {
     return (
       <ErrorContainer>
         <ErrorIcon>
@@ -400,11 +469,23 @@ const SetlistPerformanceView: FC = () => {
     );
   }
 
-  const currentSong = songs[currentIndex];
-  const currentNotes = getSetlistSongNotes(currentSong.id);
+  // Get current item and determine if it's a song or special item
+  const currentItem = setlistItems[currentIndex];
+  const isCurrentItemSong = isSongItem(currentItem);
+  const currentSong = isCurrentItemSong ? getSongById(currentItem.song_id) : null;
+  const currentNotes = currentSong ? getSetlistSongNotes(currentSong.id) : null;
+  const nextItemInfo = getNextItemInfo();
+
+  // Get only song items for sidebar display
+  const songItemsOnly = setlistItems.filter(isSongItem);
+  const songsForSidebar = songItemsOnly
+    .map((item) => getSongById(item.song_id))
+    .filter((song): song is Song => song !== undefined);
 
   // Determine what content to display with smart fallback
   const getDisplayContent = (): { type: "chords" | "lyrics" | "none"; content: string } => {
+    if (!currentSong) return { type: "none", content: "" };
+
     const hasChords = Boolean(currentSong.chords);
     const hasLyrics = Boolean(currentSong.lyrics);
 
@@ -432,7 +513,7 @@ const SetlistPerformanceView: FC = () => {
     <PerformanceContainer>
       <SEO
         title={`${setlist.name} - Performance Mode`}
-        description={`Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances with ${songs.length} songs.`}
+        description={`Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances with ${songItemsOnly.length} songs.`}
       />
       {/* Top Bar */}
       <TopBar>
@@ -443,12 +524,11 @@ const SetlistPerformanceView: FC = () => {
             </ExitButton>
             <SetlistInfo>
               <SetlistName>{setlist.name}</SetlistName>
-              {setlist.venue && <VenueName>{setlist.venue}</VenueName>}
             </SetlistInfo>
           </TopBarLeft>
 
           <SongCounter>
-            {currentIndex + 1} / {songs.length}
+            {currentIndex + 1} / {setlistItems.length}
           </SongCounter>
         </TopBarRow>
 
@@ -514,7 +594,7 @@ const SetlistPerformanceView: FC = () => {
                 onClick={toggleReorderMode}
                 title="Reorder Songs (R)"
                 $active={false}
-                disabled={songs.length < 2 || syncRole === "viewer"}
+                disabled={songsForSidebar.length < 2 || syncRole === "viewer"}
               >
                 <i className="bi bi-arrow-down-up"></i>
               </IconButton>
@@ -541,7 +621,7 @@ const SetlistPerformanceView: FC = () => {
           <SongListBackdrop onClick={() => setShowSongList(false)} />
           <SongListSidebar>
             <SidebarHeader>
-              {isReorderMode ? "Reorder Songs" : "Setlist Songs"}
+              {isReorderMode ? "Reorder Songs" : "Setlist"}
               {isReorderMode && (
                 <SidebarHint>Drag to reorder</SidebarHint>
               )}
@@ -554,125 +634,213 @@ const SetlistPerformanceView: FC = () => {
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={songs.map((s) => s.id)}
+                    items={songsForSidebar.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {songs.map((song, index) => (
+                    {songsForSidebar.map((song, index) => (
                       <SortableSongListItem
                         key={song.id}
                         song={song}
                         index={index}
-                        isActive={index === currentIndex}
-                        onClick={() => handleGoToSong(index)}
+                        isActive={false}
+                        onClick={() => {}}
                       />
                     ))}
                   </SortableContext>
                 </DndContext>
               ) : (
-                songs.map((song, index) => (
-                  <SongListItem
-                    key={song.id}
-                    $active={index === currentIndex}
-                    data-active={index === currentIndex}
-                    onClick={() => handleGoToSong(index)}
-                  >
-                    <SongListPosition>{index + 1}</SongListPosition>
-                    <SongListInfo>
-                      <SongListTitle>{song.title}</SongListTitle>
-                      {song.artist && <SongListArtist>{song.artist}</SongListArtist>}
-                    </SongListInfo>
-                    {index === currentIndex && (
-                      <SongListIndicator>
-                        <i className="bi bi-play-fill"></i>
-                      </SongListIndicator>
-                    )}
-                  </SongListItem>
-                ))
+                setlistItems.map((item, index) => {
+                  if (isSongItem(item)) {
+                    const song = getSongById(item.song_id);
+                    if (!song) return null;
+                    return (
+                      <SongListItem
+                        key={`song-${item.song_id}`}
+                        $active={index === currentIndex}
+                        data-active={index === currentIndex}
+                        onClick={() => handleGoToSong(index)}
+                      >
+                        <SongListPosition>{index + 1}</SongListPosition>
+                        <SongListInfo>
+                          <SongListTitle>{song.title}</SongListTitle>
+                          {song.artist && <SongListArtist>{song.artist}</SongListArtist>}
+                        </SongListInfo>
+                        {index === currentIndex && (
+                          <SongListIndicator>
+                            <i className="bi bi-play-fill"></i>
+                          </SongListIndicator>
+                        )}
+                      </SongListItem>
+                    );
+                  } else {
+                    // Special item (break, section, note)
+                    const getIcon = () => {
+                      if (isBreakItem(item)) return "bi-pause-circle";
+                      if (isSectionItem(item)) return "bi-bookmark";
+                      return "bi-sticky";
+                    };
+                    return (
+                      <SpecialListItem
+                        key={`special-${index}-${item.type}`}
+                        $active={index === currentIndex}
+                        data-active={index === currentIndex}
+                        $type={item.type}
+                        onClick={() => handleGoToSong(index)}
+                      >
+                        <SpecialListIcon $type={item.type}>
+                          <i className={getIcon()}></i>
+                        </SpecialListIcon>
+                        <SongListInfo>
+                          <SongListTitle>{item.label}</SongListTitle>
+                          {isBreakItem(item) && item.duration && (
+                            <SongListArtist>{item.duration} min</SongListArtist>
+                          )}
+                        </SongListInfo>
+                        {index === currentIndex && (
+                          <SongListIndicator>
+                            <i className="bi bi-play-fill"></i>
+                          </SongListIndicator>
+                        )}
+                      </SpecialListItem>
+                    );
+                  }
+                })
               )}
             </SongListItems>
           </SongListSidebar>
           </>
         )}
 
-        {/* Song Display */}
+        {/* Song/Item Display */}
         <SongDisplay data-song-display>
-          <SongHeader>
-            <SongTitleLarge>{currentSong.title}</SongTitleLarge>
-            {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
+          {isCurrentItemSong && currentSong ? (
+            <>
+              <SongHeader>
+                <SongTitleLarge>{currentSong.title}</SongTitleLarge>
+                {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
 
-            <SongMetadataBar>
-              {currentSong.key && (
-                <MetaBadgeLarge>
-                  <i className="bi bi-music-note-beamed"></i>
-                  Key: {currentSong.key}
-                </MetaBadgeLarge>
-              )}
-              {currentSong.tempo && (
-                <MetaBadgeLarge>
-                  <i className="bi bi-speedometer2"></i>
-                  {currentSong.tempo} BPM
-                </MetaBadgeLarge>
-              )}
-              {currentSong.duration && (
-                <MetaBadgeLarge>
+                <SongMetadataBar>
+                  {currentSong.key && (
+                    <MetaBadgeLarge>
+                      <i className="bi bi-music-note-beamed"></i>
+                      Key: {currentSong.key}
+                    </MetaBadgeLarge>
+                  )}
+                  {currentSong.tempo && (
+                    <MetaBadgeLarge>
+                      <i className="bi bi-speedometer2"></i>
+                      {currentSong.tempo} BPM
+                    </MetaBadgeLarge>
+                  )}
+                  {currentSong.duration && (
+                    <MetaBadgeLarge>
+                      <i className="bi bi-clock"></i>
+                      {formatDuration(currentSong.duration)}
+                    </MetaBadgeLarge>
+                  )}
+                </SongMetadataBar>
+
+                {currentNotes && (
+                  <NotesBox>
+                    <NotesLabel>
+                      <i className="bi bi-sticky"></i>
+                      Notes:
+                    </NotesLabel>
+                    <NotesText>{currentNotes}</NotesText>
+                  </NotesBox>
+                )}
+
+                {/* Backing Track Player - only visible to host or when not in sync mode */}
+                {(syncRole === "host" || syncRole === null) && (
+                  <BackingTrackPlayer
+                    songId={currentSong.id}
+                    trackUrl={getTrackUrl(currentSong.id)}
+                    trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
+                    hadTrackPreviously={hadTrackPreviously(currentSong.id)}
+                    onLoadTrack={loadTrack}
+                    onRemoveTrack={removeTrack}
+                    isHost={syncRole === "host" || syncRole === null}
+                    onTimeUpdate={handleAudioTimeUpdate}
+                    onPlayingChange={handleAudioPlayingChange}
+                  />
+                )}
+              </SongHeader>
+
+              <SongContent>
+                {displayContent.type !== "none" && (currentSong.timing_data?.sectionTimings?.length || currentSong.timing_data?.lineTimings?.length) ? (
+                  <SyncedLyricsDisplay
+                    content={displayContent.content}
+                    contentType={displayContent.type}
+                    sections={currentSong.timing_data?.sectionTimings || []}
+                    lineTimings={currentSong.timing_data?.lineTimings}
+                    currentTime={displayAudioTime}
+                    isPlaying={displayIsPlaying}
+                  />
+                ) : (
+                  <>
+                    {displayContent.type === "chords" && (
+                      <ContentSection>
+                        <SectionLabel>
+                          <i className="bi bi-music-note"></i>
+                          Chords
+                        </SectionLabel>
+                        <ContentText>{displayContent.content}</ContentText>
+                      </ContentSection>
+                    )}
+
+                    {displayContent.type === "lyrics" && (
+                      <ContentSection>
+                        <SectionLabel>
+                          <i className="bi bi-mic"></i>
+                          Lyrics
+                        </SectionLabel>
+                        <ContentText>{displayContent.content}</ContentText>
+                      </ContentSection>
+                    )}
+
+                    {displayContent.type === "none" && (
+                      <EmptyContent>
+                        <i className="bi bi-music-note-beamed"></i>
+                        <p>No chords or lyrics available for this song</p>
+                      </EmptyContent>
+                    )}
+                  </>
+                )}
+              </SongContent>
+            </>
+          ) : (
+            /* Special Item Display */
+            <SpecialItemDisplay $type={currentItem.type}>
+              <SpecialItemIconLarge $type={currentItem.type}>
+                <i className={`bi ${isBreakItem(currentItem) ? "bi-pause-circle" : isSectionItem(currentItem) ? "bi-bookmark" : "bi-sticky"}`}></i>
+              </SpecialItemIconLarge>
+              <SpecialItemTypeBadge $type={currentItem.type}>
+                {isBreakItem(currentItem) ? t("setlists.items.break") : isSectionItem(currentItem) ? t("setlists.items.section") : t("setlists.items.note")}
+              </SpecialItemTypeBadge>
+              <SpecialItemLabelLarge>{(currentItem as { label: string }).label}</SpecialItemLabelLarge>
+              {isBreakItem(currentItem) && currentItem.duration && (
+                <SpecialItemDurationLarge>
                   <i className="bi bi-clock"></i>
-                  {formatDuration(currentSong.duration)}
-                </MetaBadgeLarge>
+                  {currentItem.duration} {t("setlists.items.duration").split(" ")[0].toLowerCase()}
+                </SpecialItemDurationLarge>
               )}
-            </SongMetadataBar>
+            </SpecialItemDisplay>
+          )}
 
-            {currentNotes && (
-              <NotesBox>
-                <NotesLabel>
-                  <i className="bi bi-sticky"></i>
-                  Notes:
-                </NotesLabel>
-                <NotesText>{currentNotes}</NotesText>
-              </NotesBox>
-            )}
-
-            {/* Backing Track Player - only visible to host or when not in sync mode */}
-            {(syncRole === "host" || syncRole === null) && (
-              <BackingTrackPlayer
-                songId={currentSong.id}
-                trackUrl={getTrackUrl(currentSong.id)}
-                trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
-                hadTrackPreviously={hadTrackPreviously(currentSong.id)}
-                onLoadTrack={loadTrack}
-                onRemoveTrack={removeTrack}
-                isHost={syncRole === "host" || syncRole === null}
-              />
-            )}
-          </SongHeader>
-
-          <SongContent>
-            {displayContent.type === "chords" && (
-              <ContentSection>
-                <SectionLabel>
-                  <i className="bi bi-music-note"></i>
-                  Chords
-                </SectionLabel>
-                <ContentText>{displayContent.content}</ContentText>
-              </ContentSection>
-            )}
-
-            {displayContent.type === "lyrics" && (
-              <ContentSection>
-                <SectionLabel>
-                  <i className="bi bi-mic"></i>
-                  Lyrics
-                </SectionLabel>
-                <ContentText>{displayContent.content}</ContentText>
-              </ContentSection>
-            )}
-
-            {displayContent.type === "none" && (
-              <EmptyContent>
-                <i className="bi bi-music-note-beamed"></i>
-                <p>No chords or lyrics available for this song</p>
-              </EmptyContent>
-            )}
-          </SongContent>
+          {/* Up Next Indicator */}
+          {nextItemInfo && (
+            <UpNextBar $type={nextItemInfo.type}>
+              <UpNextLabel>{t("setlists.items.upNext")}:</UpNextLabel>
+              <UpNextContent>
+                {nextItemInfo.type === "song" && <i className="bi bi-music-note-beamed"></i>}
+                {nextItemInfo.type === "break" && <i className="bi bi-pause-circle"></i>}
+                {nextItemInfo.type === "section" && <i className="bi bi-bookmark"></i>}
+                {nextItemInfo.type === "note" && <i className="bi bi-sticky"></i>}
+                {nextItemInfo.type === "end" && <i className="bi bi-flag-fill"></i>}
+                <UpNextText>{nextItemInfo.label}</UpNextText>
+              </UpNextContent>
+            </UpNextBar>
+          )}
         </SongDisplay>
       </MainContent>
 
@@ -688,7 +856,7 @@ const SetlistPerformanceView: FC = () => {
 
         <NavCenter>
           <ProgressBar>
-            <ProgressFill $percent={((currentIndex + 1) / songs.length) * 100} />
+            <ProgressFill $percent={((currentIndex + 1) / setlistItems.length) * 100} />
           </ProgressBar>
           <KeyboardHint>
             {syncRole === "viewer"
@@ -699,7 +867,7 @@ const SetlistPerformanceView: FC = () => {
 
         <NavButton
           onClick={handleNextSong}
-          disabled={currentIndex === songs.length - 1 || syncRole === "viewer"}
+          disabled={currentIndex === setlistItems.length - 1 || syncRole === "viewer"}
         >
           <span>Next</span>
           <i className="bi bi-chevron-right"></i>
@@ -824,18 +992,6 @@ const SetlistName = styled.div`
 
   @media (min-width: ${theme.breakpoints.md}) {
     font-size: ${theme.fontSizes.bodyLg};
-  }
-`;
-
-const VenueName = styled.div`
-  font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  @media (min-width: ${theme.breakpoints.md}) {
-    font-size: ${theme.fontSizes.bodySm};
   }
 `;
 
@@ -1516,6 +1672,265 @@ const MobileToggleLabel = styled.span`
   font-weight: ${theme.fontWeights.semibold};
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+// Special item styled components for sidebar
+const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
+  width: 100%;
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : "transparent"};
+  border: 1px solid ${(props) =>
+    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+  border-left: 3px solid ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.border.default;
+    }
+  }};
+  color: ${(props) =>
+    props.$active ? "white" : theme.colors.dark.text.primary};
+  padding: ${theme.space[3]};
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  margin-bottom: ${theme.space[2]};
+  text-align: left;
+
+  &:hover {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+    border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SpecialListIcon = styled.div<{ $type: string }>`
+  width: 28px;
+  height: 28px;
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.body};
+  flex-shrink: 0;
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warningBgDark;
+      case "section":
+        return theme.colors.semantic.infoBgDark;
+      case "note":
+        return theme.colors.semantic.successBgDark;
+      default:
+        return theme.colors.dark.bg.tertiary;
+    }
+  }};
+  color: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.text.secondary;
+    }
+  }};
+`;
+
+// Special item display (main content area)
+const SpecialItemDisplay = styled.div<{ $type: string }>`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[6]};
+  text-align: center;
+  padding: ${theme.space[8]};
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warningBgDark;
+      case "section":
+        return theme.colors.semantic.infoBgDark;
+      case "note":
+        return theme.colors.semantic.successBgDark;
+      default:
+        return theme.colors.dark.bg.secondary;
+    }
+  }};
+  border: 1px solid ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.border.default;
+    }
+  }};
+  border-radius: ${theme.radius.lg};
+  margin-bottom: ${theme.space[6]};
+`;
+
+const SpecialItemIconLarge = styled.div<{ $type: string }>`
+  width: 120px;
+  height: 120px;
+  border-radius: ${theme.radius.full};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.displayLg};
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return `${theme.colors.semantic.warning}30`;
+      case "section":
+        return `${theme.colors.semantic.info}30`;
+      case "note":
+        return `${theme.colors.semantic.success}30`;
+      default:
+        return theme.colors.dark.bg.tertiary;
+    }
+  }};
+  color: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.text.secondary;
+    }
+  }};
+
+  i {
+    font-size: 3rem;
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 80px;
+    height: 80px;
+
+    i {
+      font-size: 2rem;
+    }
+  }
+`;
+
+const SpecialItemTypeBadge = styled.div<{ $type: string }>`
+  display: inline-block;
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.full};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.bg.tertiary;
+    }
+  }};
+  color: ${theme.colors.dark.bg.primary};
+`;
+
+const SpecialItemLabelLarge = styled.div`
+  font-size: ${theme.fontSizes.displayMd};
+  font-weight: ${theme.fontWeights.bold};
+  color: ${theme.colors.dark.text.primary};
+  line-height: ${theme.lineHeights.tight};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.h1};
+  }
+`;
+
+const SpecialItemDurationLarge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  font-size: ${theme.fontSizes.h3};
+  color: ${theme.colors.dark.text.secondary};
+
+  i {
+    color: ${theme.colors.semantic.warning};
+  }
+`;
+
+// Up Next indicator
+const UpNextBar = styled.div<{ $type: string }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  padding: ${theme.space[4]} ${theme.space[5]};
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-left: 3px solid ${(props) => {
+    switch (props.$type) {
+      case "song":
+        return theme.colors.brand.primary;
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      case "end":
+        return theme.colors.semantic.error;
+      default:
+        return theme.colors.dark.border.default;
+    }
+  }};
+  border-radius: ${theme.radius.base};
+  margin-top: auto;
+`;
+
+const UpNextLabel = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const UpNextContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  color: ${theme.colors.dark.text.primary};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const UpNextText = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export default SetlistPerformanceView;
