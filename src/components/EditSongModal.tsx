@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
-import type { Song, UpdateSongInput } from "../services/songsService";
+import type { Song, UpdateSongInput, SectionTiming, LineTiming } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
+import { SectionEditor } from "./SectionEditor";
+import { TimingSyncModal } from "./TimingSyncModal";
+import { LineSyncModal } from "./LineSyncModal";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   song: Song | null;
@@ -12,6 +16,7 @@ interface Props {
 }
 
 export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -28,9 +33,13 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     country: "",
     hasBackingTracks: false,
   });
+  const [sections, setSections] = useState<SectionTiming[]>([]);
+  const [lineTimings, setLineTimings] = useState<LineTiming[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [metadataFetched, setMetadataFetched] = useState(false);
+  const [isTimingSyncOpen, setIsTimingSyncOpen] = useState(false);
+  const [isLineSyncOpen, setIsLineSyncOpen] = useState(false);
 
   useEffect(() => {
     if (song) {
@@ -50,6 +59,11 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         country: song.country || "",
         hasBackingTracks: song.has_backing_tracks || false,
       });
+      setSections(song.timing_data?.sectionTimings || []);
+      setLineTimings(song.timing_data?.lineTimings || []);
+      // Reset metadata button state when switching songs
+      setMetadataFetched(false);
+      setIsFetchingMetadata(false);
     }
   }, [song]);
 
@@ -114,6 +128,14 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
 
     setIsSaving(true);
     try {
+      // Build timing_data from current state
+      const timingData = sections.length > 0 || lineTimings.length > 0
+        ? {
+            sectionTimings: sections.length > 0 ? sections : undefined,
+            lineTimings: lineTimings.length > 0 ? lineTimings : undefined,
+          }
+        : null;
+
       await onSave(song.id, {
         title: formData.title.trim(),
         artist: formData.artist.trim() || undefined,
@@ -129,6 +151,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         language: formData.language.trim() || undefined,
         country: formData.country.trim() || undefined,
         has_backing_tracks: formData.hasBackingTracks,
+        timing_data: timingData,
       });
       onClose();
     } catch (error) {
@@ -449,6 +472,55 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
             />
           </FormGroup>
 
+          {/* Section Editor - shown when there's lyrics or chords */}
+          {(formData.lyrics.trim() || formData.chords.trim()) && (
+            <>
+              <SectionDivider>{t("sectionEditor.defineSections")}</SectionDivider>
+              <SectionEditorHelp>
+                <i className="bi bi-info-circle"></i>
+                {t("sectionEditor.sectionsHelp")}
+              </SectionEditorHelp>
+              <SectionEditor
+                text={formData.chords.trim() || formData.lyrics.trim()}
+                sections={sections}
+                onSectionsChange={setSections}
+                disabled={isSaving}
+              />
+
+              {/* Timing Sync Buttons */}
+              <SyncButtonsRow>
+                {/* Section Timing Sync - shown when there are sections */}
+                {sections.length > 0 && (
+                  <TimingSyncButton
+                    type="button"
+                    onClick={() => setIsTimingSyncOpen(true)}
+                    disabled={isSaving}
+                  >
+                    <i className="bi bi-stopwatch"></i>
+                    {t("timingSync.syncTiming")}
+                    <TimingSyncHint>{t("timingSync.syncTimingHint")}</TimingSyncHint>
+                  </TimingSyncButton>
+                )}
+
+                {/* Line-by-Line Sync - shown when there's lyrics or chords */}
+                <TimingSyncButton
+                  type="button"
+                  onClick={() => setIsLineSyncOpen(true)}
+                  disabled={isSaving}
+                  $variant="secondary"
+                >
+                  <i className="bi bi-text-left"></i>
+                  {t("lineSync.syncLines")}
+                  <TimingSyncHint>
+                    {lineTimings.length > 0
+                      ? t("lineSync.linesSynced", { count: lineTimings.length })
+                      : t("lineSync.syncLinesHint")}
+                  </TimingSyncHint>
+                </TimingSyncButton>
+              </SyncButtonsRow>
+            </>
+          )}
+
           <FormActions>
             <CancelButton type="button" onClick={onClose} disabled={isSaving}>
               Cancel
@@ -469,6 +541,25 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
           </FormActions>
         </Form>
       </ModalContainer>
+
+      {/* Timing Sync Modal */}
+      <TimingSyncModal
+        isOpen={isTimingSyncOpen}
+        onClose={() => setIsTimingSyncOpen(false)}
+        sections={sections}
+        onSectionsChange={setSections}
+        songTitle={formData.title}
+      />
+
+      {/* Line Sync Modal */}
+      <LineSyncModal
+        isOpen={isLineSyncOpen}
+        onClose={() => setIsLineSyncOpen(false)}
+        content={formData.chords.trim() || formData.lyrics.trim()}
+        lineTimings={lineTimings}
+        onLineTimingsChange={setLineTimings}
+        songTitle={formData.title}
+      />
     </>
   );
 };
@@ -934,4 +1025,85 @@ const SuccessMessage = styled.div`
     font-size: ${theme.fontSizes.body};
     flex-shrink: 0;
   }
+`;
+
+const SectionEditorHelp = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.tertiary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-bottom: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SyncButtonsRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[3]};
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    flex-direction: row;
+    gap: ${theme.space[3]};
+  }
+`;
+
+const TimingSyncButton = styled.button<{ $variant?: "primary" | "secondary" }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: ${(props) =>
+    props.$variant === "secondary"
+      ? theme.colors.dark.bg.primary
+      : `linear-gradient(135deg, ${theme.colors.dark.bg.tertiary} 0%, ${theme.colors.dark.bg.secondary} 100%)`};
+  border: 1px solid ${(props) =>
+    props.$variant === "secondary"
+      ? theme.colors.dark.border.default
+      : `${theme.colors.brand.primary}40`};
+  color: ${theme.colors.dark.text.primary};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  flex: 1;
+
+  i {
+    color: ${(props) =>
+      props.$variant === "secondary"
+        ? theme.colors.semantic.info
+        : theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.bodyLg};
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${(props) =>
+      props.$variant === "secondary"
+        ? theme.colors.semantic.info
+        : theme.colors.brand.primary};
+    background: ${(props) =>
+      props.$variant === "secondary"
+        ? `${theme.colors.semantic.info}10`
+        : `linear-gradient(135deg, ${theme.colors.brand.primary}15 0%, ${theme.colors.dark.bg.tertiary} 100%)`};
+    box-shadow: 0 0 12px ${(props) =>
+      props.$variant === "secondary"
+        ? `${theme.colors.semantic.info}20`
+        : `${theme.colors.brand.primary}20`};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const TimingSyncHint = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  margin-left: auto;
 `;

@@ -538,6 +538,17 @@ const SessionBadge = styled.div<{ $role: SyncRole }>`
       : theme.colors.semantic.success};
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
+
+  /* Hide text on mobile when session is active - less space available */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    > span {
+      display: inline;
+    }
+  }
 `;
 
 const StatusDot = styled.div<{ $connected: boolean }>`
@@ -571,6 +582,17 @@ const LeaveButton = styled.button`
   font-size: ${theme.fontSizes.bodySm};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
+
+  /* Hide text on mobile when session is active - less space available */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    > span {
+      display: inline;
+    }
+  }
 
   &:hover {
     background: ${theme.colors.semantic.errorBgDark};

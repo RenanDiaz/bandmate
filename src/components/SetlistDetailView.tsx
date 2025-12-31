@@ -21,11 +21,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist } from "../services/setlistsService";
-import type { Setlist, SetlistSong } from "../services/setlistsService";
+import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
+import { useTranslation } from "react-i18next";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -270,12 +271,19 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Helper to get song by ID
+  const getSongById = (songId: string): Song | undefined => {
+    return allSongs.find((s) => s.id === songId);
+  };
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     includeDescription: true,
@@ -300,15 +308,45 @@ const SetlistDetailView: FC = () => {
     })
   );
 
+  // Get only song items for reordering
+  const songItemsOnly = setlistItems.filter(isSongItem);
+  const songsForReorder = songItemsOnly
+    .map((item) => getSongById(item.song_id))
+    .filter((song): song is Song => song !== undefined);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setSongs((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      const oldIndex = songsForReorder.findIndex((song) => song.id === active.id);
+      const newIndex = songsForReorder.findIndex((song) => song.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedSongs = arrayMove(songsForReorder, oldIndex, newIndex);
+
+        // Update setlistItems with new song order
+        const newSongItems: SetlistItem[] = reorderedSongs.map((song, index) => {
+          const existingItem = songItemsOnly.find((item) => item.song_id === song.id);
+          return {
+            type: "song" as const,
+            song_id: song.id,
+            position: index,
+            notes: existingItem?.notes || "",
+          };
+        });
+
+        // Non-song items get placed after songs
+        const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
+        const updatedItems: SetlistItem[] = [
+          ...newSongItems,
+          ...nonSongItems.map((item, index) => ({
+            ...item,
+            position: newSongItems.length + index,
+          })),
+        ];
+
+        setSetlistItems(updatedItems);
+      }
     }
   };
 
@@ -317,24 +355,21 @@ const SetlistDetailView: FC = () => {
 
     setSaving(true);
     try {
-      // Create updated setlist songs with new positions
-      const updatedSetlistSongs: SetlistSong[] = songs.map((song, index) => {
-        const existingSong = setlist.songs.find((s) => s.song_id === song.id);
-        return {
-          song_id: song.id,
-          position: index,
-          notes: existingSong?.notes || "",
-        };
-      });
+      // Update all items with new positions
+      const updatedItems = setlistItems.map((item, index) => ({
+        ...item,
+        position: index,
+      }));
 
-      await updateSetlist(setlist.id, { songs: updatedSetlistSongs });
+      await updateSetlist(setlist.id, { songs: updatedItems });
 
       // Update local setlist state
       setSetlist({
         ...setlist,
-        songs: updatedSetlistSongs,
+        songs: updatedItems,
       });
 
+      setSetlistItems(updatedItems);
       setIsReorderMode(false);
     } catch (error) {
       console.error("Failed to save order:", error);
@@ -346,11 +381,8 @@ const SetlistDetailView: FC = () => {
   const handleCancelReorder = () => {
     // Restore original order from setlist
     if (setlist) {
-      const orderedSongs = setlist.songs
-        .sort((a, b) => a.position - b.position)
-        .map((setlistSong) => songs.find((s) => s.id === setlistSong.song_id))
-        .filter((song): song is Song => song !== undefined);
-      setSongs(orderedSongs);
+      const orderedItems = [...(setlist.songs || [])].sort((a, b) => a.position - b.position);
+      setSetlistItems(orderedItems);
     }
     setIsReorderMode(false);
   };
@@ -365,15 +397,12 @@ const SetlistDetailView: FC = () => {
         setSetlist(setlistData);
 
         // Load all songs for the band
-        const allSongs = await getBandSongs(setlistData.band_id);
+        const songsData = await getBandSongs(setlistData.band_id);
+        setAllSongs(songsData);
 
-        // Map setlist songs to full song objects in order
-        const orderedSongs = setlistData.songs
-          .sort((a, b) => a.position - b.position)
-          .map((setlistSong) => allSongs.find((s) => s.id === setlistSong.song_id))
-          .filter((song): song is Song => song !== undefined);
-
-        setSongs(orderedSongs);
+        // Load all items in order
+        const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
+        setSetlistItems(orderedItems);
       } catch (error) {
         console.error("Failed to load setlist:", error);
         alert("Failed to load setlist. Please try again.");
@@ -392,12 +421,17 @@ const SetlistDetailView: FC = () => {
   };
 
   const calculateTotalDuration = (): number => {
-    return songs.reduce((total, song) => total + (song.duration || 0), 0);
+    return songItemsOnly
+      .map((item) => getSongById(item.song_id))
+      .filter((song): song is Song => song !== undefined)
+      .reduce((total, song) => total + (song.duration || 0), 0);
   };
 
   const getSetlistSongNotes = (songId: string): string | undefined => {
     if (!setlist) return undefined;
-    const setlistSong = setlist.songs.find((s) => s.song_id === songId);
+    const setlistSong = setlist.songs
+      .filter(isSongItem)
+      .find((s) => s.song_id === songId);
     return setlistSong?.notes;
   };
 
@@ -413,7 +447,7 @@ const SetlistDetailView: FC = () => {
     }
 
     if (exportOptions.includeSongCount) {
-      textContent += `Songs: ${songs.length}\n`;
+      textContent += `Songs: ${songItemsOnly.length}\n`;
     }
 
     const totalDuration = calculateTotalDuration();
@@ -428,7 +462,8 @@ const SetlistDetailView: FC = () => {
     textContent += "SETLIST\n";
     textContent += "-".repeat(50) + "\n\n";
 
-    songs.forEach((song, index) => {
+    // Export only songs (not special items) for the text export
+    songsForReorder.forEach((song, index) => {
       textContent += `${index + 1}. ${song.title}`;
       if (exportOptions.includeArtist && song.artist) {
         textContent += ` - ${song.artist}`;
@@ -505,7 +540,7 @@ const SetlistDetailView: FC = () => {
     <ViewContainer>
       <SEO
         title={setlist.name}
-        description={`View and manage the ${setlist.name} setlist. ${songs.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
+        description={`View and manage the ${setlist.name} setlist. ${songItemsOnly.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
       />
       <StyledContainer>
         <Header>
@@ -548,8 +583,8 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={() => setIsReorderMode(true)}
                     $variant="edit"
-                    disabled={songs.length < 2}
-                    title={songs.length < 2 ? "Need at least 2 songs to reorder" : "Reorder songs"}
+                    disabled={songsForReorder.length < 2}
+                    title={songsForReorder.length < 2 ? "Need at least 2 songs to reorder" : "Reorder songs"}
                   >
                     <i className="bi bi-arrow-down-up"></i>
                     Reorder
@@ -564,7 +599,7 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/print`)}
                     $variant="edit"
-                    disabled={songs.length === 0}
+                    disabled={setlistItems.length === 0}
                     title="Print setlist"
                   >
                     <i className="bi bi-printer"></i>
@@ -573,7 +608,7 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={() => setShowExportModal(true)}
                     $variant="edit"
-                    disabled={songs.length === 0}
+                    disabled={songItemsOnly.length === 0}
                     title="Export as text file"
                   >
                     <i className="bi bi-file-text"></i>
@@ -582,7 +617,7 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
                     $variant="perform"
-                    disabled={songs.length === 0}
+                    disabled={setlistItems.length === 0}
                   >
                     <i className="bi bi-play-circle"></i>
                     Start Performance
@@ -601,7 +636,7 @@ const SetlistDetailView: FC = () => {
           <MetadataBar>
             <MetadataItem>
               <i className="bi bi-music-note-beamed"></i>
-              {songs.length} {songs.length === 1 ? "song" : "songs"}
+              {songItemsOnly.length} {songItemsOnly.length === 1 ? "song" : "songs"}
             </MetadataItem>
             {totalDuration > 0 && (
               <MetadataItem>
@@ -619,7 +654,7 @@ const SetlistDetailView: FC = () => {
           </ReorderBanner>
         )}
 
-        {songs.length === 0 ? (
+        {setlistItems.length === 0 ? (
           <EmptyState>
             <EmptyIcon>
               <i className="bi bi-music-note-list"></i>
@@ -635,10 +670,10 @@ const SetlistDetailView: FC = () => {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={songs.map((s) => s.id)}
+                items={songsForReorder.map((s) => s.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {songs.map((song, index) => (
+                {songsForReorder.map((song, index) => (
                   <SortableSongCard
                     key={song.id}
                     song={song}
@@ -652,53 +687,89 @@ const SetlistDetailView: FC = () => {
           </SongsList>
         ) : (
           <SongsList>
-            {songs.map((song, index) => {
-              const notes = getSetlistSongNotes(song.id);
-              return (
-                <SongCard key={song.id}>
-                  <SongPositionWrapper>
-                    <SongPosition>{index + 1}</SongPosition>
-                    {song.has_backing_tracks && (
-                      <BackingTracksBadge title="Has Backing Tracks / Sequences">
-                        <i className="bi bi-headphones-fill"></i>
-                      </BackingTracksBadge>
-                    )}
-                  </SongPositionWrapper>
-                  <SongInfo>
-                    <SongTitle>{song.title}</SongTitle>
-                    {song.artist && <SongArtist>{song.artist}</SongArtist>}
-                    {notes && (
-                      <SongNotes>
-                        <NotesIcon>
-                          <i className="bi bi-sticky"></i>
-                        </NotesIcon>
-                        {notes}
-                      </SongNotes>
-                    )}
-                  </SongInfo>
-                  <SongMetadata>
-                    {song.key && (
-                      <MetaBadge>
-                        <i className="bi bi-music-note-beamed"></i>
-                        {song.key}
-                      </MetaBadge>
-                    )}
-                    {song.tempo && (
-                      <MetaBadge>
-                        <i className="bi bi-speedometer2"></i>
-                        {song.tempo} BPM
-                      </MetaBadge>
-                    )}
-                    {song.duration && (
-                      <MetaBadge>
-                        <i className="bi bi-clock"></i>
-                        {formatDuration(song.duration)}
-                      </MetaBadge>
-                    )}
-                  </SongMetadata>
-                </SongCard>
-              );
-            })}
+            {(() => {
+              let songNumber = 0;
+              return setlistItems.map((item, index) => {
+                if (isSongItem(item)) {
+                  const song = getSongById(item.song_id);
+                  if (!song) return null;
+                  songNumber++;
+                  const notes = getSetlistSongNotes(song.id);
+                  return (
+                    <SongCard key={`song-${item.song_id}`}>
+                      <SongPositionWrapper>
+                        <SongPosition>{songNumber}</SongPosition>
+                        {song.has_backing_tracks && (
+                          <BackingTracksBadge title="Has Backing Tracks / Sequences">
+                            <i className="bi bi-headphones-fill"></i>
+                          </BackingTracksBadge>
+                        )}
+                      </SongPositionWrapper>
+                      <SongInfo>
+                        <SongTitle>{song.title}</SongTitle>
+                        {song.artist && <SongArtist>{song.artist}</SongArtist>}
+                        {notes && (
+                          <SongNotes>
+                            <NotesIcon>
+                              <i className="bi bi-sticky"></i>
+                            </NotesIcon>
+                            {notes}
+                          </SongNotes>
+                        )}
+                      </SongInfo>
+                      <SongMetadata>
+                        {song.key && (
+                          <MetaBadge>
+                            <i className="bi bi-music-note-beamed"></i>
+                            {song.key}
+                          </MetaBadge>
+                        )}
+                        {song.tempo && (
+                          <MetaBadge>
+                            <i className="bi bi-speedometer2"></i>
+                            {song.tempo} BPM
+                          </MetaBadge>
+                        )}
+                        {song.duration && (
+                          <MetaBadge>
+                            <i className="bi bi-clock"></i>
+                            {formatDuration(song.duration)}
+                          </MetaBadge>
+                        )}
+                      </SongMetadata>
+                    </SongCard>
+                  );
+                } else {
+                  // Special item (break, section, note)
+                  const getIcon = () => {
+                    if (isBreakItem(item)) return "bi-pause-circle";
+                    if (isSectionItem(item)) return "bi-bookmark";
+                    return "bi-sticky";
+                  };
+                  const typeLabel = isBreakItem(item)
+                    ? t("setlists.items.break")
+                    : isSectionItem(item)
+                    ? t("setlists.items.section")
+                    : t("setlists.items.note");
+                  return (
+                    <SpecialItemCard key={`special-${index}`} $type={item.type}>
+                      <SpecialItemIcon $type={item.type}>
+                        <i className={`bi ${getIcon()}`}></i>
+                      </SpecialItemIcon>
+                      <SpecialItemInfo>
+                        <SpecialItemType>{typeLabel}</SpecialItemType>
+                        <SpecialItemLabel>{item.label}</SpecialItemLabel>
+                        {isBreakItem(item) && item.duration && (
+                          <SpecialItemDuration>
+                            <i className="bi bi-clock"></i> {item.duration} min
+                          </SpecialItemDuration>
+                        )}
+                      </SpecialItemInfo>
+                    </SpecialItemCard>
+                  );
+                }
+              });
+            })()}
           </SongsList>
         )}
       </StyledContainer>
@@ -1120,6 +1191,103 @@ const DisabledNote = styled.span`
   color: ${theme.colors.dark.text.tertiary};
   font-style: italic;
   margin-left: ${theme.space[2]};
+`;
+
+// Special item card styles
+const SpecialItemCard = styled.div<{ $type: string }>`
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-left: 3px solid ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.border.default;
+    }
+  }};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: ${theme.shadows.sm};
+  }
+`;
+
+const SpecialItemIcon = styled.div<{ $type: string }>`
+  width: 40px;
+  height: 40px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  flex-shrink: 0;
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warningBgDark;
+      case "section":
+        return theme.colors.semantic.infoBgDark;
+      case "note":
+        return theme.colors.semantic.successBgDark;
+      default:
+        return theme.colors.dark.bg.tertiary;
+    }
+  }};
+  color: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return theme.colors.dark.text.secondary;
+    }
+  }};
+`;
+
+const SpecialItemInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
+`;
+
+const SpecialItemType = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.tertiary};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const SpecialItemLabel = styled.div`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+`;
+
+const SpecialItemDuration = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+
+  i {
+    color: ${theme.colors.semantic.warning};
+  }
 `;
 
 export default SetlistDetailView;
