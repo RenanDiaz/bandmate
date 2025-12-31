@@ -10,15 +10,6 @@ interface Props {
   onDelete: (setlist: Setlist) => void;
 }
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
-
 export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
   const navigate = useNavigate();
 
@@ -44,12 +35,6 @@ export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
 
               <SetlistInfo>
                 <SetlistName>{setlist.name}</SetlistName>
-                {setlist.venue && <SetlistVenue><i className="bi bi-geo-alt"></i> {setlist.venue}</SetlistVenue>}
-                {setlist.event_date && (
-                  <SetlistDate>
-                    <i className="bi bi-calendar-event"></i> {formatDate(setlist.event_date)}
-                  </SetlistDate>
-                )}
                 <MetadataRow>
                   <MetadataBadge>
                     <i className="bi bi-music-note-beamed"></i>
@@ -171,32 +156,6 @@ const SetlistName = styled.h3`
   color: ${theme.colors.dark.text.primary};
   margin: 0 0 ${theme.space[2]} 0;
   line-height: ${theme.lineHeights.snug};
-`;
-
-const SetlistVenue = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
-  margin-bottom: ${theme.space[1]};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[1]};
-
-  i {
-    color: ${theme.colors.brand.primary};
-  }
-`;
-
-const SetlistDate = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
-  margin-bottom: ${theme.space[2]};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[1]};
-
-  i {
-    color: ${theme.colors.brand.primary};
-  }
 `;
 
 const MetadataRow = styled.div`

@@ -161,8 +161,6 @@ export interface Setlist {
   user_id: string;
   name: string;
   description?: string;
-  event_date?: string;
-  venue?: string;
   songs: SetlistItem[]; // Now supports all item types
   created_at: string;
   updated_at: string;
@@ -172,16 +170,12 @@ export interface CreateSetlistInput {
   band_id: number;
   name: string;
   description?: string;
-  event_date?: string;
-  venue?: string;
   songs?: SetlistItem[];
 }
 
 export interface UpdateSetlistInput {
   name?: string;
   description?: string;
-  event_date?: string;
-  venue?: string;
   songs?: SetlistItem[];
 }
 

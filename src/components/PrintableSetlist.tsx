@@ -66,16 +66,6 @@ const PrintableSetlist: FC = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-  };
-
   const calculateTotalDuration = (): number => {
     return setlistItems
       .filter(isSongItem)
@@ -136,16 +126,6 @@ const PrintableSetlist: FC = () => {
             <SetlistDescription>{setlist.description}</SetlistDescription>
           )}
           <MetaRow>
-            {setlist.venue && (
-              <MetaItem>
-                <MetaLabel>Venue:</MetaLabel> {setlist.venue}
-              </MetaItem>
-            )}
-            {setlist.event_date && (
-              <MetaItem>
-                <MetaLabel>Date:</MetaLabel> {formatDate(setlist.event_date)}
-              </MetaItem>
-            )}
             <MetaItem>
               <MetaLabel>Songs:</MetaLabel> {songItems.length}
             </MetaItem>

@@ -287,8 +287,6 @@ const SetlistDetailView: FC = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     includeDescription: true,
-    includeVenue: true,
-    includeDate: true,
     includeSongCount: true,
     includeTotalDuration: true,
     includeArtist: true,
@@ -422,16 +420,6 @@ const SetlistDetailView: FC = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-  };
-
   const calculateTotalDuration = (): number => {
     return songItemsOnly
       .map((item) => getSongById(item.song_id))
@@ -456,18 +444,6 @@ const SetlistDetailView: FC = () => {
 
     if (exportOptions.includeDescription && setlist.description) {
       textContent += `${setlist.description}\n\n`;
-    }
-
-    if (exportOptions.includeVenue && setlist.venue) {
-      textContent += `Venue: ${setlist.venue}\n`;
-    }
-
-    if (exportOptions.includeDate && setlist.event_date) {
-      textContent += `Date: ${formatDate(setlist.event_date)}\n`;
-    }
-
-    if ((exportOptions.includeVenue && setlist.venue) || (exportOptions.includeDate && setlist.event_date)) {
-      textContent += "\n";
     }
 
     if (exportOptions.includeSongCount) {
@@ -658,18 +634,6 @@ const SetlistDetailView: FC = () => {
           )}
 
           <MetadataBar>
-            {setlist.venue && (
-              <MetadataItem>
-                <i className="bi bi-geo-alt"></i>
-                {setlist.venue}
-              </MetadataItem>
-            )}
-            {setlist.event_date && (
-              <MetadataItem>
-                <i className="bi bi-calendar-event"></i>
-                {formatDate(setlist.event_date)}
-              </MetadataItem>
-            )}
             <MetadataItem>
               <i className="bi bi-music-note-beamed"></i>
               {songItemsOnly.length} {songItemsOnly.length === 1 ? "song" : "songs"}
@@ -830,32 +794,6 @@ const SetlistDetailView: FC = () => {
                 <Label check for="includeDescription">
                   Include description
                   {!setlist?.description && <DisabledNote>(no description)</DisabledNote>}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeVenue"
-                  checked={exportOptions.includeVenue}
-                  onChange={() => toggleExportOption("includeVenue")}
-                  disabled={!setlist?.venue}
-                />
-                <Label check for="includeVenue">
-                  Include venue
-                  {!setlist?.venue && <DisabledNote>(no venue)</DisabledNote>}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeDate"
-                  checked={exportOptions.includeDate}
-                  onChange={() => toggleExportOption("includeDate")}
-                  disabled={!setlist?.event_date}
-                />
-                <Label check for="includeDate">
-                  Include event date
-                  {!setlist?.event_date && <DisabledNote>(no date)</DisabledNote>}
                 </Label>
               </FormGroup>
               <FormGroup check>
