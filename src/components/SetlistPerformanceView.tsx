@@ -30,6 +30,7 @@ import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
+import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -97,6 +98,8 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // Handle sync index updates from viewers
   const handleSyncIndexChange = useCallback((index: number) => {
@@ -282,12 +285,15 @@ const SetlistPerformanceView: FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, songs.length, isFullscreen, navigate]);
 
-  // Scroll to top when song changes
+  // Scroll to top and reset audio time when song changes
   useEffect(() => {
     const songDisplay = document.querySelector('[data-song-display]');
     if (songDisplay) {
       songDisplay.scrollTop = 0;
     }
+    // Reset audio tracking state
+    setAudioCurrentTime(0);
+    setIsAudioPlaying(false);
   }, [currentIndex]);
 
   const handlePrevSong = () => {
@@ -626,36 +632,50 @@ const SetlistPerformanceView: FC = () => {
                 onLoadTrack={loadTrack}
                 onRemoveTrack={removeTrack}
                 isHost={syncRole === "host" || syncRole === null}
+                onTimeUpdate={setAudioCurrentTime}
+                onPlayingChange={setIsAudioPlaying}
               />
             )}
           </SongHeader>
 
           <SongContent>
-            {displayContent.type === "chords" && (
-              <ContentSection>
-                <SectionLabel>
-                  <i className="bi bi-music-note"></i>
-                  Chords
-                </SectionLabel>
-                <ContentText>{displayContent.content}</ContentText>
-              </ContentSection>
-            )}
+            {displayContent.type !== "none" && currentSong.timing_data?.sectionTimings?.length ? (
+              <SyncedLyricsDisplay
+                content={displayContent.content}
+                contentType={displayContent.type}
+                sections={currentSong.timing_data.sectionTimings}
+                currentTime={audioCurrentTime}
+                isPlaying={isAudioPlaying}
+              />
+            ) : (
+              <>
+                {displayContent.type === "chords" && (
+                  <ContentSection>
+                    <SectionLabel>
+                      <i className="bi bi-music-note"></i>
+                      Chords
+                    </SectionLabel>
+                    <ContentText>{displayContent.content}</ContentText>
+                  </ContentSection>
+                )}
 
-            {displayContent.type === "lyrics" && (
-              <ContentSection>
-                <SectionLabel>
-                  <i className="bi bi-mic"></i>
-                  Lyrics
-                </SectionLabel>
-                <ContentText>{displayContent.content}</ContentText>
-              </ContentSection>
-            )}
+                {displayContent.type === "lyrics" && (
+                  <ContentSection>
+                    <SectionLabel>
+                      <i className="bi bi-mic"></i>
+                      Lyrics
+                    </SectionLabel>
+                    <ContentText>{displayContent.content}</ContentText>
+                  </ContentSection>
+                )}
 
-            {displayContent.type === "none" && (
-              <EmptyContent>
-                <i className="bi bi-music-note-beamed"></i>
-                <p>No chords or lyrics available for this song</p>
-              </EmptyContent>
+                {displayContent.type === "none" && (
+                  <EmptyContent>
+                    <i className="bi bi-music-note-beamed"></i>
+                    <p>No chords or lyrics available for this song</p>
+                  </EmptyContent>
+                )}
+              </>
             )}
           </SongContent>
         </SongDisplay>

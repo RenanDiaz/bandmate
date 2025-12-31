@@ -379,5 +379,8 @@
     "clickToEdit": "Click to edit time manually",
     "syncTiming": "Sync Timing",
     "syncTimingHint": "Assign audio timestamps to each section"
+  },
+  "syncedLyrics": {
+    "nowPlaying": "Now playing"
   }
 }

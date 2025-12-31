@@ -379,5 +379,8 @@
     "clickToEdit": "Clic para editar tiempo manualmente",
     "syncTiming": "Sincronizar Tiempos",
     "syncTimingHint": "Asigna marcas de tiempo de audio a cada sección"
+  },
+  "syncedLyrics": {
+    "nowPlaying": "Reproduciendo"
   }
 }
