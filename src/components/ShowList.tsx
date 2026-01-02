@@ -1,9 +1,15 @@
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Show } from "../services/showsService";
 import { markShowCompleted, markShowCancelled } from "../services/showsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import {
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
+} from "reactstrap";
 
 interface Props {
   shows: Show[];
@@ -63,6 +69,177 @@ const getDaysUntil = (eventDate: string): string => {
   return `In ${Math.ceil(diffDays / 30)} months`;
 };
 
+// Individual show card component to manage its own dropdown state
+const ShowCardItem: FC<{
+  show: Show;
+  onEdit: (show: Show) => void;
+  onDelete: (show: Show) => void;
+  onView: (showId: string) => void;
+  onMarkCompleted: (show: Show) => void;
+  onMarkCancelled: (show: Show) => void;
+}> = ({ show, onEdit, onDelete, onView, onMarkCompleted, onMarkCancelled }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+
+  const today = new Date().toISOString().split("T")[0];
+  const isPast = show.event_date < today;
+  const isCancelled = show.status === "cancelled";
+  const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
+
+  return (
+    <ShowCard $isPast={isPast} $isCancelled={isCancelled}>
+      <ShowHeader>
+        <DateBadge $isPast={isPast} $isCancelled={isCancelled}>
+          <DateDay>
+            {new Date(show.event_date + "T00:00:00").getDate()}
+          </DateDay>
+          <DateMonth>
+            {new Date(show.event_date + "T00:00:00").toLocaleDateString("en-US", { month: "short" })}
+          </DateMonth>
+        </DateBadge>
+
+        <ShowInfo>
+          <ShowName $isCancelled={isCancelled}>{show.name}</ShowName>
+          {show.venue && (
+            <ShowVenue>
+              <i className="bi bi-geo-alt"></i> {show.venue}
+            </ShowVenue>
+          )}
+          <ShowDateTime>
+            <i className="bi bi-calendar-event"></i> {formatDate(show.event_date)}
+            {show.event_time && (
+              <>
+                {" "}at {formatTime(show.event_time)}
+              </>
+            )}
+          </ShowDateTime>
+          {show.doors_time && (
+            <ShowDoors>
+              <i className="bi bi-door-open"></i> Doors: {formatTime(show.doors_time)}
+            </ShowDoors>
+          )}
+          <MetadataRow>
+            <StatusBadge $color={getStatusColor(show.status, show.event_date)}>
+              {getStatusLabel(show.status, show.event_date)}
+            </StatusBadge>
+            {isUpcoming && (
+              <CountdownBadge>
+                <i className="bi bi-clock"></i> {getDaysUntil(show.event_date)}
+              </CountdownBadge>
+            )}
+            {show.setlist_id && (
+              <SetlistBadge>
+                <i className="bi bi-music-note-list"></i> Setlist linked
+              </SetlistBadge>
+            )}
+          </MetadataRow>
+        </ShowInfo>
+
+        {/* Desktop: Inline action buttons */}
+        <ActionButtons>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(show.id);
+            }}
+            title="View show details"
+            $variant="view"
+          >
+            <i className="bi bi-eye"></i>
+          </ActionButton>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(show);
+            }}
+            title="Edit show"
+            $variant="edit"
+          >
+            <i className="bi bi-pencil"></i>
+          </ActionButton>
+          {isUpcoming && (
+            <>
+              <ActionButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkCompleted(show);
+                }}
+                title="Mark as completed"
+                $variant="complete"
+              >
+                <i className="bi bi-check-circle"></i>
+              </ActionButton>
+              <ActionButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkCancelled(show);
+                }}
+                title="Cancel show"
+                $variant="cancel"
+              >
+                <i className="bi bi-x-circle"></i>
+              </ActionButton>
+            </>
+          )}
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(show);
+            }}
+            title="Delete show"
+            $variant="delete"
+          >
+            <i className="bi bi-trash"></i>
+          </ActionButton>
+        </ActionButtons>
+
+        {/* Mobile: Dropdown menu */}
+        <MobileDropdownWrapper>
+          <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
+            <DropdownToggle tag="button" className="mobile-actions-toggle">
+              <i className="bi bi-three-dots-vertical"></i>
+            </DropdownToggle>
+            <DropdownMenu end dark>
+              <DropdownItem onClick={() => onView(show.id)}>
+                <i className="bi bi-eye me-2"></i> View
+              </DropdownItem>
+              <DropdownItem onClick={() => onEdit(show)}>
+                <i className="bi bi-pencil me-2"></i> Edit
+              </DropdownItem>
+              {isUpcoming && (
+                <>
+                  <DropdownItem onClick={() => onMarkCompleted(show)}>
+                    <i className="bi bi-check-circle me-2 text-success"></i> Mark completed
+                  </DropdownItem>
+                  <DropdownItem onClick={() => onMarkCancelled(show)}>
+                    <i className="bi bi-x-circle me-2 text-warning"></i> Cancel show
+                  </DropdownItem>
+                </>
+              )}
+              <DropdownItem divider />
+              <DropdownItem onClick={() => onDelete(show)} className="text-danger">
+                <i className="bi bi-trash me-2"></i> Delete
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        </MobileDropdownWrapper>
+      </ShowHeader>
+
+      {show.notes && (
+        <ShowNotes>
+          <i className="bi bi-sticky"></i> {show.notes}
+        </ShowNotes>
+      )}
+
+      {show.venue_address && (
+        <ShowAddress>
+          <i className="bi bi-pin-map"></i> {show.venue_address}
+        </ShowAddress>
+      )}
+    </ShowCard>
+  );
+};
+
 export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
   const navigate = useNavigate();
 
@@ -97,133 +274,17 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
 
   return (
     <ShowsGrid>
-      {shows.map((show) => {
-        const today = new Date().toISOString().split("T")[0];
-        const isPast = show.event_date < today;
-        const isCancelled = show.status === "cancelled";
-        const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
-
-        return (
-          <ShowCard key={show.id} $isPast={isPast} $isCancelled={isCancelled}>
-            <ShowHeader>
-              <DateBadge $isPast={isPast} $isCancelled={isCancelled}>
-                <DateDay>
-                  {new Date(show.event_date + "T00:00:00").getDate()}
-                </DateDay>
-                <DateMonth>
-                  {new Date(show.event_date + "T00:00:00").toLocaleDateString("en-US", { month: "short" })}
-                </DateMonth>
-              </DateBadge>
-
-              <ShowInfo>
-                <ShowName $isCancelled={isCancelled}>{show.name}</ShowName>
-                {show.venue && (
-                  <ShowVenue>
-                    <i className="bi bi-geo-alt"></i> {show.venue}
-                  </ShowVenue>
-                )}
-                <ShowDateTime>
-                  <i className="bi bi-calendar-event"></i> {formatDate(show.event_date)}
-                  {show.event_time && (
-                    <>
-                      {" "}at {formatTime(show.event_time)}
-                    </>
-                  )}
-                </ShowDateTime>
-                {show.doors_time && (
-                  <ShowDoors>
-                    <i className="bi bi-door-open"></i> Doors: {formatTime(show.doors_time)}
-                  </ShowDoors>
-                )}
-                <MetadataRow>
-                  <StatusBadge $color={getStatusColor(show.status, show.event_date)}>
-                    {getStatusLabel(show.status, show.event_date)}
-                  </StatusBadge>
-                  {isUpcoming && (
-                    <CountdownBadge>
-                      <i className="bi bi-clock"></i> {getDaysUntil(show.event_date)}
-                    </CountdownBadge>
-                  )}
-                  {show.setlist_id && (
-                    <SetlistBadge>
-                      <i className="bi bi-music-note-list"></i> Setlist linked
-                    </SetlistBadge>
-                  )}
-                </MetadataRow>
-              </ShowInfo>
-
-              <ActionButtons>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewShow(show.id);
-                  }}
-                  title="View show details"
-                  $variant="view"
-                >
-                  <i className="bi bi-eye"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(show);
-                  }}
-                  title="Edit show"
-                  $variant="edit"
-                >
-                  <i className="bi bi-pencil"></i>
-                </ActionButton>
-                {isUpcoming && (
-                  <>
-                    <ActionButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkCompleted(show);
-                      }}
-                      title="Mark as completed"
-                      $variant="complete"
-                    >
-                      <i className="bi bi-check-circle"></i>
-                    </ActionButton>
-                    <ActionButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkCancelled(show);
-                      }}
-                      title="Cancel show"
-                      $variant="cancel"
-                    >
-                      <i className="bi bi-x-circle"></i>
-                    </ActionButton>
-                  </>
-                )}
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(show);
-                  }}
-                  title="Delete show"
-                  $variant="delete"
-                >
-                  <i className="bi bi-trash"></i>
-                </ActionButton>
-              </ActionButtons>
-            </ShowHeader>
-
-            {show.notes && (
-              <ShowNotes>
-                <i className="bi bi-sticky"></i> {show.notes}
-              </ShowNotes>
-            )}
-
-            {show.venue_address && (
-              <ShowAddress>
-                <i className="bi bi-pin-map"></i> {show.venue_address}
-              </ShowAddress>
-            )}
-          </ShowCard>
-        );
-      })}
+      {shows.map((show) => (
+        <ShowCardItem
+          key={show.id}
+          show={show}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onView={handleViewShow}
+          onMarkCompleted={handleMarkCompleted}
+          onMarkCancelled={handleMarkCancelled}
+        />
+      ))}
     </ShowsGrid>
   );
 };
@@ -411,13 +472,83 @@ const ActionButtons = styled.div`
     opacity: 1;
   }
 
-  /* Always visible on touch devices */
+  /* Hide on mobile - use dropdown instead */
   @media (max-width: ${theme.breakpoints.md}) {
-    opacity: 1;
+    display: none;
   }
 
-  @media (hover: none) {
+  @media (hover: none) and (min-width: ${theme.breakpoints.md}) {
     opacity: 1;
+  }
+`;
+
+const MobileDropdownWrapper = styled.div`
+  display: none;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .mobile-actions-toggle {
+    background: transparent;
+    border: 1px solid ${theme.colors.dark.border.default};
+    color: ${theme.colors.dark.text.secondary};
+    width: 40px;
+    height: 40px;
+    border-radius: ${theme.radius.base};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all ${theme.transitions.fast} ease;
+    font-size: ${theme.fontSizes.bodyLg};
+
+    &:hover,
+    &:focus {
+      background: ${theme.colors.dark.bg.elevated};
+      border-color: ${theme.colors.brand.primary};
+      color: ${theme.colors.brand.primary};
+    }
+
+    &::after {
+      display: none; /* Remove default caret */
+    }
+  }
+
+  .dropdown-menu {
+    background: ${theme.colors.dark.bg.elevated};
+    border: 1px solid ${theme.colors.dark.border.default};
+    border-radius: ${theme.radius.md};
+    box-shadow: ${theme.shadows.lg};
+    min-width: 160px;
+
+    .dropdown-item {
+      color: ${theme.colors.dark.text.primary};
+      padding: ${theme.space[2]} ${theme.space[3]};
+      display: flex;
+      align-items: center;
+      font-size: ${theme.fontSizes.bodySm};
+
+      &:hover,
+      &:focus {
+        background: ${theme.colors.dark.bg.tertiary};
+        color: ${theme.colors.dark.text.primary};
+      }
+
+      &.text-danger:hover {
+        background: ${theme.colors.semantic.errorBgDark};
+      }
+
+      i {
+        width: 20px;
+      }
+    }
+
+    .dropdown-divider {
+      border-color: ${theme.colors.dark.border.default};
+      margin: ${theme.space[1]} 0;
+    }
   }
 `;
 
@@ -473,13 +604,6 @@ const ActionButton = styled.button<{
       if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
       return theme.colors.dark.bg.elevated;
     }};
-  }
-
-  /* Larger touch targets on mobile */
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 40px;
-    height: 40px;
-    font-size: ${theme.fontSizes.body};
   }
 `;
 

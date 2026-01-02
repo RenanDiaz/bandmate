@@ -1,14 +1,130 @@
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Setlist } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import {
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
+} from "reactstrap";
 
 interface Props {
   setlists: Setlist[];
   onEdit: (setlist: Setlist) => void;
   onDelete: (setlist: Setlist) => void;
 }
+
+// Individual setlist card component to manage its own dropdown state
+const SetlistCardItem: FC<{
+  setlist: Setlist;
+  onEdit: (setlist: Setlist) => void;
+  onDelete: (setlist: Setlist) => void;
+  onView: (setlistId: string) => void;
+  onPerform: (setlistId: string) => void;
+}> = ({ setlist, onEdit, onDelete, onView, onPerform }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+
+  const songCount = setlist.songs?.length || 0;
+
+  return (
+    <SetlistCard>
+      <SetlistHeader>
+        <SetlistIcon>
+          <i className="bi bi-music-note-list"></i>
+        </SetlistIcon>
+
+        <SetlistInfo>
+          <SetlistName>{setlist.name}</SetlistName>
+          <MetadataRow>
+            <MetadataBadge>
+              <i className="bi bi-music-note-beamed"></i>
+              {songCount} {songCount === 1 ? "song" : "songs"}
+            </MetadataBadge>
+          </MetadataRow>
+        </SetlistInfo>
+
+        {/* Desktop: Inline action buttons */}
+        <ActionButtons>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onPerform(setlist.id);
+            }}
+            title="Start performance mode"
+            $variant="perform"
+            disabled={songCount === 0}
+          >
+            <i className="bi bi-play-circle"></i>
+          </ActionButton>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(setlist.id);
+            }}
+            title="View setlist"
+            $variant="view"
+          >
+            <i className="bi bi-eye"></i>
+          </ActionButton>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(setlist);
+            }}
+            title="Edit setlist"
+            $variant="edit"
+          >
+            <i className="bi bi-pencil"></i>
+          </ActionButton>
+          <ActionButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(setlist);
+            }}
+            title="Delete setlist"
+            $variant="delete"
+          >
+            <i className="bi bi-trash"></i>
+          </ActionButton>
+        </ActionButtons>
+
+        {/* Mobile: Dropdown menu */}
+        <MobileDropdownWrapper>
+          <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
+            <DropdownToggle tag="button" className="mobile-actions-toggle">
+              <i className="bi bi-three-dots-vertical"></i>
+            </DropdownToggle>
+            <DropdownMenu end dark>
+              <DropdownItem
+                onClick={() => onPerform(setlist.id)}
+                disabled={songCount === 0}
+              >
+                <i className="bi bi-play-circle me-2 text-success"></i> Perform
+              </DropdownItem>
+              <DropdownItem onClick={() => onView(setlist.id)}>
+                <i className="bi bi-eye me-2"></i> View
+              </DropdownItem>
+              <DropdownItem onClick={() => onEdit(setlist)}>
+                <i className="bi bi-pencil me-2"></i> Edit
+              </DropdownItem>
+              <DropdownItem divider />
+              <DropdownItem onClick={() => onDelete(setlist)} className="text-danger">
+                <i className="bi bi-trash me-2"></i> Delete
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        </MobileDropdownWrapper>
+      </SetlistHeader>
+
+      {setlist.description && (
+        <SetlistDescription>{setlist.description}</SetlistDescription>
+      )}
+    </SetlistCard>
+  );
+};
 
 export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
   const navigate = useNavigate();
@@ -23,77 +139,16 @@ export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
 
   return (
     <SetlistsGrid>
-      {setlists.map((setlist) => {
-        const songCount = setlist.songs?.length || 0;
-
-        return (
-          <SetlistCard key={setlist.id}>
-            <SetlistHeader>
-              <SetlistIcon>
-                <i className="bi bi-music-note-list"></i>
-              </SetlistIcon>
-
-              <SetlistInfo>
-                <SetlistName>{setlist.name}</SetlistName>
-                <MetadataRow>
-                  <MetadataBadge>
-                    <i className="bi bi-music-note-beamed"></i>
-                    {songCount} {songCount === 1 ? "song" : "songs"}
-                  </MetadataBadge>
-                </MetadataRow>
-              </SetlistInfo>
-
-              <ActionButtons>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePerformSetlist(setlist.id);
-                  }}
-                  title="Start performance mode"
-                  $variant="perform"
-                  disabled={songCount === 0}
-                >
-                  <i className="bi bi-play-circle"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewSetlist(setlist.id);
-                  }}
-                  title="View setlist"
-                  $variant="view"
-                >
-                  <i className="bi bi-eye"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(setlist);
-                  }}
-                  title="Edit setlist"
-                  $variant="edit"
-                >
-                  <i className="bi bi-pencil"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(setlist);
-                  }}
-                  title="Delete setlist"
-                  $variant="delete"
-                >
-                  <i className="bi bi-trash"></i>
-                </ActionButton>
-              </ActionButtons>
-            </SetlistHeader>
-
-            {setlist.description && (
-              <SetlistDescription>{setlist.description}</SetlistDescription>
-            )}
-          </SetlistCard>
-        );
-      })}
+      {setlists.map((setlist) => (
+        <SetlistCardItem
+          key={setlist.id}
+          setlist={setlist}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onView={handleViewSetlist}
+          onPerform={handlePerformSetlist}
+        />
+      ))}
     </SetlistsGrid>
   );
 };
@@ -192,6 +247,90 @@ const ActionButtons = styled.div`
 
   ${SetlistHeader}:hover & {
     opacity: 1;
+  }
+
+  /* Hide on mobile - use dropdown instead */
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none;
+  }
+
+  @media (hover: none) and (min-width: ${theme.breakpoints.md}) {
+    opacity: 1;
+  }
+`;
+
+const MobileDropdownWrapper = styled.div`
+  display: none;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .mobile-actions-toggle {
+    background: transparent;
+    border: 1px solid ${theme.colors.dark.border.default};
+    color: ${theme.colors.dark.text.secondary};
+    width: 40px;
+    height: 40px;
+    border-radius: ${theme.radius.base};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all ${theme.transitions.fast} ease;
+    font-size: ${theme.fontSizes.bodyLg};
+
+    &:hover,
+    &:focus {
+      background: ${theme.colors.dark.bg.elevated};
+      border-color: ${theme.colors.brand.primary};
+      color: ${theme.colors.brand.primary};
+    }
+
+    &::after {
+      display: none; /* Remove default caret */
+    }
+  }
+
+  .dropdown-menu {
+    background: ${theme.colors.dark.bg.elevated};
+    border: 1px solid ${theme.colors.dark.border.default};
+    border-radius: ${theme.radius.md};
+    box-shadow: ${theme.shadows.lg};
+    min-width: 160px;
+
+    .dropdown-item {
+      color: ${theme.colors.dark.text.primary};
+      padding: ${theme.space[2]} ${theme.space[3]};
+      display: flex;
+      align-items: center;
+      font-size: ${theme.fontSizes.bodySm};
+
+      &:hover,
+      &:focus {
+        background: ${theme.colors.dark.bg.tertiary};
+        color: ${theme.colors.dark.text.primary};
+      }
+
+      &.text-danger:hover {
+        background: ${theme.colors.semantic.errorBgDark};
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      i {
+        width: 20px;
+      }
+    }
+
+    .dropdown-divider {
+      border-color: ${theme.colors.dark.border.default};
+      margin: ${theme.space[1]} 0;
+    }
   }
 `;
 
