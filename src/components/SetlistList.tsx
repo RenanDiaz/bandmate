@@ -97,7 +97,7 @@ const SetlistCardItem: FC<{
             <DropdownToggle tag="button" className="mobile-actions-toggle">
               <i className="bi bi-three-dots-vertical"></i>
             </DropdownToggle>
-            <DropdownMenu end dark>
+            <DropdownMenu end dark container="body">
               <DropdownItem
                 onClick={() => onPerform(setlist.id)}
                 disabled={songCount === 0}
@@ -290,46 +290,6 @@ const MobileDropdownWrapper = styled.div`
 
     &::after {
       display: none; /* Remove default caret */
-    }
-  }
-
-  .dropdown-menu {
-    background: ${theme.colors.dark.bg.elevated};
-    border: 1px solid ${theme.colors.dark.border.default};
-    border-radius: ${theme.radius.md};
-    box-shadow: ${theme.shadows.lg};
-    min-width: 160px;
-
-    .dropdown-item {
-      color: ${theme.colors.dark.text.primary};
-      padding: ${theme.space[2]} ${theme.space[3]};
-      display: flex;
-      align-items: center;
-      font-size: ${theme.fontSizes.bodySm};
-
-      &:hover,
-      &:focus {
-        background: ${theme.colors.dark.bg.tertiary};
-        color: ${theme.colors.dark.text.primary};
-      }
-
-      &.text-danger:hover {
-        background: ${theme.colors.semantic.errorBgDark};
-      }
-
-      &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      i {
-        width: 20px;
-      }
-    }
-
-    .dropdown-divider {
-      border-color: ${theme.colors.dark.border.default};
-      margin: ${theme.space[1]} 0;
     }
   }
 `;
