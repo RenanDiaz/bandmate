@@ -27,6 +27,7 @@ import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
+import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -285,6 +286,11 @@ const SetlistDetailView: FC = () => {
     return allSongs.find((s) => s.id === songId);
   };
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showYouTubeModal, setShowYouTubeModal] = useState(false);
+  const [youtubeExporting, setYoutubeExporting] = useState(false);
+  const [youtubeProgress, setYoutubeProgress] = useState({ current: 0, total: 0, songTitle: "" });
+  const [youtubeResult, setYoutubeResult] = useState<PlaylistCreationResult | null>(null);
+  const [hasYouTubeAccess, setHasYouTubeAccess] = useState<boolean | null>(null);
   const [exportOptions, setExportOptions] = useState({
     includeDescription: true,
     includeSongCount: true,
@@ -413,6 +419,59 @@ const SetlistDetailView: FC = () => {
 
     loadData();
   }, [setlistId, navigate]);
+
+  // Check YouTube access on mount
+  useEffect(() => {
+    const checkYouTubeAccess = async () => {
+      const hasAccess = await youtubeService.hasYouTubeAccess();
+      setHasYouTubeAccess(hasAccess);
+    };
+    checkYouTubeAccess();
+  }, []);
+
+  const handleExportToYouTube = async () => {
+    if (!setlist) return;
+
+    setYoutubeExporting(true);
+    setYoutubeResult(null);
+    setYoutubeProgress({ current: 0, total: songsForReorder.length, songTitle: "" });
+
+    try {
+      const songs = songsForReorder.map((song) => ({
+        title: song.title,
+        artist: song.artist || undefined,
+      }));
+
+      const result = await youtubeService.createPlaylistFromSetlist(
+        setlist.name,
+        songs,
+        setlist.description || `Setlist created with Bandmate`,
+        (current, total, songTitle) => {
+          setYoutubeProgress({ current, total, songTitle });
+        }
+      );
+
+      setYoutubeResult(result);
+    } catch (error) {
+      setYoutubeResult({
+        success: false,
+        addedSongs: 0,
+        failedSongs: [],
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+
+    setYoutubeExporting(false);
+  };
+
+  const handleRequestYouTubeAccess = async () => {
+    try {
+      await youtubeService.requestAuthorization();
+    } catch (error) {
+      console.error("Failed to request YouTube authorization:", error);
+      alert(t("youtubeMusic.authError"));
+    }
+  };
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -613,6 +672,15 @@ const SetlistDetailView: FC = () => {
                   >
                     <i className="bi bi-file-text"></i>
                     Export
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => setShowYouTubeModal(true)}
+                    $variant="edit"
+                    disabled={songItemsOnly.length === 0}
+                    title={t("youtubeMusic.exportToYouTube")}
+                  >
+                    <i className="bi bi-youtube"></i>
+                    YouTube
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
@@ -889,6 +957,145 @@ const SetlistDetailView: FC = () => {
           <Button color="primary" onClick={handleExportAsText}>
             <i className="bi bi-download"></i> Export
           </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* YouTube Music Export Modal */}
+      <Modal isOpen={showYouTubeModal} toggle={() => !youtubeExporting && setShowYouTubeModal(false)} size="md">
+        <ModalHeader toggle={() => !youtubeExporting && setShowYouTubeModal(false)}>
+          <i className="bi bi-youtube me-2" style={{ color: "#FF0000" }}></i>
+          {t("youtubeMusic.title")}
+        </ModalHeader>
+        <ModalBody>
+          {hasYouTubeAccess === false ? (
+            <YouTubeAuthPrompt>
+              <AuthIcon>
+                <i className="bi bi-youtube"></i>
+              </AuthIcon>
+              <AuthTitle>{t("youtubeMusic.authRequired")}</AuthTitle>
+              <AuthText>{t("youtubeMusic.authDescription")}</AuthText>
+              <Button color="danger" onClick={handleRequestYouTubeAccess}>
+                <i className="bi bi-google me-2"></i>
+                {t("youtubeMusic.connectGoogle")}
+              </Button>
+            </YouTubeAuthPrompt>
+          ) : youtubeResult ? (
+            <YouTubeResultContainer>
+              {youtubeResult.success ? (
+                <>
+                  <ResultIcon $success>
+                    <i className="bi bi-check-circle-fill"></i>
+                  </ResultIcon>
+                  <ResultTitle>{t("youtubeMusic.playlistCreated")}</ResultTitle>
+                  <ResultStats>
+                    <StatRow>
+                      <span>{t("youtubeMusic.songsAdded")}:</span>
+                      <strong>{youtubeResult.addedSongs}</strong>
+                    </StatRow>
+                    {youtubeResult.failedSongs.length > 0 && (
+                      <StatRow $warning>
+                        <span>{t("youtubeMusic.songsNotFound")}:</span>
+                        <strong>{youtubeResult.failedSongs.length}</strong>
+                      </StatRow>
+                    )}
+                  </ResultStats>
+                  {youtubeResult.failedSongs.length > 0 && (
+                    <FailedSongsList>
+                      <FailedSongsTitle>{t("youtubeMusic.couldNotFind")}:</FailedSongsTitle>
+                      {youtubeResult.failedSongs.map((song, i) => (
+                        <FailedSongItem key={i}>{song}</FailedSongItem>
+                      ))}
+                    </FailedSongsList>
+                  )}
+                  <OpenPlaylistButton
+                    href={youtubeResult.playlistUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <i className="bi bi-box-arrow-up-right me-2"></i>
+                    {t("youtubeMusic.openPlaylist")}
+                  </OpenPlaylistButton>
+                </>
+              ) : (
+                <>
+                  <ResultIcon $success={false}>
+                    <i className="bi bi-exclamation-circle-fill"></i>
+                  </ResultIcon>
+                  <ResultTitle>{t("youtubeMusic.exportFailed")}</ResultTitle>
+                  <ErrorMessage>{youtubeResult.error}</ErrorMessage>
+                </>
+              )}
+            </YouTubeResultContainer>
+          ) : youtubeExporting ? (
+            <YouTubeProgressContainer>
+              <Spinner color="danger" style={{ width: "3rem", height: "3rem" }} />
+              <ProgressTitle>{t("youtubeMusic.creatingPlaylist")}</ProgressTitle>
+              <ProgressText>
+                {t("youtubeMusic.addingSong", {
+                  current: youtubeProgress.current,
+                  total: youtubeProgress.total,
+                })}
+              </ProgressText>
+              <CurrentSong>{youtubeProgress.songTitle}</CurrentSong>
+              <ProgressBar>
+                <ProgressFill
+                  style={{
+                    width: `${(youtubeProgress.current / youtubeProgress.total) * 100}%`,
+                  }}
+                />
+              </ProgressBar>
+            </YouTubeProgressContainer>
+          ) : (
+            <YouTubeExportPreview>
+              <PreviewTitle>{t("youtubeMusic.createPlaylist")}</PreviewTitle>
+              <PreviewText>
+                {t("youtubeMusic.willCreate", { name: setlist?.name })}
+              </PreviewText>
+              <PreviewStats>
+                <PreviewStat>
+                  <i className="bi bi-music-note-beamed"></i>
+                  {songsForReorder.length} {t("youtubeMusic.songs")}
+                </PreviewStat>
+              </PreviewStats>
+              <PreviewNote>
+                <i className="bi bi-info-circle me-2"></i>
+                {t("youtubeMusic.note")}
+              </PreviewNote>
+            </YouTubeExportPreview>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          {youtubeResult ? (
+            <Button
+              color="secondary"
+              onClick={() => {
+                setShowYouTubeModal(false);
+                setYoutubeResult(null);
+              }}
+            >
+              {t("common.close")}
+            </Button>
+          ) : (
+            <>
+              <Button
+                color="secondary"
+                onClick={() => setShowYouTubeModal(false)}
+                disabled={youtubeExporting}
+              >
+                {t("common.cancel")}
+              </Button>
+              {hasYouTubeAccess !== false && (
+                <Button
+                  color="danger"
+                  onClick={handleExportToYouTube}
+                  disabled={youtubeExporting || songItemsOnly.length === 0}
+                >
+                  <i className="bi bi-youtube me-2"></i>
+                  {t("youtubeMusic.createPlaylistButton")}
+                </Button>
+              )}
+            </>
+          )}
         </ModalFooter>
       </Modal>
     </ViewContainer>
@@ -1288,6 +1495,232 @@ const SpecialItemDuration = styled.div`
   i {
     color: ${theme.colors.semantic.warning};
   }
+`;
+
+// YouTube Export Modal Styles
+const YouTubeAuthPrompt = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: ${theme.space[6]};
+`;
+
+const AuthIcon = styled.div`
+  font-size: 4rem;
+  color: #ff0000;
+  margin-bottom: ${theme.space[4]};
+`;
+
+const AuthTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const AuthText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[6]};
+  line-height: ${theme.lineHeights.relaxed};
+`;
+
+const YouTubeProgressContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: ${theme.space[6]};
+`;
+
+const ProgressTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin: ${theme.space[4]} 0 ${theme.space[2]} 0;
+`;
+
+const ProgressText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const CurrentSong = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.brand.primary};
+  font-weight: ${theme.fontWeights.medium};
+  margin-bottom: ${theme.space[4]};
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 8px;
+  background: ${theme.colors.dark.bg.tertiary};
+  border-radius: ${theme.radius.base};
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div`
+  height: 100%;
+  background: #ff0000;
+  border-radius: ${theme.radius.base};
+  transition: width 0.3s ease;
+`;
+
+const YouTubeResultContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: ${theme.space[4]};
+`;
+
+const ResultIcon = styled.div<{ $success: boolean }>`
+  font-size: 3rem;
+  color: ${(props) =>
+    props.$success ? theme.colors.semantic.success : theme.colors.semantic.error};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const ResultTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const ResultStats = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const StatRow = styled.div<{ $warning?: boolean }>`
+  display: flex;
+  gap: ${theme.space[3]};
+  font-size: ${theme.fontSizes.body};
+  color: ${(props) =>
+    props.$warning ? theme.colors.semantic.warning : theme.colors.dark.text.secondary};
+
+  strong {
+    color: ${(props) =>
+      props.$warning ? theme.colors.semantic.warning : theme.colors.dark.text.primary};
+  }
+`;
+
+const FailedSongsList = styled.div`
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+  background: ${theme.colors.dark.bg.tertiary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]};
+  margin-bottom: ${theme.space[4]};
+  text-align: left;
+`;
+
+const FailedSongsTitle = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.semantic.warning};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const FailedSongItem = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.secondary};
+  padding: ${theme.space[1]} 0;
+  border-bottom: 1px solid ${theme.colors.dark.border.subtle};
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const OpenPlaylistButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  background: #ff0000;
+  color: white;
+  padding: ${theme.space[3]} ${theme.space[6]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  text-decoration: none;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: #cc0000;
+    color: white;
+    transform: translateY(-1px);
+  }
+`;
+
+const ErrorMessage = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.semantic.error};
+  background: ${theme.colors.semantic.errorBgDark};
+  border: 1px solid ${theme.colors.semantic.error};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  margin: 0;
+`;
+
+const YouTubeExportPreview = styled.div`
+  padding: ${theme.space[4]};
+`;
+
+const PreviewTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const PreviewText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[4]};
+  line-height: ${theme.lineHeights.relaxed};
+`;
+
+const PreviewStats = styled.div`
+  display: flex;
+  gap: ${theme.space[4]};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const PreviewStat = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: ${theme.colors.dark.bg.tertiary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.primary};
+
+  i {
+    color: #ff0000;
+  }
+`;
+
+const PreviewNote = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.dark.text.tertiary};
+  background: ${theme.colors.dark.bg.tertiary};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]};
+  line-height: ${theme.lineHeights.relaxed};
 `;
 
 export default SetlistDetailView;

@@ -415,5 +415,26 @@
     "markLine": "Mark line",
     "navigateLines": "Navigate lines",
     "hint": "Play the audio and press Enter or M to mark each line's start time"
+  },
+  "youtubeMusic": {
+    "title": "YouTube Music Export",
+    "exportToYouTube": "Export to YouTube Music",
+    "authRequired": "YouTube Access Required",
+    "authDescription": "To create playlists on YouTube Music, you need to sign in with Google and grant YouTube permissions.",
+    "connectGoogle": "Connect with Google",
+    "authError": "Failed to connect to YouTube. Please try again.",
+    "creatingPlaylist": "Creating Playlist...",
+    "addingSong": "Adding song {{current}} of {{total}}",
+    "playlistCreated": "Playlist Created!",
+    "songsAdded": "Songs added",
+    "songsNotFound": "Songs not found",
+    "couldNotFind": "Could not find on YouTube",
+    "openPlaylist": "Open in YouTube Music",
+    "exportFailed": "Export Failed",
+    "createPlaylist": "Create YouTube Music Playlist",
+    "willCreate": "This will create a new private playlist \"{{name}}\" on your YouTube Music account.",
+    "songs": "songs",
+    "note": "The playlist will be created as private. Songs are matched by searching YouTube Music, so some songs may not be found or may match different versions.",
+    "createPlaylistButton": "Create Playlist"
   }
 }

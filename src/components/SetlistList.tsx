@@ -12,25 +12,24 @@ import {
 
 interface Props {
   setlists: Setlist[];
-  onEdit: (setlist: Setlist) => void;
   onDelete: (setlist: Setlist) => void;
 }
 
 // Individual setlist card component to manage its own dropdown state
 const SetlistCardItem: FC<{
   setlist: Setlist;
-  onEdit: (setlist: Setlist) => void;
   onDelete: (setlist: Setlist) => void;
   onView: (setlistId: string) => void;
   onPerform: (setlistId: string) => void;
-}> = ({ setlist, onEdit, onDelete, onView, onPerform }) => {
+  onEditSongs: (setlistId: string) => void;
+}> = ({ setlist, onDelete, onView, onPerform, onEditSongs }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
   const songCount = setlist.songs?.length || 0;
 
   return (
-    <SetlistCard>
+    <SetlistCard onClick={() => onView(setlist.id)} $clickable>
       <SetlistHeader>
         <SetlistIcon>
           <i className="bi bi-music-note-list"></i>
@@ -62,17 +61,7 @@ const SetlistCardItem: FC<{
           <ActionButton
             onClick={(e) => {
               e.stopPropagation();
-              onView(setlist.id);
-            }}
-            title="View setlist"
-            $variant="view"
-          >
-            <i className="bi bi-eye"></i>
-          </ActionButton>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(setlist);
+              onEditSongs(setlist.id);
             }}
             title="Edit setlist"
             $variant="edit"
@@ -92,26 +81,32 @@ const SetlistCardItem: FC<{
         </ActionButtons>
 
         {/* Mobile: Dropdown menu */}
-        <MobileDropdownWrapper>
+        <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
           <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
             <DropdownToggle tag="button" className="mobile-actions-toggle">
               <i className="bi bi-three-dots-vertical"></i>
             </DropdownToggle>
             <DropdownMenu end dark container="body">
               <DropdownItem
-                onClick={() => onPerform(setlist.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPerform(setlist.id);
+                }}
                 disabled={songCount === 0}
               >
                 <i className="bi bi-play-circle me-2 text-success"></i> Perform
               </DropdownItem>
-              <DropdownItem onClick={() => onView(setlist.id)}>
-                <i className="bi bi-eye me-2"></i> View
-              </DropdownItem>
-              <DropdownItem onClick={() => onEdit(setlist)}>
+              <DropdownItem onClick={(e) => {
+                e.stopPropagation();
+                onEditSongs(setlist.id);
+              }}>
                 <i className="bi bi-pencil me-2"></i> Edit
               </DropdownItem>
               <DropdownItem divider />
-              <DropdownItem onClick={() => onDelete(setlist)} className="text-danger">
+              <DropdownItem onClick={(e) => {
+                e.stopPropagation();
+                onDelete(setlist);
+              }} className="text-danger">
                 <i className="bi bi-trash me-2"></i> Delete
               </DropdownItem>
             </DropdownMenu>
@@ -126,7 +121,7 @@ const SetlistCardItem: FC<{
   );
 };
 
-export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
+export const SetlistList: FC<Props> = ({ setlists, onDelete }) => {
   const navigate = useNavigate();
 
   const handleViewSetlist = (setlistId: string) => {
@@ -137,16 +132,20 @@ export const SetlistList: FC<Props> = ({ setlists, onEdit, onDelete }) => {
     navigate(`/setlists/${setlistId}/perform`);
   };
 
+  const handleEditSongs = (setlistId: string) => {
+    navigate(`/setlists/${setlistId}/edit`);
+  };
+
   return (
     <SetlistsGrid>
       {setlists.map((setlist) => (
         <SetlistCardItem
           key={setlist.id}
           setlist={setlist}
-          onEdit={onEdit}
           onDelete={onDelete}
           onView={handleViewSetlist}
           onPerform={handlePerformSetlist}
+          onEditSongs={handleEditSongs}
         />
       ))}
     </SetlistsGrid>
@@ -166,12 +165,13 @@ const SetlistsGrid = styled.div`
   }
 `;
 
-const SetlistCard = styled.div`
+const SetlistCard = styled.div<{ $clickable?: boolean }>`
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
+  cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
 
   &:hover {
     border-color: ${theme.colors.brand.primary};

@@ -9,7 +9,6 @@ import { getBandSetlists, deleteSetlist } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { NewSetlistForm } from "./NewSetlistForm";
 import { SetlistList } from "./SetlistList";
-import { EditSetlistModal } from "./EditSetlistModal";
 import { SEO } from "./SEO";
 
 interface Props {
@@ -20,8 +19,6 @@ interface Props {
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingSetlist, setEditingSetlist] = useState<Setlist | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const loadSetlists = async () => {
     if (!selectedBand) {
@@ -49,11 +46,6 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
       setLoading(false);
     }
   }, [user, selectedBand]);
-
-  const handleEditSetlist = (setlist: Setlist) => {
-    setEditingSetlist(setlist);
-    setIsEditModalOpen(true);
-  };
 
   const handleDeleteSetlist = async (setlist: Setlist) => {
     const confirmed = window.confirm(
@@ -149,19 +141,10 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
           ) : (
             <SetlistList
               setlists={setlists}
-              onEdit={handleEditSetlist}
               onDelete={handleDeleteSetlist}
             />
           )}
         </ContentSection>
-
-        <EditSetlistModal
-          setlist={editingSetlist}
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onReload={loadSetlists}
-          bandId={selectedBand.id}
-        />
       </Container>
     </PageWrapper>
   );
