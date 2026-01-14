@@ -87,7 +87,7 @@ const ShowCardItem: FC<{
   const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
 
   return (
-    <ShowCard $isPast={isPast} $isCancelled={isCancelled}>
+    <ShowCard $isPast={isPast} $isCancelled={isCancelled} onClick={() => onView(show.id)} $clickable>
       <ShowHeader>
         <DateBadge $isPast={isPast} $isCancelled={isCancelled}>
           <DateDay>
@@ -140,16 +140,6 @@ const ShowCardItem: FC<{
           <ActionButton
             onClick={(e) => {
               e.stopPropagation();
-              onView(show.id);
-            }}
-            title="View show details"
-            $variant="view"
-          >
-            <i className="bi bi-eye"></i>
-          </ActionButton>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
               onEdit(show);
             }}
             title="Edit show"
@@ -194,30 +184,39 @@ const ShowCardItem: FC<{
         </ActionButtons>
 
         {/* Mobile: Dropdown menu */}
-        <MobileDropdownWrapper>
+        <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
           <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
             <DropdownToggle tag="button" className="mobile-actions-toggle">
               <i className="bi bi-three-dots-vertical"></i>
             </DropdownToggle>
             <DropdownMenu end dark container="body">
-              <DropdownItem onClick={() => onView(show.id)}>
-                <i className="bi bi-eye me-2"></i> View
-              </DropdownItem>
-              <DropdownItem onClick={() => onEdit(show)}>
+              <DropdownItem onClick={(e) => {
+                e.stopPropagation();
+                onEdit(show);
+              }}>
                 <i className="bi bi-pencil me-2"></i> Edit
               </DropdownItem>
               {isUpcoming && (
                 <>
-                  <DropdownItem onClick={() => onMarkCompleted(show)}>
+                  <DropdownItem onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkCompleted(show);
+                  }}>
                     <i className="bi bi-check-circle me-2 text-success"></i> Mark completed
                   </DropdownItem>
-                  <DropdownItem onClick={() => onMarkCancelled(show)}>
+                  <DropdownItem onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkCancelled(show);
+                  }}>
                     <i className="bi bi-x-circle me-2 text-warning"></i> Cancel show
                   </DropdownItem>
                 </>
               )}
               <DropdownItem divider />
-              <DropdownItem onClick={() => onDelete(show)} className="text-danger">
+              <DropdownItem onClick={(e) => {
+                e.stopPropagation();
+                onDelete(show);
+              }} className="text-danger">
                 <i className="bi bi-trash me-2"></i> Delete
               </DropdownItem>
             </DropdownMenu>
@@ -302,13 +301,14 @@ const ShowsGrid = styled.div`
   }
 `;
 
-const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean }>`
+const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean; $clickable?: boolean }>`
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
   opacity: ${(props) => (props.$isPast || props.$isCancelled ? 0.7 : 1)};
+  cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
