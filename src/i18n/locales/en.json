@@ -436,6 +436,9 @@
     "willCreate": "This will create a new private playlist \"{{name}}\" on your YouTube Music account.",
     "songs": "songs",
     "note": "The playlist will be created as private. Songs are matched by searching YouTube Music, so some songs may not be found or may match different versions.",
-    "createPlaylistButton": "Create Playlist"
+    "createPlaylistButton": "Create Playlist",
+    "playlistExists": "Playlist Already Created",
+    "playlistExistsDescription": "You have already created a YouTube Music playlist for this setlist.",
+    "createNewPlaylist": "Create a new playlist instead"
   }
 }

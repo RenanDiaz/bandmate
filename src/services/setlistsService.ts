@@ -162,6 +162,7 @@ export interface Setlist {
   name: string;
   description?: string;
   songs: SetlistItem[]; // Now supports all item types
+  youtube_playlist_url?: string; // URL of exported YouTube Music playlist
   created_at: string;
   updated_at: string;
 }
@@ -283,4 +284,29 @@ export async function deleteSetlist(setlistId: string): Promise<void> {
     .eq("user_id", user.id);
 
   if (error) throw error;
+}
+
+/**
+ * Update the YouTube playlist URL for a setlist
+ */
+export async function updateSetlistYouTubePlaylist(
+  setlistId: string,
+  youtubePlaylistUrl: string | null
+): Promise<Setlist> {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (!user) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase
+    .from("setlists")
+    .update({
+      youtube_playlist_url: youtubePlaylistUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", setlistId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return normalizeSetlist(data);
 }
