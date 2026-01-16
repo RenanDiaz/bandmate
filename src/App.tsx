@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthButton } from "./AuthButton";
 import Home from "./components/Home";
@@ -33,6 +33,7 @@ const AppContent: FC = () => {
   const location = useLocation();
   const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector } =
     useBandContext();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", mode);
@@ -56,6 +57,14 @@ const AppContent: FC = () => {
               <BandInfoContainer>
                 <BandDivider />
                 <BandName>{selectedBand.name}</BandName>
+                <BandSettingsButton
+                  size="sm"
+                  onClick={() => navigate(`/bands/${selectedBand.id}/settings`)}
+                  aria-label={t('nav.bandSettings')}
+                  title={t('nav.bandSettings')}
+                >
+                  <i className="bi bi-gear"></i>
+                </BandSettingsButton>
                 <SwitchBandButton
                   size="sm"
                   onClick={() => setShowBandSelector(true)}
@@ -153,18 +162,30 @@ const AppContent: FC = () => {
                 <i className="bi bi-music-note-beamed"></i>
                 {selectedBand.name}
               </MobileBandName>
-              <SwitchBandButton
-                size="sm"
-                onClick={() => {
-                  setShowBandSelector(true);
-                  setIsOpen(false);
-                }}
-                aria-label={t('nav.switchBand')}
-                title={t('nav.switchBand')}
-              >
-                <i className="bi bi-arrow-left-right"></i>
-                <span style={{ marginLeft: '6px' }}>{t('bands.switchBand')}</span>
-              </SwitchBandButton>
+              <MobileBandActions>
+                <BandSettingsButton
+                  size="sm"
+                  onClick={() => {
+                    navigate(`/bands/${selectedBand.id}/settings`);
+                    setIsOpen(false);
+                  }}
+                  aria-label={t('nav.bandSettings')}
+                  title={t('nav.bandSettings')}
+                >
+                  <i className="bi bi-gear"></i>
+                </BandSettingsButton>
+                <SwitchBandButton
+                  size="sm"
+                  onClick={() => {
+                    setShowBandSelector(true);
+                    setIsOpen(false);
+                  }}
+                  aria-label={t('nav.switchBand')}
+                  title={t('nav.switchBand')}
+                >
+                  <i className="bi bi-arrow-left-right"></i>
+                </SwitchBandButton>
+              </MobileBandActions>
             </MobileBandInfo>
           )}
           <StyledNav navbar>
@@ -428,6 +449,32 @@ const SwitchBandButton = styled(Button)`
   &:active {
     transform: translateY(0);
   }
+`;
+
+const BandSettingsButton = styled(Button)`
+  background: transparent !important;
+  border: 1px solid ${theme.colors.dark.border.default} !important;
+  border-radius: ${theme.radius.base} !important;
+  padding: ${theme.space[1]} ${theme.space[2]} !important;
+  color: ${theme.colors.dark.text.secondary} !important;
+  transition: all ${theme.transitions.fast} ease !important;
+
+  &:hover {
+    background: ${theme.colors.dark.bg.tertiary} !important;
+    border-color: ${theme.colors.brand.primary} !important;
+    color: ${theme.colors.brand.primary} !important;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const MobileBandActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
 `;
 
 const DesktopNav = styled(Nav)`
