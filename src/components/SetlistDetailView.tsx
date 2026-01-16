@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
 import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -452,6 +452,16 @@ const SetlistDetailView: FC = () => {
       );
 
       setYoutubeResult(result);
+
+      // Save the playlist URL if successful
+      if (result.success && result.playlistUrl) {
+        try {
+          const updatedSetlist = await updateSetlistYouTubePlaylist(setlist.id, result.playlistUrl);
+          setSetlist(updatedSetlist);
+        } catch (saveError) {
+          console.error("Failed to save YouTube playlist URL:", saveError);
+        }
+      }
     } catch (error) {
       setYoutubeResult({
         success: false,
@@ -1045,6 +1055,28 @@ const SetlistDetailView: FC = () => {
                 />
               </ProgressBar>
             </YouTubeProgressContainer>
+          ) : setlist?.youtube_playlist_url ? (
+            <YouTubeExistingPlaylist>
+              <ExistingPlaylistIcon>
+                <i className="bi bi-check-circle-fill"></i>
+              </ExistingPlaylistIcon>
+              <ExistingPlaylistTitle>{t("youtubeMusic.playlistExists")}</ExistingPlaylistTitle>
+              <ExistingPlaylistText>
+                {t("youtubeMusic.playlistExistsDescription")}
+              </ExistingPlaylistText>
+              <OpenPlaylistButton
+                href={setlist.youtube_playlist_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="bi bi-box-arrow-up-right me-2"></i>
+                {t("youtubeMusic.openPlaylist")}
+              </OpenPlaylistButton>
+              <CreateNewPlaylistLink onClick={handleExportToYouTube}>
+                <i className="bi bi-plus-circle me-2"></i>
+                {t("youtubeMusic.createNewPlaylist")}
+              </CreateNewPlaylistLink>
+            </YouTubeExistingPlaylist>
           ) : (
             <YouTubeExportPreview>
               <PreviewTitle>{t("youtubeMusic.createPlaylist")}</PreviewTitle>
@@ -1065,7 +1097,7 @@ const SetlistDetailView: FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          {youtubeResult ? (
+          {youtubeResult || setlist?.youtube_playlist_url ? (
             <Button
               color="secondary"
               onClick={() => {
@@ -1661,6 +1693,50 @@ const OpenPlaylistButton = styled.a`
     background: #cc0000;
     color: white;
     transform: translateY(-1px);
+  }
+`;
+
+const YouTubeExistingPlaylist = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: ${theme.space[4]};
+`;
+
+const ExistingPlaylistIcon = styled.div`
+  font-size: 3rem;
+  color: ${theme.colors.semantic.success};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const ExistingPlaylistTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.dark.text.primary};
+  margin-bottom: ${theme.space[2]};
+`;
+
+const ExistingPlaylistText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: ${theme.colors.dark.text.secondary};
+  margin-bottom: ${theme.space[6]};
+  line-height: ${theme.lineHeights.relaxed};
+`;
+
+const CreateNewPlaylistLink = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.dark.text.secondary};
+  font-size: ${theme.fontSizes.bodySm};
+  cursor: pointer;
+  margin-top: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
   }
 `;
 

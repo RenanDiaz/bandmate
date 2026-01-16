@@ -436,6 +436,9 @@
     "willCreate": "Esto creará una nueva playlist privada \"{{name}}\" en tu cuenta de YouTube Music.",
     "songs": "canciones",
     "note": "La playlist se creará como privada. Las canciones se buscan en YouTube Music, por lo que algunas pueden no encontrarse o pueden coincidir con versiones diferentes.",
-    "createPlaylistButton": "Crear Playlist"
+    "createPlaylistButton": "Crear Playlist",
+    "playlistExists": "Playlist Ya Creada",
+    "playlistExistsDescription": "Ya has creado una playlist de YouTube Music para este setlist.",
+    "createNewPlaylist": "Crear una nueva playlist"
   }
 }
