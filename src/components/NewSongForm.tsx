@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createSong, type CreateSongInput } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
 import styled from "styled-components";
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -37,7 +39,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
 
   const handleFetchMetadata = async () => {
     if (!formData.title.trim()) {
-      alert("Please enter a song title first");
+      alert(t("songs.enterTitleFirst"));
       return;
     }
 
@@ -86,11 +88,11 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         if (metadata.lyrics) console.log(`📝 Lyrics: ${metadata.lyrics.length} characters`);
         if (metadata.genre) console.log(`🎸 Genre: ${metadata.genre}`);
       } else {
-        alert("Song not found. Try entering the artist name or check spelling.");
+        alert(t("songs.songNotFound"));
       }
     } catch (error) {
       console.error("Failed to fetch metadata:", error);
-      alert("Failed to fetch song metadata. Please try again or enter details manually.");
+      alert(t("songs.fetchMetadataError"));
     } finally {
       setIsFetchingMetadata(false);
     }
@@ -155,7 +157,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
       onSongCreated();
     } catch (error) {
       console.error("Failed to create song:", error);
-      alert("Failed to create song. Please try again.");
+      alert(t("songs.createError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +167,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
     return (
       <ExpandButton onClick={() => setIsExpanded(true)}>
         <i className="bi bi-plus-circle"></i>
-        Add New Song
+        {t("songs.addNewSong")}
       </ExpandButton>
     );
   }
@@ -175,7 +177,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
       <FormHeader>
         <FormTitle>
           <i className="bi bi-plus-circle"></i>
-          Add New Song
+          {t("songs.addNewSong")}
         </FormTitle>
         <CloseButton onClick={() => setIsExpanded(false)} type="button" aria-label="Close form">
           <i className="bi bi-x"></i>
@@ -186,11 +188,11 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         <FormRow>
           <FormGroup>
             <Label htmlFor="songTitle">
-              Song Title <Required>*</Required>
+              {t("songs.songTitle")} <Required>*</Required>
             </Label>
             <Input
               id="songTitle"
-              placeholder="Enter song title"
+              placeholder={t("songs.placeholders.enterTitle")}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
@@ -200,10 +202,10 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor="songArtist">Artist / Original Performer</Label>
+            <Label htmlFor="songArtist">{t("songs.artistPerformer")}</Label>
             <Input
               id="songArtist"
-              placeholder="e.g., The Beatles"
+              placeholder={t("songs.placeholders.artistExample")}
               value={formData.artist}
               onChange={(e) => {
                 setFormData({ ...formData, artist: e.target.value });
@@ -225,7 +227,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
             />
             <CheckboxText>
               <i className="bi bi-headphones"></i>
-              This song has backing tracks or sequences
+              {t("songs.hasBackingTracks")}
             </CheckboxText>
           </CheckboxLabel>
         </CheckboxGroup>
@@ -240,24 +242,24 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
               {isFetchingMetadata ? (
                 <>
                   <Spinner />
-                  Fetching metadata...
+                  {t("songs.fetchingMetadata")}
                 </>
               ) : metadataFetched ? (
                 <>
                   <i className="bi bi-check-circle-fill"></i>
-                  Metadata Loaded
+                  {t("songs.metadataLoaded")}
                 </>
               ) : (
                 <>
                   <i className="bi bi-music-note-list"></i>
-                  Fetch Metadata (Spotify + MusicBrainz)
+                  {t("songs.fetchMetadata")}
                 </>
               )}
             </FetchButton>
             {metadataFetched && (
               <SuccessMessage>
                 <i className="bi bi-info-circle"></i>
-                Metadata successfully loaded from multiple sources! You can edit any field before saving.
+                {t("songs.metadataSuccess")}
               </SuccessMessage>
             )}
           </MetadataSection>
@@ -268,7 +270,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
             <FormGroup>
               <Label htmlFor="songAlbum">
                 <i className="bi bi-disc"></i>
-                Album
+                {t("songs.album")}
               </Label>
               <Input
                 id="songAlbum"
@@ -284,7 +286,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
             <FormGroup>
               <Label htmlFor="songReleaseYear">
                 <i className="bi bi-calendar"></i>
-                Release Year
+                {t("songs.releaseYear")}
               </Label>
               <Input
                 id="songReleaseYear"
@@ -297,7 +299,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           )}
         </FormRow>
 
-        <SectionDivider>Musical Details</SectionDivider>
+        <SectionDivider>{t("songs.musicalDetails")}</SectionDivider>
 
         <FormRow>
           <FormGroup>
@@ -502,18 +504,18 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
 
         <FormActions>
           <CancelButton type="button" onClick={() => setIsExpanded(false)} disabled={isSubmitting}>
-            Cancel
+            {t("common.cancel")}
           </CancelButton>
           <SubmitButton type="submit" disabled={!formData.title.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Spinner />
-                Saving...
+                {t("common.saving")}
               </>
             ) : (
               <>
                 <i className="bi bi-check-circle"></i>
-                Save Song
+                {t("songs.saveSong")}
               </>
             )}
           </SubmitButton>
