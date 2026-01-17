@@ -5,6 +5,7 @@ import { ThemeProvider } from "styled-components";
 import { BrowserRouter } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import "./styles/design-tokens.css";
 import theme from "./theme";
 import { registerSW } from 'virtual:pwa-register';
 import './i18n';
