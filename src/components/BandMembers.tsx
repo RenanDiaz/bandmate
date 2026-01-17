@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, onInviteClick }) => {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<BandMember[]>([]);
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,12 +60,12 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
 
   const handleRemoveMember = async (member: BandMember) => {
     if (member.role === "owner") {
-      alert("Cannot remove the band owner");
+      alert(t("bands.cannotRemoveOwner"));
       return;
     }
 
     const confirmed = window.confirm(
-      `Are you sure you want to remove ${member.email || "this member"} from the band?`
+      t("bands.confirmRemoveMember", { email: member.email || t("common.unknown") })
     );
     if (!confirmed) return;
 
@@ -73,13 +75,13 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       onMemberChange();
     } catch (error) {
       console.error("Failed to remove member:", error);
-      alert("Failed to remove member. Please try again.");
+      alert(t("bands.removeError"));
     }
   };
 
   const handleChangeRole = async (member: BandMember, newRole: BandRole) => {
     if (member.role === "owner" && newRole !== "owner") {
-      alert("Cannot change owner role. Transfer ownership instead.");
+      alert(t("bands.cannotChangeOwnerRole"));
       return;
     }
 
@@ -89,18 +91,18 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       onMemberChange();
     } catch (error) {
       console.error("Failed to update member role:", error);
-      alert("Failed to update member role. Please try again.");
+      alert(t("bands.updateRoleError"));
     }
   };
 
   const handleLeaveBand = async () => {
     if (currentMember?.role === "owner") {
-      alert("Band owners cannot leave. Transfer ownership or delete the band instead.");
+      alert(t("bands.ownerCannotLeave"));
       return;
     }
 
     const confirmed = window.confirm(
-      `Are you sure you want to leave ${band.name}? You'll need to be re-invited to rejoin.`
+      t("bands.confirmLeaveBand", { name: band.name })
     );
     if (!confirmed) return;
 
@@ -110,7 +112,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       // The parent component should handle navigation after leaving
     } catch (error) {
       console.error("Failed to leave band:", error);
-      alert("Failed to leave band. Please try again.");
+      alert(t("bands.leaveError"));
     }
   };
 
@@ -144,7 +146,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
 
   const handleRevokeInvitation = async (invitation: BandInvitation) => {
     const confirmed = window.confirm(
-      `Are you sure you want to revoke the invitation for ${invitation.email}?`
+      t("bands.confirmRevokeInvitation", { email: invitation.email })
     );
     if (!confirmed) return;
 
@@ -153,21 +155,21 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       await loadInvitations();
     } catch (error) {
       console.error("Failed to revoke invitation:", error);
-      alert("Failed to revoke invitation. Please try again.");
+      alert(t("bands.revokeError"));
     }
   };
 
   const copyInvitationLink = (invitation: BandInvitation) => {
     const link = `${window.location.origin}/invite/accept?token=${invitation.token}`;
     navigator.clipboard.writeText(link);
-    alert("Invitation link copied to clipboard!");
+    alert(t("bands.invitationCopied"));
   };
 
   if (loading) {
     return (
       <LoadingContainer>
         <Spinner color="primary" />
-        <p>Loading members...</p>
+        <p>{t("bands.loadingMembers")}</p>
       </LoadingContainer>
     );
   }
@@ -178,21 +180,21 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
         <HeaderLeft>
           <Title>
             <i className="bi bi-people"></i>
-            Band Members
+            {t("bands.bandMembers")}
           </Title>
-          <MemberCount>{members.length} {members.length === 1 ? "member" : "members"}</MemberCount>
+          <MemberCount>{t("bands.memberCount", { count: members.length })}</MemberCount>
         </HeaderLeft>
         <HeaderActions>
           {!isOwner && currentMember && (
             <LeaveButton onClick={handleLeaveBand}>
               <i className="bi bi-box-arrow-right"></i>
-              Leave Band
+              {t("bands.leaveBand")}
             </LeaveButton>
           )}
           {isOwner && (
             <InviteButton onClick={onInviteClick}>
               <i className="bi bi-person-plus"></i>
-              Invite Member
+              {t("bands.inviteMember")}
             </InviteButton>
           )}
         </HeaderActions>
@@ -209,15 +211,15 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
                 <Avatar>{getInitials(member.email)}</Avatar>
                 <MemberDetails>
                   <MemberEmail>
-                    {member.email || "Unknown"}
-                    {isCurrentUser && <YouBadge>You</YouBadge>}
+                    {member.email || t("common.unknown")}
+                    {isCurrentUser && <YouBadge>{t("common.you")}</YouBadge>}
                   </MemberEmail>
                   <MemberMeta>
-                    Joined {new Date(member.joined_at).toLocaleDateString()}
+                    {t("common.joined")} {new Date(member.joined_at).toLocaleDateString()}
                     {member.expires_at && (
                       <ExpiryNotice>
                         <i className="bi bi-clock"></i>
-                        Expires {new Date(member.expires_at).toLocaleDateString()}
+                        {t("common.expires")} {new Date(member.expires_at).toLocaleDateString()}
                       </ExpiryNotice>
                     )}
                   </MemberMeta>
@@ -230,17 +232,17 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
                     value={member.role}
                     onChange={(e) => handleChangeRole(member, e.target.value as BandRole)}
                   >
-                    <option value="member">Member</option>
-                    <option value="guest">Guest</option>
+                    <option value="member">{t("bands.member")}</option>
+                    <option value="guest">{t("bands.guest")}</option>
                   </RoleSelect>
                 ) : (
                   <RoleBadge $bg={roleColors.bg} $text={roleColors.text} $border={roleColors.border}>
-                    {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    {t(`bands.${member.role}`)}
                   </RoleBadge>
                 )}
 
                 {isOwner && member.role !== "owner" && !isCurrentUser && (
-                  <RemoveButton onClick={() => handleRemoveMember(member)} title="Remove member">
+                  <RemoveButton onClick={() => handleRemoveMember(member)} title={t("bands.removeMember")}>
                     <i className="bi bi-x-lg"></i>
                   </RemoveButton>
                 )}
@@ -256,7 +258,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
           <InvitationsSection>
             <SectionTitle>
               <i className="bi bi-envelope"></i>
-              Pending Invitations ({invitations.length})
+              {t("bands.pendingInvitations")} ({invitations.length})
             </SectionTitle>
             <InvitationsList>
               {invitations.map((invitation) => {
@@ -274,31 +276,31 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
                         <InvitationMeta>
                           <span>
                             <i className="bi bi-person"></i>
-                            Invited by {invitation.inviter_name || "Unknown"}
+                            {t("bands.invitedBy")} {invitation.inviter_name || t("common.unknown")}
                           </span>
                           <RoleBadge $bg={roleColors.bg} $text={roleColors.text} $border={roleColors.border}>
-                            {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
+                            {t(`bands.${invitation.role}`)}
                           </RoleBadge>
                         </InvitationMeta>
                         <InvitationMeta>
                           <span>
                             <i className="bi bi-calendar"></i>
-                            Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                            {t("common.expires")} {new Date(invitation.expires_at).toLocaleDateString()}
                           </span>
-                          {isExpired && <ExpiredBadge>Expired</ExpiredBadge>}
+                          {isExpired && <ExpiredBadge>{t("bands.expired")}</ExpiredBadge>}
                         </InvitationMeta>
                       </InvitationDetails>
                     </InvitationInfo>
                     <InvitationActions>
                       <CopyLinkButton
                         onClick={() => copyInvitationLink(invitation)}
-                        title="Copy invitation link"
+                        title={t("bands.copyInviteLink")}
                       >
                         <i className="bi bi-link-45deg"></i>
                       </CopyLinkButton>
                       <RevokeButton
                         onClick={() => handleRevokeInvitation(invitation)}
-                        title="Revoke invitation"
+                        title={t("bands.revokeInvitation")}
                       >
                         <i className="bi bi-x-lg"></i>
                       </RevokeButton>

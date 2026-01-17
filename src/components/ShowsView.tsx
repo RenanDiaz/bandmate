@@ -2,6 +2,7 @@ import type { FC } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Spinner, Container, ButtonGroup, Button } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -22,6 +23,7 @@ type FilterType = "all" | "upcoming" | "past";
 type ViewMode = "list" | "calendar";
 
 const ShowsView: FC<Props> = ({ user, selectedBand }) => {
+  const { t } = useTranslation();
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingShow, setEditingShow] = useState<Show | null>(null);
@@ -63,7 +65,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
 
   const handleDeleteShow = async (show: Show) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${show.name}"? This action cannot be undone.`
+      t("shows.confirmDelete", { name: show.name })
     );
     if (!confirmed) return;
 
@@ -72,7 +74,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
       await loadShows();
     } catch (error) {
       console.error("Failed to delete show:", error);
-      alert("Failed to delete show. Please try again.");
+      alert(t("shows.deleteError"));
     }
   };
 
@@ -105,8 +107,8 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-lock"></i>
             </MessageIcon>
-            <MessageTitle>Authentication Required</MessageTitle>
-            <MessageText>Please sign in to view and manage your shows</MessageText>
+            <MessageTitle>{t("common.authRequired")}</MessageTitle>
+            <MessageText>{t("shows.pleaseSignIn")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -121,8 +123,8 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-calendar-event"></i>
             </MessageIcon>
-            <MessageTitle>No Band Selected</MessageTitle>
-            <MessageText>Please select a band to view and manage shows</MessageText>
+            <MessageTitle>{t("bands.noBandSelected")}</MessageTitle>
+            <MessageText>{t("shows.selectBand")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -132,8 +134,8 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   return (
     <PageWrapper>
       <SEO
-        title="Shows"
-        description="Schedule and manage your band's gigs and performances. Track upcoming shows, venue information, and link setlists to each performance."
+        title={t("shows.title")}
+        description={t("shows.subtitle")}
       />
       <Container>
         <PageHeader>
@@ -142,20 +144,20 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
               <i className="bi bi-music-note-beamed"></i>
               {selectedBand.name}
             </BandBadge>
-            <PageTitle>Shows</PageTitle>
+            <PageTitle>{t("shows.title")}</PageTitle>
             <PageSubtitle>
-              Schedule and manage your upcoming gigs and performances
+              {t("shows.subtitle")}
             </PageSubtitle>
           </HeaderContent>
           <StatsCard>
             <StatItem>
               <StatValue>{upcomingCount}</StatValue>
-              <StatLabel>Upcoming</StatLabel>
+              <StatLabel>{t("shows.upcoming")}</StatLabel>
             </StatItem>
             <StatDivider />
             <StatItem>
               <StatValue>{pastCount}</StatValue>
-              <StatLabel>Past</StatLabel>
+              <StatLabel>{t("shows.past")}</StatLabel>
             </StatItem>
           </StatsCard>
         </PageHeader>
@@ -165,25 +167,25 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
 
           <ControlsSection>
             <FilterSection>
-              <FilterLabel>Filter:</FilterLabel>
+              <FilterLabel>{t("common.filter")}:</FilterLabel>
               <ButtonGroup>
                 <FilterButton
                   $active={filter === "upcoming"}
                   onClick={() => setFilter("upcoming")}
                 >
-                  Upcoming ({upcomingCount})
+                  {t("shows.upcoming")} ({upcomingCount})
                 </FilterButton>
                 <FilterButton
                   $active={filter === "past"}
                   onClick={() => setFilter("past")}
                 >
-                  Past ({pastCount})
+                  {t("shows.past")} ({pastCount})
                 </FilterButton>
                 <FilterButton
                   $active={filter === "all"}
                   onClick={() => setFilter("all")}
                 >
-                  All ({shows.length})
+                  {t("common.all")} ({shows.length})
                 </FilterButton>
               </ButtonGroup>
             </FilterSection>
@@ -192,14 +194,14 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
               <ViewToggleButton
                 $active={viewMode === "list"}
                 onClick={() => setViewMode("list")}
-                title="List view"
+                title={t("shows.listView")}
               >
                 <i className="bi bi-list-ul"></i>
               </ViewToggleButton>
               <ViewToggleButton
                 $active={viewMode === "calendar"}
                 onClick={() => setViewMode("calendar")}
-                title="Calendar view"
+                title={t("shows.calendarView")}
               >
                 <i className="bi bi-calendar3"></i>
               </ViewToggleButton>
@@ -209,7 +211,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
           {loading ? (
             <LoadingContainer>
               <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-              <LoadingText>Loading shows...</LoadingText>
+              <LoadingText>{t("shows.loading")}</LoadingText>
             </LoadingContainer>
           ) : viewMode === "calendar" ? (
             <ShowCalendar shows={shows} onEdit={handleEditShow} />
@@ -219,14 +221,14 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
                 <i className="bi bi-calendar-event"></i>
               </EmptyIcon>
               <EmptyTitle>
-                {filter === "upcoming" ? "No upcoming shows" : filter === "past" ? "No past shows" : "No shows yet"}
+                {filter === "upcoming" ? t("shows.noUpcoming") : filter === "past" ? t("shows.noPast") : t("shows.noShows")}
               </EmptyTitle>
               <EmptyText>
                 {filter === "upcoming"
-                  ? "Create your first show above to start scheduling performances"
+                  ? t("shows.createFirst")
                   : filter === "past"
-                  ? "Your completed shows will appear here"
-                  : "Create your first show above to get started"}
+                  ? t("shows.completedShowsAppear")
+                  : t("shows.createFirstAll")}
               </EmptyText>
             </EmptyState>
           ) : (

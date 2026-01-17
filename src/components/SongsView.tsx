@@ -4,6 +4,7 @@ import type { Song } from "../services/songsService";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const SongsView: FC<Props> = ({ user, selectedBand }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
 
   const handleDeleteSong = async (song: Song) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${song.title}"? This action cannot be undone.`
+      t("songs.confirmDelete", { title: song.title })
     );
     if (!confirmed) return;
 
@@ -93,7 +95,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       await loadSongs();
     } catch (error) {
       console.error("Failed to delete song:", error);
-      alert("Failed to delete song. Please try again.");
+      alert(t("songs.deleteError"));
     }
   };
 
@@ -105,8 +107,8 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-lock"></i>
             </MessageIcon>
-            <MessageTitle>Authentication Required</MessageTitle>
-            <MessageText>Please sign in to view and manage your songs</MessageText>
+            <MessageTitle>{t("common.authRequired")}</MessageTitle>
+            <MessageText>{t("songs.pleaseSignIn")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -121,8 +123,8 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-music-note-beamed"></i>
             </MessageIcon>
-            <MessageTitle>No Band Selected</MessageTitle>
-            <MessageText>Please select a band to view and manage songs</MessageText>
+            <MessageTitle>{t("bands.noBandSelected")}</MessageTitle>
+            <MessageText>{t("songs.selectBand")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -132,8 +134,8 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   return (
     <PageWrapper>
       <SEO
-        title="Songs"
-        description={`Manage your band's song library. View, edit, and organize songs with lyrics, chords, keys, and tempo information.`}
+        title={t("songs.title")}
+        description={t("songs.subtitle")}
       />
       <Container>
         <PageHeader>
@@ -142,27 +144,27 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
               <i className="bi bi-music-note-beamed"></i>
               {selectedBand.name}
             </BandBadge>
-            <PageTitle>Song Library</PageTitle>
+            <PageTitle>{t("songs.songLibrary")}</PageTitle>
             <PageSubtitle>
-              Manage all your songs with lyrics, chords, and metadata
+              {t("songs.subtitle")}
             </PageSubtitle>
           </HeaderContent>
           <HeaderActions>
             <StatsCard>
               <StatItem>
                 <StatValue>{songs.length}</StatValue>
-                <StatLabel>Songs</StatLabel>
+                <StatLabel>{t("songs.title")}</StatLabel>
               </StatItem>
             </StatsCard>
             <ActionButtons>
               <ActionButton onClick={() => setIsImportModalOpen(true)}>
                 <i className="bi bi-file-earmark-arrow-up"></i>
-                Import CSV
+                {t("songs.importCsv")}
               </ActionButton>
               {songs.length > 0 && (
                 <ActionButton onClick={() => navigate("/songs/print")}>
                   <i className="bi bi-printer"></i>
-                  Print Songbook
+                  {t("songs.printSongbook")}
                 </ActionButton>
               )}
             </ActionButtons>
@@ -175,16 +177,16 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
           {loading ? (
             <LoadingContainer>
               <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} />
-              <LoadingText>Loading songs...</LoadingText>
+              <LoadingText>{t("common.loading")}</LoadingText>
             </LoadingContainer>
           ) : songs.length === 0 ? (
             <EmptyState>
               <EmptyIcon>
                 <i className="bi bi-music-note-list"></i>
               </EmptyIcon>
-              <EmptyTitle>No songs yet</EmptyTitle>
+              <EmptyTitle>{t("songs.noSongs")}</EmptyTitle>
               <EmptyText>
-                Add your first song above to start building your repertoire
+                {t("songs.addFirstSong")}
               </EmptyText>
             </EmptyState>
           ) : (
@@ -205,9 +207,9 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                   <EmptyIcon>
                     <i className="bi bi-search"></i>
                   </EmptyIcon>
-                  <EmptyTitle>No songs found</EmptyTitle>
+                  <EmptyTitle>{t("songs.noSongsFound")}</EmptyTitle>
                   <EmptyText>
-                    Try adjusting your search or filters to find what you're looking for
+                    {t("songs.noSongsFoundDesc")}
                   </EmptyText>
                 </EmptyState>
               ) : (

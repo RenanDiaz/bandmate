@@ -2,6 +2,7 @@ import type { FC } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
+  const { t } = useTranslation();
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
 
   const handleDeleteSetlist = async (setlist: Setlist) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${setlist.name}"? This action cannot be undone.`
+      t("setlists.confirmDelete", { name: setlist.name })
     );
     if (!confirmed) return;
 
@@ -58,7 +60,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
       await loadSetlists();
     } catch (error) {
       console.error("Failed to delete setlist:", error);
-      alert("Failed to delete setlist. Please try again.");
+      alert(t("setlists.deleteError"));
     }
   };
 
@@ -70,8 +72,8 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-lock"></i>
             </MessageIcon>
-            <MessageTitle>Authentication Required</MessageTitle>
-            <MessageText>Please sign in to view and manage your setlists</MessageText>
+            <MessageTitle>{t("common.authRequired")}</MessageTitle>
+            <MessageText>{t("setlists.pleaseSignIn")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -86,8 +88,8 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
             <MessageIcon>
               <i className="bi bi-music-note-list"></i>
             </MessageIcon>
-            <MessageTitle>No Band Selected</MessageTitle>
-            <MessageText>Please select a band to view and manage setlists</MessageText>
+            <MessageTitle>{t("bands.noBandSelected")}</MessageTitle>
+            <MessageText>{t("setlists.selectBand")}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -97,8 +99,8 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   return (
     <PageWrapper>
       <SEO
-        title="Setlists"
-        description="Create and manage setlists for performances and rehearsals. Organize songs with drag-and-drop, add notes, and link setlists to shows."
+        title={t("setlists.title")}
+        description={t("setlists.subtitle")}
       />
       <Container>
         <PageHeader>
@@ -107,15 +109,15 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
               <i className="bi bi-music-note-beamed"></i>
               {selectedBand.name}
             </BandBadge>
-            <PageTitle>Setlists</PageTitle>
+            <PageTitle>{t("setlists.title")}</PageTitle>
             <PageSubtitle>
-              Organize your songs for performances and practice sessions
+              {t("setlists.subtitle")}
             </PageSubtitle>
           </HeaderContent>
           <StatsCard>
             <StatItem>
               <StatValue>{setlists.length}</StatValue>
-              <StatLabel>Setlists</StatLabel>
+              <StatLabel>{t("setlists.title")}</StatLabel>
             </StatItem>
           </StatsCard>
         </PageHeader>
@@ -126,16 +128,16 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
           {loading ? (
             <LoadingContainer>
               <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-              <LoadingText>Loading setlists...</LoadingText>
+              <LoadingText>{t("setlists.loading")}</LoadingText>
             </LoadingContainer>
           ) : setlists.length === 0 ? (
             <EmptyState>
               <EmptyIcon>
                 <i className="bi bi-music-note-list"></i>
               </EmptyIcon>
-              <EmptyTitle>No setlists yet</EmptyTitle>
+              <EmptyTitle>{t("setlists.noSetlists")}</EmptyTitle>
               <EmptyText>
-                Create your first setlist above to organize songs for your next performance
+                {t("setlists.createFirst")}
               </EmptyText>
             </EmptyState>
           ) : (
