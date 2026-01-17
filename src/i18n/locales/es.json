@@ -95,6 +95,10 @@
     "tomorrow": "Mañana",
     "inDays": "En {{count}} días",
     "inWeeks": "En {{count}} semanas",
+    "inWeekAndDays_one": "En 1 semana y {{days}} día",
+    "inWeekAndDays_other": "En 1 semana y {{days}} días",
+    "inWeeksAndDays_one": "En {{weeks}} semanas y {{days}} día",
+    "inWeeksAndDays_other": "En {{weeks}} semanas y {{days}} días",
     "at": "a las"
   },
   "features": {

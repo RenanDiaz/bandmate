@@ -65,8 +65,15 @@ const getDaysUntil = (eventDate: string): string => {
   if (diffDays === 1) return "Tomorrow";
   if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
   if (diffDays <= 7) return `In ${diffDays} days`;
-  if (diffDays <= 30) return `In ${Math.ceil(diffDays / 7)} weeks`;
-  return `In ${Math.ceil(diffDays / 30)} months`;
+
+  const weeks = Math.floor(diffDays / 7);
+  const remainingDays = diffDays % 7;
+
+  if (remainingDays === 0) {
+    return `In ${weeks} week${weeks > 1 ? "s" : ""}`;
+  }
+
+  return `In ${weeks} week${weeks > 1 ? "s" : ""} and ${remainingDays} day${remainingDays > 1 ? "s" : ""}`;
 };
 
 // Individual show card component to manage its own dropdown state
