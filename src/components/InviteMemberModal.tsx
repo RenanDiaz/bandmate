@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Exclude<BandRole, "owner">>("member");
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +27,7 @@ export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose
     e.preventDefault();
 
     if (!email.trim()) {
-      alert("Please enter an email address");
+      alert(t('bands.enterEmail'));
       return;
     }
 
@@ -57,7 +59,7 @@ export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose
         <ModalHeader>
           <Title>
             <i className="bi bi-person-plus"></i>
-            Invite Member to {bandName}
+            {t('bands.inviteMemberTo', { bandName })}
           </Title>
           <CloseButton onClick={onClose}>
             <i className="bi bi-x"></i>
@@ -66,40 +68,40 @@ export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose
 
         <Form onSubmit={handleSubmit}>
           <FormGroup>
-            <Label>Email Address</Label>
+            <Label>{t('bands.emailAddress')}</Label>
             <Input
               type="email"
-              placeholder="member@example.com"
+              placeholder={t('bands.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
               required
             />
-            <HelperText>They'll receive an invitation to join this band</HelperText>
+            <HelperText>{t('bands.emailHint')}</HelperText>
           </FormGroup>
 
           <FormGroup>
-            <Label>Role</Label>
+            <Label>{t('bands.role')}</Label>
             <Select value={role} onChange={(e) => setRole(e.target.value as Exclude<BandRole, "owner">)} disabled={submitting}>
-              <option value="member">Member - Full access to songs and setlists</option>
-              <option value="guest">Guest - Limited access (30 day expiry)</option>
+              <option value="member">{t('bands.roleMemberDesc')}</option>
+              <option value="guest">{t('bands.roleGuestDesc')}</option>
             </Select>
           </FormGroup>
 
           <Actions>
             <CancelButton type="button" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('common.cancel')}
             </CancelButton>
             <SubmitButton type="submit" disabled={submitting}>
               {submitting ? (
                 <>
                   <Spinner size="sm" />
-                  Sending...
+                  {t('common.sending')}
                 </>
               ) : (
                 <>
                   <i className="bi bi-send"></i>
-                  Send Invitation
+                  {t('bands.sendInvitation')}
                 </>
               )}
             </SubmitButton>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createSetlist, type CreateSetlistInput } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -35,7 +37,7 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       onSetlistCreated();
     } catch (error) {
       console.error("Failed to create setlist:", error);
-      alert("Failed to create setlist. Please try again.");
+      alert(t('setlists.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -45,7 +47,7 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
     return (
       <ExpandButton onClick={() => setIsExpanded(true)}>
         <i className="bi bi-plus-circle"></i>
-        Create New Setlist
+        {t('setlists.createNewSetlist')}
       </ExpandButton>
     );
   }
@@ -55,12 +57,12 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       <FormHeader>
         <FormTitle>
           <i className="bi bi-plus-circle"></i>
-          Create New Setlist
+          {t('setlists.createNewSetlist')}
         </FormTitle>
         <CloseButton
           onClick={() => setIsExpanded(false)}
           type="button"
-          aria-label="Close form"
+          aria-label={t('common.closeForm')}
         >
           <i className="bi bi-x"></i>
         </CloseButton>
@@ -69,11 +71,11 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       <Form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="setlistName">
-            Setlist Name <Required>*</Required>
+            {t('setlists.setlistName')} <Required>*</Required>
           </Label>
           <Input
             id="setlistName"
-            placeholder="e.g., Summer Festival 2025"
+            placeholder={t('setlists.placeholders.name')}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -85,12 +87,12 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
         <FormGroup>
           <Label htmlFor="setlistDescription">
             <i className="bi bi-card-text"></i>
-            Description / Notes
+            {t('setlists.descriptionNotes')}
           </Label>
           <TextArea
             id="setlistDescription"
             rows={3}
-            placeholder="Add notes about this setlist..."
+            placeholder={t('setlists.placeholders.description')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             disabled={isSubmitting}
@@ -99,18 +101,18 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
 
         <FormActions>
           <CancelButton type="button" onClick={() => setIsExpanded(false)} disabled={isSubmitting}>
-            Cancel
+            {t('common.cancel')}
           </CancelButton>
           <SubmitButton type="submit" disabled={!formData.name.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Spinner />
-                Creating...
+                {t('common.creating')}
               </>
             ) : (
               <>
                 <i className="bi bi-check-circle"></i>
-                Create Setlist
+                {t('setlists.addSetlist')}
               </>
             )}
           </SubmitButton>

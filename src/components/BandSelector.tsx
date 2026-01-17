@@ -49,7 +49,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       if (e instanceof Error) {
         setError(e.message);
       } else {
-        setError("An unexpected error occurred.");
+        setError(t('common.error'));
       }
     }
     setLoading(false);
@@ -72,9 +72,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadBands();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(`Failed to create band: ${e.message}`);
+        alert(`${t('bands.createError')}: ${e.message}`);
       } else {
-        alert("Failed to create band. Please try again.");
+        alert(t('bands.createError'));
       }
     }
   };
@@ -109,9 +109,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadBands();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(`Failed to delete band: ${e.message}`);
+        alert(`${t('bands.deleteError')}: ${e.message}`);
       } else {
-        alert("Failed to delete band. Please try again.");
+        alert(t('bands.deleteError'));
       }
     }
   };
@@ -124,7 +124,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadBands();
     } catch (error: any) {
       console.error("Failed to accept invitation:", error);
-      alert(error.message || "Failed to accept invitation");
+      alert(error.message || t('bands.acceptInvitationError'));
     }
     setProcessingInvitationId(null);
   };
@@ -141,7 +141,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadInvitations();
     } catch (error) {
       console.error("Failed to decline invitation:", error);
-      alert("Failed to decline invitation");
+      alert(t('bands.declineInvitationError'));
     }
     setProcessingInvitationId(null);
   };
@@ -190,7 +190,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
                         </InvitationIcon>
                         <InvitationDetails>
                           <InvitationBandName>
-                            {invitation.band?.name || "Band Invitation"}
+                            {invitation.band?.name || t('bands.bandInvitation')}
                           </InvitationBandName>
                           <InvitationMeta>
                             <i className="bi bi-person"></i>

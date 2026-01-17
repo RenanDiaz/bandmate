@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { theme } from "../theme";
 
@@ -45,6 +46,7 @@ export const SongSearchFilter = ({
   resultsCount,
   totalCount,
 }: Props) => {
+  const { t } = useTranslation();
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const hasActiveFilters =
@@ -59,14 +61,14 @@ export const SongSearchFilter = ({
           </SearchIcon>
           <SearchInput
             type="text"
-            placeholder="Search songs by title or artist..."
+            placeholder={t('songs.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
           {searchQuery && (
             <ClearButton
               onClick={() => onSearchChange("")}
-              title="Clear search"
+              title={t('songs.clearSearch')}
               type="button"
             >
               <i className="bi bi-x"></i>
@@ -76,27 +78,27 @@ export const SongSearchFilter = ({
 
         <ControlsGroup>
           <SortSelect value={sortBy} onChange={(e) => onSortChange(e.target.value as SortOption)}>
-            <option value="artist_title_asc">Artist & Title (A-Z)</option>
-            <option value="title_asc">Title (A-Z)</option>
-            <option value="title_desc">Title (Z-A)</option>
-            <option value="artist_asc">Artist (A-Z)</option>
-            <option value="artist_desc">Artist (Z-A)</option>
-            <option value="date_desc">Newest First</option>
-            <option value="date_asc">Oldest First</option>
-            <option value="tempo_asc">Tempo (Slow to Fast)</option>
-            <option value="tempo_desc">Tempo (Fast to Slow)</option>
-            <option value="duration_asc">Duration (Short to Long)</option>
-            <option value="duration_desc">Duration (Long to Short)</option>
+            <option value="artist_title_asc">{t('songs.sortOptions.artistTitle')}</option>
+            <option value="title_asc">{t('songs.sortOptions.titleAsc')}</option>
+            <option value="title_desc">{t('songs.sortOptions.titleDesc')}</option>
+            <option value="artist_asc">{t('songs.sortOptions.artistAsc')}</option>
+            <option value="artist_desc">{t('songs.sortOptions.artistDesc')}</option>
+            <option value="date_desc">{t('songs.sortOptions.newestFirst')}</option>
+            <option value="date_asc">{t('songs.sortOptions.oldestFirst')}</option>
+            <option value="tempo_asc">{t('songs.sortOptions.tempoAsc')}</option>
+            <option value="tempo_desc">{t('songs.sortOptions.tempoDesc')}</option>
+            <option value="duration_asc">{t('songs.sortOptions.durationAsc')}</option>
+            <option value="duration_desc">{t('songs.sortOptions.durationDesc')}</option>
           </SortSelect>
 
           <FilterToggleButton
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
             $active={hasActiveFilters}
-            title="Toggle filters"
+            title={t('songs.toggleFilters')}
             type="button"
           >
             <i className="bi bi-funnel"></i>
-            Filters
+            {t('songs.filters')}
             {hasActiveFilters && <FilterBadge>{Object.values(filters).filter(Boolean).length}</FilterBadge>}
           </FilterToggleButton>
         </ControlsGroup>
@@ -104,7 +106,7 @@ export const SongSearchFilter = ({
 
       {isFilterExpanded && (
         <FilterPanel>
-          <FilterTitle>Filter by content</FilterTitle>
+          <FilterTitle>{t('songs.filterByContent')}</FilterTitle>
           <FilterOptions>
             <FilterCheckbox>
               <Checkbox
@@ -115,7 +117,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasChords">
                 <i className="bi bi-music-note"></i>
-                Has Chords
+                {t('songs.hasChords')}
               </CheckboxLabel>
             </FilterCheckbox>
 
@@ -128,7 +130,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasLyrics">
                 <i className="bi bi-file-text"></i>
-                Has Lyrics
+                {t('songs.hasLyrics')}
               </CheckboxLabel>
             </FilterCheckbox>
 
@@ -141,7 +143,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasKey">
                 <i className="bi bi-music-note-beamed"></i>
-                Has Key
+                {t('songs.hasKey')}
               </CheckboxLabel>
             </FilterCheckbox>
 
@@ -154,7 +156,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasTempo">
                 <i className="bi bi-speedometer2"></i>
-                Has Tempo
+                {t('songs.hasTempo')}
               </CheckboxLabel>
             </FilterCheckbox>
 
@@ -167,7 +169,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasDuration">
                 <i className="bi bi-clock"></i>
-                Has Duration
+                {t('songs.hasDuration')}
               </CheckboxLabel>
             </FilterCheckbox>
 
@@ -180,7 +182,7 @@ export const SongSearchFilter = ({
               />
               <CheckboxLabel htmlFor="hasTags">
                 <i className="bi bi-tags"></i>
-                Has Tags
+                {t('songs.hasTags')}
               </CheckboxLabel>
             </FilterCheckbox>
           </FilterOptions>
@@ -199,7 +201,7 @@ export const SongSearchFilter = ({
               }
               type="button"
             >
-              Clear all filters
+              {t('songs.clearAllFilters')}
             </ClearFiltersButton>
           )}
         </FilterPanel>
@@ -207,7 +209,7 @@ export const SongSearchFilter = ({
 
       {(searchQuery || hasActiveFilters) && (
         <ResultsInfo>
-          Showing {resultsCount} of {totalCount} songs
+          {t('songs.showingResults', { resultsCount, totalCount })}
           {searchQuery && ` matching "${searchQuery}"`}
         </ResultsInfo>
       )}

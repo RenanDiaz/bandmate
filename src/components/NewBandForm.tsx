@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { CreateBandInput } from "../services/bandsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -8,6 +9,7 @@ export const NewBandForm = ({
 }: {
   onBandCreated: (input: CreateBandInput) => void;
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<CreateBandInput>({
     name: "",
     genre: "",
@@ -33,7 +35,7 @@ export const NewBandForm = ({
     return (
       <ExpandButton onClick={() => setIsExpanded(true)}>
         <i className="bi bi-plus-circle"></i>
-        Create New Band
+        {t('bands.createBand')}
       </ExpandButton>
     );
   }
@@ -43,12 +45,12 @@ export const NewBandForm = ({
       <FormHeader>
         <FormTitle>
           <i className="bi bi-plus-circle"></i>
-          Create New Band
+          {t('bands.createBand')}
         </FormTitle>
         <CloseButton
           onClick={() => setIsExpanded(false)}
           type="button"
-          aria-label="Close form"
+          aria-label={t('common.closeForm')}
         >
           <i className="bi bi-x"></i>
         </CloseButton>
@@ -57,11 +59,11 @@ export const NewBandForm = ({
       <Form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="newBandName">
-            Band Name <Required>*</Required>
+            {t('bands.bandName')} <Required>*</Required>
           </Label>
           <Input
             id="newBandName"
-            placeholder="Enter your band name"
+            placeholder={t('bands.placeholders.name')}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -70,34 +72,34 @@ export const NewBandForm = ({
         </FormGroup>
 
         <FormGroup>
-          <Label htmlFor="newBandGenre">Genre</Label>
+          <Label htmlFor="newBandGenre">{t('bands.genre')}</Label>
           <Input
             id="newBandGenre"
-            placeholder="e.g., Rock, Jazz, Pop, Blues"
+            placeholder={t('bands.placeholders.genre')}
             value={formData.genre}
             onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
           />
         </FormGroup>
 
         <FormGroup>
-          <Label htmlFor="newBandDescription">Description</Label>
+          <Label htmlFor="newBandDescription">{t('bands.description')}</Label>
           <TextArea
             id="newBandDescription"
             rows={3}
-            placeholder="Tell us about your band..."
+            placeholder={t('bands.placeholders.description')}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           />
-          <HelperText>Optional: Add details about your band's style or mission</HelperText>
+          <HelperText>{t('bands.descriptionHint')}</HelperText>
         </FormGroup>
 
         <FormActions>
           <CancelButton type="button" onClick={() => setIsExpanded(false)}>
-            Cancel
+            {t('common.cancel')}
           </CancelButton>
           <SubmitButton type="submit" disabled={!formData.name.trim()}>
             <i className="bi bi-check-circle"></i>
-            Create Band
+            {t('bands.createBand')}
           </SubmitButton>
         </FormActions>
       </Form>

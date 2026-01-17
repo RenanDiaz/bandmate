@@ -1,5 +1,6 @@
 import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { Setlist } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -25,6 +26,7 @@ const SetlistCardItem: FC<{
 }> = ({ setlist, onDelete, onView, onPerform, onEditSongs }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+  const { t } = useTranslation();
 
   const songCount = setlist.songs?.length || 0;
 
@@ -40,7 +42,7 @@ const SetlistCardItem: FC<{
           <MetadataRow>
             <MetadataBadge>
               <i className="bi bi-music-note-beamed"></i>
-              {songCount} {songCount === 1 ? "song" : "songs"}
+              {t('setlists.songCount', { count: songCount })}
             </MetadataBadge>
           </MetadataRow>
         </SetlistInfo>
@@ -52,7 +54,7 @@ const SetlistCardItem: FC<{
               e.stopPropagation();
               onPerform(setlist.id);
             }}
-            title="Start performance mode"
+            title={t('setlists.performTooltip')}
             $variant="perform"
             disabled={songCount === 0}
           >
@@ -63,7 +65,7 @@ const SetlistCardItem: FC<{
               e.stopPropagation();
               onEditSongs(setlist.id);
             }}
-            title="Edit setlist"
+            title={t('setlists.editSetlistTooltip')}
             $variant="edit"
           >
             <i className="bi bi-pencil"></i>
@@ -73,7 +75,7 @@ const SetlistCardItem: FC<{
               e.stopPropagation();
               onDelete(setlist);
             }}
-            title="Delete setlist"
+            title={t('setlists.deleteSetlistTooltip')}
             $variant="delete"
           >
             <i className="bi bi-trash"></i>
@@ -94,20 +96,20 @@ const SetlistCardItem: FC<{
                 }}
                 disabled={songCount === 0}
               >
-                <i className="bi bi-play-circle me-2 text-success"></i> Perform
+                <i className="bi bi-play-circle me-2 text-success"></i> {t('setlists.perform')}
               </DropdownItem>
               <DropdownItem onClick={(e) => {
                 e.stopPropagation();
                 onEditSongs(setlist.id);
               }}>
-                <i className="bi bi-pencil me-2"></i> Edit
+                <i className="bi bi-pencil me-2"></i> {t('common.edit')}
               </DropdownItem>
               <DropdownItem divider />
               <DropdownItem onClick={(e) => {
                 e.stopPropagation();
                 onDelete(setlist);
               }} className="text-danger">
-                <i className="bi bi-trash me-2"></i> Delete
+                <i className="bi bi-trash me-2"></i> {t('common.delete')}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>

@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Song } from "../services/songsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -17,6 +18,7 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
 
   const toggleExpanded = (songId: string) => {
@@ -38,7 +40,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                     <i className="bi bi-music-note-beamed"></i>
                   </SongIcon>
                   {song.has_backing_tracks && (
-                    <BackingTracksBadge title="Has Backing Tracks / Sequences">
+                    <BackingTracksBadge title={t('songs.hasBackingTracksShort')}>
                       <i className="bi bi-headphones-fill"></i>
                     </BackingTracksBadge>
                   )}
@@ -46,7 +48,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
 
                 <SongInfo>
                   <SongTitle>{song.title}</SongTitle>
-                  {song.artist && <SongArtist>by {song.artist}</SongArtist>}
+                  {song.artist && <SongArtist>{t('songs.by')} {song.artist}</SongArtist>}
                   <MetadataRow>
                     {song.key && (
                       <MetadataBadge>
@@ -89,7 +91,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                     e.stopPropagation();
                     onEdit(song);
                   }}
-                  title="Edit song"
+                  title={t('songs.editSongTooltip')}
                   $variant="edit"
                 >
                   <i className="bi bi-pencil"></i>
@@ -99,7 +101,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                     e.stopPropagation();
                     onDelete(song);
                   }}
-                  title="Delete song"
+                  title={t('songs.deleteSongTooltip')}
                   $variant="delete"
                 >
                   <i className="bi bi-trash"></i>
@@ -113,7 +115,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                   <DetailsSection>
                     <DetailsLabel>
                       <i className="bi bi-music-note"></i>
-                      Chords
+                      {t('songs.chords')}
                     </DetailsLabel>
                     <ChordsContent>{song.chords}</ChordsContent>
                   </DetailsSection>
@@ -123,7 +125,7 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                   <DetailsSection>
                     <DetailsLabel>
                       <i className="bi bi-file-text"></i>
-                      Lyrics
+                      {t('songs.lyrics')}
                     </DetailsLabel>
                     <LyricsContent>{song.lyrics}</LyricsContent>
                   </DetailsSection>
