@@ -140,6 +140,7 @@
     "songTitle": "Title",
     "artist": "Artist",
     "artistPerformer": "Artist / Original Performer",
+    "by": "by",
     "album": "Album",
     "releaseYear": "Release Year",
     "key": "Key",
@@ -159,6 +160,7 @@
     "danceability": "Danceability",
     "tags": "Tags / Categories",
     "hasBackingTracks": "This song has backing tracks or sequences",
+    "hasBackingTracksShort": "Has Backing Tracks / Sequences",
     "searchSongs": "Search songs...",
     "noSongs": "No songs yet",
     "noSongsDesc": "Start building your song library",
@@ -235,7 +237,9 @@
       "durationAsc": "Duration (Short to Long)",
       "durationDesc": "Duration (Long to Short)"
     },
-    "updateError": "Failed to update song. Please try again."
+    "updateError": "Failed to update song. Please try again.",
+    "editSongTooltip": "Edit song",
+    "deleteSongTooltip": "Delete song"
   },
   "setlists": {
     "title": "Setlists",
@@ -289,7 +293,63 @@
         "section": "e.g., Set 2, Encore",
         "note": "e.g., Tune to Drop D"
       }
-    }
+    },
+    "editor": {
+      "loading": "Loading setlist editor...",
+      "notFound": "Setlist Not Found",
+      "notFoundText": "The requested setlist could not be found.",
+      "saveSetlist": "Save Setlist",
+      "songLibrary": "Song Library",
+      "available": "available",
+      "searchSongs": "Search songs...",
+      "noSongsMatch": "No songs match your search",
+      "allSongsAdded": "All songs added to setlist",
+      "noSongsInLibrary": "No songs in library",
+      "addToSetlist": "Add to setlist",
+      "item": "item",
+      "items": "items",
+      "noSongsInSetlist": "No songs in setlist",
+      "addSongsHint": "Add songs from the library on the left",
+      "addNotesPlaceholder": "Add notes for this song...",
+      "removeFromSetlist": "Remove from setlist",
+      "loadError": "Failed to load setlist. Please try again.",
+      "saveError": "Failed to save setlist. Please try again."
+    },
+    "detail": {
+      "loading": "Loading setlist...",
+      "notFound": "Setlist Not Found",
+      "notFoundText": "The setlist you're looking for doesn't exist or has been deleted.",
+      "backToSetlists": "Back to Setlists",
+      "reorder": "Reorder",
+      "saveOrder": "Save Order",
+      "startPerformance": "Start Performance",
+      "noSongsYet": "No Songs Yet",
+      "noSongsYetText": "This setlist doesn't have any songs. Click \"Edit Setlist\" to add songs.",
+      "reorderHint": "Drag songs to reorder. Click \"Save Order\" when done.",
+      "saveOrderError": "Failed to save order. Please try again.",
+      "loadError": "Failed to load setlist. Please try again."
+    },
+    "export": {
+      "title": "Export Setlist Options",
+      "setlistInfo": "Setlist Information",
+      "includeDescription": "Include description",
+      "noDescription": "(no description)",
+      "includeSongCount": "Include song count",
+      "includeTotalDuration": "Include total duration",
+      "noDurations": "(no durations)",
+      "songDetails": "Song Details",
+      "includeArtist": "Include artist names",
+      "includeKey": "Include song keys",
+      "includeTempo": "Include tempo (BPM)",
+      "includeDuration": "Include song durations",
+      "includeNotes": "Include song notes"
+    },
+    "performTooltip": "Start performance mode",
+    "editSetlistTooltip": "Edit setlist",
+    "deleteSetlistTooltip": "Delete setlist",
+    "perform": "Perform",
+    "songCount": "{{count}} song",
+    "songCount_plural": "{{count}} songs"
   },
   "shows": {
     "title": "Shows",
@@ -345,7 +405,26 @@
       "venueAddress": "e.g., 123 Music St, New York, NY",
       "notes": "e.g., Outdoor stage, bring extra cables",
       "notesDetailed": "Load in time, contact person, parking info, etc."
-    }
+    },
+    "doors": "Doors",
+    "setlistLinked": "Setlist linked",
+    "editShowTooltip": "Edit show",
+    "markCompleted": "Mark as completed",
+    "cancelShowTooltip": "Cancel show",
+    "cancelShow": "Cancel show",
+    "deleteShowTooltip": "Delete show",
+    "markCompletedAction": "Mark completed",
+    "updateStatusError": "Failed to update show status. Please try again.",
+    "cancelConfirm": "Are you sure you want to cancel \"{{name}}\"?",
+    "cancelError": "Failed to cancel show. Please try again.",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "daysAgo": "{{count}} days ago",
+    "inDays": "In {{count}} days",
+    "inWeeks": "In {{count}} week",
+    "inWeeks_plural": "In {{count}} weeks",
+    "inWeeksDays": "In {{weeks}} week and {{days}} day",
+    "inWeeksDays_plural": "In {{weeks}} weeks and {{days}} days"
   },
   "bands": {
     "title": "Bands",
@@ -413,12 +492,24 @@
     "notFoundOrNoAccess": "Band not found or you don't have access",
     "loadError": "Failed to load band",
     "updateError": "Failed to update band. Please try again.",
+    "createError": "Failed to create band. Please try again.",
+    "deleteError": "Failed to delete band. Please try again.",
+    "acceptInvitationError": "Failed to accept invitation",
+    "declineInvitationError": "Failed to decline invitation",
+    "bandInvitation": "Band Invitation",
     "descriptionHint": "Optional: Add details about your band's style or mission",
     "placeholders": {
       "name": "e.g., The Rockers",
       "genre": "e.g., Rock, Jazz, Pop",
       "description": "Tell us about your band..."
-    }
+    },
+    "selected": "Selected",
+    "settingsTooltip": "Band settings and members",
+    "editBandTooltip": "Edit band",
+    "deleteBandTooltip": "Delete band",
+    "manageBandAriaLabel": "Manage {{name}}",
+    "editBandAriaLabel": "Edit {{name}}",
+    "deleteBandAriaLabel": "Delete {{name}}"
   },
   "invitations": {
     "title": "Invitation",

@@ -49,6 +49,7 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
   onUpdateNotes,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -82,7 +83,7 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
           {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
         </SongMetadata>
         <NotesInput
-          placeholder="Add notes for this song..."
+          placeholder={t('setlists.editor.addNotesPlaceholder')}
           value={setlistSong.notes || ""}
           onChange={(e) => onUpdateNotes(index, e.target.value)}
         />
@@ -90,7 +91,7 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
       <SongActions>
         <ActionButton
           onClick={() => onRemove(index)}
-          title="Remove from setlist"
+          title={t('setlists.editor.removeFromSetlist')}
           $variant="delete"
         >
           <i className="bi bi-trash"></i>
@@ -261,7 +262,7 @@ const SetlistEditor: FC = () => {
         setAvailableSongs(songsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        alert("Failed to load setlist. Please try again.");
+        alert(t('setlists.editor.loadError'));
         navigate("/setlists");
       }
       setLoading(false);
@@ -281,7 +282,7 @@ const SetlistEditor: FC = () => {
       navigate("/setlists");
     } catch (error) {
       console.error("Failed to save setlist:", error);
-      alert("Failed to save setlist. Please try again.");
+      alert(t('setlists.editor.saveError'));
     }
     setSaving(false);
   };
@@ -460,7 +461,7 @@ const SetlistEditor: FC = () => {
         <Container>
           <LoadingContainer>
             <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-            <LoadingText>Loading setlist editor...</LoadingText>
+            <LoadingText>{t('setlists.editor.loading')}</LoadingText>
           </LoadingContainer>
         </Container>
       </PageWrapper>
@@ -475,8 +476,8 @@ const SetlistEditor: FC = () => {
             <MessageIcon>
               <i className="bi bi-exclamation-triangle"></i>
             </MessageIcon>
-            <MessageTitle>Setlist Not Found</MessageTitle>
-            <MessageText>The requested setlist could not be found.</MessageText>
+            <MessageTitle>{t('setlists.editor.notFound')}</MessageTitle>
+            <MessageText>{t('setlists.editor.notFoundText')}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -499,18 +500,18 @@ const SetlistEditor: FC = () => {
           </HeaderLeft>
           <HeaderActions>
             <CancelButton onClick={() => navigate("/setlists")} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </CancelButton>
             <SaveButton onClick={handleSave} disabled={saving}>
               {saving ? (
                 <>
                   <Spinner size="sm" style={{ marginRight: "8px" }} />
-                  Saving...
+                  {t('common.saving')}
                 </>
               ) : (
                 <>
                   <i className="bi bi-check-circle"></i>
-                  Save Setlist
+                  {t('setlists.editor.saveSetlist')}
                 </>
               )}
             </SaveButton>
@@ -522,16 +523,16 @@ const SetlistEditor: FC = () => {
             <PanelHeader>
               <PanelTitle>
                 <i className="bi bi-music-note-beamed"></i>
-                Song Library
+                {t('setlists.editor.songLibrary')}
               </PanelTitle>
-              <PanelStats>{filteredAvailableSongs.length} available</PanelStats>
+              <PanelStats>{filteredAvailableSongs.length} {t('setlists.editor.available')}</PanelStats>
             </PanelHeader>
 
             <SearchBox>
               <i className="bi bi-search"></i>
               <SearchInput
                 type="text"
-                placeholder="Search songs..."
+                placeholder={t('setlists.editor.searchSongs')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -541,10 +542,10 @@ const SetlistEditor: FC = () => {
               {filteredAvailableSongs.length === 0 ? (
                 <EmptyMessage>
                   {searchQuery
-                    ? "No songs match your search"
+                    ? t('setlists.editor.noSongsMatch')
                     : songItemsInSetlist.length === availableSongs.length
-                    ? "All songs added to setlist"
-                    : "No songs in library"}
+                    ? t('setlists.editor.allSongsAdded')
+                    : t('setlists.editor.noSongsInLibrary')}
                 </EmptyMessage>
               ) : (
                 filteredAvailableSongs.map((song) => (
@@ -560,7 +561,7 @@ const SetlistEditor: FC = () => {
                     </SongInfo>
                     <AddButton
                       onClick={() => handleAddSong(song)}
-                      title="Add to setlist"
+                      title={t('setlists.editor.addToSetlist')}
                     >
                       <i className="bi bi-plus-circle"></i>
                     </AddButton>
@@ -574,11 +575,11 @@ const SetlistEditor: FC = () => {
             <PanelHeader>
               <PanelTitle>
                 <i className="bi bi-music-note-list"></i>
-                Setlist
+                {t('setlists.title')}
               </PanelTitle>
               <PanelStats>
                 {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
-                {specialItemCount > 0 && <> · {specialItemCount} {specialItemCount === 1 ? "item" : "items"}</>}
+                {specialItemCount > 0 && <> · {specialItemCount} {specialItemCount === 1 ? t("setlists.editor.item") : t("setlists.editor.items")}</>}
                 {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
               </PanelStats>
             </PanelHeader>
@@ -616,8 +617,8 @@ const SetlistEditor: FC = () => {
                   <EmptyIcon>
                     <i className="bi bi-music-note-list"></i>
                   </EmptyIcon>
-                  <EmptyTitle>No songs in setlist</EmptyTitle>
-                  <EmptyText>Add songs from the library on the left</EmptyText>
+                  <EmptyTitle>{t('setlists.editor.noSongsInSetlist')}</EmptyTitle>
+                  <EmptyText>{t('setlists.editor.addSongsHint')}</EmptyText>
                 </EmptyState>
               ) : (
                 <DndContext

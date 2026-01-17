@@ -235,7 +235,11 @@
       "durationAsc": "Duración (Corta a Larga)",
       "durationDesc": "Duración (Larga a Corta)"
     },
-    "updateError": "Error al actualizar la canción. Por favor intenta de nuevo."
+    "updateError": "Error al actualizar la canción. Por favor intenta de nuevo.",
+    "by": "por",
+    "hasBackingTracksShort": "Tiene Pistas de Acompañamiento / Secuencias",
+    "editSongTooltip": "Editar canción",
+    "deleteSongTooltip": "Eliminar canción"
   },
   "setlists": {
     "title": "Setlists",
@@ -289,7 +293,63 @@
         "section": "ej., Set 2, Encore",
         "note": "ej., Afinar a Drop D"
       }
-    }
+    },
+    "editor": {
+      "loading": "Cargando editor de setlist...",
+      "notFound": "Setlist No Encontrado",
+      "notFoundText": "No se pudo encontrar el setlist solicitado.",
+      "saveSetlist": "Guardar Setlist",
+      "songLibrary": "Biblioteca de Canciones",
+      "available": "disponibles",
+      "searchSongs": "Buscar canciones...",
+      "noSongsMatch": "Ninguna canción coincide con tu búsqueda",
+      "allSongsAdded": "Todas las canciones agregadas al setlist",
+      "noSongsInLibrary": "Sin canciones en la biblioteca",
+      "addToSetlist": "Agregar al setlist",
+      "item": "item",
+      "items": "items",
+      "noSongsInSetlist": "Sin canciones en el setlist",
+      "addSongsHint": "Agrega canciones de la biblioteca a la izquierda",
+      "addNotesPlaceholder": "Agregar notas para esta canción...",
+      "removeFromSetlist": "Quitar del setlist",
+      "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
+      "saveError": "Error al guardar el setlist. Por favor intenta de nuevo."
+    },
+    "detail": {
+      "loading": "Cargando setlist...",
+      "notFound": "Setlist No Encontrado",
+      "notFoundText": "El setlist que buscas no existe o ha sido eliminado.",
+      "backToSetlists": "Volver a Setlists",
+      "reorder": "Reordenar",
+      "saveOrder": "Guardar Orden",
+      "startPerformance": "Iniciar Presentación",
+      "noSongsYet": "Sin Canciones Aún",
+      "noSongsYetText": "Este setlist no tiene canciones. Haz clic en \"Editar Setlist\" para agregar canciones.",
+      "reorderHint": "Arrastra las canciones para reordenar. Haz clic en \"Guardar Orden\" cuando termines.",
+      "saveOrderError": "Error al guardar el orden. Por favor intenta de nuevo.",
+      "loadError": "Error al cargar el setlist. Por favor intenta de nuevo."
+    },
+    "export": {
+      "title": "Opciones de Exportación del Setlist",
+      "setlistInfo": "Información del Setlist",
+      "includeDescription": "Incluir descripción",
+      "noDescription": "(sin descripción)",
+      "includeSongCount": "Incluir cantidad de canciones",
+      "includeTotalDuration": "Incluir duración total",
+      "noDurations": "(sin duraciones)",
+      "songDetails": "Detalles de Canciones",
+      "includeArtist": "Incluir nombres de artistas",
+      "includeKey": "Incluir tonalidades",
+      "includeTempo": "Incluir tempo (BPM)",
+      "includeDuration": "Incluir duraciones de canciones",
+      "includeNotes": "Incluir notas de canciones"
+    },
+    "performTooltip": "Iniciar modo presentación",
+    "editSetlistTooltip": "Editar setlist",
+    "deleteSetlistTooltip": "Eliminar setlist",
+    "perform": "Presentar",
+    "songCount": "{{count}} canción",
+    "songCount_plural": "{{count}} canciones"
   },
   "shows": {
     "title": "Shows",
@@ -345,7 +405,26 @@
       "venueAddress": "ej., Calle Música 123, Ciudad",
       "notes": "ej., Escenario al aire libre, traer cables extra",
       "notesDetailed": "Hora de carga, persona de contacto, estacionamiento, etc."
-    }
+    },
+    "doors": "Puertas",
+    "setlistLinked": "Setlist vinculado",
+    "editShowTooltip": "Editar show",
+    "markCompleted": "Marcar como completado",
+    "cancelShowTooltip": "Cancelar show",
+    "cancelShow": "Cancelar show",
+    "deleteShowTooltip": "Eliminar show",
+    "markCompletedAction": "Marcar completado",
+    "updateStatusError": "Error al actualizar el estado del show. Por favor intenta de nuevo.",
+    "cancelConfirm": "¿Estás seguro de que quieres cancelar \"{{name}}\"?",
+    "cancelError": "Error al cancelar el show. Por favor intenta de nuevo.",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "daysAgo": "Hace {{count}} días",
+    "inDays": "En {{count}} días",
+    "inWeeks": "En {{count}} semana",
+    "inWeeks_plural": "En {{count}} semanas",
+    "inWeeksDays": "En {{weeks}} semana y {{days}} día",
+    "inWeeksDays_plural": "En {{weeks}} semanas y {{days}} días"
   },
   "bands": {
     "title": "Bandas",
@@ -413,12 +492,24 @@
     "notFoundOrNoAccess": "Banda no encontrada o no tienes acceso",
     "loadError": "Error al cargar la banda",
     "updateError": "Error al actualizar la banda. Por favor intenta de nuevo.",
+    "createError": "Error al crear la banda. Por favor intenta de nuevo.",
+    "deleteError": "Error al eliminar la banda. Por favor intenta de nuevo.",
+    "acceptInvitationError": "Error al aceptar la invitación",
+    "declineInvitationError": "Error al rechazar la invitación",
+    "bandInvitation": "Invitación de Banda",
     "descriptionHint": "Opcional: Agrega detalles sobre el estilo o misión de tu banda",
     "placeholders": {
       "name": "ej., Los Rockeros",
       "genre": "ej., Rock, Jazz, Pop",
       "description": "Cuéntanos sobre tu banda..."
-    }
+    },
+    "selected": "Seleccionada",
+    "settingsTooltip": "Configuración y miembros de la banda",
+    "editBandTooltip": "Editar banda",
+    "deleteBandTooltip": "Eliminar banda",
+    "manageBandAriaLabel": "Administrar {{name}}",
+    "editBandAriaLabel": "Editar {{name}}",
+    "deleteBandAriaLabel": "Eliminar {{name}}"
   },
   "invitations": {
     "title": "Invitación",

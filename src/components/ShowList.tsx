@@ -1,5 +1,6 @@
 import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { Show } from "../services/showsService";
 import { markShowCompleted, markShowCancelled } from "../services/showsService";
 import styled from "styled-components";
@@ -46,36 +47,6 @@ const getStatusColor = (status: string, eventDate: string) => {
   return theme.colors.semantic.success;
 };
 
-const getStatusLabel = (status: string, eventDate: string) => {
-  const today = new Date().toISOString().split("T")[0];
-  if (status === "cancelled") return "Cancelled";
-  if (status === "completed") return "Completed";
-  if (eventDate < today) return "Past";
-  return "Upcoming";
-};
-
-const getDaysUntil = (eventDate: string): string => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const event = new Date(eventDate + "T00:00:00");
-  const diffTime = event.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
-  if (diffDays <= 7) return `In ${diffDays} days`;
-
-  const weeks = Math.floor(diffDays / 7);
-  const remainingDays = diffDays % 7;
-
-  if (remainingDays === 0) {
-    return `In ${weeks} week${weeks > 1 ? "s" : ""}`;
-  }
-
-  return `In ${weeks} week${weeks > 1 ? "s" : ""} and ${remainingDays} day${remainingDays > 1 ? "s" : ""}`;
-};
-
 // Individual show card component to manage its own dropdown state
 const ShowCardItem: FC<{
   show: Show;
@@ -85,6 +56,7 @@ const ShowCardItem: FC<{
   onMarkCompleted: (show: Show) => void;
   onMarkCancelled: (show: Show) => void;
 }> = ({ show, onEdit, onDelete, onView, onMarkCompleted, onMarkCancelled }) => {
+  const { t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
@@ -92,6 +64,35 @@ const ShowCardItem: FC<{
   const isPast = show.event_date < today;
   const isCancelled = show.status === "cancelled";
   const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
+
+  const getStatusLabel = () => {
+    if (show.status === "cancelled") return t('shows.statusCancelled');
+    if (show.status === "completed") return t('shows.statusCompleted');
+    if (show.event_date < today) return t('shows.past');
+    return t('shows.statusUpcoming');
+  };
+
+  const getDaysUntil = (): string => {
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const event = new Date(show.event_date + "T00:00:00");
+    const diffTime = event.getTime() - todayDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return t('shows.today');
+    if (diffDays === 1) return t('shows.tomorrow');
+    if (diffDays < 0) return t('shows.daysAgo', { count: Math.abs(diffDays) });
+    if (diffDays <= 7) return t('shows.inDays', { count: diffDays });
+
+    const weeks = Math.floor(diffDays / 7);
+    const remainingDays = diffDays % 7;
+
+    if (remainingDays === 0) {
+      return t('shows.inWeeks', { count: weeks });
+    }
+
+    return t('shows.inWeeksDays', { weeks, days: remainingDays });
+  };
 
   return (
     <ShowCard $isPast={isPast} $isCancelled={isCancelled} onClick={() => onView(show.id)} $clickable>
@@ -122,21 +123,21 @@ const ShowCardItem: FC<{
           </ShowDateTime>
           {show.doors_time && (
             <ShowDoors>
-              <i className="bi bi-door-open"></i> Doors: {formatTime(show.doors_time)}
+              <i className="bi bi-door-open"></i> {t('shows.doors')}: {formatTime(show.doors_time)}
             </ShowDoors>
           )}
           <MetadataRow>
             <StatusBadge $color={getStatusColor(show.status, show.event_date)}>
-              {getStatusLabel(show.status, show.event_date)}
+              {getStatusLabel()}
             </StatusBadge>
             {isUpcoming && (
               <CountdownBadge>
-                <i className="bi bi-clock"></i> {getDaysUntil(show.event_date)}
+                <i className="bi bi-clock"></i> {getDaysUntil()}
               </CountdownBadge>
             )}
             {show.setlist_id && (
               <SetlistBadge>
-                <i className="bi bi-music-note-list"></i> Setlist linked
+                <i className="bi bi-music-note-list"></i> {t('shows.setlistLinked')}
               </SetlistBadge>
             )}
           </MetadataRow>
@@ -149,7 +150,7 @@ const ShowCardItem: FC<{
               e.stopPropagation();
               onEdit(show);
             }}
-            title="Edit show"
+            title={t('shows.editShowTooltip')}
             $variant="edit"
           >
             <i className="bi bi-pencil"></i>
@@ -161,7 +162,7 @@ const ShowCardItem: FC<{
                   e.stopPropagation();
                   onMarkCompleted(show);
                 }}
-                title="Mark as completed"
+                title={t('shows.markCompleted')}
                 $variant="complete"
               >
                 <i className="bi bi-check-circle"></i>
@@ -171,7 +172,7 @@ const ShowCardItem: FC<{
                   e.stopPropagation();
                   onMarkCancelled(show);
                 }}
-                title="Cancel show"
+                title={t('shows.cancelShowTooltip')}
                 $variant="cancel"
               >
                 <i className="bi bi-x-circle"></i>
@@ -183,7 +184,7 @@ const ShowCardItem: FC<{
               e.stopPropagation();
               onDelete(show);
             }}
-            title="Delete show"
+            title={t('shows.deleteShowTooltip')}
             $variant="delete"
           >
             <i className="bi bi-trash"></i>
@@ -201,7 +202,7 @@ const ShowCardItem: FC<{
                 e.stopPropagation();
                 onEdit(show);
               }}>
-                <i className="bi bi-pencil me-2"></i> Edit
+                <i className="bi bi-pencil me-2"></i> {t('common.edit')}
               </DropdownItem>
               {isUpcoming && (
                 <>
@@ -209,13 +210,13 @@ const ShowCardItem: FC<{
                     e.stopPropagation();
                     onMarkCompleted(show);
                   }}>
-                    <i className="bi bi-check-circle me-2 text-success"></i> Mark completed
+                    <i className="bi bi-check-circle me-2 text-success"></i> {t('shows.markCompletedAction')}
                   </DropdownItem>
                   <DropdownItem onClick={(e) => {
                     e.stopPropagation();
                     onMarkCancelled(show);
                   }}>
-                    <i className="bi bi-x-circle me-2 text-warning"></i> Cancel show
+                    <i className="bi bi-x-circle me-2 text-warning"></i> {t('shows.cancelShow')}
                   </DropdownItem>
                 </>
               )}
@@ -224,7 +225,7 @@ const ShowCardItem: FC<{
                 e.stopPropagation();
                 onDelete(show);
               }} className="text-danger">
-                <i className="bi bi-trash me-2"></i> Delete
+                <i className="bi bi-trash me-2"></i> {t('common.delete')}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
@@ -247,6 +248,7 @@ const ShowCardItem: FC<{
 };
 
 export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleViewShow = (showId: string) => {
@@ -259,14 +261,12 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
       onReload();
     } catch (error) {
       console.error("Failed to mark show as completed:", error);
-      alert("Failed to update show status. Please try again.");
+      alert(t('shows.updateStatusError'));
     }
   };
 
   const handleMarkCancelled = async (show: Show) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to cancel "${show.name}"?`
-    );
+    const confirmed = window.confirm(t('shows.cancelConfirm', { name: show.name }));
     if (!confirmed) return;
 
     try {
@@ -274,7 +274,7 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
       onReload();
     } catch (error) {
       console.error("Failed to cancel show:", error);
-      alert("Failed to cancel show. Please try again.");
+      alert(t('shows.cancelError'));
     }
   };
 

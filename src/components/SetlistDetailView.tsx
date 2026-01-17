@@ -582,7 +582,7 @@ const SetlistDetailView: FC = () => {
     return (
       <LoadingContainer>
         <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-        <LoadingText>Loading setlist...</LoadingText>
+        <LoadingText>{t('setlists.detail.loading')}</LoadingText>
       </LoadingContainer>
     );
   }
@@ -593,11 +593,11 @@ const SetlistDetailView: FC = () => {
         <ErrorIcon>
           <i className="bi bi-exclamation-triangle"></i>
         </ErrorIcon>
-        <ErrorTitle>Setlist Not Found</ErrorTitle>
-        <ErrorText>The setlist you're looking for doesn't exist or has been deleted.</ErrorText>
+        <ErrorTitle>{t('setlists.detail.notFound')}</ErrorTitle>
+        <ErrorText>{t('setlists.detail.notFoundText')}</ErrorText>
         <BackButton onClick={() => navigate("/setlists")}>
           <i className="bi bi-arrow-left"></i>
-          Back to Setlists
+          {t('setlists.detail.backToSetlists')}
         </BackButton>
       </ErrorContainer>
     );
@@ -616,7 +616,7 @@ const SetlistDetailView: FC = () => {
           <HeaderTop>
             <BackLink onClick={() => navigate("/setlists")}>
               <i className="bi bi-arrow-left"></i>
-              Back to Setlists
+              {t('setlists.detail.backToSetlists')}
             </BackLink>
             <ActionButtons>
               {isReorderMode ? (
@@ -627,7 +627,7 @@ const SetlistDetailView: FC = () => {
                     disabled={saving}
                   >
                     <i className="bi bi-x-lg"></i>
-                    Cancel
+                    {t('common.cancel')}
                   </ActionButton>
                   <ActionButton
                     onClick={handleSaveOrder}
@@ -637,12 +637,12 @@ const SetlistDetailView: FC = () => {
                     {saving ? (
                       <>
                         <Spinner size="sm" style={{ marginRight: "8px" }} />
-                        Saving...
+                        {t('common.saving')}
                       </>
                     ) : (
                       <>
                         <i className="bi bi-check-lg"></i>
-                        Save Order
+                        {t('setlists.detail.saveOrder')}
                       </>
                     )}
                   </ActionButton>
@@ -653,35 +653,35 @@ const SetlistDetailView: FC = () => {
                     onClick={() => setIsReorderMode(true)}
                     $variant="edit"
                     disabled={songsForReorder.length < 2}
-                    title={songsForReorder.length < 2 ? "Need at least 2 songs to reorder" : "Reorder songs"}
+                    title={t('setlists.detail.reorder')}
                   >
                     <i className="bi bi-arrow-down-up"></i>
-                    Reorder
+                    {t('setlists.detail.reorder')}
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/edit`)}
                     $variant="edit"
                   >
                     <i className="bi bi-pencil"></i>
-                    Edit Setlist
+                    {t('setlists.editSetlist')}
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/print`)}
                     $variant="edit"
                     disabled={setlistItems.length === 0}
-                    title="Print setlist"
+                    title={t('setlists.print')}
                   >
                     <i className="bi bi-printer"></i>
-                    Print
+                    {t('setlists.print')}
                   </ActionButton>
                   <ActionButton
                     onClick={() => setShowExportModal(true)}
                     $variant="edit"
                     disabled={songItemsOnly.length === 0}
-                    title="Export as text file"
+                    title={t('setlists.export')}
                   >
                     <i className="bi bi-file-text"></i>
-                    Export
+                    {t('setlists.export')}
                   </ActionButton>
                   <ActionButton
                     onClick={() => setShowYouTubeModal(true)}
@@ -698,7 +698,7 @@ const SetlistDetailView: FC = () => {
                     disabled={setlistItems.length === 0}
                   >
                     <i className="bi bi-play-circle"></i>
-                    Start Performance
+                    {t('setlists.detail.startPerformance')}
                   </ActionButton>
                 </>
               )}
@@ -714,7 +714,7 @@ const SetlistDetailView: FC = () => {
           <MetadataBar>
             <MetadataItem>
               <i className="bi bi-music-note-beamed"></i>
-              {songItemsOnly.length} {songItemsOnly.length === 1 ? "song" : "songs"}
+              {songItemsOnly.length} {songItemsOnly.length === 1 ? t('setlists.items.song').toLowerCase() : t('setlists.songs').toLowerCase()}
             </MetadataItem>
             {totalDuration > 0 && (
               <MetadataItem>
@@ -728,7 +728,7 @@ const SetlistDetailView: FC = () => {
         {isReorderMode && (
           <ReorderBanner>
             <i className="bi bi-info-circle"></i>
-            Drag songs to reorder. Click "Save Order" when done.
+            {t('setlists.detail.reorderHint')}
           </ReorderBanner>
         )}
 
@@ -737,8 +737,8 @@ const SetlistDetailView: FC = () => {
             <EmptyIcon>
               <i className="bi bi-music-note-list"></i>
             </EmptyIcon>
-            <EmptyTitle>No Songs Yet</EmptyTitle>
-            <EmptyText>This setlist doesn't have any songs. Click "Edit Setlist" to add songs.</EmptyText>
+            <EmptyTitle>{t('setlists.detail.noSongsYet')}</EmptyTitle>
+            <EmptyText>{t('setlists.detail.noSongsYetText')}</EmptyText>
           </EmptyState>
         ) : isReorderMode ? (
           <SongsList>
@@ -778,7 +778,7 @@ const SetlistDetailView: FC = () => {
                       <SongPositionWrapper>
                         <SongPosition>{songNumber}</SongPosition>
                         {song.has_backing_tracks && (
-                          <BackingTracksBadge title="Has Backing Tracks / Sequences">
+                          <BackingTracksBadge title={t('songs.hasBackingTracksShort')}>
                             <i className="bi bi-headphones-fill"></i>
                           </BackingTracksBadge>
                         )}
@@ -855,12 +855,12 @@ const SetlistDetailView: FC = () => {
       {/* Export Options Modal */}
       <Modal isOpen={showExportModal} toggle={() => setShowExportModal(false)} size="lg">
         <ModalHeader toggle={() => setShowExportModal(false)}>
-          Export Setlist Options
+          {t('setlists.export.title')}
         </ModalHeader>
         <ModalBody>
           <ExportOptionsContainer>
             <OptionSection>
-              <SectionTitle>Setlist Information</SectionTitle>
+              <SectionTitle>{t('setlists.export.setlistInfo')}</SectionTitle>
               <FormGroup check>
                 <Input
                   type="checkbox"
@@ -870,8 +870,8 @@ const SetlistDetailView: FC = () => {
                   disabled={!setlist?.description}
                 />
                 <Label check for="includeDescription">
-                  Include description
-                  {!setlist?.description && <DisabledNote>(no description)</DisabledNote>}
+                  {t('setlists.export.includeDescription')}
+                  {!setlist?.description && <DisabledNote>{t('setlists.export.noDescription')}</DisabledNote>}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -882,7 +882,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeSongCount")}
                 />
                 <Label check for="includeSongCount">
-                  Include song count
+                  {t('setlists.export.includeSongCount')}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -894,14 +894,14 @@ const SetlistDetailView: FC = () => {
                   disabled={calculateTotalDuration() === 0}
                 />
                 <Label check for="includeTotalDuration">
-                  Include total duration
-                  {calculateTotalDuration() === 0 && <DisabledNote>(no durations)</DisabledNote>}
+                  {t('setlists.export.includeTotalDuration')}
+                  {calculateTotalDuration() === 0 && <DisabledNote>{t('setlists.export.noDurations')}</DisabledNote>}
                 </Label>
               </FormGroup>
             </OptionSection>
 
             <OptionSection>
-              <SectionTitle>Song Details</SectionTitle>
+              <SectionTitle>{t('setlists.export.songDetails')}</SectionTitle>
               <FormGroup check>
                 <Input
                   type="checkbox"
@@ -910,7 +910,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeArtist")}
                 />
                 <Label check for="includeArtist">
-                  Include artist names
+                  {t('setlists.export.includeArtist')}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -921,7 +921,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeKey")}
                 />
                 <Label check for="includeKey">
-                  Include song keys
+                  {t('setlists.export.includeKey')}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -932,7 +932,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeTempo")}
                 />
                 <Label check for="includeTempo">
-                  Include tempo (BPM)
+                  {t('setlists.export.includeTempo')}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -943,7 +943,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeDuration")}
                 />
                 <Label check for="includeDuration">
-                  Include song durations
+                  {t('setlists.export.includeDuration')}
                 </Label>
               </FormGroup>
               <FormGroup check>
@@ -954,7 +954,7 @@ const SetlistDetailView: FC = () => {
                   onChange={() => toggleExportOption("includeNotes")}
                 />
                 <Label check for="includeNotes">
-                  Include song notes
+                  {t('setlists.export.includeNotes')}
                 </Label>
               </FormGroup>
             </OptionSection>
@@ -962,10 +962,10 @@ const SetlistDetailView: FC = () => {
         </ModalBody>
         <ModalFooter>
           <Button color="secondary" onClick={() => setShowExportModal(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button color="primary" onClick={handleExportAsText}>
-            <i className="bi bi-download"></i> Export
+            <i className="bi bi-download"></i> {t('setlists.export')}
           </Button>
         </ModalFooter>
       </Modal>

@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { Band } from "../services/bandsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -14,6 +15,7 @@ interface Props {
 
 export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selectedBandId }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const getRoleBadgeColor = (role?: string) => {
     switch (role) {
@@ -56,7 +58,7 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
                 const roleColors = getRoleBadgeColor(band.user_role);
                 return (
                   <RoleBadge $bg={roleColors.bg} $text={roleColors.text}>
-                    {band.user_role.charAt(0).toUpperCase() + band.user_role.slice(1)}
+                    {t(`bands.${band.user_role}`)}
                   </RoleBadge>
                 );
               })()}
@@ -68,7 +70,7 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
           {selectedBandId === band.id && (
             <SelectedBadge>
               <i className="bi bi-check-circle-fill"></i>
-              Selected
+              {t('bands.selected')}
             </SelectedBadge>
           )}
         </BandCardContent>
@@ -79,8 +81,8 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
               e.stopPropagation();
               navigate(`/bands/${band.id}/settings`);
             }}
-            title="Band settings and members"
-            aria-label={`Manage ${band.name}`}
+            title={t('bands.settingsTooltip')}
+            aria-label={t('bands.manageBandAriaLabel', { name: band.name })}
           >
             <i className="bi bi-people"></i>
           </ActionButton>
@@ -89,8 +91,8 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
               e.stopPropagation();
               onEdit(band);
             }}
-            title="Edit band"
-            aria-label={`Edit ${band.name}`}
+            title={t('bands.editBandTooltip')}
+            aria-label={t('bands.editBandAriaLabel', { name: band.name })}
           >
             <i className="bi bi-pencil"></i>
           </ActionButton>
@@ -100,8 +102,8 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
                 e.stopPropagation();
                 onDelete(band);
               }}
-              title="Delete band"
-              aria-label={`Delete ${band.name}`}
+              title={t('bands.deleteBandTooltip')}
+              aria-label={t('bands.deleteBandAriaLabel', { name: band.name })}
               $danger
             >
               <i className="bi bi-trash"></i>
