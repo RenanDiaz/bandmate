@@ -267,7 +267,6 @@
     "reorderSongs": "Arrastra para reordenar",
     "performanceMode": "Modo Presentación",
     "print": "Imprimir",
-    "export": "Exportar",
     "backingTracks": "Pistas de Acompañamiento",
     "placeholders": {
       "name": "ej., Set del Viernes",
@@ -330,6 +329,7 @@
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo."
     },
     "export": {
+      "button": "Exportar",
       "title": "Opciones de Exportación del Setlist",
       "setlistInfo": "Información del Setlist",
       "includeDescription": "Incluir descripción",
