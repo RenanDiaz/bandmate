@@ -627,7 +627,7 @@ const SetlistDetailView: FC = () => {
                     disabled={saving}
                   >
                     <i className="bi bi-x-lg"></i>
-                    {t('common.cancel')}
+                    <span>{t('common.cancel')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={handleSaveOrder}
@@ -637,12 +637,12 @@ const SetlistDetailView: FC = () => {
                     {saving ? (
                       <>
                         <Spinner size="sm" style={{ marginRight: "8px" }} />
-                        {t('common.saving')}
+                        <span>{t('common.saving')}</span>
                       </>
                     ) : (
                       <>
                         <i className="bi bi-check-lg"></i>
-                        {t('setlists.detail.saveOrder')}
+                        <span>{t('setlists.detail.saveOrder')}</span>
                       </>
                     )}
                   </ActionButton>
@@ -652,53 +652,60 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={() => setIsReorderMode(true)}
                     $variant="edit"
+                    $iconOnly
                     disabled={songsForReorder.length < 2}
                     title={t('setlists.detail.reorder')}
                   >
                     <i className="bi bi-arrow-down-up"></i>
-                    {t('setlists.detail.reorder')}
+                    <span>{t('setlists.detail.reorder')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/edit`)}
                     $variant="edit"
+                    $iconOnly
+                    title={t('setlists.editSetlist')}
                   >
                     <i className="bi bi-pencil"></i>
-                    {t('setlists.editSetlist')}
+                    <span>{t('setlists.editSetlist')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/print`)}
                     $variant="edit"
+                    $iconOnly
                     disabled={setlistItems.length === 0}
                     title={t('setlists.print')}
                   >
                     <i className="bi bi-printer"></i>
-                    {t('setlists.print')}
+                    <span>{t('setlists.print')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => setShowExportModal(true)}
                     $variant="edit"
+                    $iconOnly
                     disabled={songItemsOnly.length === 0}
                     title={t('setlists.export')}
                   >
                     <i className="bi bi-file-text"></i>
-                    {t('setlists.export')}
+                    <span>{t('setlists.export')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => setShowYouTubeModal(true)}
                     $variant="edit"
+                    $iconOnly
                     disabled={songItemsOnly.length === 0}
                     title={t("youtubeMusic.exportToYouTube")}
                   >
                     <i className="bi bi-youtube"></i>
-                    YouTube
+                    <span>YouTube</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
                     $variant="perform"
                     disabled={setlistItems.length === 0}
+                    title={t('setlists.detail.startPerformance')}
                   >
                     <i className="bi bi-play-circle"></i>
-                    {t('setlists.detail.startPerformance')}
+                    <span>{t('setlists.detail.startPerformance')}</span>
                   </ActionButton>
                 </>
               )}
@@ -1256,37 +1263,52 @@ const BackLink = styled.button`
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: ${theme.space[3]};
+  flex-wrap: wrap;
+  gap: ${theme.space[2]};
+  justify-content: flex-end;
 
   @media (max-width: ${theme.breakpoints.md}) {
     width: 100%;
-    flex-direction: column;
+    justify-content: stretch;
   }
 `;
 
-const ActionButton = styled.button<{ $variant: "edit" | "perform" }>`
+const ActionButton = styled.button<{ $variant: "edit" | "perform"; $iconOnly?: boolean }>`
   background: ${(props) =>
     props.$variant === "perform" ? theme.colors.semantic.success : theme.colors.brand.primary};
   border: none;
   color: white;
-  padding: ${theme.space[3]} ${theme.space[5]};
+  padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.body};
+  font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: ${theme.space[2]};
+  white-space: nowrap;
 
   i {
-    font-size: ${theme.fontSizes.bodyLg};
+    font-size: ${theme.fontSizes.body};
   }
+
+  /* Icon-only buttons on medium screens */
+  ${(props) => props.$iconOnly && `
+    @media (min-width: ${theme.breakpoints.md}) and (max-width: ${theme.breakpoints.xl}) {
+      padding: ${theme.space[2]};
+
+      span {
+        display: none;
+      }
+    }
+  `}
 
   &:hover:not(:disabled) {
     background: ${(props) =>
       props.$variant === "perform"
-        ? "#059669" // Darker green for hover (success hover)
+        ? "#059669"
         : theme.colors.brand.primaryHover};
     transform: translateY(-1px);
   }
@@ -1301,7 +1323,9 @@ const ActionButton = styled.button<{ $variant: "edit" | "perform" }>`
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
+    flex: 1;
     justify-content: center;
+    min-width: calc(50% - ${theme.space[1]});
   }
 `;
 
