@@ -1,5 +1,6 @@
 import type { FC, FormEvent, ChangeEvent } from "react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Modal,
   ModalHeader,
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, bandId }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
 
@@ -82,7 +84,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
       onReload();
     } catch (error) {
       console.error("Failed to update show:", error);
-      alert("Failed to update show. Please try again.");
+      alert(t('shows.updateError'));
     }
     setLoading(false);
   };
@@ -93,21 +95,21 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
     <StyledModal isOpen={isOpen} toggle={onClose} size="lg" centered>
       <StyledModalHeader toggle={onClose}>
         <i className="bi bi-calendar-event me-2"></i>
-        Edit Show
+        {t('shows.editShow')}
       </StyledModalHeader>
 
       <Form onSubmit={handleSubmit}>
         <StyledModalBody>
           <FormGroup>
             <StyledLabel for="editShowName">
-              Show Name <Required>*</Required>
+              {t('shows.showName')} <Required>*</Required>
             </StyledLabel>
             <StyledInput
               type="text"
               id="editShowName"
               value={name}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-              placeholder="e.g., Summer Festival 2025"
+              placeholder={t('shows.placeholders.name')}
               required
             />
           </FormGroup>
@@ -116,7 +118,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
             <Col md={6}>
               <FormGroup>
                 <StyledLabel for="editEventDate">
-                  Date <Required>*</Required>
+                  {t('shows.date')} <Required>*</Required>
                 </StyledLabel>
                 <StyledInput
                   type="date"
@@ -129,7 +131,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
             </Col>
             <Col md={3}>
               <FormGroup>
-                <StyledLabel for="editEventTime">Show Time</StyledLabel>
+                <StyledLabel for="editEventTime">{t('shows.showTime')}</StyledLabel>
                 <StyledInput
                   type="time"
                   id="editEventTime"
@@ -140,7 +142,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
             </Col>
             <Col md={3}>
               <FormGroup>
-                <StyledLabel for="editDoorsTime">Doors Open</StyledLabel>
+                <StyledLabel for="editDoorsTime">{t('shows.doorsOpen')}</StyledLabel>
                 <StyledInput
                   type="time"
                   id="editDoorsTime"
@@ -154,25 +156,25 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
           <Row>
             <Col md={6}>
               <FormGroup>
-                <StyledLabel for="editVenue">Venue Name</StyledLabel>
+                <StyledLabel for="editVenue">{t('shows.venueName')}</StyledLabel>
                 <StyledInput
                   type="text"
                   id="editVenue"
                   value={venue}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setVenue(e.target.value)}
-                  placeholder="e.g., The Blue Note"
+                  placeholder={t('shows.placeholders.venue')}
                 />
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
-                <StyledLabel for="editVenueAddress">Venue Address</StyledLabel>
+                <StyledLabel for="editVenueAddress">{t('shows.venueAddress')}</StyledLabel>
                 <StyledInput
                   type="text"
                   id="editVenueAddress"
                   value={venueAddress}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setVenueAddress(e.target.value)}
-                  placeholder="e.g., 123 Music St, New York, NY"
+                  placeholder={t('shows.placeholders.venueAddress')}
                 />
               </FormGroup>
             </Col>
@@ -181,17 +183,17 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
           <Row>
             <Col md={6}>
               <FormGroup>
-                <StyledLabel for="editSetlistId">Link Setlist</StyledLabel>
+                <StyledLabel for="editSetlistId">{t('shows.linkSetlist')}</StyledLabel>
                 <StyledSelect
                   type="select"
                   id="editSetlistId"
                   value={setlistId}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setSetlistId(e.target.value)}
                 >
-                  <option value="">-- No setlist --</option>
+                  <option value="">{t('shows.noSetlist')}</option>
                   {setlists.map((setlist) => (
                     <option key={setlist.id} value={setlist.id}>
-                      {setlist.name} ({setlist.songs?.length || 0} songs)
+                      {setlist.name} ({setlist.songs?.length || 0} {t('setlists.songs').toLowerCase()})
                     </option>
                   ))}
                 </StyledSelect>
@@ -199,29 +201,29 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
             </Col>
             <Col md={6}>
               <FormGroup>
-                <StyledLabel for="editStatus">Status</StyledLabel>
+                <StyledLabel for="editStatus">{t('shows.status')}</StyledLabel>
                 <StyledSelect
                   type="select"
                   id="editStatus"
                   value={status}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setStatus(e.target.value as ShowStatus)}
                 >
-                  <option value="upcoming">Upcoming</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="upcoming">{t('shows.statusUpcoming')}</option>
+                  <option value="completed">{t('shows.statusCompleted')}</option>
+                  <option value="cancelled">{t('shows.statusCancelled')}</option>
                 </StyledSelect>
               </FormGroup>
             </Col>
           </Row>
 
           <FormGroup>
-            <StyledLabel for="editNotes">Notes</StyledLabel>
+            <StyledLabel for="editNotes">{t('shows.notes')}</StyledLabel>
             <StyledTextarea
               type="textarea"
               id="editNotes"
               value={notes}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
-              placeholder="Load in time, contact person, parking info, etc."
+              placeholder={t('shows.placeholders.notesDetailed')}
               rows={3}
             />
           </FormGroup>
@@ -229,18 +231,18 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
 
         <StyledModalFooter>
           <CancelButton type="button" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </CancelButton>
           <SubmitButton type="submit" disabled={loading || !name.trim() || !eventDate}>
             {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2"></span>
-                Saving...
+                {t('common.saving')}
               </>
             ) : (
               <>
                 <i className="bi bi-check-lg me-2"></i>
-                Save Changes
+                {t('common.saveChanges')}
               </>
             )}
           </SubmitButton>

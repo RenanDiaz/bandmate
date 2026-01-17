@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export const BandSettings: FC<Props> = ({ user }) => {
+  const { t } = useTranslation();
   const { bandId } = useParams<{ bandId: string }>();
   const navigate = useNavigate();
 
@@ -39,7 +41,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
       const foundBand = bands.find((b) => b.id === parseInt(bandId));
 
       if (!foundBand) {
-        alert("Band not found or you don't have access");
+        alert(t('bands.notFoundOrNoAccess'));
         navigate("/");
         return;
       }
@@ -47,7 +49,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
       setBand(foundBand);
     } catch (error) {
       console.error("Failed to load band:", error);
-      alert("Failed to load band");
+      alert(t('bands.loadError'));
       navigate("/");
     }
     setLoading(false);
@@ -63,7 +65,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
         <Container>
           <LoadingContainer>
             <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-            <LoadingText>Loading band settings...</LoadingText>
+            <LoadingText>{t('bands.loadingSettings')}</LoadingText>
           </LoadingContainer>
         </Container>
       </PageWrapper>
@@ -78,8 +80,8 @@ export const BandSettings: FC<Props> = ({ user }) => {
             <MessageIcon>
               <i className="bi bi-exclamation-triangle"></i>
             </MessageIcon>
-            <MessageTitle>Access Denied</MessageTitle>
-            <MessageText>You don't have permission to view this band's settings.</MessageText>
+            <MessageTitle>{t('bands.accessDenied')}</MessageTitle>
+            <MessageText>{t('bands.noPermission')}</MessageText>
           </MessageCard>
         </Container>
       </PageWrapper>
@@ -100,7 +102,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
             </BackButton>
             <HeaderInfo>
               <BandName>{band.name}</BandName>
-              <BreadcrumbText>Band Settings</BreadcrumbText>
+              <BreadcrumbText>{t('bands.settings')}</BreadcrumbText>
             </HeaderInfo>
           </HeaderLeft>
         </Header>
@@ -108,11 +110,11 @@ export const BandSettings: FC<Props> = ({ user }) => {
         <TabsContainer>
           <Tab $active={activeTab === "members"} onClick={() => setActiveTab("members")}>
             <i className="bi bi-people"></i>
-            Members
+            {t('bands.members')}
           </Tab>
           <Tab $active={activeTab === "details"} onClick={() => setActiveTab("details")}>
             <i className="bi bi-gear"></i>
-            Details
+            {t('settings.title')}
           </Tab>
         </TabsContainer>
 

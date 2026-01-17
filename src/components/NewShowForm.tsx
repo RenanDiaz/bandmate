@@ -1,5 +1,6 @@
 import type { FC, FormEvent, ChangeEvent } from "react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Form, FormGroup, Label, Input, Button, Collapse, Row, Col } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -69,7 +71,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
       onShowCreated();
     } catch (error) {
       console.error("Failed to create show:", error);
-      alert("Failed to create show. Please try again.");
+      alert(t('shows.createError'));
     }
     setLoading(false);
   };
@@ -84,16 +86,16 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
       {!isOpen ? (
         <AddButton onClick={() => setIsOpen(true)}>
           <i className="bi bi-plus-circle"></i>
-          Schedule New Show
+          {t('shows.scheduleNewShow')}
         </AddButton>
       ) : (
         <FormCard>
           <FormHeader>
             <FormTitle>
               <i className="bi bi-calendar-plus"></i>
-              Schedule New Show
+              {t('shows.scheduleNewShow')}
             </FormTitle>
-            <CloseButton onClick={handleCancel} aria-label="Close form">
+            <CloseButton onClick={handleCancel} aria-label={t('common.closeForm')}>
               <i className="bi bi-x-lg"></i>
             </CloseButton>
           </FormHeader>
@@ -103,14 +105,14 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
               <FormBody>
                 <FormGroup>
                   <StyledLabel for="showName">
-                    Show Name <Required>*</Required>
+                    {t('shows.showName')} <Required>*</Required>
                   </StyledLabel>
                   <StyledInput
                     type="text"
                     id="showName"
                     value={name}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                    placeholder="e.g., Summer Festival 2025, Birthday Party Gig"
+                    placeholder={t('shows.placeholders.nameParty')}
                     required
                   />
                 </FormGroup>
@@ -119,7 +121,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                   <Col md={6}>
                     <FormGroup>
                       <StyledLabel for="eventDate">
-                        Date <Required>*</Required>
+                        {t('shows.date')} <Required>*</Required>
                       </StyledLabel>
                       <StyledInput
                         type="date"
@@ -133,7 +135,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                   </Col>
                   <Col md={3}>
                     <FormGroup>
-                      <StyledLabel for="eventTime">Show Time</StyledLabel>
+                      <StyledLabel for="eventTime">{t('shows.showTime')}</StyledLabel>
                       <StyledInput
                         type="time"
                         id="eventTime"
@@ -144,7 +146,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                   </Col>
                   <Col md={3}>
                     <FormGroup>
-                      <StyledLabel for="doorsTime">Doors Open</StyledLabel>
+                      <StyledLabel for="doorsTime">{t('shows.doorsOpen')}</StyledLabel>
                       <StyledInput
                         type="time"
                         id="doorsTime"
@@ -158,58 +160,58 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                 <Row>
                   <Col md={6}>
                     <FormGroup>
-                      <StyledLabel for="venue">Venue Name</StyledLabel>
+                      <StyledLabel for="venue">{t('shows.venueName')}</StyledLabel>
                       <StyledInput
                         type="text"
                         id="venue"
                         value={venue}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setVenue(e.target.value)}
-                        placeholder="e.g., The Blue Note, Madison Square Garden"
+                        placeholder={t('shows.placeholders.venueFull')}
                       />
                     </FormGroup>
                   </Col>
                   <Col md={6}>
                     <FormGroup>
-                      <StyledLabel for="venueAddress">Venue Address</StyledLabel>
+                      <StyledLabel for="venueAddress">{t('shows.venueAddress')}</StyledLabel>
                       <StyledInput
                         type="text"
                         id="venueAddress"
                         value={venueAddress}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setVenueAddress(e.target.value)}
-                        placeholder="e.g., 123 Music St, New York, NY"
+                        placeholder={t('shows.placeholders.venueAddress')}
                       />
                     </FormGroup>
                   </Col>
                 </Row>
 
                 <FormGroup>
-                  <StyledLabel for="setlistId">Link Setlist</StyledLabel>
+                  <StyledLabel for="setlistId">{t('shows.linkSetlist')}</StyledLabel>
                   <StyledSelect
                     type="select"
                     id="setlistId"
                     value={setlistId}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setSetlistId(e.target.value)}
                   >
-                    <option value="">-- No setlist --</option>
+                    <option value="">{t('shows.noSetlist')}</option>
                     {setlists.map((setlist) => (
                       <option key={setlist.id} value={setlist.id}>
-                        {setlist.name} ({setlist.songs?.length || 0} songs)
+                        {setlist.name} ({setlist.songs?.length || 0} {t('setlists.songs').toLowerCase()})
                       </option>
                     ))}
                   </StyledSelect>
                   <FormHint>
-                    Link a setlist to this show for quick access during performance
+                    {t('shows.linkSetlistHint')}
                   </FormHint>
                 </FormGroup>
 
                 <FormGroup>
-                  <StyledLabel for="notes">Notes</StyledLabel>
+                  <StyledLabel for="notes">{t('shows.notes')}</StyledLabel>
                   <StyledTextarea
                     type="textarea"
                     id="notes"
                     value={notes}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
-                    placeholder="Load in time, contact person, parking info, etc."
+                    placeholder={t('shows.placeholders.notesDetailed')}
                     rows={3}
                   />
                 </FormGroup>
@@ -217,18 +219,18 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
 
               <FormFooter>
                 <CancelButton type="button" onClick={handleCancel}>
-                  Cancel
+                  {t('common.cancel')}
                 </CancelButton>
                 <SubmitButton type="submit" disabled={loading || !name.trim() || !eventDate}>
                   {loading ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2"></span>
-                      Creating...
+                      {t('common.creating')}
                     </>
                   ) : (
                     <>
                       <i className="bi bi-calendar-plus me-2"></i>
-                      Create Show
+                      {t('shows.addShow')}
                     </>
                   )}
                 </SubmitButton>

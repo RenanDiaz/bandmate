@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Modal,
   ModalHeader,
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<UpdateBandInput>({
     name: "",
     genre: "",
@@ -51,7 +53,7 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
       toggle();
     } catch (error) {
       console.error("Failed to update band:", error);
-      alert("Failed to update band. Please try again.");
+      alert(t('bands.updateError'));
     } finally {
       setIsSaving(false);
     }
@@ -59,11 +61,11 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
 
   return (
     <Modal isOpen={isOpen} toggle={toggle}>
-      <ModalHeader toggle={toggle}>Edit Band</ModalHeader>
+      <ModalHeader toggle={toggle}>{t('bands.editBand')}</ModalHeader>
       <Form onSubmit={handleSubmit}>
         <ModalBody>
           <FormGroup>
-            <Label for="bandName">Band Name *</Label>
+            <Label for="bandName">{t('bands.bandName')} *</Label>
             <Input
               id="bandName"
               type="text"
@@ -73,22 +75,22 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
             />
           </FormGroup>
           <FormGroup>
-            <Label for="bandGenre">Genre</Label>
+            <Label for="bandGenre">{t('bands.genre')}</Label>
             <Input
               id="bandGenre"
               type="text"
-              placeholder="e.g., Rock, Jazz, Pop"
+              placeholder={t('bands.placeholders.genre')}
               value={formData.genre}
               onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
             />
           </FormGroup>
           <FormGroup>
-            <Label for="bandDescription">Description</Label>
+            <Label for="bandDescription">{t('bands.description')}</Label>
             <Input
               id="bandDescription"
               type="textarea"
               rows={3}
-              placeholder="Tell us about your band..."
+              placeholder={t('bands.placeholders.description')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -96,10 +98,10 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
         </ModalBody>
         <ModalFooter>
           <Button color="secondary" onClick={toggle} disabled={isSaving}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button color="primary" type="submit" disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? t('common.saving') : t('common.saveChanges')}
           </Button>
         </ModalFooter>
       </Form>
