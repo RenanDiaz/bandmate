@@ -683,10 +683,10 @@ const SetlistDetailView: FC = () => {
                     $variant="edit"
                     $iconOnly
                     disabled={songItemsOnly.length === 0}
-                    title={t('setlists.export')}
+                    title={t('setlists.export.button')}
                   >
                     <i className="bi bi-file-text"></i>
-                    <span>{t('setlists.export')}</span>
+                    <span>{t('setlists.export.button')}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => setShowYouTubeModal(true)}
@@ -972,7 +972,7 @@ const SetlistDetailView: FC = () => {
             {t('common.cancel')}
           </Button>
           <Button color="primary" onClick={handleExportAsText}>
-            <i className="bi bi-download"></i> {t('setlists.export')}
+            <i className="bi bi-download"></i> {t('setlists.export.button')}
           </Button>
         </ModalFooter>
       </Modal>

@@ -267,7 +267,6 @@
     "reorderSongs": "Drag to reorder",
     "performanceMode": "Performance Mode",
     "print": "Print",
-    "export": "Export",
     "backingTracks": "Backing Tracks",
     "placeholders": {
       "name": "e.g., Friday Night Set",
@@ -330,6 +329,7 @@
       "loadError": "Failed to load setlist. Please try again."
     },
     "export": {
+      "button": "Export",
       "title": "Export Setlist Options",
       "setlistInfo": "Setlist Information",
       "includeDescription": "Include description",
