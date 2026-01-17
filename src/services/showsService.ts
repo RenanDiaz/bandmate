@@ -13,6 +13,7 @@ export interface Show {
   event_date: string;
   event_time?: string;
   doors_time?: string;
+  soundcheck_time?: string;
   status: ShowStatus;
   notes?: string;
   created_at: string;
@@ -27,6 +28,7 @@ export interface CreateShowInput {
   event_date: string;
   event_time?: string;
   doors_time?: string;
+  soundcheck_time?: string;
   setlist_id?: string;
   status?: ShowStatus;
   notes?: string;
@@ -39,6 +41,7 @@ export interface UpdateShowInput {
   event_date?: string;
   event_time?: string;
   doors_time?: string;
+  soundcheck_time?: string;
   setlist_id?: string | null;
   status?: ShowStatus;
   notes?: string;

@@ -14,6 +14,8 @@ import PrintableSetlist from "./components/PrintableSetlist";
 import PrintableSongbook from "./components/PrintableSongbook";
 import ShowsView from "./components/ShowsView";
 import ShowDetailView from "./components/ShowDetailView";
+import RehearsalsView from "./components/RehearsalsView";
+import RehearsalDetailView from "./components/RehearsalDetailView";
 import { BandSettings } from "./components/BandSettings";
 import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
@@ -111,6 +113,16 @@ const AppContent: FC = () => {
                 $mode={mode}
               >
                 {t('nav.shows')}
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/rehearsals"
+                $active={location.pathname.startsWith("/rehearsals")}
+                $mode={mode}
+              >
+                {t('nav.rehearsals')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -234,6 +246,18 @@ const AppContent: FC = () => {
             <NavItem>
               <StyledNavLink
                 as={Link}
+                to="/rehearsals"
+                $active={location.pathname.startsWith("/rehearsals")}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-calendar-check"></i>
+                <span>{t('nav.rehearsals')}</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
                 to="/about"
                 $active={location.pathname === "/about"}
                 $mode={mode}
@@ -288,6 +312,8 @@ const AppContent: FC = () => {
             <Route path="/setlists/:setlistId/print" element={<PrintableSetlist />} />
             <Route path="/shows" element={<ShowsView user={user} selectedBand={selectedBand} />} />
             <Route path="/shows/:showId" element={<ShowDetailView />} />
+            <Route path="/rehearsals" element={<RehearsalsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/rehearsals/:rehearsalId" element={<RehearsalDetailView />} />
             <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
             <Route path="/invite/accept" element={<AcceptInvitation />} />
             <Route path="/about" element={<About />} />
