@@ -260,6 +260,13 @@ const ShowDetailView: FC = () => {
                   <span>{formatTime(show.event_time)}</span>
                 </>
               )}
+              {show.soundcheck_time && (
+                <>
+                  <Separator>|</Separator>
+                  <i className="bi bi-mic"></i>
+                  <span>Soundcheck: {formatTime(show.soundcheck_time)}</span>
+                </>
+              )}
               {show.doors_time && (
                 <>
                   <Separator>|</Separator>
@@ -423,6 +430,18 @@ const ShowDetailView: FC = () => {
                   <QuickInfoItem>
                     <QuickInfoLabel>Time</QuickInfoLabel>
                     <QuickInfoValue>{formatTime(show.event_time)}</QuickInfoValue>
+                  </QuickInfoItem>
+                )}
+                {show.soundcheck_time && (
+                  <QuickInfoItem>
+                    <QuickInfoLabel>Soundcheck</QuickInfoLabel>
+                    <QuickInfoValue>{formatTime(show.soundcheck_time)}</QuickInfoValue>
+                  </QuickInfoItem>
+                )}
+                {show.doors_time && (
+                  <QuickInfoItem>
+                    <QuickInfoLabel>Doors</QuickInfoLabel>
+                    <QuickInfoValue>{formatTime(show.doors_time)}</QuickInfoValue>
                   </QuickInfoItem>
                 )}
                 {show.venue && (

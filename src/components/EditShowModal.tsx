@@ -41,6 +41,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [doorsTime, setDoorsTime] = useState("");
+  const [soundcheckTime, setSoundcheckTime] = useState("");
   const [setlistId, setSetlistId] = useState("");
   const [status, setStatus] = useState<ShowStatus>("upcoming");
   const [notes, setNotes] = useState("");
@@ -54,6 +55,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
       setEventDate(show.event_date || "");
       setEventTime(show.event_time || "");
       setDoorsTime(show.doors_time || "");
+      setSoundcheckTime(show.soundcheck_time || "");
       setSetlistId(show.setlist_id || "");
       setStatus(show.status || "upcoming");
       setNotes(show.notes || "");
@@ -76,6 +78,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
         event_date: eventDate,
         event_time: eventTime || undefined,
         doors_time: doorsTime || undefined,
+        soundcheck_time: soundcheckTime || undefined,
         setlist_id: setlistId || null,
         status,
         notes: notes.trim() || undefined,
@@ -129,7 +132,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
                 />
               </FormGroup>
             </Col>
-            <Col md={3}>
+            <Col md={6}>
               <FormGroup>
                 <StyledLabel for="editEventTime">{t('shows.showTime')}</StyledLabel>
                 <StyledInput
@@ -140,7 +143,21 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
                 />
               </FormGroup>
             </Col>
-            <Col md={3}>
+          </Row>
+
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <StyledLabel for="editSoundcheckTime">{t('shows.soundcheck')}</StyledLabel>
+                <StyledInput
+                  type="time"
+                  id="editSoundcheckTime"
+                  value={soundcheckTime}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSoundcheckTime(e.target.value)}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
               <FormGroup>
                 <StyledLabel for="editDoorsTime">{t('shows.doorsOpen')}</StyledLabel>
                 <StyledInput

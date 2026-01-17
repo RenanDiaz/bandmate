@@ -29,6 +29,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
   const [eventDate, setEventDate] = useState(today);
   const [eventTime, setEventTime] = useState("");
   const [doorsTime, setDoorsTime] = useState("");
+  const [soundcheckTime, setSoundcheckTime] = useState("");
   const [setlistId, setSetlistId] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -45,6 +46,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
     setEventDate(new Date().toISOString().split("T")[0]);
     setEventTime("");
     setDoorsTime("");
+    setSoundcheckTime("");
     setSetlistId("");
     setNotes("");
   };
@@ -63,6 +65,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
         event_date: eventDate,
         event_time: eventTime || undefined,
         doors_time: doorsTime || undefined,
+        soundcheck_time: soundcheckTime || undefined,
         setlist_id: setlistId || undefined,
         notes: notes.trim() || undefined,
       });
@@ -133,7 +136,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                       />
                     </FormGroup>
                   </Col>
-                  <Col md={3}>
+                  <Col md={6}>
                     <FormGroup>
                       <StyledLabel for="eventTime">{t('shows.showTime')}</StyledLabel>
                       <StyledInput
@@ -144,7 +147,21 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                       />
                     </FormGroup>
                   </Col>
-                  <Col md={3}>
+                </Row>
+
+                <Row>
+                  <Col md={4}>
+                    <FormGroup>
+                      <StyledLabel for="soundcheckTime">{t('shows.soundcheck')}</StyledLabel>
+                      <StyledInput
+                        type="time"
+                        id="soundcheckTime"
+                        value={soundcheckTime}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSoundcheckTime(e.target.value)}
+                      />
+                    </FormGroup>
+                  </Col>
+                  <Col md={4}>
                     <FormGroup>
                       <StyledLabel for="doorsTime">{t('shows.doorsOpen')}</StyledLabel>
                       <StyledInput
@@ -153,6 +170,13 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
                         value={doorsTime}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setDoorsTime(e.target.value)}
                       />
+                    </FormGroup>
+                  </Col>
+                  <Col md={4}>
+                    <FormGroup>
+                      <FormHint style={{ marginTop: '24px' }}>
+                        {t('shows.soundcheck')} → {t('shows.doorsOpen')} → {t('shows.showTime')}
+                      </FormHint>
                     </FormGroup>
                   </Col>
                 </Row>
