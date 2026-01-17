@@ -180,17 +180,20 @@ export const LineSyncModal = ({
   }, []);
 
   const handleMarkTime = useCallback((lineIndex: number) => {
+    // Read current time directly from audio element to avoid stale closure issues
+    const audio = audioRef.current;
+    const time = audio ? audio.currentTime : currentTime;
     const existingIndex = lineTimings.findIndex((lt) => lt.lineIndex === lineIndex);
     let updatedTimings: LineTiming[];
 
     if (existingIndex >= 0) {
       // Update existing timing
       updatedTimings = lineTimings.map((lt, i) =>
-        i === existingIndex ? { ...lt, startTime: currentTime } : lt
+        i === existingIndex ? { ...lt, startTime: time } : lt
       );
     } else {
       // Add new timing
-      updatedTimings = [...lineTimings, { lineIndex, startTime: currentTime }];
+      updatedTimings = [...lineTimings, { lineIndex, startTime: time }];
       updatedTimings.sort((a, b) => a.lineIndex - b.lineIndex);
     }
 

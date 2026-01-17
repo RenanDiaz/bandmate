@@ -163,8 +163,11 @@ export const TimingSyncModal = ({
   }, []);
 
   const handleMarkTime = useCallback((index: number) => {
+    // Read current time directly from audio element to avoid stale closure issues
+    const audio = audioRef.current;
+    const time = audio ? audio.currentTime : currentTime;
     const updatedSections = sections.map((section, i) =>
-      i === index ? { ...section, startTime: currentTime } : section
+      i === index ? { ...section, startTime: time } : section
     );
     onSectionsChange(updatedSections);
     // Auto-advance to next section
