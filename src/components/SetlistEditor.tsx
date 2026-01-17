@@ -727,7 +727,7 @@ const SetlistEditor: FC = () => {
 
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[6]} 0;
 `;
 
@@ -738,7 +738,7 @@ const Header = styled.div`
   gap: ${theme.space[4]};
   margin-bottom: ${theme.space[6]};
   padding-bottom: ${theme.space[4]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     flex-direction: column;
@@ -753,9 +753,9 @@ const HeaderLeft = styled.div`
 `;
 
 const BackButton = styled.button`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -767,7 +767,7 @@ const BackButton = styled.button`
   font-size: ${theme.fontSizes.bodyLg};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
     transform: translateY(-1px);
@@ -783,7 +783,7 @@ const HeaderInfo = styled.div`
 const SetlistTitle = styled.h1`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   line-height: ${theme.lineHeights.tight};
 `;
@@ -799,8 +799,8 @@ const HeaderActions = styled.div`
 
 const CancelButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[5]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -809,8 +809,8 @@ const CancelButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.dark.bg.elevated};
-    border-color: ${theme.colors.dark.border.strong};
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -840,12 +840,12 @@ const SaveButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 `;
@@ -863,8 +863,8 @@ const EditorGrid = styled.div`
 `;
 
 const SongLibraryPanel = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   display: flex;
   flex-direction: column;
@@ -873,8 +873,8 @@ const SongLibraryPanel = styled.div`
 `;
 
 const SetlistPanel = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   display: flex;
   flex-direction: column;
@@ -887,13 +887,13 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const PanelTitle = styled.h2`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -906,19 +906,19 @@ const PanelTitle = styled.h2`
 
 const PanelStats = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-weight: ${theme.fontWeights.medium};
 `;
 
 const SearchBox = styled.div`
   padding: ${theme.space[4]} ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: ${theme.space[3]};
 
   i {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
     font-size: ${theme.fontSizes.body};
   }
 `;
@@ -927,13 +927,13 @@ const SearchInput = styled.input`
   flex: 1;
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-size: ${theme.fontSizes.body};
   outline: none;
   font-family: ${theme.fonts.sans};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 `;
 
@@ -956,8 +956,8 @@ const SetlistSongsList = styled.div`
 `;
 
 const LibrarySongCard = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   display: flex;
@@ -972,9 +972,9 @@ const LibrarySongCard = styled.div`
 
 const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
   background: ${(props) =>
-    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+    props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)'};
   border: 1px solid ${(props) =>
-    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$isDragging ? theme.colors.brand.primary : 'var(--color-border)'};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   display: flex;
@@ -993,7 +993,7 @@ const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
 const DragHandle = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   width: 24px;
   height: 32px;
   display: flex;
@@ -1046,7 +1046,7 @@ const SongDetails = styled.div`
 const SongTitle = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1054,7 +1054,7 @@ const SongTitle = styled.div`
 
 const SongArtist = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1069,9 +1069,9 @@ const SongMetadata = styled.div`
 const MetaBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -1080,9 +1080,9 @@ const MetaBadge = styled.span`
 `;
 
 const NotesInput = styled.input`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodySm};
@@ -1090,7 +1090,7 @@ const NotesInput = styled.input`
   font-family: ${theme.fonts.sans};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 
   &:focus {
@@ -1108,8 +1108,8 @@ const SongActions = styled.div`
 
 const AddButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -1122,7 +1122,7 @@ const AddButton = styled.button`
   font-size: ${theme.fontSizes.bodyLg};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -1130,9 +1130,9 @@ const AddButton = styled.button`
 
 const ActionButton = styled.button<{ $variant?: "delete" }>`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${(props) =>
-    props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.dark.text.secondary};
+    props.$variant === "delete" ? theme.colors.semantic.error : 'var(--color-text-secondary)'};
   width: 32px;
   height: 32px;
   border-radius: ${theme.radius.base};
@@ -1147,7 +1147,7 @@ const ActionButton = styled.button<{ $variant?: "delete" }>`
     background: ${(props) =>
       props.$variant === "delete"
         ? theme.colors.semantic.errorBgDark
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
     border-color: ${(props) =>
       props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
     color: ${(props) =>
@@ -1163,7 +1163,7 @@ const ActionButton = styled.button<{ $variant?: "delete" }>`
 const EmptyMessage = styled.div`
   text-align: center;
   padding: ${theme.space[8]} ${theme.space[4]};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.body};
 `;
 
@@ -1174,7 +1174,7 @@ const EmptyState = styled.div`
 
 const EmptyIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -1182,13 +1182,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const EmptyText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -1204,13 +1204,13 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
 const MessageCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[12]};
   text-align: center;
@@ -1219,7 +1219,7 @@ const MessageCard = styled.div`
 
 const MessageIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -1227,13 +1227,13 @@ const MessageIcon = styled.div`
 const MessageTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const MessageText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -1248,15 +1248,15 @@ const getItemTypeColor = (type: string) => {
     case "note":
       return theme.colors.semantic.info;
     default:
-      return theme.colors.dark.text.secondary;
+      return 'var(--color-text-secondary)';
   }
 };
 
 const SpecialItemCard = styled.div<{ $isDragging?: boolean; $type: string }>`
   background: ${(props) =>
-    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+    props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)'};
   border: 1px solid ${(props) =>
-    props.$isDragging ? getItemTypeColor(props.$type) : theme.colors.dark.border.default};
+    props.$isDragging ? getItemTypeColor(props.$type) : 'var(--color-border)'};
   border-left: 3px solid ${(props) => getItemTypeColor(props.$type)};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]} ${theme.space[4]};
@@ -1291,7 +1291,7 @@ const SpecialItemIcon = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.infoBgDark;
       default:
-        return theme.colors.dark.bg.tertiary;
+        return 'var(--color-bg-tertiary)';
     }
   }};
   color: ${(props) => getItemTypeColor(props.$type)};
@@ -1307,7 +1307,7 @@ const SpecialItemContent = styled.div`
 
 const SpecialItemType = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: ${theme.fontWeights.medium};
@@ -1316,7 +1316,7 @@ const SpecialItemType = styled.div`
 const SpecialItemLabel = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1324,7 +1324,7 @@ const SpecialItemLabel = styled.div`
 
 const SpecialItemDuration = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
@@ -1336,7 +1336,7 @@ const SpecialItemDuration = styled.div`
 
 const AddItemBar = styled.div`
   padding: ${theme.space[3]} ${theme.space[4]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const AddItemDropdownWrapper = styled.div`
@@ -1344,9 +1344,9 @@ const AddItemDropdownWrapper = styled.div`
 `;
 
 const AddItemButton = styled.button`
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px dashed ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -1360,7 +1360,7 @@ const AddItemButton = styled.button`
   justify-content: center;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -1380,19 +1380,19 @@ const AddItemMenu = styled.div`
   top: 100%;
   left: 0;
   right: 0;
-  background: ${theme.colors.dark.bg.elevated};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   margin-top: ${theme.space[1]};
   overflow: hidden;
   z-index: 100;
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: var(--shadow-lg);
 `;
 
 const AddItemMenuItem = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   font-size: ${theme.fontSizes.body};
   cursor: pointer;
@@ -1404,7 +1404,7 @@ const AddItemMenuItem = styled.button`
   text-align: left;
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     color: ${theme.colors.brand.primary};
   }
 

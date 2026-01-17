@@ -121,7 +121,7 @@ export const ShowCalendar: FC<Props> = ({ shows }) => {
 
   const getStatusColor = (show: Show) => {
     if (show.status === "cancelled") return theme.colors.semantic.error;
-    if (show.status === "completed") return theme.colors.dark.text.tertiary;
+    if (show.status === "completed") return 'var(--color-text-tertiary)';
     return theme.colors.brand.primary;
   };
 
@@ -197,7 +197,7 @@ export const ShowCalendar: FC<Props> = ({ shows }) => {
           <span>Upcoming</span>
         </LegendItem>
         <LegendItem>
-          <LegendDot $color={theme.colors.dark.text.tertiary} />
+          <LegendDot $color={'var(--color-text-tertiary)'} />
           <span>Completed</span>
         </LegendItem>
         <LegendItem>
@@ -212,8 +212,8 @@ export const ShowCalendar: FC<Props> = ({ shows }) => {
 // Styled Components
 
 const CalendarContainer = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   margin-top: ${theme.space[4]};
@@ -224,8 +224,8 @@ const CalendarHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]} ${theme.space[5]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const MonthNavigation = styled.div`
@@ -236,8 +236,8 @@ const MonthNavigation = styled.div`
 
 const NavButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -248,7 +248,7 @@ const NavButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -257,7 +257,7 @@ const NavButton = styled.button`
 const MonthTitle = styled.h2`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   min-width: 200px;
   text-align: center;
@@ -265,8 +265,8 @@ const MonthTitle = styled.h2`
 
 const TodayButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -278,7 +278,7 @@ const TodayButton = styled.button`
   gap: ${theme.space[2]};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -294,9 +294,9 @@ const DayHeader = styled.div`
   text-align: center;
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -313,10 +313,10 @@ const DayCell = styled.div<{
     props.$isToday
       ? `${theme.colors.brand.primary}10`
       : props.$isCurrentMonth
-      ? theme.colors.dark.bg.secondary
-      : theme.colors.dark.bg.primary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
-  border-right: 1px solid ${theme.colors.dark.border.default};
+      ? 'var(--color-bg-secondary)'
+      : 'var(--color-bg-primary)'};
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   opacity: ${(props) => (props.$isCurrentMonth ? 1 : 0.5)};
   transition: background ${theme.transitions.fast} ease;
 
@@ -328,7 +328,7 @@ const DayCell = styled.div<{
     background: ${(props) =>
       props.$isToday
         ? `${theme.colors.brand.primary}15`
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -342,7 +342,7 @@ const DayNumber = styled.div<{ $isToday: boolean }>`
   font-weight: ${(props) =>
     props.$isToday ? theme.fontWeights.bold : theme.fontWeights.medium};
   color: ${(props) =>
-    props.$isToday ? theme.colors.brand.primary : theme.colors.dark.text.primary};
+    props.$isToday ? theme.colors.brand.primary : 'var(--color-text-primary)'};
   margin-bottom: ${theme.space[1]};
   width: 24px;
   height: 24px;
@@ -353,7 +353,7 @@ const DayNumber = styled.div<{ $isToday: boolean }>`
   background: ${(props) =>
     props.$isToday ? theme.colors.brand.primary : "transparent"};
   color: ${(props) =>
-    props.$isToday ? "white" : theme.colors.dark.text.primary};
+    props.$isToday ? "white" : 'var(--color-text-primary)'};
 `;
 
 const ShowsContainer = styled.div`
@@ -390,7 +390,7 @@ const ShowPill = styled.div<{ $statusColor: string; $isCancelled: boolean }>`
 
 const ShowTime = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: block;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -401,7 +401,7 @@ const ShowTime = styled.span`
 const ShowName = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -410,7 +410,7 @@ const ShowName = styled.span`
 
 const MoreShows = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   padding: ${theme.space[1]} ${theme.space[2]};
   text-align: center;
 `;
@@ -421,8 +421,8 @@ const Legend = styled.div`
   justify-content: center;
   gap: ${theme.space[6]};
   padding: ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border);
 `;
 
 const LegendItem = styled.div`
@@ -430,7 +430,7 @@ const LegendItem = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const LegendDot = styled.div<{ $color: string }>`

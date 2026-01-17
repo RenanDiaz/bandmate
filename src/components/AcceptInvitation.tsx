@@ -216,7 +216,7 @@ export const AcceptInvitation: FC = () => {
 
 const PageWrapper = styled.div`
   min-height: 100vh;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,8 +224,8 @@ const PageWrapper = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.xl};
   padding: ${theme.space[8]};
   max-width: 600px;
@@ -255,13 +255,13 @@ const Icon = styled.div<{ $type: "invite" | "success" | "error" }>`
 const Title = styled.h1`
   font-size: ${theme.fontSizes.h1};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[3]};
 `;
 
 const Message = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[6]};
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -269,7 +269,7 @@ const Message = styled.p`
 const RoleBadge = styled.span<{ $role: string }>`
   background: ${(props) =>
     props.$role === "member"
-      ? theme.colors.dark.bg.tertiary
+      ? 'var(--color-bg-tertiary)'
       : theme.colors.semantic.warningBgDark};
   color: ${(props) =>
     props.$role === "member"
@@ -282,8 +282,8 @@ const RoleBadge = styled.span<{ $role: string }>`
 `;
 
 const InvitationDetails = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[5]};
   margin-bottom: ${theme.space[6]};
@@ -295,7 +295,7 @@ const DetailRow = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   padding: ${theme.space[3]} 0;
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   &:last-child {
     border-bottom: none;
@@ -309,7 +309,7 @@ const DetailRow = styled.div`
 
 const DetailLabel = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-weight: ${theme.fontWeights.medium};
   display: flex;
   align-items: center;
@@ -322,7 +322,7 @@ const DetailLabel = styled.div`
 
 const DetailValue = styled.div`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-weight: ${theme.fontWeights.medium};
   text-align: right;
   max-width: 60%;
@@ -355,7 +355,7 @@ const PrimaryButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -370,8 +370,8 @@ const PrimaryButton = styled.button`
 
 const SecondaryButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[6]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -380,8 +380,8 @@ const SecondaryButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.dark.bg.elevated};
-    border-color: ${theme.colors.dark.border.strong};
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -400,6 +400,6 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;

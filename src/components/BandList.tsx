@@ -20,11 +20,11 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
       case "owner":
         return { bg: theme.gradients.brandPrimary, text: "white" };
       case "member":
-        return { bg: theme.colors.dark.bg.tertiary, text: theme.colors.dark.text.primary };
+        return { bg: 'var(--color-bg-tertiary)', text: 'var(--color-text-primary)' };
       case "guest":
         return { bg: theme.colors.semantic.warningBgDark, text: theme.colors.semantic.warning };
       default:
-        return { bg: theme.colors.dark.bg.tertiary, text: theme.colors.dark.text.secondary };
+        return { bg: 'var(--color-bg-tertiary)', text: 'var(--color-text-secondary)' };
     }
   };
 
@@ -128,10 +128,10 @@ const BandGrid = styled.div`
 `;
 
 const BandCard = styled.div<{ $isSelected: boolean }>`
-  background: ${theme.colors.dark.bg.secondary};
+  background: var(--color-bg-secondary);
   border: 2px solid ${props => props.$isSelected
     ? theme.colors.brand.primary
-    : theme.colors.dark.border.default};
+    : 'var(--color-border)'};
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[5]};
   cursor: pointer;
@@ -140,14 +140,14 @@ const BandCard = styled.div<{ $isSelected: boolean }>`
   overflow: hidden;
 
   ${props => props.$isSelected && `
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     box-shadow: ${theme.shadows.glow};
   `}
 
   &:hover {
     transform: translateY(-4px);
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.lg};
+    box-shadow: var(--shadow-lg);
   }
 
   &:focus {
@@ -173,7 +173,7 @@ const BandIcon = styled.div<{ $isSelected: boolean }>`
   height: 56px;
   background: ${props => props.$isSelected
     ? theme.gradients.brandPrimary
-    : theme.colors.dark.bg.elevated};
+    : 'var(--color-bg-elevated)'};
   border-radius: ${theme.radius.md};
   display: flex;
   align-items: center;
@@ -181,7 +181,7 @@ const BandIcon = styled.div<{ $isSelected: boolean }>`
   font-size: ${theme.fontSizes.h1};
   color: ${props => props.$isSelected
     ? 'white'
-    : theme.colors.dark.text.secondary};
+    : 'var(--color-text-secondary)'};
   transition: all ${theme.transitions.base} ease;
 `;
 
@@ -199,7 +199,7 @@ const BandNameRow = styled.div`
 const BandName = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   line-height: ${theme.lineHeights.snug};
 `;
@@ -221,8 +221,8 @@ const BandGenre = styled.div`
   align-items: center;
   gap: ${theme.space[1]};
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
-  background: ${theme.colors.dark.bg.elevated};
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-elevated);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   margin-bottom: ${theme.space[2]};
@@ -238,7 +238,7 @@ const BandGenre = styled.div`
 
 const BandDescription = styled.p`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
   margin: 0;
   display: -webkit-box;
@@ -270,20 +270,20 @@ const BandActions = styled.div`
   display: flex;
   gap: ${theme.space[2]};
   padding-top: ${theme.space[4]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
 `;
 
 const ActionButton = styled.button<{ $danger?: boolean }>`
   flex: 1;
   background: ${props => props.$danger
     ? 'transparent'
-    : theme.colors.dark.bg.elevated};
+    : 'var(--color-bg-elevated)'};
   border: 1px solid ${props => props.$danger
     ? theme.colors.semantic.error
-    : theme.colors.dark.border.default};
+    : 'var(--color-border)'};
   color: ${props => props.$danger
     ? theme.colors.semantic.error
-    : theme.colors.dark.text.primary};
+    : 'var(--color-text-primary)'};
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -302,7 +302,7 @@ const ActionButton = styled.button<{ $danger?: boolean }>`
   &:hover {
     background: ${props => props.$danger
       ? theme.colors.semantic.errorBgDark
-      : theme.colors.dark.bg.hover};
+      : 'var(--color-bg-hover)'};
     border-color: ${props => props.$danger
       ? theme.colors.semantic.error
       : theme.colors.brand.primary};

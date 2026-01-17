@@ -455,8 +455,8 @@ const ModalContainer = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   width: 95%;
   max-width: 600px;
@@ -465,7 +465,7 @@ const ModalContainer = styled.div`
   display: flex;
   flex-direction: column;
   z-index: ${theme.zIndex.modal + 10};
-  box-shadow: ${theme.shadows.xl};
+  box-shadow: var(--shadow-xl);
   animation: slideUp 0.3s ease;
 
   @keyframes slideUp {
@@ -479,14 +479,14 @@ const ModalHeader = styled.div`
   align-items: center;
   gap: ${theme.space[3]};
   padding: ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
-  background: ${theme.colors.dark.bg.secondary};
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
 `;
 
 const ModalTitle = styled.h2`
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -499,7 +499,7 @@ const ModalTitle = styled.h2`
 
 const SongName = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -509,7 +509,7 @@ const SongName = styled.span`
 const CloseButton = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -521,8 +521,8 @@ const CloseButton = styled.button`
   font-size: ${theme.fontSizes.h3};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
   }
 `;
 
@@ -536,8 +536,8 @@ const ModalContent = styled.div`
 `;
 
 const AudioSection = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   overflow: hidden;
 `;
@@ -558,16 +558,16 @@ const LoadAudioIcon = styled.div`
   width: 64px;
   height: 64px;
   border-radius: ${theme.radius.full};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: ${theme.fontSizes.h2};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const LoadAudioText = styled.p`
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-size: ${theme.fontSizes.body};
   text-align: center;
   margin: 0;
@@ -621,7 +621,7 @@ const AudioIcon = styled.div`
 const AudioFileName = styled.div`
   flex: 1;
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -629,8 +629,8 @@ const AudioFileName = styled.div`
 
 const ChangeFileButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 32px;
   height: 32px;
   border-radius: ${theme.radius.sm};
@@ -683,7 +683,7 @@ const ProgressSection = styled.div`
 const TimeDisplay = styled.span<{ $current?: boolean }>`
   font-size: ${theme.fontSizes.bodySm};
   font-family: ${theme.fonts.mono};
-  color: ${(props) => props.$current ? theme.colors.brand.primary : theme.colors.dark.text.secondary};
+  color: ${(props) => props.$current ? theme.colors.brand.primary : 'var(--color-text-secondary)'};
   min-width: 55px;
   text-align: center;
 `;
@@ -693,7 +693,7 @@ const ProgressSlider = styled.input`
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.full};
   cursor: pointer;
 
@@ -728,24 +728,24 @@ const KeyboardHints = styled.div`
   gap: ${theme.space[3]};
   justify-content: center;
   padding-top: ${theme.space[2]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
 `;
 
 const Hint = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
 
   kbd {
-    background: ${theme.colors.dark.bg.tertiary};
-    border: 1px solid ${theme.colors.dark.border.default};
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: ${theme.radius.sm};
     padding: 2px 6px;
     font-family: ${theme.fonts.mono};
     font-size: ${theme.fontSizes.bodyXs};
-    color: ${theme.colors.dark.text.secondary};
+    color: var(--color-text-secondary);
   }
 `;
 
@@ -764,7 +764,7 @@ const SectionsHeader = styled.div`
 const SectionsTitle = styled.h3`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -777,14 +777,14 @@ const SectionsTitle = styled.h3`
 
 const SyncProgress = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-left: auto;
 `;
 
 const ClearAllButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -812,12 +812,12 @@ const SectionsList = styled.div`
   }
 
   &::-webkit-scrollbar-track {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-radius: ${theme.radius.sm};
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${theme.colors.dark.border.strong};
+    background: var(--color-border-strong);
     border-radius: ${theme.radius.sm};
 
     &:hover {
@@ -832,7 +832,7 @@ const EmptyState = styled.div`
   justify-content: center;
   gap: ${theme.space[2]};
   padding: ${theme.space[4]};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.bodySm};
 `;
 
@@ -845,8 +845,8 @@ const SectionRow = styled.div<{
   align-items: center;
   gap: ${theme.space[3]};
   padding: ${theme.space[3]};
-  background: ${(props) => props.$isSelected ? props.$color.bg : theme.colors.dark.bg.primary};
-  border: 1px solid ${(props) => props.$isSelected ? props.$color.border : theme.colors.dark.border.default};
+  background: ${(props) => props.$isSelected ? props.$color.bg : 'var(--color-bg-primary)'};
+  border: 1px solid ${(props) => props.$isSelected ? props.$color.border : 'var(--color-border)'};
   border-radius: ${theme.radius.base};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
@@ -868,7 +868,7 @@ const SectionColorDot = styled.div<{
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: ${(props) => props.$isSynced ? props.$color.text : theme.colors.dark.text.tertiary};
+  background: ${(props) => props.$isSynced ? props.$color.text : 'var(--color-text-tertiary)'};
   flex-shrink: 0;
 `;
 
@@ -880,12 +880,12 @@ const SectionInfo = styled.div`
 const SectionName = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const SectionLines = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const SectionTime = styled.div`
@@ -898,15 +898,15 @@ const TimeValue = styled.button<{ $isSynced: boolean }>`
   border: 1px solid transparent;
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${(props) => props.$isSynced ? theme.colors.brand.primary : theme.colors.dark.text.tertiary};
+  color: ${(props) => props.$isSynced ? theme.colors.brand.primary : 'var(--color-text-tertiary)'};
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
 
   &:hover {
-    border-color: ${theme.colors.dark.border.default};
-    background: ${theme.colors.dark.bg.tertiary};
+    border-color: var(--color-border);
+    background: var(--color-bg-tertiary);
   }
 `;
 
@@ -914,8 +914,8 @@ const TimeInput = styled.input`
   width: 70px;
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
-  background: ${theme.colors.dark.bg.secondary};
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
   border: 1px solid ${theme.colors.brand.primary};
   border-radius: ${theme.radius.sm};
   padding: ${theme.space[1]} ${theme.space[2]};
@@ -950,16 +950,16 @@ const MarkButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.tertiary};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 `;
 
 const ClearButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.tertiary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
   width: 32px;
   height: 32px;
   border-radius: ${theme.radius.sm};
@@ -982,13 +982,13 @@ const ModalFooter = styled.div`
   justify-content: space-between;
   gap: ${theme.space[3]};
   padding: ${theme.space[4]} ${theme.space[5]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
-  background: ${theme.colors.dark.bg.secondary};
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
 `;
 
 const FooterHint = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};

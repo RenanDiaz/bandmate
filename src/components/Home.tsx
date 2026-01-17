@@ -568,7 +568,7 @@ const CTAButton = styled.button`
 
 const FeaturesSection = styled.section`
   padding: ${theme.space[20]} 0;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
 
   @media (max-width: ${theme.breakpoints.md}) {
     padding: ${theme.space[12]} 0;
@@ -578,7 +578,7 @@ const FeaturesSection = styled.section`
 const SectionTitle = styled.h2`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   text-align: center;
   margin-bottom: ${theme.space[12]};
 
@@ -602,8 +602,8 @@ const FeaturesGrid = styled.div`
 `;
 
 const FeatureCard = styled.div<{ $clickable?: boolean }>`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
   transition: all ${theme.transitions.base} ease;
@@ -615,13 +615,13 @@ const FeatureCard = styled.div<{ $clickable?: boolean }>`
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: ${theme.shadows.lg};
+    box-shadow: var(--shadow-lg);
     border-color: ${theme.colors.brand.primary};
 
     ${(props) =>
       props.$clickable &&
       `
-      background: ${theme.colors.dark.bg.elevated};
+      background: var(--color-bg-elevated);
     `}
   }
 `;
@@ -642,21 +642,21 @@ const FeatureIcon = styled.div`
 const FeatureTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const FeatureDescription = styled.p`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
   margin: 0;
 `;
 
 
 const CTASectionBottom = styled.section`
-  background: ${theme.colors.dark.bg.secondary};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
   padding: ${theme.space[16]} 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -673,7 +673,7 @@ const CTAContent = styled.div`
 const CTABottomTitle = styled.h2`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[4]};
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -683,7 +683,7 @@ const CTABottomTitle = styled.h2`
 
 const CTABottomSubtitle = styled.p`
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[8]};
   line-height: ${theme.lineHeights.relaxed};
 
@@ -697,7 +697,7 @@ const CTABottomSubtitle = styled.p`
 const DashboardSection = styled.section`
   flex: 1;
   padding: ${theme.space[6]} 0 ${theme.space[12]};
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
 `;
 
 const DashboardHeader = styled.div`
@@ -713,7 +713,7 @@ const WelcomeText = styled.div`
 const WelcomeTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -738,7 +738,7 @@ const LoadingState = styled.div`
   align-items: center;
   justify-content: center;
   padding: ${theme.space[12]};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const StatsGrid = styled.div`
@@ -753,8 +753,8 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[5]};
   display: flex;
@@ -767,7 +767,7 @@ const StatCard = styled.div`
   &:hover {
     border-color: ${theme.colors.brand.primary};
     transform: translateY(-2px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 `;
 
@@ -791,13 +791,13 @@ const StatInfo = styled.div`
 const StatNumber = styled.span`
   font-size: ${theme.fontSizes.h1};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: 1;
 `;
 
 const StatLabel = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const WidgetsGrid = styled.div`
@@ -812,8 +812,8 @@ const WidgetsGrid = styled.div`
 `;
 
 const Widget = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
 `;
@@ -823,14 +823,14 @@ const WidgetHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
-  background: ${theme.colors.dark.bg.tertiary};
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
 `;
 
 const WidgetTitle = styled.h3`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -873,12 +873,12 @@ const EmptyState = styled.div`
 
   i {
     font-size: ${theme.fontSizes.displayMd};
-    color: ${theme.colors.dark.text.disabled};
+    color: var(--color-text-disabled);
     margin-bottom: ${theme.space[3]};
   }
 
   p {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
     margin: 0 0 ${theme.space[3]} 0;
     font-size: ${theme.fontSizes.bodySm};
   }
@@ -913,13 +913,13 @@ const ShowItem = styled.div`
   align-items: flex-start;
   gap: ${theme.space[3]};
   padding: ${theme.space[3]};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.md};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     transform: translateX(4px);
   }
 `;
@@ -958,7 +958,7 @@ const ShowDetails = styled.div`
 const ShowName = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[1]};
   white-space: nowrap;
   overflow: hidden;
@@ -967,7 +967,7 @@ const ShowName = styled.div`
 
 const ShowVenue = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[1]};
   white-space: nowrap;
   overflow: hidden;
@@ -976,7 +976,7 @@ const ShowVenue = styled.div`
 
 const ShowMeta = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -1009,7 +1009,7 @@ const SongItem = styled.div`
   transition: background ${theme.transitions.fast} ease;
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
   }
 `;
 
@@ -1023,12 +1023,12 @@ const SongArt = styled.img`
 const SongArtPlaceholder = styled.div`
   width: 40px;
   height: 40px;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.sm};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${theme.colors.dark.text.disabled};
+  color: var(--color-text-disabled);
 `;
 
 const SongInfo = styled.div`
@@ -1039,7 +1039,7 @@ const SongInfo = styled.div`
 const SongTitle = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1047,15 +1047,15 @@ const SongTitle = styled.div`
 
 const SongArtist = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
 const SongKey = styled.span`
-  background: ${theme.colors.dark.bg.tertiary};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -1081,8 +1081,8 @@ const QuickActionsGrid = styled.div`
 `;
 
 const QuickAction = styled.button`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[5]};
   display: flex;
@@ -1097,8 +1097,8 @@ const QuickAction = styled.button`
   &:hover {
     border-color: ${theme.colors.brand.primary};
     transform: translateY(-2px);
-    box-shadow: ${theme.shadows.md};
-    background: ${theme.colors.dark.bg.elevated};
+    box-shadow: var(--shadow-md);
+    background: var(--color-bg-elevated);
   }
 `;
 
@@ -1123,7 +1123,7 @@ const QuickActionIcon = styled.div<{ $color: string }>`
 const QuickActionText = styled.span`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 export default Home;

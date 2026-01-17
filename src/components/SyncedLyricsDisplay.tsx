@@ -304,11 +304,11 @@ const Container = styled.div`
   }
 
   &::-webkit-scrollbar-track {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${theme.colors.dark.border.strong};
+    background: var(--color-border-strong);
     border-radius: ${theme.radius.sm};
 
     &:hover {
@@ -349,7 +349,7 @@ const PlainContent = styled.pre<{ $contentType: "chords" | "lyrics" }>`
   font-family: ${(props) =>
     props.$contentType === "chords" ? theme.fonts.mono : theme.fonts.sans};
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   white-space: pre-wrap;
   word-break: break-word;
   line-height: ${theme.lineHeights.loose};
@@ -397,13 +397,13 @@ const SectionHeader = styled.div<{
   margin-bottom: ${theme.space[2]};
   padding-bottom: ${theme.space[2]};
   border-bottom: 1px solid ${(props) =>
-    props.$isActive ? props.$color.border + "40" : theme.colors.dark.border.default};
+    props.$isActive ? props.$color.border + "40" : 'var(--color-border)'};
 `;
 
 const SectionName = styled.span`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -411,8 +411,8 @@ const SectionName = styled.span`
 const SectionTime = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
   font-family: ${theme.fonts.mono};
-  color: ${theme.colors.dark.text.tertiary};
-  background: ${theme.colors.dark.bg.tertiary};
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
   padding: 2px 6px;
   border-radius: ${theme.radius.sm};
 `;
@@ -433,7 +433,7 @@ const SectionContent = styled.div<{ $contentType: "chords" | "lyrics" }>`
   font-family: ${(props) =>
     props.$contentType === "chords" ? theme.fonts.mono : theme.fonts.sans};
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.loose};
 `;
 
@@ -451,7 +451,7 @@ const SyncedLine = styled.div<{
   cursor: ${(props) => (props.$isSynced ? "pointer" : "default")};
 
   ${(props) => props.$isEmpty && `
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   `}
 
   ${(props) => props.$isActive && `
@@ -464,7 +464,7 @@ const SyncedLine = styled.div<{
 
   ${(props) => props.$hasLineSync && props.$isSynced && !props.$isActive && `
     &:hover {
-      background: ${theme.colors.dark.bg.elevated};
+      background: var(--color-bg-elevated);
     }
   `}
 
@@ -478,6 +478,6 @@ const UnsectionedBlock = styled.div`
   opacity: 0.7;
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.loose};
 `;

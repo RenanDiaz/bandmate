@@ -219,7 +219,7 @@ const PrintableSetlist: FC = () => {
 
 const PageWrapper = styled.div`
   min-height: 100vh;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
 
   @media print {
     background: white;
@@ -232,8 +232,8 @@ const ControlBar = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: ${theme.space[4]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -245,8 +245,8 @@ const ControlBar = styled.div`
 
 const BackButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -293,7 +293,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 

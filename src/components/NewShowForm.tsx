@@ -250,10 +250,10 @@ const FormContainer = styled.div`
 const AddButton = styled.button`
   width: 100%;
   padding: ${theme.space[4]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 2px dashed ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 2px dashed var(--color-border);
   border-radius: ${theme.radius.lg};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
@@ -268,15 +268,15 @@ const AddButton = styled.button`
   }
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
 `;
 
 const FormCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
 `;
@@ -286,15 +286,15 @@ const FormHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const FormTitle = styled.h3`
   margin: 0;
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -307,7 +307,7 @@ const FormTitle = styled.h3`
 const CloseButton = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.h4};
   cursor: pointer;
   padding: ${theme.space[1]};
@@ -317,7 +317,7 @@ const CloseButton = styled.button`
   transition: color ${theme.transitions.fast} ease;
 
   &:hover {
-    color: ${theme.colors.dark.text.primary};
+    color: var(--color-text-primary);
   }
 `;
 
@@ -328,7 +328,7 @@ const FormBody = styled.div`
 const StyledLabel = styled(Label)`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[2]};
 `;
 
@@ -337,15 +337,15 @@ const Required = styled.span`
 `;
 
 const StyledInput = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
 
   &::placeholder {
-    color: ${theme.colors.dark.text.disabled} !important;
+    color: var(--color-text-disabled) !important;
   }
 
   &:focus {
@@ -359,9 +359,9 @@ const StyledInput = styled(Input)`
 `;
 
 const StyledSelect = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
@@ -372,15 +372,15 @@ const StyledSelect = styled(Input)`
   }
 
   option {
-    background: ${theme.colors.dark.bg.secondary};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
   }
 `;
 
 const StyledTextarea = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
@@ -388,7 +388,7 @@ const StyledTextarea = styled(Input)`
   min-height: 80px;
 
   &::placeholder {
-    color: ${theme.colors.dark.text.disabled} !important;
+    color: var(--color-text-disabled) !important;
   }
 
   &:focus {
@@ -401,7 +401,7 @@ const FormHint = styled.small`
   display: block;
   margin-top: ${theme.space[1]};
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const FormFooter = styled.div`
@@ -409,22 +409,22 @@ const FormFooter = styled.div`
   justify-content: flex-end;
   gap: ${theme.space[3]};
   padding: ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border);
 `;
 
 const CancelButton = styled(Button)`
   background: transparent !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.secondary} !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
   padding: ${theme.space[2]} ${theme.space[4]} !important;
   font-weight: ${theme.fontWeights.medium} !important;
   border-radius: ${theme.radius.base} !important;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated} !important;
-    border-color: ${theme.colors.dark.border.strong} !important;
-    color: ${theme.colors.dark.text.primary} !important;
+    background: var(--color-bg-elevated) !important;
+    border-color: var(--color-border-strong) !important;
+    color: var(--color-text-primary) !important;
   }
 `;
 

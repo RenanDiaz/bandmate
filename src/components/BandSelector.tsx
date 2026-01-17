@@ -290,7 +290,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
 
 const SelectorWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[8]} 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -304,7 +304,7 @@ const SelectorHeader = styled.div`
   gap: ${theme.space[4]};
   margin-bottom: ${theme.space[8]};
   padding-bottom: ${theme.space[6]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     flex-direction: column;
@@ -333,7 +333,7 @@ const HeaderContent = styled.div`
 const HeaderTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
   line-height: ${theme.lineHeights.tight};
 
@@ -344,7 +344,7 @@ const HeaderTitle = styled.h1`
 
 const HeaderSubtitle = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -365,7 +365,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -386,7 +386,7 @@ const ErrorIcon = styled.div`
 
 const ErrorText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[4]};
 `;
 
@@ -417,15 +417,15 @@ const RetryButton = styled.button`
 const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.space[12]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px dashed ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
   border-radius: ${theme.radius.lg};
   margin-top: ${theme.space[6]};
 `;
 
 const EmptyIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -433,13 +433,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const EmptyText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -447,7 +447,7 @@ const EmptyText = styled.p`
 // Invitations Styled Components
 
 const InvitationsSection = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
+  background: var(--color-bg-secondary);
   border: 2px solid ${theme.colors.brand.primary};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
@@ -459,14 +459,14 @@ const InvitationsHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]} ${theme.space[5]};
-  background: ${theme.colors.dark.bg.elevated};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const InvitationsTitle = styled.h3`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -500,9 +500,9 @@ const InvitationsList = styled.div`
 `;
 
 const InvitationCard = styled.div<{ $expired: boolean }>`
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   border: 1px solid ${(props) =>
-    props.$expired ? theme.colors.dark.border.default : theme.colors.brand.primary};
+    props.$expired ? 'var(--color-border)' : theme.colors.brand.primary};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   display: flex;
@@ -544,13 +544,13 @@ const InvitationDetails = styled.div`
 const InvitationBandName = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[1]};
 `;
 
 const InvitationMeta = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
@@ -563,7 +563,7 @@ const InvitationMeta = styled.div`
 
 const InvitationRole = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -572,7 +572,7 @@ const InvitationRole = styled.div`
 const RoleBadge = styled.span<{ $role: string }>`
   background: ${(props) =>
     props.$role === "member"
-      ? theme.colors.dark.bg.tertiary
+      ? 'var(--color-bg-tertiary)'
       : theme.colors.semantic.warningBgDark};
   color: ${(props) =>
     props.$role === "member"
@@ -632,7 +632,7 @@ const AcceptButton = styled.button`
 
 const DeclineButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${theme.colors.semantic.error};
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};

@@ -314,17 +314,10 @@ const AppWrapper = styled.div`
 `;
 
 const StyledNavbar = styled(Navbar)<{ $mode: "light" | "dark" }>`
-  background: ${(props) =>
-    props.$mode === "dark"
-      ? theme.colors.dark.bg.secondary
-      : theme.colors.light.bg.primary} !important;
-  border-bottom: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default};
+  background: var(--color-bg-secondary) !important;
+  border-bottom: 1px solid var(--color-border);
   padding: ${theme.space[3]} 0;
-  box-shadow: ${(props) => (props.$mode === "dark" ? theme.shadows.sm : theme.shadowsLight.sm)};
+  box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: ${theme.zIndex.sticky};
@@ -356,8 +349,8 @@ const NavBrandContainer = styled.div`
 const StyledNavbarToggler = styled.button`
   display: none;
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -370,7 +363,7 @@ const StyledNavbarToggler = styled.button`
   margin-left: auto;
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -393,7 +386,7 @@ const BandInfoContainer = styled.div`
 const BandDivider = styled.div`
   width: 1px;
   height: 24px;
-  background: ${theme.colors.dark.border.default};
+  background: var(--color-border);
   opacity: 0.5;
 `;
 
@@ -411,7 +404,7 @@ const MobileBandInfo = styled.div`
   display: none;
   padding: ${theme.space[3]} 0;
   margin-bottom: ${theme.space[2]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     display: flex;
@@ -453,14 +446,14 @@ const SwitchBandButton = styled(Button)`
 
 const BandSettingsButton = styled(Button)`
   background: transparent !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
+  border: 1px solid var(--color-border) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[1]} ${theme.space[2]} !important;
-  color: ${theme.colors.dark.text.secondary} !important;
+  color: var(--color-text-secondary) !important;
   transition: all ${theme.transitions.fast} ease !important;
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary} !important;
+    background: var(--color-bg-tertiary) !important;
     border-color: ${theme.colors.brand.primary} !important;
     color: ${theme.colors.brand.primary} !important;
     transform: translateY(-1px);
@@ -498,9 +491,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   color: ${(props) =>
     props.$active
       ? theme.colors.brand.primary
-      : props.$mode === "dark"
-      ? theme.colors.dark.text.secondary
-      : theme.colors.light.text.secondary} !important;
+      : 'var(--color-text-secondary)'} !important;
   text-decoration: none !important;
   font-weight: ${(props) =>
     props.$active ? theme.fontWeights.semibold : theme.fontWeights.medium};
@@ -524,8 +515,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
 
     &:hover {
       color: ${theme.colors.brand.primary} !important;
-      background: ${(props) =>
-        props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+      background: var(--color-bg-tertiary);
       transform: none;
     }
   }
@@ -545,8 +535,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
 
     &:hover {
       color: ${theme.colors.brand.primary} !important;
-      background: ${(props) =>
-        props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+      background: var(--color-bg-tertiary);
       transform: translateX(4px);
     }
   }
@@ -554,9 +543,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   ${(props) =>
     props.$active &&
     `
-    background: ${
-      props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary
-    };
+    background: var(--color-bg-tertiary);
   `}
 `;
 
@@ -567,18 +554,13 @@ const NavActions = styled.div`
   width: 100%;
   margin-top: auto;
   padding-top: ${theme.space[4]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
 `;
 
 const ThemeToggleButton = styled.button<{ $mode: "light" | "dark" }>`
   background: transparent;
-  border: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default};
-  color: ${(props) =>
-    props.$mode === "dark" ? theme.colors.dark.text.primary : theme.colors.light.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   width: 100%;
   height: 48px;
   border-radius: ${theme.radius.base};
@@ -592,8 +574,7 @@ const ThemeToggleButton = styled.button<{ $mode: "light" | "dark" }>`
   font-weight: ${theme.fontWeights.medium};
 
   &:hover {
-    background: ${(props) =>
-      props.$mode === "dark" ? theme.colors.dark.bg.tertiary : theme.colors.light.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
     transform: translateX(4px);

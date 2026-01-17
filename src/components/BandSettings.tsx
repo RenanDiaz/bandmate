@@ -155,7 +155,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
 
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[6]} 0;
 `;
 
@@ -173,9 +173,9 @@ const HeaderLeft = styled.div`
 `;
 
 const BackButton = styled.button`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -187,7 +187,7 @@ const BackButton = styled.button`
   font-size: ${theme.fontSizes.bodyLg};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
     transform: translateY(-1px);
@@ -203,21 +203,21 @@ const HeaderInfo = styled.div`
 const BandName = styled.h1`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   line-height: ${theme.lineHeights.tight};
 `;
 
 const BreadcrumbText = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const TabsContainer = styled.div`
   display: flex;
   gap: ${theme.space[2]};
   margin-bottom: ${theme.space[6]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
@@ -226,7 +226,7 @@ const Tab = styled.button<{ $active: boolean }>`
   border-bottom: 2px solid ${(props) =>
     props.$active ? theme.colors.brand.primary : "transparent"};
   color: ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.text.secondary};
+    props.$active ? theme.colors.brand.primary : 'var(--color-text-secondary)'};
   padding: ${theme.space[3]} ${theme.space[5]};
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
@@ -251,8 +251,8 @@ const ContentArea = styled.div`
 `;
 
 const DetailsPlaceholder = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[12]};
   text-align: center;
@@ -260,7 +260,7 @@ const DetailsPlaceholder = styled.div`
 
 const PlaceholderIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 
@@ -272,13 +272,13 @@ const PlaceholderIcon = styled.div`
 const PlaceholderTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const PlaceholderText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   max-width: 500px;
   margin: 0 auto;
@@ -296,13 +296,13 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
 const MessageCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[12]};
   text-align: center;
@@ -311,7 +311,7 @@ const MessageCard = styled.div`
 
 const MessageIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -319,13 +319,13 @@ const MessageIcon = styled.div`
 const MessageTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const MessageText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;

@@ -254,21 +254,21 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
 
 const StyledModal = styled(Modal)`
   .modal-content {
-    background: ${theme.colors.dark.bg.secondary};
-    border: 1px solid ${theme.colors.dark.border.default};
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: ${theme.radius.lg};
   }
 `;
 
 const StyledModalHeader = styled(ModalHeader)`
-  background: ${theme.colors.dark.bg.tertiary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
   padding: ${theme.space[4]};
 
   .modal-title {
     font-size: ${theme.fontSizes.h4};
     font-weight: ${theme.fontWeights.semibold};
-    color: ${theme.colors.dark.text.primary};
+    color: var(--color-text-primary);
     display: flex;
     align-items: center;
 
@@ -287,8 +287,8 @@ const StyledModalBody = styled(ModalBody)`
 `;
 
 const StyledModalFooter = styled(ModalFooter)`
-  background: ${theme.colors.dark.bg.tertiary};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border);
   padding: ${theme.space[4]};
   display: flex;
   justify-content: flex-end;
@@ -298,7 +298,7 @@ const StyledModalFooter = styled(ModalFooter)`
 const StyledLabel = styled(Label)`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[2]};
 `;
 
@@ -307,15 +307,15 @@ const Required = styled.span`
 `;
 
 const StyledInput = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
 
   &::placeholder {
-    color: ${theme.colors.dark.text.disabled} !important;
+    color: var(--color-text-disabled) !important;
   }
 
   &:focus {
@@ -329,9 +329,9 @@ const StyledInput = styled(Input)`
 `;
 
 const StyledSelect = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
@@ -342,15 +342,15 @@ const StyledSelect = styled(Input)`
   }
 
   option {
-    background: ${theme.colors.dark.bg.secondary};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
   }
 `;
 
 const StyledTextarea = styled(Input)`
-  background: ${theme.colors.dark.bg.tertiary} !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.primary} !important;
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
   border-radius: ${theme.radius.base} !important;
   padding: ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.body} !important;
@@ -358,7 +358,7 @@ const StyledTextarea = styled(Input)`
   min-height: 80px;
 
   &::placeholder {
-    color: ${theme.colors.dark.text.disabled} !important;
+    color: var(--color-text-disabled) !important;
   }
 
   &:focus {
@@ -369,16 +369,16 @@ const StyledTextarea = styled(Input)`
 
 const CancelButton = styled(Button)`
   background: transparent !important;
-  border: 1px solid ${theme.colors.dark.border.default} !important;
-  color: ${theme.colors.dark.text.secondary} !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
   padding: ${theme.space[2]} ${theme.space[4]} !important;
   font-weight: ${theme.fontWeights.medium} !important;
   border-radius: ${theme.radius.base} !important;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated} !important;
-    border-color: ${theme.colors.dark.border.strong} !important;
-    color: ${theme.colors.dark.text.primary} !important;
+    background: var(--color-bg-elevated) !important;
+    border-color: var(--color-border-strong) !important;
+    color: var(--color-text-primary) !important;
   }
 `;
 

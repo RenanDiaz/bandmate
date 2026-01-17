@@ -161,7 +161,7 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
 // Styled Components
 
 const Container = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
+  background: var(--color-bg-secondary);
   border: 1px solid ${theme.colors.brand.primary};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
@@ -173,14 +173,14 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]} ${theme.space[5]};
-  background: ${theme.colors.dark.bg.elevated};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const Title = styled.h3`
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -213,11 +213,11 @@ const InvitationsList = styled.div`
 `;
 
 const InvitationCard = styled.div<{ $expired: boolean }>`
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   border: 1px solid
     ${(props) =>
       props.$expired
-        ? theme.colors.dark.border.default
+        ? 'var(--color-border)'
         : theme.colors.brand.primary};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
@@ -260,13 +260,13 @@ const InvitationDetails = styled.div`
 const InvitationTitle = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[1]};
 `;
 
 const InvitationMeta = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -280,7 +280,7 @@ const InvitationMeta = styled.div`
 const RoleBadge = styled.span<{ $role: string }>`
   background: ${(props) =>
     props.$role === "member"
-      ? theme.colors.dark.bg.tertiary
+      ? 'var(--color-bg-tertiary)'
       : theme.colors.semantic.warningBgDark};
   color: ${(props) =>
     props.$role === "member"
@@ -340,7 +340,7 @@ const AcceptButton = styled.button`
 
 const DeclineButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${theme.colors.semantic.error};
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
@@ -365,7 +365,7 @@ const DeclineButton = styled.button`
 
 const ExpiredText = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-style: italic;
 `;
 
@@ -378,7 +378,7 @@ const LoadingContainer = styled.div`
 
   p {
     font-size: ${theme.fontSizes.body};
-    color: ${theme.colors.dark.text.secondary};
+    color: var(--color-text-secondary);
     margin: 0;
   }
 `;

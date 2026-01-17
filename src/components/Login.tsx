@@ -196,10 +196,10 @@ const LoginContainer = styled.div`
 `;
 
 const LoginCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.xl};
-  box-shadow: ${theme.shadows.xl};
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
 `;
 
@@ -229,7 +229,7 @@ const FormSection = styled.div`
 const FormTitle = styled.h2`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[6]} 0;
   text-align: center;
 `;
@@ -285,13 +285,13 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const Input = styled.input`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -299,7 +299,7 @@ const Input = styled.input`
   font-family: ${theme.fonts.sans};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 
   &:focus {
@@ -309,7 +309,7 @@ const Input = styled.input`
   }
 
   &:hover:not(:focus):not(:disabled) {
-    border-color: ${theme.colors.dark.border.strong};
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -320,7 +320,7 @@ const Input = styled.input`
 
 const HelperText = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const SubmitButton = styled.button`
@@ -342,7 +342,7 @@ const SubmitButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -380,12 +380,12 @@ const Divider = styled.div`
 const DividerLine = styled.div`
   flex: 1;
   height: 1px;
-  background: ${theme.colors.dark.border.default};
+  background: var(--color-border);
 `;
 
 const DividerText = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -415,7 +415,7 @@ const GoogleButton = styled.button`
     background: #f8f9fa;
     border-color: #d2e3fc;
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.sm};
+    box-shadow: var(--shadow-sm);
   }
 
   &:active:not(:disabled) {
@@ -432,7 +432,7 @@ const GoogleButton = styled.button`
 const ToggleText = styled.p`
   text-align: center;
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: ${theme.space[6]} 0 ${theme.space[4]};
 `;
 
@@ -456,7 +456,7 @@ const BackLink = styled(Link)`
   align-items: center;
   justify-content: center;
   gap: ${theme.space[2]};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.bodySm};
   text-decoration: none;
   transition: color ${theme.transitions.fast} ease;

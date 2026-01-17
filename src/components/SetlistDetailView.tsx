@@ -32,9 +32,9 @@ import { youtubeService, type PlaylistCreationResult } from "../services/youtube
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
   background: ${(props) =>
-    props.$isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.secondary};
+    props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-secondary)'};
   border: 1px solid ${(props) =>
-    props.$isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$isDragging ? theme.colors.brand.primary : 'var(--color-border)'};
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[4]};
   display: flex;
@@ -47,7 +47,7 @@ const SongCard = styled.div<{ $isDragging?: boolean }>`
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.sm};
+    box-shadow: var(--shadow-sm);
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -59,7 +59,7 @@ const SongCard = styled.div<{ $isDragging?: boolean }>`
 const DragHandle = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   width: 24px;
   height: 36px;
   display: flex;
@@ -108,14 +108,14 @@ const BackingTracksBadge = styled.div`
   width: 20px;
   height: 20px;
   background: ${theme.colors.semantic.success};
-  border: 2px solid ${theme.colors.dark.bg.secondary};
+  border: 2px solid var(--color-bg-secondary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 10px;
-  box-shadow: ${theme.shadows.sm};
+  box-shadow: var(--shadow-sm);
   transition: all ${theme.transitions.fast} ease;
   cursor: help;
 
@@ -132,13 +132,13 @@ const SongInfo = styled.div`
 const SongTitle = styled.div`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[1]};
 `;
 
 const SongArtist = styled.div`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[2]};
 `;
 
@@ -148,7 +148,7 @@ const SongNotes = styled.div`
   border-radius: ${theme.radius.sm};
   padding: ${theme.space[2]} ${theme.space[3]};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: flex-start;
   gap: ${theme.space[2]};
@@ -177,9 +177,9 @@ const MetaBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -1138,7 +1138,7 @@ const SetlistDetailView: FC = () => {
 
 const ViewContainer = styled.div`
   min-height: calc(100vh - 72px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[8]} 0;
 `;
 
@@ -1157,7 +1157,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -1181,13 +1181,13 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
 `;
 
 const ErrorText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -1213,8 +1213,8 @@ const BackButton = styled.button`
 `;
 
 const Header = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
   margin-bottom: ${theme.space[6]};
@@ -1236,7 +1236,7 @@ const HeaderTop = styled.div`
 const BackLink = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-size: ${theme.fontSizes.body};
   cursor: pointer;
   display: flex;
@@ -1308,7 +1308,7 @@ const ActionButton = styled.button<{ $variant: "edit" | "perform" }>`
 const SetlistTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[4]} 0;
   line-height: ${theme.lineHeights.tight};
 
@@ -1319,7 +1319,7 @@ const SetlistTitle = styled.h1`
 
 const SetlistDescription = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
   margin: 0 0 ${theme.space[6]} 0;
 `;
@@ -1334,9 +1334,9 @@ const MetadataItem = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -1349,8 +1349,8 @@ const MetadataItem = styled.div`
 `;
 
 const EmptyState = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[12]} ${theme.space[6]};
   text-align: center;
@@ -1358,7 +1358,7 @@ const EmptyState = styled.div`
 
 const EmptyIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -1366,13 +1366,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[2]} 0;
 `;
 
 const EmptyText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -1419,23 +1419,23 @@ const OptionSection = styled.div`
 const SectionTitle = styled.h3`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[2]} 0;
   padding-bottom: ${theme.space[2]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const DisabledNote = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-style: italic;
   margin-left: ${theme.space[2]};
 `;
 
 // Special item card styles
 const SpecialItemCard = styled.div<{ $type: string }>`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-left: 3px solid ${(props) => {
     switch (props.$type) {
       case "break":
@@ -1445,7 +1445,7 @@ const SpecialItemCard = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.border.default;
+        return 'var(--color-border)';
     }
   }};
   border-radius: ${theme.radius.lg};
@@ -1457,7 +1457,7 @@ const SpecialItemCard = styled.div<{ $type: string }>`
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.sm};
+    box-shadow: var(--shadow-sm);
   }
 `;
 
@@ -1479,7 +1479,7 @@ const SpecialItemIcon = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.successBgDark;
       default:
-        return theme.colors.dark.bg.tertiary;
+        return 'var(--color-bg-tertiary)';
     }
   }};
   color: ${(props) => {
@@ -1491,7 +1491,7 @@ const SpecialItemIcon = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.text.secondary;
+        return 'var(--color-text-secondary)';
     }
   }};
 `;
@@ -1506,7 +1506,7 @@ const SpecialItemInfo = styled.div`
 const SpecialItemType = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -1514,12 +1514,12 @@ const SpecialItemType = styled.div`
 const SpecialItemLabel = styled.div`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const SpecialItemDuration = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
@@ -1547,13 +1547,13 @@ const AuthIcon = styled.div`
 const AuthTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const AuthText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[6]};
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -1569,13 +1569,13 @@ const YouTubeProgressContainer = styled.div`
 const ProgressTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: ${theme.space[4]} 0 ${theme.space[2]} 0;
 `;
 
 const ProgressText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[2]};
 `;
 
@@ -1593,7 +1593,7 @@ const CurrentSong = styled.div`
 const ProgressBar = styled.div`
   width: 100%;
   height: 8px;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.base};
   overflow: hidden;
 `;
@@ -1623,7 +1623,7 @@ const ResultIcon = styled.div<{ $success: boolean }>`
 const ResultTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[4]};
 `;
 
@@ -1639,11 +1639,11 @@ const StatRow = styled.div<{ $warning?: boolean }>`
   gap: ${theme.space[3]};
   font-size: ${theme.fontSizes.body};
   color: ${(props) =>
-    props.$warning ? theme.colors.semantic.warning : theme.colors.dark.text.secondary};
+    props.$warning ? theme.colors.semantic.warning : 'var(--color-text-secondary)'};
 
   strong {
     color: ${(props) =>
-      props.$warning ? theme.colors.semantic.warning : theme.colors.dark.text.primary};
+      props.$warning ? theme.colors.semantic.warning : 'var(--color-text-primary)'};
   }
 `;
 
@@ -1651,8 +1651,8 @@ const FailedSongsList = styled.div`
   width: 100%;
   max-height: 150px;
   overflow-y: auto;
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   margin-bottom: ${theme.space[4]};
@@ -1668,9 +1668,9 @@ const FailedSongsTitle = styled.div`
 
 const FailedSongItem = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} 0;
-  border-bottom: 1px solid ${theme.colors.dark.border.subtle};
+  border-bottom: 1px solid var(--color-border-subtle);
 
   &:last-child {
     border-bottom: none;
@@ -1713,13 +1713,13 @@ const ExistingPlaylistIcon = styled.div`
 const ExistingPlaylistTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const ExistingPlaylistText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[6]};
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -1727,7 +1727,7 @@ const ExistingPlaylistText = styled.p`
 const CreateNewPlaylistLink = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-size: ${theme.fontSizes.bodySm};
   cursor: pointer;
   margin-top: ${theme.space[4]};
@@ -1757,13 +1757,13 @@ const YouTubeExportPreview = styled.div`
 const PreviewTitle = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const PreviewText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[4]};
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -1778,12 +1778,12 @@ const PreviewStat = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 
   i {
     color: #ff0000;
@@ -1792,8 +1792,8 @@ const PreviewStat = styled.div`
 
 const PreviewNote = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
-  background: ${theme.colors.dark.bg.tertiary};
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   line-height: ${theme.lineHeights.relaxed};

@@ -132,15 +132,15 @@ const ModalContainer = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
   z-index: ${theme.zIndex.modal + 10};
-  box-shadow: ${theme.shadows.xl};
+  box-shadow: var(--shadow-xl);
   animation: slideIn ${theme.transitions.base} ease;
 
   @keyframes slideIn {
@@ -160,13 +160,13 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const Title = styled.h2`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -180,7 +180,7 @@ const Title = styled.h2`
 const CloseButton = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   width: 32px;
   height: 32px;
   border-radius: ${theme.radius.base};
@@ -192,8 +192,8 @@ const CloseButton = styled.button`
   font-size: ${theme.fontSizes.h3};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
   }
 `;
 
@@ -213,13 +213,13 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const Input = styled.input`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -239,9 +239,9 @@ const Input = styled.input`
 `;
 
 const Select = styled.select`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -263,7 +263,7 @@ const Select = styled.select`
 
 const HelperText = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const Actions = styled.div`
@@ -275,8 +275,8 @@ const Actions = styled.div`
 
 const CancelButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[5]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -285,8 +285,8 @@ const CancelButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.dark.bg.elevated};
-    border-color: ${theme.colors.dark.border.strong};
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -316,7 +316,7 @@ const SubmitButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -324,8 +324,8 @@ const SubmitButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 `;

@@ -450,7 +450,7 @@ const ShowDetailView: FC = () => {
 
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[8]} 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -462,7 +462,7 @@ const BackLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[2]};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-decoration: none;
   font-size: ${theme.fontSizes.bodySm};
   margin-bottom: ${theme.space[4]};
@@ -477,8 +477,8 @@ const ShowHeader = styled.div<{ $isCancelled: boolean }>`
   display: flex;
   gap: ${theme.space[6]};
   padding: ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   margin-bottom: ${theme.space[6]};
   opacity: ${(props) => (props.$isCancelled ? 0.8 : 1)};
@@ -533,7 +533,7 @@ const HeaderContent = styled.div`
 const ShowName = styled.h1<{ $isCancelled: boolean }>`
   font-size: ${theme.fontSizes.h1};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[3]} 0;
   text-decoration: ${(props) => (props.$isCancelled ? "line-through" : "none")};
 `;
@@ -557,13 +557,13 @@ const StatusBadge = styled.span<{ $status: string; $isPast: boolean }>`
     props.$status === "cancelled"
       ? theme.colors.semantic.errorBgDark
       : props.$status === "completed" || props.$isPast
-      ? theme.colors.dark.bg.tertiary
+      ? 'var(--color-bg-tertiary)'
       : theme.colors.semantic.successBgDark};
   color: ${(props) =>
     props.$status === "cancelled"
       ? theme.colors.semantic.error
       : props.$status === "completed" || props.$isPast
-      ? theme.colors.dark.text.tertiary
+      ? 'var(--color-text-tertiary)'
       : theme.colors.semantic.success};
 `;
 
@@ -588,7 +588,7 @@ const VenueInfo = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 
   i {
@@ -601,7 +601,7 @@ const DateTimeInfo = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   flex-wrap: wrap;
 
   i {
@@ -610,7 +610,7 @@ const DateTimeInfo = styled.div`
 `;
 
 const Separator = styled.span`
-  color: ${theme.colors.dark.border.default};
+  color: var(--color-border);
 `;
 
 const ActionButtonsHeader = styled.div`
@@ -678,8 +678,8 @@ const Sidebar = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
 `;
@@ -689,10 +689,10 @@ const InfoCardHeader = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   padding: ${theme.space[3]} ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 
@@ -707,7 +707,7 @@ const InfoCardBody = styled.div`
 
 const AddressText = styled.p`
   margin: 0 0 ${theme.space[3]} 0;
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.relaxed};
 `;
 
@@ -726,14 +726,14 @@ const MapLink = styled.a`
 
 const NotesText = styled.p`
   margin: 0;
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.relaxed};
   white-space: pre-wrap;
 `;
 
 const SetlistCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
 `;
@@ -743,8 +743,8 @@ const SetlistHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
   gap: ${theme.space[3]};
   flex-wrap: wrap;
 `;
@@ -753,7 +753,7 @@ const SetlistTitle = styled.h3`
   margin: 0;
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -784,7 +784,7 @@ const SetlistBody = styled.div`
 
 const EmptySetlist = styled.p`
   margin: 0;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-align: center;
   padding: ${theme.space[4]};
 `;
@@ -800,7 +800,7 @@ const SongItem = styled.div`
   align-items: center;
   gap: ${theme.space[3]};
   padding: ${theme.space[3]};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.base};
 `;
 
@@ -825,12 +825,12 @@ const SongInfo = styled.div`
 
 const SongTitle = styled.div`
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const SongArtist = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const SongNotes = styled.div`
@@ -844,14 +844,14 @@ const SongNotes = styled.div`
 const NoSetlistCard = styled.div`
   text-align: center;
   padding: ${theme.space[8]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px dashed ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
   border-radius: ${theme.radius.lg};
 `;
 
 const NoSetlistIcon = styled.div`
   font-size: ${theme.fontSizes.displayMd};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[3]};
   opacity: 0.5;
 `;
@@ -859,23 +859,23 @@ const NoSetlistIcon = styled.div`
 const NoSetlistText = styled.p`
   margin: 0 0 ${theme.space[2]} 0;
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const NoSetlistHint = styled.p`
   margin: 0 0 ${theme.space[4]} 0;
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const SetlistSelector = styled.select`
   width: 100%;
   max-width: 400px;
   padding: ${theme.space[3]} ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-size: ${theme.fontSizes.body};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
@@ -898,7 +898,7 @@ const SetlistSelector = styled.select`
 
 const SetlistLinkDivider = styled.div`
   margin: ${theme.space[4]} 0;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.bodySm};
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
@@ -911,7 +911,7 @@ const SetlistLinkDivider = styled.div`
     top: 50%;
     width: 40%;
     height: 1px;
-    background: ${theme.colors.dark.border.default};
+    background: var(--color-border);
   }
 
   &::before {
@@ -940,8 +940,8 @@ const CreateSetlistButton = styled(Button)`
 `;
 
 const QuickInfoCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[4]};
 `;
@@ -950,7 +950,7 @@ const QuickInfoTitle = styled.h3`
   margin: 0 0 ${theme.space[4]} 0;
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -969,14 +969,14 @@ const QuickInfoItem = styled.div`
 
 const QuickInfoLabel = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
 
 const QuickInfoValue = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-weight: ${theme.fontWeights.medium};
 `;
 
@@ -991,14 +991,14 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   margin: 0;
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const ErrorCard = styled.div`
   text-align: center;
   padding: ${theme.space[12]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   margin-top: ${theme.space[8]};
 `;
@@ -1012,12 +1012,12 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.h2`
   margin: 0 0 ${theme.space[2]} 0;
   font-size: ${theme.fontSizes.h2};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const ErrorText = styled.p`
   margin: 0 0 ${theme.space[4]} 0;
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const BackButton = styled(Button)`
