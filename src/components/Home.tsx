@@ -74,7 +74,19 @@ const Home = () => {
     if (diffDays === 0) return t('home.today');
     if (diffDays === 1) return t('home.tomorrow');
     if (diffDays <= 7) return t('home.inDays', { count: diffDays });
-    return t('home.inWeeks', { count: Math.ceil(diffDays / 7) });
+
+    const weeks = Math.floor(diffDays / 7);
+    const remainingDays = diffDays % 7;
+
+    if (remainingDays === 0) {
+      return t('home.inWeeks', { count: weeks });
+    }
+
+    if (weeks === 1) {
+      return t('home.inWeekAndDays', { days: remainingDays, count: remainingDays });
+    }
+
+    return t('home.inWeeksAndDays', { weeks, days: remainingDays, count: remainingDays });
   };
 
   // Show dashboard for authenticated users with a selected band
