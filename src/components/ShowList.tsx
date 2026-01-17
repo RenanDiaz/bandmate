@@ -42,7 +42,7 @@ const formatTime = (timeString: string): string => {
 const getStatusColor = (status: string, eventDate: string) => {
   const today = new Date().toISOString().split("T")[0];
   if (status === "cancelled") return theme.colors.semantic.error;
-  if (status === "completed" || eventDate < today) return theme.colors.dark.text.tertiary;
+  if (status === "completed" || eventDate < today) return 'var(--color-text-tertiary)';
   return theme.colors.semantic.success;
 };
 
@@ -309,8 +309,8 @@ const ShowsGrid = styled.div`
 `;
 
 const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean; $clickable?: boolean }>`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
@@ -319,7 +319,7 @@ const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean; $clickabl
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
     opacity: 1;
   }
 `;
@@ -338,7 +338,7 @@ const DateBadge = styled.div<{ $isPast: boolean; $isCancelled: boolean }>`
     props.$isCancelled
       ? theme.colors.semantic.errorBgDark
       : props.$isPast
-      ? theme.colors.dark.bg.tertiary
+      ? 'var(--color-bg-tertiary)'
       : theme.gradients.brandPrimary};
   border-radius: ${theme.radius.md};
   display: flex;
@@ -371,7 +371,7 @@ const ShowInfo = styled.div`
 const ShowName = styled.h3<{ $isCancelled: boolean }>`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[2]} 0;
   line-height: ${theme.lineHeights.snug};
   text-decoration: ${(props) => (props.$isCancelled ? "line-through" : "none")};
@@ -379,7 +379,7 @@ const ShowName = styled.h3<{ $isCancelled: boolean }>`
 
 const ShowVenue = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[1]};
   display: flex;
   align-items: center;
@@ -392,7 +392,7 @@ const ShowVenue = styled.div`
 
 const ShowDateTime = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[1]};
   display: flex;
   align-items: center;
@@ -405,14 +405,14 @@ const ShowDateTime = styled.div`
 
 const ShowDoors = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[2]};
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
 
   i {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 `;
 
@@ -442,9 +442,9 @@ const CountdownBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -499,8 +499,8 @@ const MobileDropdownWrapper = styled.div`
 
   .mobile-actions-toggle {
     background: transparent;
-    border: 1px solid ${theme.colors.dark.border.default};
-    color: ${theme.colors.dark.text.secondary};
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
     width: 40px;
     height: 40px;
     border-radius: ${theme.radius.base};
@@ -513,7 +513,7 @@ const MobileDropdownWrapper = styled.div`
 
     &:hover,
     &:focus {
-      background: ${theme.colors.dark.bg.elevated};
+      background: var(--color-bg-elevated);
       border-color: ${theme.colors.brand.primary};
       color: ${theme.colors.brand.primary};
     }
@@ -528,12 +528,12 @@ const ActionButton = styled.button<{
   $variant: "view" | "edit" | "complete" | "cancel" | "delete";
 }>`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${(props) => {
     if (props.$variant === "complete") return theme.colors.semantic.success;
     if (props.$variant === "cancel") return theme.colors.accent.amber;
     if (props.$variant === "delete") return theme.colors.semantic.error;
-    return theme.colors.dark.text.secondary;
+    return 'var(--color-text-secondary)';
   }};
   width: 32px;
   height: 32px;
@@ -551,7 +551,7 @@ const ActionButton = styled.button<{
       if (props.$variant === "complete") return theme.colors.semantic.successBgDark;
       if (props.$variant === "cancel") return theme.colors.semantic.warningBgDark;
       if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
-      return theme.colors.dark.bg.elevated;
+      return 'var(--color-bg-elevated)';
     }};
     border-color: ${(props) => {
       if (props.$variant === "complete") return theme.colors.semantic.success;
@@ -574,7 +574,7 @@ const ActionButton = styled.button<{
       if (props.$variant === "complete") return theme.colors.semantic.successBgDark;
       if (props.$variant === "cancel") return theme.colors.semantic.warningBgDark;
       if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
-      return theme.colors.dark.bg.elevated;
+      return 'var(--color-bg-elevated)';
     }};
   }
 `;
@@ -583,10 +583,10 @@ const ShowNotes = styled.div`
   padding: ${theme.space[3]} ${theme.space[4]};
   margin: 0;
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
-  border-top: 1px solid ${theme.colors.dark.border.default};
-  background: ${theme.colors.dark.bg.tertiary};
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
   display: flex;
   align-items: flex-start;
   gap: ${theme.space[2]};
@@ -601,13 +601,13 @@ const ShowNotes = styled.div`
 const ShowAddress = styled.div`
   padding: ${theme.space[2]} ${theme.space[4]} ${theme.space[3]};
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  border-top: 1px solid ${theme.colors.dark.border.subtle};
+  border-top: 1px solid var(--color-border-subtle);
 
   i {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 `;

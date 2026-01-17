@@ -155,7 +155,7 @@ const About = () => {
 
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[8]} 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -167,13 +167,13 @@ const AboutHeader = styled.div`
   text-align: center;
   margin-bottom: ${theme.space[8]};
   padding-bottom: ${theme.space[6]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const Title = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-top: ${theme.space[4]};
   margin-bottom: 0;
 
@@ -191,8 +191,8 @@ const ContentSection = styled.div`
 `;
 
 const Card = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
 `;
@@ -200,7 +200,7 @@ const Card = styled.div`
 const CardTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[4]};
   display: flex;
   align-items: center;
@@ -217,7 +217,7 @@ const CardTitle = styled.h2`
 
 const CardText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
   margin: 0;
 `;
@@ -253,11 +253,11 @@ const FeatureIcon = styled.div<{ $coming?: boolean }>`
 
 const FeatureText = styled.div`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
 
   strong {
-    color: ${theme.colors.dark.text.primary};
+    color: var(--color-text-primary);
     font-weight: ${theme.fontWeights.semibold};
   }
 `;
@@ -269,14 +269,14 @@ const TechGrid = styled.div`
 `;
 
 const TechItem = styled.div`
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   text-align: center;
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   transition: all ${theme.transitions.fast} ease;
 
   &:hover {

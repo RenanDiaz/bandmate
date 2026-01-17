@@ -248,7 +248,7 @@ const PrintableSongbook: FC = () => {
 
 const PageWrapper = styled.div`
   min-height: 100vh;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
 
   @media print {
     background: white;
@@ -263,8 +263,8 @@ const ControlBar = styled.div`
   flex-wrap: wrap;
   gap: ${theme.space[4]};
   padding: ${theme.space[4]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -288,14 +288,14 @@ const ControlsGroup = styled.div`
 
 const ControlLabel = styled.span`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-weight: ${theme.fontWeights.medium};
 `;
 
 const Select = styled.select`
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -312,7 +312,7 @@ const CheckboxLabel = styled.label`
   align-items: center;
   gap: ${theme.space[1]};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   cursor: pointer;
 
   input {
@@ -322,8 +322,8 @@ const CheckboxLabel = styled.label`
 
 const BackButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -370,7 +370,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 

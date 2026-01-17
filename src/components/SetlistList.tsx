@@ -166,8 +166,8 @@ const SetlistsGrid = styled.div`
 `;
 
 const SetlistCard = styled.div<{ $clickable?: boolean }>`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
@@ -175,7 +175,7 @@ const SetlistCard = styled.div<{ $clickable?: boolean }>`
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 `;
 
@@ -208,7 +208,7 @@ const SetlistInfo = styled.div`
 const SetlistName = styled.h3`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[2]} 0;
   line-height: ${theme.lineHeights.snug};
 `;
@@ -224,9 +224,9 @@ const MetadataBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -269,8 +269,8 @@ const MobileDropdownWrapper = styled.div`
 
   .mobile-actions-toggle {
     background: transparent;
-    border: 1px solid ${theme.colors.dark.border.default};
-    color: ${theme.colors.dark.text.secondary};
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
     width: 40px;
     height: 40px;
     border-radius: ${theme.radius.base};
@@ -283,7 +283,7 @@ const MobileDropdownWrapper = styled.div`
 
     &:hover,
     &:focus {
-      background: ${theme.colors.dark.bg.elevated};
+      background: var(--color-bg-elevated);
       border-color: ${theme.colors.brand.primary};
       color: ${theme.colors.brand.primary};
     }
@@ -296,11 +296,11 @@ const MobileDropdownWrapper = styled.div`
 
 const ActionButton = styled.button<{ $variant: "perform" | "view" | "edit" | "delete" }>`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${(props) => {
     if (props.$variant === "perform") return theme.colors.semantic.success;
     if (props.$variant === "delete") return theme.colors.semantic.error;
-    return theme.colors.dark.text.secondary;
+    return 'var(--color-text-secondary)';
   }};
   width: 36px;
   height: 36px;
@@ -316,7 +316,7 @@ const ActionButton = styled.button<{ $variant: "perform" | "view" | "edit" | "de
     background: ${(props) => {
       if (props.$variant === "perform") return theme.colors.semantic.successBgDark;
       if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
-      return theme.colors.dark.bg.elevated;
+      return 'var(--color-bg-elevated)';
     }};
     border-color: ${(props) => {
       if (props.$variant === "perform") return theme.colors.semantic.success;
@@ -345,8 +345,8 @@ const SetlistDescription = styled.p`
   padding: 0 ${theme.space[4]} ${theme.space[4]} ${theme.space[4]};
   margin: 0;
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.relaxed};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
   padding-top: ${theme.space[3]};
 `;

@@ -436,8 +436,8 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
 // Styled Components
 
 const Instructions = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   margin-bottom: ${theme.space[6]};
@@ -449,7 +449,7 @@ const InstructionTitle = styled.div`
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[3]};
 
   i {
@@ -459,24 +459,24 @@ const InstructionTitle = styled.div`
 
 const InstructionText = styled.p`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: ${theme.space[2]} 0;
   line-height: ${theme.lineHeights.relaxed};
 
   strong {
-    color: ${theme.colors.dark.text.primary};
+    color: var(--color-text-primary);
   }
 `;
 
 const ColumnList = styled.ul`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: ${theme.space[2]} 0;
   padding-left: ${theme.space[6]};
   line-height: ${theme.lineHeights.relaxed};
 
   code {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     padding: ${theme.space[1]} ${theme.space[2]};
     border-radius: ${theme.radius.sm};
     font-family: monospace;
@@ -499,16 +499,16 @@ const FileLabel = styled.label<{ $isDragging: boolean }>`
   justify-content: center;
   gap: ${theme.space[3]};
   background: ${props => props.$isDragging
-    ? theme.colors.dark.bg.tertiary
-    : theme.colors.dark.bg.secondary};
+    ? 'var(--color-bg-tertiary)'
+    : 'var(--color-bg-secondary)'};
   border: 2px dashed ${props => props.$isDragging
     ? theme.colors.brand.primary
-    : theme.colors.dark.border.default};
+    : 'var(--color-border)'};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[8]} ${theme.space[4]};
   color: ${props => props.$isDragging
-    ? theme.colors.dark.text.primary
-    : theme.colors.dark.text.secondary};
+    ? 'var(--color-text-primary)'
+    : 'var(--color-text-secondary)'};
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
@@ -532,8 +532,8 @@ const FileLabel = styled.label<{ $isDragging: boolean }>`
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
-    background: ${theme.colors.dark.bg.tertiary};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
   }
 `;
 
@@ -549,33 +549,33 @@ const PreviewHeader = styled.div`
 const PreviewTitle = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[1]};
 `;
 
 const PreviewSubtitle = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 `;
 
 const PreviewTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   font-size: ${theme.fontSizes.bodySm};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   overflow: hidden;
 
   th, td {
     padding: ${theme.space[2]} ${theme.space[3]};
     text-align: left;
-    border-bottom: 1px solid ${theme.colors.dark.border.default};
+    border-bottom: 1px solid var(--color-border);
   }
 
   th {
-    background: ${theme.colors.dark.bg.tertiary};
-    color: ${theme.colors.dark.text.secondary};
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
     font-weight: ${theme.fontWeights.semibold};
     text-transform: uppercase;
     letter-spacing: ${theme.letterSpacing.wide};
@@ -583,7 +583,7 @@ const PreviewTable = styled.table`
   }
 
   td {
-    color: ${theme.colors.dark.text.primary};
+    color: var(--color-text-primary);
   }
 
   tbody tr:last-child td {
@@ -592,7 +592,7 @@ const PreviewTable = styled.table`
 
   tbody tr.invalid {
     opacity: 0.5;
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
 
     td em {
       color: ${theme.colors.semantic.error};
@@ -601,14 +601,14 @@ const PreviewTable = styled.table`
   }
 
   tbody tr:hover:not(.invalid) {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
   }
 `;
 
 const PreviewFooter = styled.div`
   margin-top: ${theme.space[2]};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-align: center;
   font-style: italic;
 `;
@@ -639,7 +639,7 @@ const ErrorList = styled.ul`
 
 const ErrorItem = styled.li`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} 0;
   font-family: monospace;
 `;

@@ -283,10 +283,10 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
 const PlayerContainer = styled.div<{ $hasTrack: boolean; $isExpanded: boolean }>`
   background: ${(props) =>
     props.$hasTrack
-      ? `linear-gradient(135deg, ${theme.colors.dark.bg.secondary} 0%, ${theme.colors.dark.bg.tertiary} 100%)`
-      : theme.colors.dark.bg.secondary};
+      ? `linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%)`
+      : 'var(--color-bg-secondary)'};
   border: 1px solid ${(props) =>
-    props.$hasTrack ? theme.colors.brand.primary + "40" : theme.colors.dark.border.default};
+    props.$hasTrack ? theme.colors.brand.primary + "40" : 'var(--color-border)'};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
@@ -322,13 +322,13 @@ const PlayerIcon = styled.div<{ $hasTrack: boolean }>`
   height: 44px;
   border-radius: ${theme.radius.base};
   background: ${(props) =>
-    props.$hasTrack ? theme.colors.brand.primary : theme.colors.dark.bg.tertiary};
+    props.$hasTrack ? theme.colors.brand.primary : 'var(--color-bg-tertiary)'};
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: ${theme.fontSizes.h3};
   color: ${(props) =>
-    props.$hasTrack ? "white" : theme.colors.dark.text.tertiary};
+    props.$hasTrack ? "white" : 'var(--color-text-tertiary)'};
   transition: all ${theme.transitions.fast} ease;
 
   ${(props) =>
@@ -352,7 +352,7 @@ const HeaderInfo = styled.div`
 const HeaderTitle = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 `;
 
 const HeaderFileName = styled.div`
@@ -370,7 +370,7 @@ const HeaderFileName = styled.div`
 
 const HeaderHint = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const HeaderActions = styled.div`
@@ -387,7 +387,7 @@ const ActionButton = styled.button<{ $variant: "play" | "default" }>`
   background: ${(props) =>
     props.$variant === "play" ? theme.colors.brand.primary : "transparent"};
   color: ${(props) =>
-    props.$variant === "play" ? "white" : theme.colors.dark.text.secondary};
+    props.$variant === "play" ? "white" : 'var(--color-text-secondary)'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -399,7 +399,7 @@ const ActionButton = styled.button<{ $variant: "play" | "default" }>`
     background: ${(props) =>
       props.$variant === "play"
         ? theme.colors.brand.primaryHover
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
     transform: scale(1.05);
   }
 `;
@@ -430,7 +430,7 @@ const HiddenFileInput = styled.input`
 
 const PlayerControls = styled.div`
   padding: ${theme.space[4]} ${theme.space[5]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: ${theme.space[4]};
@@ -445,7 +445,7 @@ const ProgressSection = styled.div`
 const TimeDisplay = styled.span`
   font-size: ${theme.fontSizes.bodySm};
   font-family: ${theme.fonts.mono};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   min-width: 45px;
   text-align: center;
 `;
@@ -455,7 +455,7 @@ const ProgressSlider = styled.input`
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.full};
   cursor: pointer;
 
@@ -511,7 +511,7 @@ const ControlButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
       ? theme.colors.brand.primary
       : props.$danger
       ? theme.colors.semantic.error
-      : theme.colors.dark.border.default};
+      : 'var(--color-border)'};
   background: ${(props) =>
     props.$primary ? theme.colors.brand.primary : "transparent"};
   color: ${(props) =>
@@ -519,7 +519,7 @@ const ControlButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
       ? "white"
       : props.$danger
       ? theme.colors.semantic.error
-      : theme.colors.dark.text.secondary};
+      : 'var(--color-text-secondary)'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,7 +533,7 @@ const ControlButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
         ? theme.colors.brand.primaryHover
         : props.$danger
         ? theme.colors.semantic.errorBgDark
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
     border-color: ${(props) =>
       props.$primary
         ? theme.colors.brand.primaryHover
@@ -562,7 +562,7 @@ const VolumeSection = styled.div`
 
 const VolumeIcon = styled.div<{ $muted: boolean }>`
   color: ${(props) =>
-    props.$muted ? theme.colors.dark.text.tertiary : theme.colors.dark.text.secondary};
+    props.$muted ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)'};
   font-size: ${theme.fontSizes.bodyLg};
   width: 24px;
   text-align: center;
@@ -573,7 +573,7 @@ const VolumeSlider = styled.input`
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.full};
   cursor: pointer;
 
@@ -583,7 +583,7 @@ const VolumeSlider = styled.input`
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: ${theme.colors.dark.text.secondary};
+    background: var(--color-text-secondary);
     cursor: pointer;
 
     &:hover {
@@ -595,7 +595,7 @@ const VolumeSlider = styled.input`
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: ${theme.colors.dark.text.secondary};
+    background: var(--color-text-secondary);
     cursor: pointer;
     border: none;
   }

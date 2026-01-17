@@ -279,8 +279,8 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[3]};
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
 `;
@@ -308,7 +308,7 @@ const HeaderTitle = styled.div`
 
 const HeaderHint = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 `;
 
 const SectionList = styled.div`
@@ -347,7 +347,7 @@ const SectionColorIndicator = styled.div<{
 `;
 
 const SectionName = styled.span`
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
 
@@ -357,10 +357,10 @@ const SectionName = styled.span`
 `;
 
 const SectionEditInput = styled.input`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.strong};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-strong);
   border-radius: ${theme.radius.sm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   padding: ${theme.space[1]} ${theme.space[2]};
   font-size: ${theme.fontSizes.bodySm};
   width: 100px;
@@ -372,14 +372,14 @@ const SectionEditInput = styled.input`
 `;
 
 const SectionLines = styled.span`
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.bodyXs};
 `;
 
 const SectionDeleteButton = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -400,7 +400,7 @@ const AddSectionForm = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[2]};
-  background: ${theme.colors.dark.bg.secondary};
+  background: var(--color-bg-secondary);
   border: 1px solid ${theme.colors.brand.primary};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
@@ -421,15 +421,15 @@ const FormRow = styled.div`
 
 const SectionNameInput = styled.input`
   flex: 1;
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodySm};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 
   &:focus {
@@ -462,16 +462,16 @@ const AddButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 `;
 
 const ClearButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   cursor: pointer;
@@ -496,7 +496,7 @@ const LinesContainer = styled.div`
   flex-direction: column;
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.sm};
 
   /* Custom scrollbar */
@@ -505,11 +505,11 @@ const LinesContainer = styled.div`
   }
 
   &::-webkit-scrollbar-track {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${theme.colors.dark.border.strong};
+    background: var(--color-border-strong);
     border-radius: ${theme.radius.sm};
 
     &:hover {
@@ -552,7 +552,7 @@ const LineRow = styled.div<{
     !props.$isSelected &&
     `
     &:hover {
-      background: ${theme.colors.dark.bg.tertiary};
+      background: var(--color-bg-tertiary);
     }
   `}
 `;
@@ -560,7 +560,7 @@ const LineRow = styled.div<{
 const LineNumber = styled.span`
   min-width: 28px;
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-align: right;
   font-family: ${theme.fonts.mono};
   user-select: none;
@@ -571,7 +571,7 @@ const LineContent = styled.span<{ $isEmpty: boolean }>`
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodySm};
   color: ${(props) =>
-    props.$isEmpty ? theme.colors.dark.text.tertiary : theme.colors.dark.text.primary};
+    props.$isEmpty ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)'};
   white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -599,7 +599,7 @@ const EmptyState = styled.div`
   align-items: center;
   justify-content: center;
   padding: ${theme.space[6]};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   gap: ${theme.space[2]};
 
   i {

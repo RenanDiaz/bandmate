@@ -130,17 +130,9 @@ const OffcanvasContainer = styled.div<{
   bottom: 0;
   width: 320px;
   max-width: 85vw;
-  background: ${(props) =>
-    props.$mode === "dark"
-      ? theme.colors.dark.bg.primary
-      : theme.colors.light.bg.primary};
-  border-left: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default};
-  box-shadow: ${(props) =>
-    props.$mode === "dark" ? theme.shadows.lg : theme.shadowsLight.lg};
+  background: var(--color-bg-primary);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   z-index: ${theme.zIndex.modal};
   display: flex;
   flex-direction: column;
@@ -174,21 +166,14 @@ const StyledOffcanvasHeader = styled.div<{ $mode: "light" | "dark" }>`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[4]};
-  border-bottom: 1px solid
-    ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.border.default
-        : theme.colors.light.border.default};
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 `;
 
 const CloseButton = styled.button<{ $mode: "light" | "dark" }>`
   background: transparent;
   border: none;
-  color: ${(props) =>
-    props.$mode === "dark"
-      ? theme.colors.dark.text.primary
-      : theme.colors.light.text.primary};
+  color: var(--color-text-primary);
   font-size: ${theme.fontSizes.h5};
   padding: ${theme.space[2]};
   cursor: pointer;
@@ -201,10 +186,7 @@ const CloseButton = styled.button<{ $mode: "light" | "dark" }>`
 
   &:hover {
     opacity: 1;
-    background: ${(props) =>
-      props.$mode === "dark"
-        ? theme.colors.dark.bg.tertiary
-        : theme.colors.light.bg.tertiary};
+    background: var(--color-bg-tertiary);
     color: ${theme.colors.brand.primary};
     transform: scale(1.1);
   }

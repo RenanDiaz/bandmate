@@ -891,7 +891,7 @@ const PerformanceContainer = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
   z-index: ${theme.zIndex.modal};
@@ -902,8 +902,8 @@ const TopBar = styled.div`
   flex-direction: column;
   gap: ${theme.space[3]};
   padding: ${theme.space[4]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 
   @media (min-width: ${theme.breakpoints.md}) {
@@ -955,8 +955,8 @@ const TopBarControls = styled.div`
 
 const ExitButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -985,7 +985,7 @@ const SetlistInfo = styled.div`
 const SetlistName = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -998,19 +998,19 @@ const SetlistName = styled.div`
 const SongCounter = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[4]};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.base};
 `;
 
 const ViewToggleGroup = styled.div`
   display: flex;
   gap: ${theme.space[2]};
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   padding: ${theme.space[1]};
   border-radius: ${theme.radius.base};
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     display: none;
@@ -1022,7 +1022,7 @@ const ViewToggleButton = styled.button<{ $active: boolean }>`
     props.$active ? theme.colors.brand.primary : "transparent"};
   border: none;
   color: ${(props) =>
-    props.$active ? "white" : theme.colors.dark.text.secondary};
+    props.$active ? "white" : 'var(--color-text-secondary)'};
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.sm};
   display: flex;
@@ -1039,7 +1039,7 @@ const ViewToggleButton = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${(props) =>
-      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-elevated)'};
     color: ${(props) =>
       props.$active ? "white" : theme.colors.brand.primary};
   }
@@ -1049,9 +1049,9 @@ const IconButton = styled.button<{ $active?: boolean }>`
   background: ${(props) =>
     props.$active ? theme.colors.brand.primary : "transparent"};
   border: 1px solid ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   color: ${(props) =>
-    props.$active ? "white" : theme.colors.dark.text.secondary};
+    props.$active ? "white" : 'var(--color-text-secondary)'};
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -1064,7 +1064,7 @@ const IconButton = styled.button<{ $active?: boolean }>`
 
   &:hover:not(:disabled) {
     background: ${(props) =>
-      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-elevated)'};
     border-color: ${theme.colors.brand.primary};
     color: ${(props) =>
       props.$active ? "white" : theme.colors.brand.primary};
@@ -1085,9 +1085,9 @@ const ReorderActionButton = styled.button<{ $variant: "cancel" | "save" }>`
   background: ${(props) =>
     props.$variant === "save" ? theme.colors.semantic.success : "transparent"};
   border: 1px solid ${(props) =>
-    props.$variant === "save" ? theme.colors.semantic.success : theme.colors.dark.border.default};
+    props.$variant === "save" ? theme.colors.semantic.success : 'var(--color-border)'};
   color: ${(props) =>
-    props.$variant === "save" ? "white" : theme.colors.dark.text.secondary};
+    props.$variant === "save" ? "white" : 'var(--color-text-secondary)'};
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   display: flex;
@@ -1100,9 +1100,9 @@ const ReorderActionButton = styled.button<{ $variant: "cancel" | "save" }>`
 
   &:hover:not(:disabled) {
     background: ${(props) =>
-      props.$variant === "save" ? "#059669" : theme.colors.dark.bg.elevated};
+      props.$variant === "save" ? "#059669" : 'var(--color-bg-elevated)'};
     border-color: ${(props) =>
-      props.$variant === "save" ? "#059669" : theme.colors.dark.border.strong};
+      props.$variant === "save" ? "#059669" : 'var(--color-border-strong)'};
   }
 
   &:disabled {
@@ -1131,8 +1131,8 @@ const SongListBackdrop = styled.div`
 
 const SongListSidebar = styled.div`
   width: 320px;
-  background: ${theme.colors.dark.bg.secondary};
-  border-right: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1146,7 +1146,7 @@ const SongListSidebar = styled.div`
     width: 100%;
     max-height: 60vh;
     border-right: none;
-    border-top: 1px solid ${theme.colors.dark.border.default};
+    border-top: 1px solid var(--color-border);
     border-radius: ${theme.radius.lg} ${theme.radius.lg} 0 0;
     z-index: 11;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
@@ -1156,10 +1156,10 @@ const SongListSidebar = styled.div`
 
 const SidebarHeader = styled.div`
   padding: ${theme.space[4]} ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1176,7 +1176,7 @@ const SidebarHeader = styled.div`
       transform: translateX(-50%);
       width: 36px;
       height: 4px;
-      background: ${theme.colors.dark.border.strong};
+      background: var(--color-border-strong);
       border-radius: ${theme.radius.full};
     }
   }
@@ -1201,14 +1201,14 @@ const SongListItem = styled.button<{ $active: boolean; $isDragging?: boolean }>`
   width: 100%;
   background: ${(props) =>
     props.$isDragging
-      ? theme.colors.dark.bg.elevated
+      ? 'var(--color-bg-elevated)'
       : props.$active
       ? theme.colors.brand.primary
       : "transparent"};
   border: 1px solid ${(props) =>
-    props.$isDragging || props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$isDragging || props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   color: ${(props) =>
-    props.$active ? "white" : theme.colors.dark.text.primary};
+    props.$active ? "white" : 'var(--color-text-primary)'};
   padding: ${theme.space[3]};
   border-radius: ${theme.radius.base};
   display: flex;
@@ -1230,13 +1230,13 @@ const SongListItem = styled.button<{ $active: boolean; $isDragging?: boolean }>`
 
   &:hover {
     background: ${(props) =>
-      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-elevated)'};
     border-color: ${theme.colors.brand.primary};
   }
 `;
 
 const SongListDragHandle = styled.div`
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   width: 20px;
   display: flex;
   align-items: center;
@@ -1335,7 +1335,7 @@ const SongHeader = styled.div`
 const SongTitleLarge = styled.h1`
   font-size: ${theme.fontSizes.displayLg};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[3]} 0;
   line-height: ${theme.lineHeights.tight};
 
@@ -1346,7 +1346,7 @@ const SongTitleLarge = styled.h1`
 
 const SongArtistLarge = styled.div`
   font-size: ${theme.fontSizes.h2};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin-bottom: ${theme.space[6]};
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -1365,9 +1365,9 @@ const MetaBadgeLarge = styled.div`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[2]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[5]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodyLg};
@@ -1403,7 +1403,7 @@ const NotesLabel = styled.div`
 
 const NotesText = styled.div`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.relaxed};
   white-space: pre-wrap;
 `;
@@ -1415,8 +1415,8 @@ const SongContent = styled.div`
 `;
 
 const ContentSection = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
 `;
@@ -1438,7 +1438,7 @@ const SectionLabel = styled.div`
 const ContentText = styled.pre`
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodyLg};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.loose};
   white-space: pre-wrap;
   margin: 0;
@@ -1451,7 +1451,7 @@ const ContentText = styled.pre`
 const EmptyContent = styled.div`
   text-align: center;
   padding: ${theme.space[12]} ${theme.space[6]};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
 
   i {
     font-size: ${theme.fontSizes.displayLg};
@@ -1470,8 +1470,8 @@ const BottomNav = styled.div`
   align-items: center;
   gap: ${theme.space[6]};
   padding: ${theme.space[4]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -1506,8 +1506,8 @@ const NavButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
     opacity: 0.5;
   }
@@ -1533,7 +1533,7 @@ const NavCenter = styled.div`
 const ProgressBar = styled.div`
   width: 100%;
   height: 8px;
-  background: ${theme.colors.dark.bg.tertiary};
+  background: var(--color-bg-tertiary);
   border-radius: ${theme.radius.full};
   overflow: hidden;
 `;
@@ -1547,7 +1547,7 @@ const ProgressFill = styled.div<{ $percent: number }>`
 
 const KeyboardHint = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-align: center;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -1561,7 +1561,7 @@ const LoadingContainer = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1571,7 +1571,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -1581,7 +1581,7 @@ const ErrorContainer = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1600,13 +1600,13 @@ const ErrorIcon = styled.div`
 const ErrorTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
 `;
 
 const ErrorText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
@@ -1680,7 +1680,7 @@ const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
   background: ${(props) =>
     props.$active ? theme.colors.brand.primary : "transparent"};
   border: 1px solid ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   border-left: 3px solid ${(props) => {
     switch (props.$type) {
       case "break":
@@ -1690,11 +1690,11 @@ const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.border.default;
+        return 'var(--color-border)';
     }
   }};
   color: ${(props) =>
-    props.$active ? "white" : theme.colors.dark.text.primary};
+    props.$active ? "white" : 'var(--color-text-primary)'};
   padding: ${theme.space[3]};
   border-radius: ${theme.radius.base};
   display: flex;
@@ -1707,7 +1707,7 @@ const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
 
   &:hover {
     background: ${(props) =>
-      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-elevated)'};
     border-color: ${theme.colors.brand.primary};
   }
 `;
@@ -1730,7 +1730,7 @@ const SpecialListIcon = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.successBgDark;
       default:
-        return theme.colors.dark.bg.tertiary;
+        return 'var(--color-bg-tertiary)';
     }
   }};
   color: ${(props) => {
@@ -1742,7 +1742,7 @@ const SpecialListIcon = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.text.secondary;
+        return 'var(--color-text-secondary)';
     }
   }};
 `;
@@ -1766,7 +1766,7 @@ const SpecialItemDisplay = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.successBgDark;
       default:
-        return theme.colors.dark.bg.secondary;
+        return 'var(--color-bg-secondary)';
     }
   }};
   border: 1px solid ${(props) => {
@@ -1778,7 +1778,7 @@ const SpecialItemDisplay = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.border.default;
+        return 'var(--color-border)';
     }
   }};
   border-radius: ${theme.radius.lg};
@@ -1802,7 +1802,7 @@ const SpecialItemIconLarge = styled.div<{ $type: string }>`
       case "note":
         return `${theme.colors.semantic.success}30`;
       default:
-        return theme.colors.dark.bg.tertiary;
+        return 'var(--color-bg-tertiary)';
     }
   }};
   color: ${(props) => {
@@ -1814,7 +1814,7 @@ const SpecialItemIconLarge = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.text.secondary;
+        return 'var(--color-text-secondary)';
     }
   }};
 
@@ -1849,16 +1849,16 @@ const SpecialItemTypeBadge = styled.div<{ $type: string }>`
       case "note":
         return theme.colors.semantic.success;
       default:
-        return theme.colors.dark.bg.tertiary;
+        return 'var(--color-bg-tertiary)';
     }
   }};
-  color: ${theme.colors.dark.bg.primary};
+  color: var(--color-bg-primary);
 `;
 
 const SpecialItemLabelLarge = styled.div`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   line-height: ${theme.lineHeights.tight};
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -1871,7 +1871,7 @@ const SpecialItemDurationLarge = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.h3};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 
   i {
     color: ${theme.colors.semantic.warning};
@@ -1884,8 +1884,8 @@ const UpNextBar = styled.div<{ $type: string }>`
   align-items: center;
   gap: ${theme.space[4]};
   padding: ${theme.space[4]} ${theme.space[5]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-left: 3px solid ${(props) => {
     switch (props.$type) {
       case "song":
@@ -1899,7 +1899,7 @@ const UpNextBar = styled.div<{ $type: string }>`
       case "end":
         return theme.colors.semantic.error;
       default:
-        return theme.colors.dark.border.default;
+        return 'var(--color-border)';
     }
   }};
   border-radius: ${theme.radius.base};
@@ -1909,7 +1909,7 @@ const UpNextBar = styled.div<{ $type: string }>`
 const UpNextLabel = styled.span`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
 `;
@@ -1918,7 +1918,7 @@ const UpNextContent = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
 

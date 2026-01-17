@@ -151,24 +151,24 @@ const SongsGrid = styled.div`
 `;
 
 const SongCard = styled.div<{ $isExpanded: boolean }>`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
   cursor: pointer;
 
   &:hover {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-color: ${theme.colors.brand.primary};
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
     transform: translateY(-2px);
   }
 
   ${(props) =>
     props.$isExpanded &&
     `
-    box-shadow: ${theme.shadows.lg};
+    box-shadow: var(--shadow-lg);
     border-color: ${theme.colors.brand.primary};
   `}
 `;
@@ -212,9 +212,9 @@ const ActionButtons = styled.div`
 
 const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${(props) =>
-    props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.dark.text.secondary};
+    props.$variant === "delete" ? theme.colors.semantic.error : 'var(--color-text-secondary)'};
   width: 36px;
   height: 36px;
   border-radius: ${theme.radius.base};
@@ -229,7 +229,7 @@ const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
     background: ${(props) =>
       props.$variant === "delete"
         ? theme.colors.semantic.errorBgDark
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
     border-color: ${(props) =>
       props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
     color: ${(props) =>
@@ -242,7 +242,7 @@ const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
     background: ${(props) =>
       props.$variant === "delete"
         ? theme.colors.semantic.errorBgDark
-        : theme.colors.dark.bg.elevated};
+        : 'var(--color-bg-elevated)'};
   }
 
   /* Larger touch targets on mobile */
@@ -278,14 +278,14 @@ const BackingTracksBadge = styled.div`
   width: 24px;
   height: 24px;
   background: ${theme.colors.semantic.success};
-  border: 2px solid ${theme.colors.dark.bg.secondary};
+  border: 2px solid var(--color-bg-secondary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 12px;
-  box-shadow: ${theme.shadows.sm};
+  box-shadow: var(--shadow-sm);
   transition: all ${theme.transitions.fast} ease;
 
   ${SongCard}:hover & {
@@ -301,7 +301,7 @@ const SongInfo = styled.div`
 const SongTitle = styled.h3`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[1]} 0;
   line-height: ${theme.lineHeights.snug};
   overflow: hidden;
@@ -311,7 +311,7 @@ const SongTitle = styled.h3`
 
 const SongArtist = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-style: italic;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -329,9 +329,9 @@ const MetadataBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -365,8 +365,8 @@ const Tag = styled.span`
 
 const ExpandButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.secondary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 32px;
   height: 32px;
   border-radius: ${theme.radius.base};
@@ -378,7 +378,7 @@ const ExpandButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
     border-color: ${theme.colors.brand.primary};
     color: ${theme.colors.brand.primary};
   }
@@ -426,13 +426,13 @@ const DetailsLabel = styled.div`
 `;
 
 const ChordsContent = styled.pre`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
@@ -441,13 +441,13 @@ const ChordsContent = styled.pre`
 `;
 
 const LyricsContent = styled.pre`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   font-family: ${theme.fonts.sans};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
@@ -461,12 +461,12 @@ const LyricsContent = styled.pre`
   }
 
   &::-webkit-scrollbar-track {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     border-radius: ${theme.radius.sm};
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${theme.colors.dark.border.strong};
+    background: var(--color-border-strong);
     border-radius: ${theme.radius.sm};
 
     &:hover {

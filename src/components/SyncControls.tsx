@@ -278,13 +278,13 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
         ? theme.colors.brand.primary
         : props.$hasSession
           ? theme.colors.semantic.success
-          : theme.colors.dark.border.default};
+          : 'var(--color-border)'};
   color: ${(props) =>
     props.$isOpen
       ? "white"
       : props.$hasSession
         ? theme.colors.semantic.success
-        : theme.colors.dark.text.secondary};
+        : 'var(--color-text-secondary)'};
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   display: flex;
@@ -305,7 +305,7 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
         ? theme.colors.brand.primaryHover
         : props.$hasSession
           ? theme.colors.semantic.success + "30"
-          : theme.colors.dark.bg.elevated};
+          : 'var(--color-bg-elevated)'};
     border-color: ${(props) =>
       props.$hasSession
         ? theme.colors.semantic.success
@@ -345,10 +345,10 @@ const SyncDropdown = styled.div`
   right: 0;
   width: 320px;
   max-width: calc(100vw - ${theme.space[4]});
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.md};
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: var(--shadow-lg);
   z-index: ${theme.zIndex.dropdown};
   overflow: hidden;
 
@@ -370,8 +370,8 @@ const DropdownHeader = styled.div`
   padding: ${theme.space[4]};
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -384,7 +384,7 @@ const DropdownSection = styled.div`
 const SectionTitle = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -397,7 +397,7 @@ const SectionTitle = styled.div`
 
 const SectionDescription = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[3]};
 `;
 
@@ -457,11 +457,11 @@ const HostInfo = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   padding: ${theme.space[2]} ${theme.space[3]};
-  background: ${theme.colors.dark.bg.elevated};
+  background: var(--color-bg-elevated);
   border-radius: ${theme.radius.base};
   margin-bottom: ${theme.space[3]};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
 
   i {
     color: ${theme.colors.brand.primary};
@@ -473,11 +473,11 @@ const SessionTime = styled.span`
   align-items: center;
   gap: ${theme.space[1]};
   margin-left: auto;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-size: ${theme.fontSizes.bodyXs};
 
   i {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 `;
 
@@ -487,7 +487,7 @@ const OrphanedSessionControls = styled.div`
 
 const Divider = styled.div`
   height: 1px;
-  background: ${theme.colors.dark.border.default};
+  background: var(--color-border);
   margin-bottom: ${theme.space[3]};
 `;
 
@@ -576,9 +576,9 @@ const LeaveButton = styled.button`
   gap: ${theme.space[2]};
   padding: ${theme.space[2]} ${theme.space[3]};
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   font-size: ${theme.fontSizes.bodySm};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;

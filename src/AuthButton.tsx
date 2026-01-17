@@ -155,7 +155,7 @@ const SignInButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -179,9 +179,9 @@ const UserMenuContainer = styled.div`
 `;
 
 const UserButton = styled.button`
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -194,7 +194,7 @@ const UserButton = styled.button`
 
   &:hover:not(:disabled) {
     border-color: ${theme.colors.brand.primary};
-    background: ${theme.colors.dark.bg.elevated};
+    background: var(--color-bg-elevated);
   }
 
   &:disabled {
@@ -238,10 +238,10 @@ const UserDropdown = styled.div`
   position: absolute;
   top: calc(100% + ${theme.space[2]});
   right: 0;
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.md};
-  box-shadow: ${theme.shadows.lg};
+  box-shadow: var(--shadow-lg);
   min-width: 240px;
   z-index: ${theme.zIndex.dropdown};
   animation: slideDown 0.2s ease-out;
@@ -264,7 +264,7 @@ const UserInfo = styled.div`
 
 const UserInfoLabel = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
   margin-bottom: ${theme.space[1]};
@@ -273,13 +273,13 @@ const UserInfoLabel = styled.div`
 const UserInfoEmail = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   word-break: break-all;
 `;
 
 const DropdownDivider = styled.div`
   height: 1px;
-  background: ${theme.colors.dark.border.default};
+  background: var(--color-border);
   margin: ${theme.space[2]} 0;
 `;
 
@@ -287,7 +287,7 @@ const DropdownItem = styled.button`
   width: 100%;
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   text-align: left;
   cursor: pointer;
@@ -299,11 +299,11 @@ const DropdownItem = styled.button`
 
   i {
     font-size: ${theme.fontSizes.body};
-    color: ${theme.colors.dark.text.secondary};
+    color: var(--color-text-secondary);
   }
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
     color: ${theme.colors.brand.primary};
 
     i {
@@ -333,11 +333,11 @@ const LanguageLabel = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
 
   i {
     font-size: ${theme.fontSizes.body};
-    color: ${theme.colors.dark.text.secondary};
+    color: var(--color-text-secondary);
   }
 `;
 
@@ -348,11 +348,11 @@ const LanguageButtons = styled.div`
 
 const LanguageButton = styled.button<{ $active: boolean }>`
   background: ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.bg.tertiary};
+    props.$active ? theme.colors.brand.primary : 'var(--color-bg-tertiary)'};
   color: ${(props) =>
-    props.$active ? 'white' : theme.colors.dark.text.secondary};
+    props.$active ? 'white' : 'var(--color-text-secondary)'};
   border: 1px solid ${(props) =>
-    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   padding: ${theme.space[1]} ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
@@ -362,7 +362,7 @@ const LanguageButton = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${(props) =>
-      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-elevated)'};
     border-color: ${theme.colors.brand.primary};
     color: ${(props) =>
       props.$active ? 'white' : theme.colors.brand.primary};

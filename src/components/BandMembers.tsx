@@ -124,9 +124,9 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
         };
       case "member":
         return {
-          bg: theme.colors.dark.bg.tertiary,
-          text: theme.colors.dark.text.primary,
-          border: theme.colors.dark.border.strong,
+          bg: 'var(--color-bg-tertiary)',
+          text: 'var(--color-text-primary)',
+          border: 'var(--color-border-strong)',
         };
       case "guest":
         return {
@@ -317,8 +317,8 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
 // Styled Components
 
 const Container = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
 `;
@@ -328,7 +328,7 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[5]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     flex-direction: column;
@@ -346,7 +346,7 @@ const HeaderLeft = styled.div`
 const Title = styled.h3`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -360,8 +360,8 @@ const Title = styled.h3`
 
 const MemberCount = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
-  background: ${theme.colors.dark.bg.tertiary};
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
   padding: ${theme.space[1]} ${theme.space[3]};
   border-radius: ${theme.radius.full};
   font-weight: ${theme.fontWeights.medium};
@@ -393,7 +393,7 @@ const InviteButton = styled.button`
   &:hover {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active {
@@ -438,9 +438,9 @@ const MembersList = styled.div`
 
 const MemberCard = styled.div<{ $isCurrentUser: boolean }>`
   background: ${(props) =>
-    props.$isCurrentUser ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.primary};
+    props.$isCurrentUser ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)'};
   border: 1px solid ${(props) =>
-    props.$isCurrentUser ? theme.colors.brand.primary : theme.colors.dark.border.default};
+    props.$isCurrentUser ? theme.colors.brand.primary : 'var(--color-border)'};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   display: flex;
@@ -489,7 +489,7 @@ const MemberDetails = styled.div`
 const MemberEmail = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -511,7 +511,7 @@ const YouBadge = styled.span`
 
 const MemberMeta = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -554,9 +554,9 @@ const RoleBadge = styled.div<{ $bg: string; $text: string; $border: string }>`
 `;
 
 const RoleSelect = styled.select`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
@@ -577,7 +577,7 @@ const RoleSelect = styled.select`
 
 const RemoveButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${theme.colors.semantic.error};
   width: 36px;
   height: 36px;
@@ -610,14 +610,14 @@ const LoadingContainer = styled.div`
 
   p {
     font-size: ${theme.fontSizes.body};
-    color: ${theme.colors.dark.text.secondary};
+    color: var(--color-text-secondary);
     margin: 0;
   }
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: ${theme.colors.dark.border.default};
+  background: var(--color-border);
   margin: ${theme.space[6]} ${theme.space[5]};
 `;
 
@@ -628,7 +628,7 @@ const InvitationsSection = styled.div`
 const SectionTitle = styled.h4`
   font-size: ${theme.fontSizes.h4};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0 0 ${theme.space[4]} 0;
   display: flex;
   align-items: center;
@@ -647,9 +647,9 @@ const InvitationsList = styled.div`
 `;
 
 const InvitationCard = styled.div<{ $expired: boolean }>`
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   border: 1px solid ${(props) =>
-    props.$expired ? theme.colors.dark.border.default : theme.colors.brand.primary};
+    props.$expired ? 'var(--color-border)' : theme.colors.brand.primary};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   display: flex;
@@ -693,7 +693,7 @@ const InvitationDetails = styled.div`
 const InvitationEmail = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -701,7 +701,7 @@ const InvitationEmail = styled.div`
 
 const InvitationMeta = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -756,7 +756,7 @@ const CopyLinkButton = styled.button`
 
 const RevokeButton = styled.button`
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
+  border: 1px solid var(--color-border);
   color: ${theme.colors.semantic.error};
   width: 36px;
   height: 36px;

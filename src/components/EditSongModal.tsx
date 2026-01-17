@@ -592,15 +592,15 @@ const ModalContainer = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   width: 90%;
   max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
   z-index: ${theme.zIndex.modal + 10};
-  box-shadow: ${theme.shadows.xl};
+  box-shadow: var(--shadow-xl);
   animation: slideUp 0.3s ease;
 
   @keyframes slideUp {
@@ -620,11 +620,11 @@ const ModalContainer = styled.div`
   }
 
   &::-webkit-scrollbar-track {
-    background: ${theme.colors.dark.bg.tertiary};
+    background: var(--color-bg-tertiary);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: ${theme.colors.dark.border.strong};
+    background: var(--color-border-strong);
     border-radius: ${theme.radius.sm};
 
     &:hover {
@@ -638,17 +638,17 @@ const ModalHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: ${theme.space[6]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  background: ${theme.colors.dark.bg.secondary};
+  background: var(--color-bg-secondary);
   z-index: 1;
 `;
 
 const ModalTitle = styled.h2`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -663,7 +663,7 @@ const ModalTitle = styled.h2`
 const CloseButton = styled.button`
   background: transparent;
   border: none;
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   width: 40px;
   height: 40px;
   border-radius: ${theme.radius.base};
@@ -675,8 +675,8 @@ const CloseButton = styled.button`
   font-size: ${theme.fontSizes.h2};
 
   &:hover {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.primary};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
   }
 `;
 
@@ -706,7 +706,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -721,9 +721,9 @@ const Required = styled.span`
 `;
 
 const Input = styled.input`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -731,7 +731,7 @@ const Input = styled.input`
   font-family: ${theme.fonts.sans};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
   }
 
   &:focus {
@@ -741,7 +741,7 @@ const Input = styled.input`
   }
 
   &:hover:not(:focus):not(:disabled) {
-    border-color: ${theme.colors.dark.border.strong};
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -751,9 +751,9 @@ const Input = styled.input`
 `;
 
 const Select = styled.select`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -770,7 +770,7 @@ const Select = styled.select`
   }
 
   &:hover:not(:focus):not(:disabled) {
-    border-color: ${theme.colors.dark.border.strong};
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -780,9 +780,9 @@ const Select = styled.select`
 `;
 
 const TextArea = styled.textarea`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -793,7 +793,7 @@ const TextArea = styled.textarea`
   line-height: ${theme.lineHeights.relaxed};
 
   &::placeholder {
-    color: ${theme.colors.dark.text.tertiary};
+    color: var(--color-text-tertiary);
     font-family: ${theme.fonts.sans};
   }
 
@@ -804,7 +804,7 @@ const TextArea = styled.textarea`
   }
 
   &:hover:not(:focus):not(:disabled) {
-    border-color: ${theme.colors.dark.border.strong};
+    border-color: var(--color-border-strong);
   }
 
   &:disabled {
@@ -818,7 +818,7 @@ const FormActions = styled.div`
   gap: ${theme.space[3]};
   margin-top: ${theme.space[2]};
   padding-top: ${theme.space[4]};
-  border-top: 1px solid ${theme.colors.dark.border.default};
+  border-top: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.sm}) {
     flex-direction: column-reverse;
@@ -828,8 +828,8 @@ const FormActions = styled.div`
 const CancelButton = styled.button`
   flex: 1;
   background: transparent;
-  border: 1px solid ${theme.colors.dark.border.default};
-  color: ${theme.colors.dark.text.primary};
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[6]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -838,8 +838,8 @@ const CancelButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
 
   &:hover:not(:disabled) {
-    background: ${theme.colors.dark.bg.elevated};
-    border-color: ${theme.colors.dark.border.strong};
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border-strong);
   }
 
   &:active:not(:disabled) {
@@ -875,7 +875,7 @@ const SubmitButton = styled.button`
   &:hover:not(:disabled) {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-    box-shadow: ${theme.shadows.md};
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -883,8 +883,8 @@ const SubmitButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
   }
 `;
@@ -905,8 +905,8 @@ const Spinner = styled.span`
 `;
 
 const CheckboxGroup = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
 `;
@@ -933,7 +933,7 @@ const CheckboxInput = styled.input`
 `;
 
 const CheckboxText = styled.span`
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   display: flex;
@@ -948,24 +948,24 @@ const CheckboxText = styled.span`
 
 const HelperText = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   font-style: italic;
 `;
 
 const SectionDivider = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
   padding: ${theme.space[3]} 0 ${theme.space[2]} 0;
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
   margin-top: ${theme.space[2]};
 `;
 
 const MetadataSection = styled.div`
-  background: ${theme.colors.dark.bg.primary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
   display: flex;
@@ -1003,8 +1003,8 @@ const FetchButton = styled.button`
   }
 
   &:disabled {
-    background: ${theme.colors.dark.bg.elevated};
-    color: ${theme.colors.dark.text.disabled};
+    background: var(--color-bg-elevated);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
     box-shadow: none;
   }
@@ -1029,7 +1029,7 @@ const SuccessMessage = styled.div`
 
 const SectionEditorHelp = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -1058,13 +1058,13 @@ const TimingSyncButton = styled.button<{ $variant?: "primary" | "secondary" }>`
   gap: ${theme.space[2]};
   background: ${(props) =>
     props.$variant === "secondary"
-      ? theme.colors.dark.bg.primary
-      : `linear-gradient(135deg, ${theme.colors.dark.bg.tertiary} 0%, ${theme.colors.dark.bg.secondary} 100%)`};
+      ? 'var(--color-bg-primary)'
+      : `linear-gradient(135deg, var(--color-bg-tertiary) 0%, var(--color-bg-secondary) 100%)`};
   border: 1px solid ${(props) =>
     props.$variant === "secondary"
-      ? theme.colors.dark.border.default
+      ? 'var(--color-border)'
       : `${theme.colors.brand.primary}40`};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.body};
@@ -1089,7 +1089,7 @@ const TimingSyncButton = styled.button<{ $variant?: "primary" | "secondary" }>`
     background: ${(props) =>
       props.$variant === "secondary"
         ? `${theme.colors.semantic.info}10`
-        : `linear-gradient(135deg, ${theme.colors.brand.primary}15 0%, ${theme.colors.dark.bg.tertiary} 100%)`};
+        : `linear-gradient(135deg, ${theme.colors.brand.primary}15 0%, var(--color-bg-tertiary) 100%)`};
     box-shadow: 0 0 12px ${(props) =>
       props.$variant === "secondary"
         ? `${theme.colors.semantic.info}20`
@@ -1104,6 +1104,6 @@ const TimingSyncButton = styled.button<{ $variant?: "primary" | "secondary" }>`
 
 const TimingSyncHint = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-left: auto;
 `;

@@ -154,7 +154,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
 
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
-  background: ${theme.colors.dark.bg.primary};
+  background: var(--color-bg-primary);
   padding: ${theme.space[8]} 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -169,7 +169,7 @@ const PageHeader = styled.div`
   gap: ${theme.space[6]};
   margin-bottom: ${theme.space[8]};
   padding-bottom: ${theme.space[6]};
-  border-bottom: 1px solid ${theme.colors.dark.border.default};
+  border-bottom: 1px solid var(--color-border);
 
   @media (max-width: ${theme.breakpoints.md}) {
     flex-direction: column;
@@ -200,7 +200,7 @@ const BandBadge = styled.div`
 const PageTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
   line-height: ${theme.lineHeights.tight};
 
@@ -211,14 +211,14 @@ const PageTitle = styled.h1`
 
 const PageSubtitle = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
 
 const StatsCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[5]};
   min-width: 140px;
@@ -242,7 +242,7 @@ const StatValue = styled.div`
 
 const StatLabel = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
   font-weight: ${theme.fontWeights.medium};
@@ -254,8 +254,8 @@ const ContentSection = styled.div`
 `;
 
 const MessageCard = styled.div`
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[12]};
   text-align: center;
@@ -264,7 +264,7 @@ const MessageCard = styled.div`
 
 const MessageIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -272,13 +272,13 @@ const MessageIcon = styled.div`
 const MessageTitle = styled.h2`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const MessageText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
@@ -294,22 +294,22 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
   padding: ${theme.space[12]} ${theme.space[6]};
-  background: ${theme.colors.dark.bg.secondary};
-  border: 1px dashed ${theme.colors.dark.border.default};
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
   border-radius: ${theme.radius.lg};
   margin-top: ${theme.space[6]};
 `;
 
 const EmptyIcon = styled.div`
   font-size: ${theme.fontSizes.displayLg};
-  color: ${theme.colors.dark.text.tertiary};
+  color: var(--color-text-tertiary);
   margin-bottom: ${theme.space[4]};
   opacity: 0.5;
 `;
@@ -317,13 +317,13 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   font-size: ${theme.fontSizes.h2};
   font-weight: ${theme.fontWeights.semibold};
-  color: ${theme.colors.dark.text.primary};
+  color: var(--color-text-primary);
   margin-bottom: ${theme.space[2]};
 `;
 
 const EmptyText = styled.p`
   font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.dark.text.secondary};
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
 `;
