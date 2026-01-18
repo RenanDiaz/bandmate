@@ -240,7 +240,14 @@
     "by": "por",
     "hasBackingTracksShort": "Tiene Pistas de Acompañamiento / Secuencias",
     "editSongTooltip": "Editar canción",
-    "deleteSongTooltip": "Eliminar canción"
+    "deleteSongTooltip": "Eliminar canción",
+    "transpose": "Transponer",
+    "transposeUp": "Subir un semitono",
+    "transposeDown": "Bajar un semitono",
+    "resetTransposition": "Volver a tonalidad original",
+    "originalKey": "Tonalidad original",
+    "originalKeyShort": "Orig",
+    "transposeError": "Error al transponer la canción. Por favor intenta de nuevo."
   },
   "setlists": {
     "title": "Setlists",

@@ -240,7 +240,14 @@
     },
     "updateError": "Failed to update song. Please try again.",
     "editSongTooltip": "Edit song",
-    "deleteSongTooltip": "Delete song"
+    "deleteSongTooltip": "Delete song",
+    "transpose": "Transpose",
+    "transposeUp": "Transpose up one semitone",
+    "transposeDown": "Transpose down one semitone",
+    "resetTransposition": "Reset to original key",
+    "originalKey": "Original key",
+    "originalKeyShort": "Orig",
+    "transposeError": "Failed to transpose song. Please try again."
   },
   "setlists": {
     "title": "Setlists",

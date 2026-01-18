@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
-import { getBandSongs, updateSong, deleteSong } from "../services/songsService";
+import { getBandSongs, updateSong, deleteSong, transposeSong, resetSongTransposition } from "../services/songsService";
 import type { UpdateSongInput } from "../services/songsService";
 import { NewSongForm } from "./NewSongForm";
 import { SongList } from "./SongList";
@@ -96,6 +96,26 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
     } catch (error) {
       console.error("Failed to delete song:", error);
       alert(t("songs.deleteError"));
+    }
+  };
+
+  const handleTransposeSong = async (songId: string, semitones: number) => {
+    try {
+      await transposeSong(songId, semitones);
+      await loadSongs();
+    } catch (error) {
+      console.error("Failed to transpose song:", error);
+      alert(t("songs.transposeError"));
+    }
+  };
+
+  const handleResetTransposition = async (songId: string) => {
+    try {
+      await resetSongTransposition(songId);
+      await loadSongs();
+    } catch (error) {
+      console.error("Failed to reset transposition:", error);
+      alert(t("songs.transposeError"));
     }
   };
 
@@ -213,7 +233,13 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                   </EmptyText>
                 </EmptyState>
               ) : (
-                <SongList songs={filteredSongs} onEdit={handleEditSong} onDelete={handleDeleteSong} />
+                <SongList
+                  songs={filteredSongs}
+                  onEdit={handleEditSong}
+                  onDelete={handleDeleteSong}
+                  onTranspose={handleTransposeSong}
+                  onResetTransposition={handleResetTransposition}
+                />
               )}
             </>
           )}
