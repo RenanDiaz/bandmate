@@ -101,8 +101,11 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
 
   const handleTransposeSong = async (songId: string, semitones: number) => {
     try {
-      await transposeSong(songId, semitones);
-      await loadSongs();
+      const updatedSong = await transposeSong(songId, semitones);
+      // Update only the transposed song in state, preserving expansion state
+      setSongs(prevSongs =>
+        prevSongs.map(song => song.id === songId ? updatedSong : song)
+      );
     } catch (error) {
       console.error("Failed to transpose song:", error);
       alert(t("songs.transposeError"));
@@ -111,8 +114,11 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
 
   const handleResetTransposition = async (songId: string) => {
     try {
-      await resetSongTransposition(songId);
-      await loadSongs();
+      const updatedSong = await resetSongTransposition(songId);
+      // Update only the reset song in state, preserving expansion state
+      setSongs(prevSongs =>
+        prevSongs.map(song => song.id === songId ? updatedSong : song)
+      );
     } catch (error) {
       console.error("Failed to reset transposition:", error);
       alert(t("songs.transposeError"));

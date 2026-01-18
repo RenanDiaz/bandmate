@@ -45,9 +45,11 @@ const FLAT_KEYS = ["F", "Bb", "Eb", "Ab", "Db", "Gb", "Dm", "Gm", "Cm", "Fm"];
 const CHORD_REGEX =
   /^([A-G])([#b])?([^/\s]*)?(?:\/([A-G])([#b])?)?$/;
 
-// Regex to find chords in a line of text (word boundaries)
+// Regex to find chords in a line of text
+// Uses negative lookahead instead of word boundary at end to properly capture
+// sharps/flats (# and b are not word characters, so \b fails for chords like "F#")
 const CHORD_IN_LINE_REGEX =
-  /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus|add|M)?[0-9]?(?:sus[24]|add[0-9]+|maj[0-9]+|m[0-9]+|[0-9]+)?(?:b[0-9]+|#[0-9]+)?(?:\/[A-G][#b]?)?)\b/g;
+  /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus|add|M)?[0-9]?(?:sus[24]|add[0-9]+|maj[0-9]+|m[0-9]+|[0-9]+)?(?:b[0-9]+|#[0-9]+)?(?:\/[A-G][#b]?)?)(?![#b\w])/g;
 
 /**
  * Determines if a key conventionally uses flats or sharps
