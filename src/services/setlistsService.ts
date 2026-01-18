@@ -164,6 +164,7 @@ export interface Setlist {
   description?: string;
   songs: SetlistItem[]; // Now supports all item types
   youtube_playlist_url?: string; // URL of exported YouTube Music playlist
+  is_draft?: boolean; // Draft setlists are proposals, not shown in main list
   created_at: string;
   updated_at: string;
 }
@@ -173,6 +174,7 @@ export interface CreateSetlistInput {
   name: string;
   description?: string;
   songs?: SetlistItem[];
+  is_draft?: boolean;
 }
 
 export interface UpdateSetlistInput {
@@ -192,13 +194,35 @@ function normalizeSetlist(setlist: Setlist): Setlist {
 }
 
 /**
- * Get all setlists for a band
+ * Get all setlists for a band (excludes drafts by default)
  */
-export async function getBandSetlists(bandId: number): Promise<Setlist[]> {
+export async function getBandSetlists(bandId: number, includeDrafts = false): Promise<Setlist[]> {
+  let query = supabase
+    .from("setlists")
+    .select("*")
+    .eq("band_id", bandId)
+    .order("created_at", { ascending: false });
+
+  if (!includeDrafts) {
+    // Exclude drafts - include where is_draft is false OR null (for backwards compatibility)
+    query = query.or("is_draft.eq.false,is_draft.is.null");
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return (data || []).map(normalizeSetlist);
+}
+
+/**
+ * Get all draft setlists for a band
+ */
+export async function getDraftSetlists(bandId: number): Promise<Setlist[]> {
   const { data, error } = await supabase
     .from("setlists")
     .select("*")
     .eq("band_id", bandId)
+    .eq("is_draft", true)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -238,8 +262,58 @@ export async function createSetlist(setlist: CreateSetlistInput): Promise<Setlis
         ...setlist,
         user_id: user.id,
         songs: setlist.songs || [],
+        is_draft: setlist.is_draft || false,
       },
     ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return normalizeSetlist(data);
+}
+
+/**
+ * Create a draft setlist (for proposals)
+ */
+export async function createDraftSetlist(setlist: Omit<CreateSetlistInput, "is_draft">): Promise<Setlist> {
+  return createSetlist({
+    ...setlist,
+    is_draft: true,
+  });
+}
+
+/**
+ * Convert a draft setlist to a regular setlist
+ */
+export async function convertDraftToSetlist(setlistId: string): Promise<Setlist> {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (!user) throw new Error("User not authenticated");
+
+  // First get the setlist to verify it's a draft
+  const { data: setlist, error: fetchError } = await supabase
+    .from("setlists")
+    .select("band_id, is_draft")
+    .eq("id", setlistId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!setlist) throw new Error("Setlist not found");
+  if (!setlist.is_draft) throw new Error("Setlist is not a draft");
+
+  // Check permission
+  const hasPermission = await canUserEditContent(setlist.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to convert this draft");
+  }
+
+  const { data, error } = await supabase
+    .from("setlists")
+    .update({
+      is_draft: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", setlistId)
     .select()
     .single();
 

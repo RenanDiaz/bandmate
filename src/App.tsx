@@ -130,6 +130,16 @@ const AppContent: FC = () => {
             <NavItem>
               <StyledNavLink
                 as={Link}
+                to="/requests"
+                $active={location.pathname.startsWith("/requests")}
+                $mode={mode}
+              >
+                {t('nav.requests')}
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
                 to="/about"
                 $active={location.pathname === "/about"}
                 $mode={mode}
@@ -255,6 +265,18 @@ const AppContent: FC = () => {
               >
                 <i className="bi bi-calendar-check"></i>
                 <span>{t('nav.rehearsals')}</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/requests"
+                $active={location.pathname.startsWith("/requests")}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-lightbulb"></i>
+                <span>{t('nav.requests')}</span>
               </StyledNavLink>
             </NavItem>
             <NavItem>
