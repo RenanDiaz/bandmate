@@ -334,7 +334,18 @@
       "noSongsYetText": "This setlist doesn't have any songs. Click \"Edit Setlist\" to add songs.",
       "reorderHint": "Drag songs to reorder. Click \"Save Order\" when done.",
       "saveOrderError": "Failed to save order. Please try again.",
-      "loadError": "Failed to load setlist. Please try again."
+      "loadError": "Failed to load setlist. Please try again.",
+      "linkedToShow": "Linked to show",
+      "notLinkedToShow": "Not linked to any show",
+      "linkToShow": "Link to Show",
+      "linkToShowTitle": "Link Setlist to Show",
+      "linkToShowDescription": "Select an upcoming show to link this setlist to:",
+      "selectShow": "Select a show...",
+      "noUpcomingShows": "No upcoming shows available",
+      "noUpcomingShowsHint": "Create a new show to link this setlist",
+      "createNewShow": "Create New Show",
+      "linkSuccess": "Setlist linked to show successfully",
+      "linkError": "Failed to link setlist to show. Please try again."
     },
     "export": {
       "button": "Export",

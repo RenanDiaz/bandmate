@@ -334,7 +334,18 @@
       "noSongsYetText": "Este setlist no tiene canciones. Haz clic en \"Editar Setlist\" para agregar canciones.",
       "reorderHint": "Arrastra las canciones para reordenar. Haz clic en \"Guardar Orden\" cuando termines.",
       "saveOrderError": "Error al guardar el orden. Por favor intenta de nuevo.",
-      "loadError": "Error al cargar el setlist. Por favor intenta de nuevo."
+      "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
+      "linkedToShow": "Vinculado al show",
+      "notLinkedToShow": "No vinculado a ningún show",
+      "linkToShow": "Vincular a Show",
+      "linkToShowTitle": "Vincular Setlist a Show",
+      "linkToShowDescription": "Selecciona un show próximo para vincular este setlist:",
+      "selectShow": "Selecciona un show...",
+      "noUpcomingShows": "No hay shows próximos disponibles",
+      "noUpcomingShowsHint": "Crea un nuevo show para vincular este setlist",
+      "createNewShow": "Crear Nuevo Show",
+      "linkSuccess": "Setlist vinculado al show exitosamente",
+      "linkError": "Error al vincular el setlist al show. Por favor intenta de nuevo."
     },
     "export": {
       "button": "Exportar",
