@@ -16,6 +16,8 @@ import ShowsView from "./components/ShowsView";
 import ShowDetailView from "./components/ShowDetailView";
 import RehearsalsView from "./components/RehearsalsView";
 import RehearsalDetailView from "./components/RehearsalDetailView";
+import RequestsView from "./components/RequestsView";
+import RequestDetailView from "./components/RequestDetailView";
 import { BandSettings } from "./components/BandSettings";
 import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
@@ -123,6 +125,16 @@ const AppContent: FC = () => {
                 $mode={mode}
               >
                 {t('nav.rehearsals')}
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
+                to="/requests"
+                $active={location.pathname.startsWith("/requests")}
+                $mode={mode}
+              >
+                {t('nav.requests')}
               </StyledNavLink>
             </NavItem>
             <NavItem>
@@ -258,6 +270,18 @@ const AppContent: FC = () => {
             <NavItem>
               <StyledNavLink
                 as={Link}
+                to="/requests"
+                $active={location.pathname.startsWith("/requests")}
+                $mode={mode}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="bi bi-lightbulb"></i>
+                <span>{t('nav.requests')}</span>
+              </StyledNavLink>
+            </NavItem>
+            <NavItem>
+              <StyledNavLink
+                as={Link}
                 to="/about"
                 $active={location.pathname === "/about"}
                 $mode={mode}
@@ -314,6 +338,8 @@ const AppContent: FC = () => {
             <Route path="/shows/:showId" element={<ShowDetailView />} />
             <Route path="/rehearsals" element={<RehearsalsView user={user} selectedBand={selectedBand} />} />
             <Route path="/rehearsals/:rehearsalId" element={<RehearsalDetailView />} />
+            <Route path="/requests" element={<RequestsView user={user} selectedBand={selectedBand} />} />
+            <Route path="/requests/:requestId" element={<RequestDetailView />} />
             <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
             <Route path="/invite/accept" element={<AcceptInvitation />} />
             <Route path="/about" element={<About />} />

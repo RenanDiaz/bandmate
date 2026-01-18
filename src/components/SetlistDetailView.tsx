@@ -28,6 +28,7 @@ import type { Song } from "../services/songsService";
 import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
+import { NewRequestModal } from "./NewRequestModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 
@@ -289,6 +290,9 @@ const SetlistDetailView: FC = () => {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [selectedShowId, setSelectedShowId] = useState<string>("");
   const [linkingShow, setLinkingShow] = useState(false);
+
+  // Propose setlist modal state
+  const [showProposeModal, setShowProposeModal] = useState(false);
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
@@ -750,6 +754,15 @@ const SetlistDetailView: FC = () => {
                   >
                     <i className="bi bi-youtube"></i>
                     <span>YouTube</span>
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => setShowProposeModal(true)}
+                    $variant="edit"
+                    $iconOnly
+                    title={t("requests.proposeSetlist")}
+                  >
+                    <i className="bi bi-chat-square-text"></i>
+                    <span>{t("requests.proposeSetlist")}</span>
                   </ActionButton>
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
@@ -1274,6 +1287,18 @@ const SetlistDetailView: FC = () => {
           )}
         </ModalFooter>
       </Modal>
+
+      {/* Propose Setlist Modal */}
+      {setlist && (
+        <NewRequestModal
+          isOpen={showProposeModal}
+          onClose={() => setShowProposeModal(false)}
+          bandId={setlist.band_id}
+          onCreated={() => setShowProposeModal(false)}
+          prefillSetlistId={setlist.id}
+          prefillType="setlist_proposal"
+        />
+      )}
     </ViewContainer>
   );
 };

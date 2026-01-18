@@ -2,6 +2,7 @@ import type { FC } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Song } from "../services/songsService";
 import type { Band } from "../services/bandsService";
+import type { RequestType } from "../services/requestsService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -14,6 +15,7 @@ import { NewSongForm } from "./NewSongForm";
 import { SongList } from "./SongList";
 import { EditSongModal } from "./EditSongModal";
 import { ImportSongsModal } from "./ImportSongsModal";
+import { NewRequestModal } from "./NewRequestModal";
 import { SongSearchFilter, type SortOption, type FilterOptions } from "./SongSearchFilter";
 import { processSongs } from "../utils/songFilters";
 import { SEO } from "./SEO";
@@ -31,6 +33,9 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestSong, setRequestSong] = useState<Song | null>(null);
+  const [requestType, setRequestType] = useState<RequestType | null>(null);
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,6 +128,18 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       console.error("Failed to reset transposition:", error);
       alert(t("songs.transposeError"));
     }
+  };
+
+  const handleRequestAction = (song: Song, actionType: RequestType) => {
+    setRequestSong(song);
+    setRequestType(actionType);
+    setIsRequestModalOpen(true);
+  };
+
+  const handleRequestModalClose = () => {
+    setIsRequestModalOpen(false);
+    setRequestSong(null);
+    setRequestType(null);
   };
 
   if (!user) {
@@ -245,6 +262,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                   onDelete={handleDeleteSong}
                   onTranspose={handleTransposeSong}
                   onResetTransposition={handleResetTransposition}
+                  onRequestAction={handleRequestAction}
                 />
               )}
             </>
@@ -264,6 +282,17 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
           onImportComplete={loadSongs}
           bandId={selectedBand.id}
         />
+
+        {requestSong && requestType && (
+          <NewRequestModal
+            isOpen={isRequestModalOpen}
+            onClose={handleRequestModalClose}
+            bandId={selectedBand.id}
+            onCreated={handleRequestModalClose}
+            prefillSongId={requestSong.id}
+            prefillType={requestType}
+          />
+        )}
       </Container>
     </PageWrapper>
   );
