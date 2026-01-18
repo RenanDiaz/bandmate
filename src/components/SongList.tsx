@@ -9,6 +9,8 @@ interface Props {
   songs: Song[];
   onEdit: (song: Song) => void;
   onDelete: (song: Song) => void;
+  onTranspose?: (songId: string, semitones: number) => void;
+  onResetTransposition?: (songId: string) => void;
   canEdit?: boolean;
 }
 
@@ -18,9 +20,37 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export const SongList: FC<Props> = ({ songs, onEdit, onDelete, canEdit = true }) => {
+export const SongList: FC<Props> = ({
+  songs,
+  onEdit,
+  onDelete,
+  onTranspose,
+  onResetTransposition,
+  canEdit = true
+}) => {
   const { t } = useTranslation();
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
+  const [transposing, setTransposing] = useState<string | null>(null);
+
+  const handleTranspose = async (songId: string, semitones: number) => {
+    if (!onTranspose) return;
+    setTransposing(songId);
+    try {
+      await onTranspose(songId, semitones);
+    } finally {
+      setTransposing(null);
+    }
+  };
+
+  const handleResetTransposition = async (songId: string) => {
+    if (!onResetTransposition) return;
+    setTransposing(songId);
+    try {
+      await onResetTransposition(songId);
+    } finally {
+      setTransposing(null);
+    }
+  };
 
   const toggleExpanded = (songId: string) => {
     setExpandedSongId(expandedSongId === songId ? null : songId);
@@ -116,10 +146,54 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete, canEdit = true })
               <SongDetails>
                 {song.chords && (
                   <DetailsSection>
-                    <DetailsLabel>
-                      <i className="bi bi-music-note"></i>
-                      {t('songs.chords')}
-                    </DetailsLabel>
+                    <ChordsHeader>
+                      <DetailsLabel>
+                        <i className="bi bi-music-note"></i>
+                        {t('songs.chords')}
+                      </DetailsLabel>
+                      {canEdit && onTranspose && (
+                        <TranspositionControls>
+                          {song.original_key && song.original_key !== song.key && (
+                            <OriginalKeyBadge title={t('songs.originalKey')}>
+                              {t('songs.originalKeyShort')}: {song.original_key}
+                            </OriginalKeyBadge>
+                          )}
+                          <TransposeButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTranspose(song.id, -1);
+                            }}
+                            disabled={transposing === song.id}
+                            title={t('songs.transposeDown')}
+                          >
+                            <i className="bi bi-dash"></i>
+                          </TransposeButton>
+                          <TransposeLabel>{t('songs.transpose')}</TransposeLabel>
+                          <TransposeButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTranspose(song.id, 1);
+                            }}
+                            disabled={transposing === song.id}
+                            title={t('songs.transposeUp')}
+                          >
+                            <i className="bi bi-plus"></i>
+                          </TransposeButton>
+                          {song.original_key && song.original_key !== song.key && (
+                            <ResetButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetTransposition(song.id);
+                              }}
+                              disabled={transposing === song.id}
+                              title={t('songs.resetTransposition')}
+                            >
+                              <i className="bi bi-arrow-counterclockwise"></i>
+                            </ResetButton>
+                          )}
+                        </TranspositionControls>
+                      )}
+                    </ChordsHeader>
                     <ChordsContent>{song.chords}</ChordsContent>
                   </DetailsSection>
                 )}
@@ -478,4 +552,91 @@ const LyricsContent = styled.pre`
       background: ${theme.colors.brand.primary};
     }
   }
+`;
+
+const ChordsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: ${theme.space[2]};
+`;
+
+const TranspositionControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const TransposeButton = styled.button`
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  width: 28px;
+  height: 28px;
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.body};
+
+  &:hover:not(:disabled) {
+    background: ${theme.colors.brand.primary};
+    border-color: ${theme.colors.brand.primary};
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const TransposeLabel = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: var(--color-text-secondary);
+  font-weight: ${theme.fontWeights.medium};
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const ResetButton = styled.button`
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  margin-left: ${theme.space[1]};
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+    border-color: ${theme.colors.semantic.warning};
+    color: ${theme.colors.semantic.warning};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const OriginalKeyBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-bg-tertiary);
+  border: 1px solid ${theme.colors.semantic.warning};
+  color: ${theme.colors.semantic.warning};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  margin-right: ${theme.space[2]};
 `;
