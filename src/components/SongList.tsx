@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Song } from "../services/songsService";
+import type { RequestType } from "../services/requestsService";
 import styled from "styled-components";
 import { theme } from "../theme";
 
@@ -11,6 +12,7 @@ interface Props {
   onDelete: (song: Song) => void;
   onTranspose?: (songId: string, semitones: number) => void;
   onResetTransposition?: (songId: string) => void;
+  onRequestAction?: (song: Song, requestType: RequestType) => void;
   canEdit?: boolean;
 }
 
@@ -26,11 +28,13 @@ export const SongList: FC<Props> = ({
   onDelete,
   onTranspose,
   onResetTransposition,
+  onRequestAction,
   canEdit = true
 }) => {
   const { t } = useTranslation();
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
   const [transposing, setTransposing] = useState<string | null>(null);
+  const [menuOpenSongId, setMenuOpenSongId] = useState<string | null>(null);
 
   const handleTranspose = async (songId: string, semitones: number) => {
     if (!onTranspose) return;
@@ -138,6 +142,42 @@ export const SongList: FC<Props> = ({
                   >
                     <i className="bi bi-trash"></i>
                   </ActionButton>
+                  {onRequestAction && (
+                    <MoreMenuWrapper>
+                      <ActionButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenSongId(menuOpenSongId === song.id ? null : song.id);
+                        }}
+                        title={t('songs.moreActions')}
+                        $variant="edit"
+                      >
+                        <i className="bi bi-three-dots-vertical"></i>
+                      </ActionButton>
+                      {menuOpenSongId === song.id && (
+                        <MoreMenu onClick={(e) => e.stopPropagation()}>
+                          <MenuItem
+                            onClick={() => {
+                              onRequestAction(song, "backing_track");
+                              setMenuOpenSongId(null);
+                            }}
+                          >
+                            <i className="bi bi-soundwave"></i>
+                            {t('songs.requestBackingTrack')}
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => {
+                              onRequestAction(song, "song_change");
+                              setMenuOpenSongId(null);
+                            }}
+                          >
+                            <i className="bi bi-pencil-square"></i>
+                            {t('songs.requestChange')}
+                          </MenuItem>
+                        </MoreMenu>
+                      )}
+                    </MoreMenuWrapper>
+                  )}
                 </ActionButtons>
               )}
             </SongHeader>
@@ -645,4 +685,51 @@ const OriginalKeyBadge = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.medium};
   margin-right: ${theme.space[2]};
+`;
+
+const MoreMenuWrapper = styled.div`
+  position: relative;
+`;
+
+const MoreMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: ${theme.space[1]};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  z-index: ${theme.zIndex.dropdown};
+  overflow: hidden;
+`;
+
+const MenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  width: 100%;
+  padding: ${theme.space[3]} ${theme.space[4]};
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: ${theme.fontSizes.bodySm};
+  text-align: left;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  i {
+    color: ${theme.colors.brand.primary};
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+  }
 `;
