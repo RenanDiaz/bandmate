@@ -49,16 +49,19 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(refreshBands, [refreshBands]);
 
-  // Load selected band from storage
+  // Load selected band from storage, or auto-select if user has only one band
   useEffect(() => {
     if (user) {
       const savedBandId = BandStorage.getSelectedBandId();
-      if (savedBandId) {
-        getMyBands().then((bands) => {
+      getMyBands().then((bands) => {
+        if (savedBandId) {
           const found = bands.find((b) => String(b.id) === savedBandId);
           if (found) setSelectedBand(found);
-        });
-      }
+        } else if (bands.length === 1) {
+          // Auto-select when user has only one band and nothing saved
+          setSelectedBand(bands[0]);
+        }
+      });
     } else {
       setSelectedBand(null);
     }
