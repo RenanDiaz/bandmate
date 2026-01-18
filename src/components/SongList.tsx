@@ -9,6 +9,7 @@ interface Props {
   songs: Song[];
   onEdit: (song: Song) => void;
   onDelete: (song: Song) => void;
+  canEdit?: boolean;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -17,7 +18,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
+export const SongList: FC<Props> = ({ songs, onEdit, onDelete, canEdit = true }) => {
   const { t } = useTranslation();
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
 
@@ -85,28 +86,30 @@ export const SongList: FC<Props> = ({ songs, onEdit, onDelete }) => {
                 )}
               </SongClickArea>
 
-              <ActionButtons>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(song);
-                  }}
-                  title={t('songs.editSongTooltip')}
-                  $variant="edit"
-                >
-                  <i className="bi bi-pencil"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(song);
-                  }}
-                  title={t('songs.deleteSongTooltip')}
-                  $variant="delete"
-                >
-                  <i className="bi bi-trash"></i>
-                </ActionButton>
-              </ActionButtons>
+              {canEdit && (
+                <ActionButtons>
+                  <ActionButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(song);
+                    }}
+                    title={t('songs.editSongTooltip')}
+                    $variant="edit"
+                  >
+                    <i className="bi bi-pencil"></i>
+                  </ActionButton>
+                  <ActionButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(song);
+                    }}
+                    title={t('songs.deleteSongTooltip')}
+                    $variant="delete"
+                  >
+                    <i className="bi bi-trash"></i>
+                  </ActionButton>
+                </ActionButtons>
+              )}
             </SongHeader>
 
             {isExpanded && hasDetails && (

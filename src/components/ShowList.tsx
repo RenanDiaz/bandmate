@@ -17,6 +17,7 @@ interface Props {
   onEdit: (show: Show) => void;
   onDelete: (show: Show) => void;
   onReload: () => void;
+  canEdit?: boolean;
 }
 
 const formatDate = (dateString: string): string => {
@@ -55,7 +56,8 @@ const ShowCardItem: FC<{
   onView: (showId: string) => void;
   onMarkCompleted: (show: Show) => void;
   onMarkCancelled: (show: Show) => void;
-}> = ({ show, onEdit, onDelete, onView, onMarkCompleted, onMarkCancelled }) => {
+  canEdit: boolean;
+}> = ({ show, onEdit, onDelete, onView, onMarkCompleted, onMarkCancelled, canEdit }) => {
   const { t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
@@ -144,92 +146,96 @@ const ShowCardItem: FC<{
         </ShowInfo>
 
         {/* Desktop: Inline action buttons */}
-        <ActionButtons>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(show);
-            }}
-            title={t('shows.editShowTooltip')}
-            $variant="edit"
-          >
-            <i className="bi bi-pencil"></i>
-          </ActionButton>
-          {isUpcoming && (
-            <>
-              <ActionButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkCompleted(show);
-                }}
-                title={t('shows.markCompleted')}
-                $variant="complete"
-              >
-                <i className="bi bi-check-circle"></i>
-              </ActionButton>
-              <ActionButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkCancelled(show);
-                }}
-                title={t('shows.cancelShowTooltip')}
-                $variant="cancel"
-              >
-                <i className="bi bi-x-circle"></i>
-              </ActionButton>
-            </>
-          )}
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(show);
-            }}
-            title={t('shows.deleteShowTooltip')}
-            $variant="delete"
-          >
-            <i className="bi bi-trash"></i>
-          </ActionButton>
-        </ActionButtons>
-
-        {/* Mobile: Dropdown menu */}
-        <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
-          <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
-            <DropdownToggle tag="button" className="mobile-actions-toggle">
-              <i className="bi bi-three-dots-vertical"></i>
-            </DropdownToggle>
-            <DropdownMenu end dark container="body">
-              <DropdownItem onClick={(e) => {
+        {canEdit && (
+          <ActionButtons>
+            <ActionButton
+              onClick={(e) => {
                 e.stopPropagation();
                 onEdit(show);
-              }}>
-                <i className="bi bi-pencil me-2"></i> {t('common.edit')}
-              </DropdownItem>
-              {isUpcoming && (
-                <>
-                  <DropdownItem onClick={(e) => {
+              }}
+              title={t('shows.editShowTooltip')}
+              $variant="edit"
+            >
+              <i className="bi bi-pencil"></i>
+            </ActionButton>
+            {isUpcoming && (
+              <>
+                <ActionButton
+                  onClick={(e) => {
                     e.stopPropagation();
                     onMarkCompleted(show);
-                  }}>
-                    <i className="bi bi-check-circle me-2 text-success"></i> {t('shows.markCompletedAction')}
-                  </DropdownItem>
-                  <DropdownItem onClick={(e) => {
+                  }}
+                  title={t('shows.markCompleted')}
+                  $variant="complete"
+                >
+                  <i className="bi bi-check-circle"></i>
+                </ActionButton>
+                <ActionButton
+                  onClick={(e) => {
                     e.stopPropagation();
                     onMarkCancelled(show);
-                  }}>
-                    <i className="bi bi-x-circle me-2 text-warning"></i> {t('shows.cancelShow')}
-                  </DropdownItem>
-                </>
-              )}
-              <DropdownItem divider />
-              <DropdownItem onClick={(e) => {
+                  }}
+                  title={t('shows.cancelShowTooltip')}
+                  $variant="cancel"
+                >
+                  <i className="bi bi-x-circle"></i>
+                </ActionButton>
+              </>
+            )}
+            <ActionButton
+              onClick={(e) => {
                 e.stopPropagation();
                 onDelete(show);
-              }} className="text-danger">
-                <i className="bi bi-trash me-2"></i> {t('common.delete')}
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </MobileDropdownWrapper>
+              }}
+              title={t('shows.deleteShowTooltip')}
+              $variant="delete"
+            >
+              <i className="bi bi-trash"></i>
+            </ActionButton>
+          </ActionButtons>
+        )}
+
+        {/* Mobile: Dropdown menu */}
+        {canEdit && (
+          <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
+            <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
+              <DropdownToggle tag="button" className="mobile-actions-toggle">
+                <i className="bi bi-three-dots-vertical"></i>
+              </DropdownToggle>
+              <DropdownMenu end dark container="body">
+                <DropdownItem onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(show);
+                }}>
+                  <i className="bi bi-pencil me-2"></i> {t('common.edit')}
+                </DropdownItem>
+                {isUpcoming && (
+                  <>
+                    <DropdownItem onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkCompleted(show);
+                    }}>
+                      <i className="bi bi-check-circle me-2 text-success"></i> {t('shows.markCompletedAction')}
+                    </DropdownItem>
+                    <DropdownItem onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkCancelled(show);
+                    }}>
+                      <i className="bi bi-x-circle me-2 text-warning"></i> {t('shows.cancelShow')}
+                    </DropdownItem>
+                  </>
+                )}
+                <DropdownItem divider />
+                <DropdownItem onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(show);
+                }} className="text-danger">
+                  <i className="bi bi-trash me-2"></i> {t('common.delete')}
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </MobileDropdownWrapper>
+        )}
       </ShowHeader>
 
       {show.notes && (
@@ -247,7 +253,7 @@ const ShowCardItem: FC<{
   );
 };
 
-export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
+export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit = true }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -289,6 +295,7 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload }) => {
           onView={handleViewShow}
           onMarkCompleted={handleMarkCompleted}
           onMarkCancelled={handleMarkCancelled}
+          canEdit={canEdit}
         />
       ))}
     </ShowsGrid>

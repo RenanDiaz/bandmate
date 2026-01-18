@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { canUserManageEvents } from "./bandMembersService";
 
 export type RehearsalStatus = "scheduled" | "completed" | "cancelled";
 
@@ -157,6 +158,22 @@ export async function updateRehearsal(rehearsalId: string, updates: UpdateRehear
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
 
+  // First get the rehearsal to check band membership
+  const { data: rehearsal, error: fetchError } = await supabase
+    .from("rehearsals")
+    .select("band_id")
+    .eq("id", rehearsalId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!rehearsal) throw new Error("Rehearsal not found");
+
+  // Check if user has permission to manage events in this band
+  const hasPermission = await canUserManageEvents(rehearsal.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit rehearsals in this band");
+  }
+
   const { data, error } = await supabase
     .from("rehearsals")
     .update({
@@ -178,6 +195,22 @@ export async function deleteRehearsal(rehearsalId: string): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
+
+  // First get the rehearsal to check band membership
+  const { data: rehearsal, error: fetchError } = await supabase
+    .from("rehearsals")
+    .select("band_id")
+    .eq("id", rehearsalId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!rehearsal) throw new Error("Rehearsal not found");
+
+  // Check if user has permission to manage events in this band
+  const hasPermission = await canUserManageEvents(rehearsal.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to delete rehearsals in this band");
+  }
 
   const { error } = await supabase
     .from("rehearsals")

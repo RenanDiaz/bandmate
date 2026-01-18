@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { canUserEditContent } from "./bandMembersService";
 
 // Timing data interfaces for syncing lyrics/chords with audio
 export interface SectionTiming {
@@ -131,11 +132,26 @@ export async function updateSong(songId: string, updates: UpdateSongInput) {
 
   if (!user) throw new Error("User not authenticated");
 
+  // First get the song to check band membership
+  const { data: song, error: fetchError } = await supabase
+    .from("songs")
+    .select("band_id")
+    .eq("id", songId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!song) throw new Error("Song not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(song.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit songs in this band");
+  }
+
   const { data, error } = await supabase
     .from("songs")
     .update(updates)
     .eq("id", songId)
-    .eq("user_id", user.id)
     .select()
     .single();
 
@@ -149,7 +165,23 @@ export async function deleteSong(songId: string) {
 
   if (!user) throw new Error("User not authenticated");
 
-  const { error } = await supabase.from("songs").delete().eq("id", songId).eq("user_id", user.id);
+  // First get the song to check band membership
+  const { data: song, error: fetchError } = await supabase
+    .from("songs")
+    .select("band_id")
+    .eq("id", songId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!song) throw new Error("Song not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(song.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to delete songs in this band");
+  }
+
+  const { error } = await supabase.from("songs").delete().eq("id", songId);
 
   if (error) throw error;
 }
@@ -176,11 +208,26 @@ export async function updateSongTimingData(
 
   if (!user) throw new Error("User not authenticated");
 
+  // First get the song to check band membership
+  const { data: song, error: fetchError } = await supabase
+    .from("songs")
+    .select("band_id")
+    .eq("id", songId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!song) throw new Error("Song not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(song.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit songs in this band");
+  }
+
   const { data, error } = await supabase
     .from("songs")
     .update({ timing_data: timingData })
     .eq("id", songId)
-    .eq("user_id", user.id)
     .select()
     .single();
 

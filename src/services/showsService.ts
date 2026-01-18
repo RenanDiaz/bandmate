@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { canUserManageEvents } from "./bandMembersService";
 
 export type ShowStatus = "upcoming" | "completed" | "cancelled";
 
@@ -146,6 +147,22 @@ export async function updateShow(showId: string, updates: UpdateShowInput): Prom
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
 
+  // First get the show to check band membership
+  const { data: show, error: fetchError } = await supabase
+    .from("shows")
+    .select("band_id")
+    .eq("id", showId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!show) throw new Error("Show not found");
+
+  // Check if user has permission to manage events in this band
+  const hasPermission = await canUserManageEvents(show.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit shows in this band");
+  }
+
   const { data, error } = await supabase
     .from("shows")
     .update({
@@ -167,6 +184,22 @@ export async function deleteShow(showId: string): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
+
+  // First get the show to check band membership
+  const { data: show, error: fetchError } = await supabase
+    .from("shows")
+    .select("band_id")
+    .eq("id", showId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!show) throw new Error("Show not found");
+
+  // Check if user has permission to manage events in this band
+  const hasPermission = await canUserManageEvents(show.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to delete shows in this band");
+  }
 
   const { error } = await supabase
     .from("shows")
