@@ -124,6 +124,12 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
           text: "white",
           border: theme.colors.brand.primary,
         };
+      case "admin":
+        return {
+          bg: theme.colors.semantic.successBgDark,
+          text: theme.colors.semantic.success,
+          border: theme.colors.semantic.success,
+        };
       case "member":
         return {
           bg: 'var(--color-bg-tertiary)',
@@ -232,6 +238,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
                     value={member.role}
                     onChange={(e) => handleChangeRole(member, e.target.value as BandRole)}
                   >
+                    <option value="admin">{t("bands.admin")}</option>
                     <option value="member">{t("bands.member")}</option>
                     <option value="guest">{t("bands.guest")}</option>
                   </RoleSelect>

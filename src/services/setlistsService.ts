@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { canUserEditContent } from "./bandMembersService";
 
 // ============================================
 // Setlist Item Types
@@ -254,6 +255,22 @@ export async function updateSetlist(setlistId: string, updates: UpdateSetlistInp
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
 
+  // First get the setlist to check band membership
+  const { data: setlist, error: fetchError } = await supabase
+    .from("setlists")
+    .select("band_id")
+    .eq("id", setlistId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!setlist) throw new Error("Setlist not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(setlist.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit setlists in this band");
+  }
+
   const { data, error } = await supabase
     .from("setlists")
     .update({
@@ -261,7 +278,6 @@ export async function updateSetlist(setlistId: string, updates: UpdateSetlistInp
       updated_at: new Date().toISOString(),
     })
     .eq("id", setlistId)
-    .eq("user_id", user.id)
     .select()
     .single();
 
@@ -277,11 +293,26 @@ export async function deleteSetlist(setlistId: string): Promise<void> {
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
 
+  // First get the setlist to check band membership
+  const { data: setlist, error: fetchError } = await supabase
+    .from("setlists")
+    .select("band_id")
+    .eq("id", setlistId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!setlist) throw new Error("Setlist not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(setlist.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to delete setlists in this band");
+  }
+
   const { error } = await supabase
     .from("setlists")
     .delete()
-    .eq("id", setlistId)
-    .eq("user_id", user.id);
+    .eq("id", setlistId);
 
   if (error) throw error;
 }
@@ -296,6 +327,22 @@ export async function updateSetlistYouTubePlaylist(
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) throw new Error("User not authenticated");
+
+  // First get the setlist to check band membership
+  const { data: setlist, error: fetchError } = await supabase
+    .from("setlists")
+    .select("band_id")
+    .eq("id", setlistId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!setlist) throw new Error("Setlist not found");
+
+  // Check if user has permission to edit content in this band
+  const hasPermission = await canUserEditContent(setlist.band_id);
+  if (!hasPermission) {
+    throw new Error("You don't have permission to edit setlists in this band");
+  }
 
   const { data, error } = await supabase
     .from("setlists")

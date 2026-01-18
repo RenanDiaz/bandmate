@@ -14,6 +14,7 @@ import {
 interface Props {
   setlists: Setlist[];
   onDelete: (setlist: Setlist) => void;
+  canEdit?: boolean;
 }
 
 // Individual setlist card component to manage its own dropdown state
@@ -23,7 +24,8 @@ const SetlistCardItem: FC<{
   onView: (setlistId: string) => void;
   onPerform: (setlistId: string) => void;
   onEditSongs: (setlistId: string) => void;
-}> = ({ setlist, onDelete, onView, onPerform, onEditSongs }) => {
+  canEdit: boolean;
+}> = ({ setlist, onDelete, onView, onPerform, onEditSongs, canEdit }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
   const { t } = useTranslation();
@@ -60,26 +62,30 @@ const SetlistCardItem: FC<{
           >
             <i className="bi bi-play-circle"></i>
           </ActionButton>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditSongs(setlist.id);
-            }}
-            title={t('setlists.editSetlistTooltip')}
-            $variant="edit"
-          >
-            <i className="bi bi-pencil"></i>
-          </ActionButton>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(setlist);
-            }}
-            title={t('setlists.deleteSetlistTooltip')}
-            $variant="delete"
-          >
-            <i className="bi bi-trash"></i>
-          </ActionButton>
+          {canEdit && (
+            <>
+              <ActionButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSongs(setlist.id);
+                }}
+                title={t('setlists.editSetlistTooltip')}
+                $variant="edit"
+              >
+                <i className="bi bi-pencil"></i>
+              </ActionButton>
+              <ActionButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(setlist);
+                }}
+                title={t('setlists.deleteSetlistTooltip')}
+                $variant="delete"
+              >
+                <i className="bi bi-trash"></i>
+              </ActionButton>
+            </>
+          )}
         </ActionButtons>
 
         {/* Mobile: Dropdown menu */}
@@ -98,19 +104,23 @@ const SetlistCardItem: FC<{
               >
                 <i className="bi bi-play-circle me-2 text-success"></i> {t('setlists.perform')}
               </DropdownItem>
-              <DropdownItem onClick={(e) => {
-                e.stopPropagation();
-                onEditSongs(setlist.id);
-              }}>
-                <i className="bi bi-pencil me-2"></i> {t('common.edit')}
-              </DropdownItem>
-              <DropdownItem divider />
-              <DropdownItem onClick={(e) => {
-                e.stopPropagation();
-                onDelete(setlist);
-              }} className="text-danger">
-                <i className="bi bi-trash me-2"></i> {t('common.delete')}
-              </DropdownItem>
+              {canEdit && (
+                <>
+                  <DropdownItem onClick={(e) => {
+                    e.stopPropagation();
+                    onEditSongs(setlist.id);
+                  }}>
+                    <i className="bi bi-pencil me-2"></i> {t('common.edit')}
+                  </DropdownItem>
+                  <DropdownItem divider />
+                  <DropdownItem onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(setlist);
+                  }} className="text-danger">
+                    <i className="bi bi-trash me-2"></i> {t('common.delete')}
+                  </DropdownItem>
+                </>
+              )}
             </DropdownMenu>
           </Dropdown>
         </MobileDropdownWrapper>
@@ -123,7 +133,7 @@ const SetlistCardItem: FC<{
   );
 };
 
-export const SetlistList: FC<Props> = ({ setlists, onDelete }) => {
+export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit = true }) => {
   const navigate = useNavigate();
 
   const handleViewSetlist = (setlistId: string) => {
@@ -148,6 +158,7 @@ export const SetlistList: FC<Props> = ({ setlists, onDelete }) => {
           onView={handleViewSetlist}
           onPerform={handlePerformSetlist}
           onEditSongs={handleEditSongs}
+          canEdit={canEdit}
         />
       ))}
     </SetlistsGrid>

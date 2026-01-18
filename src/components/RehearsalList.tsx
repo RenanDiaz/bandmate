@@ -12,6 +12,7 @@ interface Props {
   onDelete: (rehearsal: Rehearsal) => void;
   onMarkCompleted: (rehearsal: Rehearsal) => void;
   onMarkCancelled: (rehearsal: Rehearsal) => void;
+  canEdit?: boolean;
 }
 
 const formatTime = (timeString: string): string => {
@@ -46,6 +47,7 @@ export const RehearsalList: FC<Props> = ({
   onDelete,
   onMarkCompleted,
   onMarkCancelled,
+  canEdit = true,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -137,40 +139,42 @@ export const RehearsalList: FC<Props> = ({
                   : t('rehearsals.statusScheduled')}
               </StatusBadge>
 
-              <CardActions onClick={(e) => e.stopPropagation()}>
-                {isUpcoming && (
-                  <>
-                    <ActionButton
-                      onClick={() => onMarkCompleted(rehearsal)}
-                      title={t('rehearsals.markCompleted')}
-                      $variant="success"
-                    >
-                      <i className="bi bi-check-circle"></i>
-                    </ActionButton>
-                    <ActionButton
-                      onClick={() => onMarkCancelled(rehearsal)}
-                      title={t('rehearsals.cancelRehearsal')}
-                      $variant="warning"
-                    >
-                      <i className="bi bi-x-circle"></i>
-                    </ActionButton>
-                  </>
-                )}
-                <ActionButton
-                  onClick={() => onEdit(rehearsal)}
-                  title={t('rehearsals.editRehearsalTooltip')}
-                  $variant="default"
-                >
-                  <i className="bi bi-pencil"></i>
-                </ActionButton>
-                <ActionButton
-                  onClick={() => onDelete(rehearsal)}
-                  title={t('rehearsals.deleteRehearsalTooltip')}
-                  $variant="danger"
-                >
-                  <i className="bi bi-trash"></i>
-                </ActionButton>
-              </CardActions>
+              {canEdit && (
+                <CardActions onClick={(e) => e.stopPropagation()}>
+                  {isUpcoming && (
+                    <>
+                      <ActionButton
+                        onClick={() => onMarkCompleted(rehearsal)}
+                        title={t('rehearsals.markCompleted')}
+                        $variant="success"
+                      >
+                        <i className="bi bi-check-circle"></i>
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => onMarkCancelled(rehearsal)}
+                        title={t('rehearsals.cancelRehearsal')}
+                        $variant="warning"
+                      >
+                        <i className="bi bi-x-circle"></i>
+                      </ActionButton>
+                    </>
+                  )}
+                  <ActionButton
+                    onClick={() => onEdit(rehearsal)}
+                    title={t('rehearsals.editRehearsalTooltip')}
+                    $variant="default"
+                  >
+                    <i className="bi bi-pencil"></i>
+                  </ActionButton>
+                  <ActionButton
+                    onClick={() => onDelete(rehearsal)}
+                    title={t('rehearsals.deleteRehearsalTooltip')}
+                    $variant="danger"
+                  >
+                    <i className="bi bi-trash"></i>
+                  </ActionButton>
+                </CardActions>
+              )}
             </CardFooter>
 
             {(rehearsal.show_id || rehearsal.setlist_id) && (

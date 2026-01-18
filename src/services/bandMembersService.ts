@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 
-export type BandRole = "owner" | "member" | "guest";
+export type BandRole = "owner" | "admin" | "member" | "guest";
 export type InvitationStatus = "pending" | "accepted" | "declined" | "expired";
 
 export interface BandMember {
@@ -419,4 +419,56 @@ export async function getInvitationByToken(token: string): Promise<BandInvitatio
 
   if (error) return null;
   return data;
+}
+
+// ============================================
+// Permission Utilities
+// ============================================
+
+/**
+ * Check if a role can edit content (songs, setlists)
+ * Allowed: owner, admin, member
+ */
+export function canEditContent(role: BandRole | null): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
+/**
+ * Check if a role can manage shows and rehearsals
+ * Allowed: owner, admin, member
+ */
+export function canManageEvents(role: BandRole | null): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
+/**
+ * Check if a role can access band settings
+ * Allowed: owner, admin
+ */
+export function canManageBandSettings(role: BandRole | null): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/**
+ * Check if a role can manage band members
+ * Allowed: owner only
+ */
+export function canManageMembers(role: BandRole | null): boolean {
+  return role === "owner";
+}
+
+/**
+ * Check if current user can edit content in a band
+ */
+export async function canUserEditContent(bandId: number): Promise<boolean> {
+  const role = await getUserBandRole(bandId);
+  return canEditContent(role);
+}
+
+/**
+ * Check if current user can manage events in a band
+ */
+export async function canUserManageEvents(bandId: number): Promise<boolean> {
+  const role = await getUserBandRole(bandId);
+  return canManageEvents(role);
 }
