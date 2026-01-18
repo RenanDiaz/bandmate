@@ -159,7 +159,9 @@ export const SongList: FC<Props> = ({
                             </OriginalKeyBadge>
                           )}
                           <TransposeButton
+                            type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               handleTranspose(song.id, -1);
                             }}
@@ -170,7 +172,9 @@ export const SongList: FC<Props> = ({
                           </TransposeButton>
                           <TransposeLabel>{t('songs.transpose')}</TransposeLabel>
                           <TransposeButton
+                            type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               handleTranspose(song.id, 1);
                             }}
@@ -181,7 +185,9 @@ export const SongList: FC<Props> = ({
                           </TransposeButton>
                           {song.original_key && song.original_key !== song.key && (
                             <ResetButton
+                              type="button"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 handleResetTransposition(song.id);
                               }}

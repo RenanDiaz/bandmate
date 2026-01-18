@@ -277,19 +277,18 @@ export async function transposeSong(
   // If this is the first transposition, save the original key
   const originalKey = song.original_key || song.key;
 
-  // Determine if we should use flats based on the target key
-  const currentKey = song.key || "C";
-  const preferFlats = usesFlats(currentKey);
-
-  // Transpose chords if present
-  const transposedChords = song.chords
-    ? transposeChordSheet(song.chords, semitones, preferFlats)
-    : song.chords;
-
-  // Transpose the key if present
+  // Transpose the key first to know the target key
   const transposedKey = song.key
     ? transposeKey(song.key, semitones)
     : song.key;
+
+  // Determine if we should use flats based on the TARGET key (not current)
+  const preferFlats = usesFlats(transposedKey);
+
+  // Transpose chords using the correct flat/sharp preference for the target key
+  const transposedChords = song.chords
+    ? transposeChordSheet(song.chords, semitones, preferFlats)
+    : song.chords;
 
   // Update the song
   const { data, error } = await supabase
