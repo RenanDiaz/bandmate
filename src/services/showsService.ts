@@ -243,3 +243,36 @@ export async function getShowsStats(bandId: number): Promise<{ upcoming: number;
 
   return stats;
 }
+
+/**
+ * Get shows that use a specific setlist
+ */
+export async function getShowsBySetlistId(setlistId: string): Promise<Show[]> {
+  const { data, error } = await supabase
+    .from("shows")
+    .select("*")
+    .eq("setlist_id", setlistId)
+    .order("event_date", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get upcoming shows for a band that don't have a setlist linked
+ */
+export async function getUpcomingShowsWithoutSetlist(bandId: number): Promise<Show[]> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("shows")
+    .select("*")
+    .eq("band_id", bandId)
+    .eq("status", "upcoming")
+    .gte("event_date", today)
+    .is("setlist_id", null)
+    .order("event_date", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}

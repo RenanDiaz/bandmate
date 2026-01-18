@@ -25,6 +25,8 @@ import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, is
 import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
+import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
@@ -281,6 +283,13 @@ const SetlistDetailView: FC = () => {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Show linking state
+  const [linkedShows, setLinkedShows] = useState<Show[]>([]);
+  const [availableShows, setAvailableShows] = useState<Show[]>([]);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [selectedShowId, setSelectedShowId] = useState<string>("");
+  const [linkingShow, setLinkingShow] = useState(false);
+
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
     return allSongs.find((s) => s.id === songId);
@@ -409,6 +418,14 @@ const SetlistDetailView: FC = () => {
         // Load all items in order
         const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
         setSetlistItems(orderedItems);
+
+        // Load shows that use this setlist
+        const linkedShowsData = await getShowsBySetlistId(setlistId);
+        setLinkedShows(linkedShowsData);
+
+        // Load available shows (upcoming without setlist)
+        const availableShowsData = await getUpcomingShowsWithoutSetlist(setlistData.band_id);
+        setAvailableShows(availableShowsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
         alert("Failed to load setlist. Please try again.");
@@ -481,6 +498,42 @@ const SetlistDetailView: FC = () => {
       console.error("Failed to request YouTube authorization:", error);
       alert(t("youtubeMusic.authError"));
     }
+  };
+
+  const handleLinkToShow = async () => {
+    if (!selectedShowId || !setlistId) return;
+
+    setLinkingShow(true);
+    try {
+      await updateShow(selectedShowId, { setlist_id: setlistId });
+
+      // Refresh linked shows
+      const linkedShowsData = await getShowsBySetlistId(setlistId);
+      setLinkedShows(linkedShowsData);
+
+      // Refresh available shows
+      if (setlist) {
+        const availableShowsData = await getUpcomingShowsWithoutSetlist(setlist.band_id);
+        setAvailableShows(availableShowsData);
+      }
+
+      setShowLinkModal(false);
+      setSelectedShowId("");
+    } catch (error) {
+      console.error("Failed to link setlist to show:", error);
+      alert(t("setlists.detail.linkError"));
+    }
+    setLinkingShow(false);
+  };
+
+  const formatShowDate = (dateString: string): string => {
+    const date = new Date(dateString + "T00:00:00");
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const formatDuration = (seconds: number): string => {
@@ -728,6 +781,17 @@ const SetlistDetailView: FC = () => {
                 <i className="bi bi-clock"></i>
                 Total: {formatDuration(totalDuration)}
               </MetadataItem>
+            )}
+            {linkedShows.length > 0 ? (
+              <LinkedShowBadge onClick={() => navigate(`/shows/${linkedShows[0].id}`)}>
+                <i className="bi bi-calendar-event-fill"></i>
+                {t('setlists.detail.linkedToShow')}: {linkedShows[0].name}
+              </LinkedShowBadge>
+            ) : (
+              <LinkToShowButton onClick={() => setShowLinkModal(true)}>
+                <i className="bi bi-link-45deg"></i>
+                {t('setlists.detail.linkToShow')}
+              </LinkToShowButton>
             )}
           </MetadataBar>
         </Header>
@@ -1137,6 +1201,79 @@ const SetlistDetailView: FC = () => {
           )}
         </ModalFooter>
       </Modal>
+
+      {/* Link to Show Modal */}
+      <Modal isOpen={showLinkModal} toggle={() => !linkingShow && setShowLinkModal(false)} size="md">
+        <ModalHeader toggle={() => !linkingShow && setShowLinkModal(false)}>
+          <i className="bi bi-link-45deg me-2"></i>
+          {t("setlists.detail.linkToShowTitle")}
+        </ModalHeader>
+        <ModalBody>
+          {availableShows.length > 0 ? (
+            <>
+              <LinkModalDescription>
+                {t("setlists.detail.linkToShowDescription")}
+              </LinkModalDescription>
+              <FormGroup>
+                <Input
+                  type="select"
+                  value={selectedShowId}
+                  onChange={(e) => setSelectedShowId(e.target.value)}
+                  disabled={linkingShow}
+                >
+                  <option value="">{t("setlists.detail.selectShow")}</option>
+                  {availableShows.map((show) => (
+                    <option key={show.id} value={show.id}>
+                      {show.name} - {formatShowDate(show.event_date)}
+                      {show.venue && ` @ ${show.venue}`}
+                    </option>
+                  ))}
+                </Input>
+              </FormGroup>
+            </>
+          ) : (
+            <NoShowsMessage>
+              <NoShowsIcon>
+                <i className="bi bi-calendar-x"></i>
+              </NoShowsIcon>
+              <NoShowsTitle>{t("setlists.detail.noUpcomingShows")}</NoShowsTitle>
+              <NoShowsText>{t("setlists.detail.noUpcomingShowsHint")}</NoShowsText>
+              <CreateShowLink onClick={() => navigate("/shows")}>
+                <i className="bi bi-plus-circle me-2"></i>
+                {t("setlists.detail.createNewShow")}
+              </CreateShowLink>
+            </NoShowsMessage>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="secondary"
+            onClick={() => setShowLinkModal(false)}
+            disabled={linkingShow}
+          >
+            {t("common.cancel")}
+          </Button>
+          {availableShows.length > 0 && (
+            <Button
+              color="primary"
+              onClick={handleLinkToShow}
+              disabled={linkingShow || !selectedShowId}
+            >
+              {linkingShow ? (
+                <>
+                  <Spinner size="sm" style={{ marginRight: "8px" }} />
+                  {t("common.saving")}
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-link-45deg me-2"></i>
+                  {t("setlists.detail.linkToShow")}
+                </>
+              )}
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     </ViewContainer>
   );
 };
@@ -1368,6 +1505,57 @@ const MetadataItem = styled.div`
 
   i {
     font-size: ${theme.fontSizes.body};
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const LinkedShowBadge = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: ${theme.colors.semantic.successBgDark};
+  border: 1px solid ${theme.colors.semantic.success};
+  color: ${theme.colors.semantic.success};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${theme.colors.semantic.success};
+    color: white;
+    transform: translateY(-1px);
+  }
+`;
+
+const LinkToShowButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    border-color: ${theme.colors.brand.primary};
+    border-style: solid;
     color: ${theme.colors.brand.primary};
   }
 `;
@@ -1821,6 +2009,62 @@ const PreviewNote = styled.div`
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
   line-height: ${theme.lineHeights.relaxed};
+`;
+
+// Link to Show Modal Styles
+const LinkModalDescription = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  margin-bottom: ${theme.space[4]};
+  line-height: ${theme.lineHeights.relaxed};
+`;
+
+const NoShowsMessage = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: ${theme.space[6]};
+`;
+
+const NoShowsIcon = styled.div`
+  font-size: 3rem;
+  color: var(--color-text-tertiary);
+  margin-bottom: ${theme.space[4]};
+  opacity: 0.5;
+`;
+
+const NoShowsTitle = styled.h3`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin-bottom: ${theme.space[2]};
+`;
+
+const NoShowsText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  margin-bottom: ${theme.space[6]};
+  line-height: ${theme.lineHeights.relaxed};
+`;
+
+const CreateShowLink = styled.button`
+  display: inline-flex;
+  align-items: center;
+  background: ${theme.colors.brand.primary};
+  color: white;
+  padding: ${theme.space[3]} ${theme.space[6]};
+  border: none;
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.brand.primaryHover};
+    transform: translateY(-1px);
+  }
 `;
 
 export default SetlistDetailView;
