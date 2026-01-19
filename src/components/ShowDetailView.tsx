@@ -198,6 +198,8 @@ const ShowDetailView: FC = () => {
   const countdown = getDaysUntil(show.event_date);
   const isUpcoming = show.status === "upcoming" && !countdown.isPast;
   const isCancelled = show.status === "cancelled";
+  const isCompleted = show.status === "completed";
+  const canChangeStatus = !isCancelled && !isCompleted;
 
   // Get song details for setlist (only song items, not breaks/sections/notes)
   const setlistSongs = setlist?.songs?.filter(isSongItem).map((s) => {
@@ -278,7 +280,7 @@ const ShowDetailView: FC = () => {
           </HeaderContent>
 
           <ActionButtonsHeader>
-            {isUpcoming && (
+            {canChangeStatus && (
               <>
                 <HeaderButton onClick={handleMarkCompleted} $variant="success">
                   <i className="bi bi-check-circle"></i>
