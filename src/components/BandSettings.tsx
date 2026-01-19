@@ -8,6 +8,7 @@ import { theme } from "../theme";
 import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import { BandMembers } from "./BandMembers";
+import { BandReports } from "./BandReports";
 import { InviteMemberModal } from "./InviteMemberModal";
 import { SEO } from "./SEO";
 
@@ -23,7 +24,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
   const [band, setBand] = useState<Band | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"members" | "details">("members");
+  const [activeTab, setActiveTab] = useState<"members" | "details" | "reports">("members");
 
   useEffect(() => {
     loadBand();
@@ -116,6 +117,10 @@ export const BandSettings: FC<Props> = ({ user }) => {
             <i className="bi bi-gear"></i>
             {t('settings.title')}
           </Tab>
+          <Tab $active={activeTab === "reports"} onClick={() => setActiveTab("reports")}>
+            <i className="bi bi-bar-chart-line"></i>
+            {t('reports.title')}
+          </Tab>
         </TabsContainer>
 
         <ContentArea>
@@ -138,6 +143,10 @@ export const BandSettings: FC<Props> = ({ user }) => {
                 Band details management coming soon. Use the band selector to edit basic info.
               </PlaceholderText>
             </DetailsPlaceholder>
+          )}
+
+          {activeTab === "reports" && (
+            <BandReports band={band} />
           )}
         </ContentArea>
 
