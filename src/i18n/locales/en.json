@@ -828,6 +828,39 @@
       "proposedChanges": "Describe the changes you'd like to make..."
     }
   },
+  "reports": {
+    "title": "Reports",
+    "loading": "Loading reports...",
+    "overview": "Overview",
+    "totalSongs": "Total Songs",
+    "totalSetlists": "Total Setlists",
+    "completedShows": "Completed Shows",
+    "completedRehearsals": "Completed Rehearsals",
+    "showsStatus": "Shows by Status",
+    "upcoming": "Upcoming",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "monthlyActivity": "Monthly Activity",
+    "shows": "shows",
+    "show": "show",
+    "rehearsals": "rehearsals",
+    "mostUsedSongs": "Most Used Songs",
+    "setlist": "setlist",
+    "setlists": "setlists",
+    "keyDistribution": "Key Distribution",
+    "tempoDistribution": "Tempo Distribution",
+    "tempo": {
+      "slow": "Slow (< 80)",
+      "medium": "Medium (80-120)",
+      "fast": "Fast (121-160)",
+      "very": "Very Fast (> 160)"
+    },
+    "topVenues": "Top Venues",
+    "unusedSongs": "Unused Songs",
+    "andMore": "and {{count}} more...",
+    "noData": "No Data Yet",
+    "noDataDesc": "Start adding songs and scheduling shows to see your band's statistics here."
+  },
   "youtubeMusic": {
     "title": "YouTube Music Export",
     "exportToYouTube": "Export to YouTube Music",
