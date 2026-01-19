@@ -65,6 +65,8 @@ const ShowCardItem: FC<{
   const today = new Date().toISOString().split("T")[0];
   const isPast = show.event_date < today;
   const isCancelled = show.status === "cancelled";
+  const isCompleted = show.status === "completed";
+  const canChangeStatus = !isCancelled && !isCompleted;
   const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
 
   const getStatusLabel = () => {
@@ -158,7 +160,7 @@ const ShowCardItem: FC<{
             >
               <i className="bi bi-pencil"></i>
             </ActionButton>
-            {isUpcoming && (
+            {canChangeStatus && (
               <>
                 <ActionButton
                   onClick={(e) => {
@@ -209,7 +211,7 @@ const ShowCardItem: FC<{
                 }}>
                   <i className="bi bi-pencil me-2"></i> {t('common.edit')}
                 </DropdownItem>
-                {isUpcoming && (
+                {canChangeStatus && (
                   <>
                     <DropdownItem onClick={(e) => {
                       e.stopPropagation();
