@@ -206,7 +206,7 @@ class YouTubeService {
             description: description || `Created with Bandmate`,
           },
           status: {
-            privacyStatus: "private", // Start as private, user can change later
+            privacyStatus: "unlisted", // Unlisted so band members with the link can access
           },
         }),
       }
