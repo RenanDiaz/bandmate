@@ -120,37 +120,11 @@ const SongCardItem: FC<{
           )}
         </SongClickArea>
 
-        {/* Desktop: Inline action buttons */}
+        {/* Dropdown menu for actions */}
         {canEdit && (
-          <ActionButtons>
-            <ActionButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(song);
-              }}
-              title={t('songs.editSongTooltip')}
-              $variant="edit"
-            >
-              <i className="bi bi-pencil"></i>
-            </ActionButton>
-            <ActionButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(song);
-              }}
-              title={t('songs.deleteSongTooltip')}
-              $variant="delete"
-            >
-              <i className="bi bi-trash"></i>
-            </ActionButton>
-          </ActionButtons>
-        )}
-
-        {/* Mobile: Dropdown menu */}
-        {canEdit && (
-          <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
+          <DropdownWrapper onClick={(e) => e.stopPropagation()}>
             <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
-              <DropdownToggle tag="button" className="mobile-actions-toggle">
+              <DropdownToggle tag="button" className="actions-toggle">
                 <i className="bi bi-three-dots-vertical"></i>
               </DropdownToggle>
               <DropdownMenu end dark container="body">
@@ -194,7 +168,7 @@ const SongCardItem: FC<{
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
-          </MobileDropdownWrapper>
+          </DropdownWrapper>
         )}
       </SongHeader>
 
@@ -355,47 +329,22 @@ const SongClickArea = styled.div`
   min-width: 0;
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: ${theme.space[2]};
-  opacity: 0;
-  transition: opacity ${theme.transitions.fast} ease;
+const DropdownWrapper = styled.div`
+  flex-shrink: 0;
 
-  ${SongHeader}:hover & {
-    opacity: 1;
-  }
-
-  /* Hide on mobile - use dropdown instead */
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
-  }
-
-  @media (hover: none) and (min-width: ${theme.breakpoints.md}) {
-    opacity: 1;
-  }
-`;
-
-const MobileDropdownWrapper = styled.div`
-  display: none;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: block;
-    flex-shrink: 0;
-  }
-
-  .mobile-actions-toggle {
+  .actions-toggle {
     background: transparent;
     border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: ${theme.radius.base};
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all ${theme.transitions.fast} ease;
-    font-size: ${theme.fontSizes.bodyLg};
+    font-size: ${theme.fontSizes.body};
 
     &:hover,
     &:focus {
@@ -408,48 +357,14 @@ const MobileDropdownWrapper = styled.div`
       display: none; /* Remove default caret */
     }
   }
-`;
-
-const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: ${(props) =>
-    props.$variant === "delete" ? theme.colors.semantic.error : 'var(--color-text-secondary)'};
-  width: 36px;
-  height: 36px;
-  border-radius: ${theme.radius.base};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-  flex-shrink: 0;
-
-  &:hover {
-    background: ${(props) =>
-      props.$variant === "delete"
-        ? theme.colors.semantic.errorBgDark
-        : 'var(--color-bg-elevated)'};
-    border-color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
-    color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
-    background: ${(props) =>
-      props.$variant === "delete"
-        ? theme.colors.semantic.errorBgDark
-        : 'var(--color-bg-elevated)'};
-  }
 
   /* Larger touch targets on mobile */
   @media (max-width: ${theme.breakpoints.md}) {
-    width: 44px;
-    height: 44px;
-    font-size: ${theme.fontSizes.bodyLg};
+    .actions-toggle {
+      width: 40px;
+      height: 40px;
+      font-size: ${theme.fontSizes.bodyLg};
+    }
   }
 `;
 
