@@ -5,6 +5,12 @@ import type { Song } from "../services/songsService";
 import type { RequestType } from "../services/requestsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import {
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
+} from "reactstrap";
 
 interface Props {
   songs: Song[];
@@ -22,6 +28,227 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
+// Individual song card component to manage its own state
+const SongCardItem: FC<{
+  song: Song;
+  onEdit: (song: Song) => void;
+  onDelete: (song: Song) => void;
+  onTranspose?: (songId: string, semitones: number) => void;
+  onResetTransposition?: (songId: string) => void;
+  onRequestAction?: (song: Song, requestType: RequestType) => void;
+  canEdit: boolean;
+}> = ({ song, onEdit, onDelete, onTranspose, onResetTransposition, onRequestAction, canEdit }) => {
+  const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [transposing, setTransposing] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+  const hasDetails = song.lyrics || song.chords;
+
+  const handleTranspose = async (semitones: number) => {
+    if (!onTranspose) return;
+    setTransposing(true);
+    try {
+      await onTranspose(song.id, semitones);
+    } finally {
+      setTransposing(false);
+    }
+  };
+
+  const handleResetTransposition = async () => {
+    if (!onResetTransposition) return;
+    setTransposing(true);
+    try {
+      await onResetTransposition(song.id);
+    } finally {
+      setTransposing(false);
+    }
+  };
+
+  return (
+    <SongCard $isExpanded={isExpanded}>
+      <SongHeader>
+        <SongClickArea onClick={() => hasDetails && setIsExpanded(!isExpanded)}>
+          <SongIconWrapper>
+            <SongIcon>
+              <i className="bi bi-music-note-beamed"></i>
+            </SongIcon>
+            {song.has_backing_tracks && (
+              <BackingTracksBadge title={t('songs.hasBackingTracksShort')}>
+                <i className="bi bi-headphones-fill"></i>
+              </BackingTracksBadge>
+            )}
+          </SongIconWrapper>
+
+          <SongInfo>
+            <SongTitle>{song.title}</SongTitle>
+            {song.artist && <SongArtist>{t('songs.by')} {song.artist}</SongArtist>}
+            <MetadataRow>
+              {song.key && (
+                <MetadataBadge>
+                  <i className="bi bi-music-note-beamed"></i>
+                  {song.key}
+                </MetadataBadge>
+              )}
+              {song.tempo && (
+                <MetadataBadge>
+                  <i className="bi bi-speedometer2"></i>
+                  {song.tempo} BPM
+                </MetadataBadge>
+              )}
+              {song.duration && (
+                <MetadataBadge>
+                  <i className="bi bi-clock"></i>
+                  {formatDuration(song.duration)}
+                </MetadataBadge>
+              )}
+            </MetadataRow>
+            {song.tags && song.tags.length > 0 && (
+              <TagsRow>
+                {song.tags.map((tag, index) => (
+                  <Tag key={index}>{tag}</Tag>
+                ))}
+              </TagsRow>
+            )}
+          </SongInfo>
+
+          {hasDetails && (
+            <ExpandButton>
+              <i className={`bi bi-chevron-${isExpanded ? "up" : "down"}`}></i>
+            </ExpandButton>
+          )}
+        </SongClickArea>
+
+        {/* Dropdown menu for actions */}
+        {canEdit && (
+          <DropdownWrapper onClick={(e) => e.stopPropagation()}>
+            <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
+              <DropdownToggle tag="button" className="actions-toggle">
+                <i className="bi bi-three-dots-vertical"></i>
+              </DropdownToggle>
+              <DropdownMenu end dark container="body">
+                <DropdownItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(song);
+                  }}
+                >
+                  <i className="bi bi-pencil me-2"></i> {t('common.edit')}
+                </DropdownItem>
+                {onRequestAction && (
+                  <>
+                    <DropdownItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRequestAction(song, "backing_track");
+                      }}
+                    >
+                      <i className="bi bi-soundwave me-2 text-primary"></i> {t('songs.requestBackingTrack')}
+                    </DropdownItem>
+                    <DropdownItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRequestAction(song, "song_change");
+                      }}
+                    >
+                      <i className="bi bi-pencil-square me-2 text-primary"></i> {t('songs.requestChange')}
+                    </DropdownItem>
+                  </>
+                )}
+                <DropdownItem divider />
+                <DropdownItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(song);
+                  }}
+                  className="text-danger"
+                >
+                  <i className="bi bi-trash me-2"></i> {t('common.delete')}
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </DropdownWrapper>
+        )}
+      </SongHeader>
+
+      {isExpanded && hasDetails && (
+        <SongDetails>
+          {song.chords && (
+            <DetailsSection>
+              <ChordsHeader>
+                <DetailsLabel>
+                  <i className="bi bi-music-note"></i>
+                  {t('songs.chords')}
+                </DetailsLabel>
+                {canEdit && onTranspose && (
+                  <TranspositionControls>
+                    {song.original_key && song.original_key !== song.key && (
+                      <OriginalKeyBadge title={t('songs.originalKey')}>
+                        {t('songs.originalKeyShort')}: {song.original_key}
+                      </OriginalKeyBadge>
+                    )}
+                    <TransposeButton
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleTranspose(-1);
+                      }}
+                      disabled={transposing}
+                      title={t('songs.transposeDown')}
+                    >
+                      <i className="bi bi-dash"></i>
+                    </TransposeButton>
+                    <TransposeLabel>{t('songs.transpose')}</TransposeLabel>
+                    <TransposeButton
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleTranspose(1);
+                      }}
+                      disabled={transposing}
+                      title={t('songs.transposeUp')}
+                    >
+                      <i className="bi bi-plus"></i>
+                    </TransposeButton>
+                    {song.original_key && song.original_key !== song.key && (
+                      <ResetButton
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleResetTransposition();
+                        }}
+                        disabled={transposing}
+                        title={t('songs.resetTransposition')}
+                      >
+                        <i className="bi bi-arrow-counterclockwise"></i>
+                      </ResetButton>
+                    )}
+                  </TranspositionControls>
+                )}
+              </ChordsHeader>
+              <ChordsContent>{song.chords}</ChordsContent>
+            </DetailsSection>
+          )}
+
+          {song.lyrics && (
+            <DetailsSection>
+              <DetailsLabel>
+                <i className="bi bi-file-text"></i>
+                {t('songs.lyrics')}
+              </DetailsLabel>
+              <LyricsContent>{song.lyrics}</LyricsContent>
+            </DetailsSection>
+          )}
+        </SongDetails>
+      )}
+    </SongCard>
+  );
+};
+
 export const SongList: FC<Props> = ({
   songs,
   onEdit,
@@ -31,233 +258,20 @@ export const SongList: FC<Props> = ({
   onRequestAction,
   canEdit = true
 }) => {
-  const { t } = useTranslation();
-  const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
-  const [transposing, setTransposing] = useState<string | null>(null);
-  const [menuOpenSongId, setMenuOpenSongId] = useState<string | null>(null);
-
-  const handleTranspose = async (songId: string, semitones: number) => {
-    if (!onTranspose) return;
-    setTransposing(songId);
-    try {
-      await onTranspose(songId, semitones);
-    } finally {
-      setTransposing(null);
-    }
-  };
-
-  const handleResetTransposition = async (songId: string) => {
-    if (!onResetTransposition) return;
-    setTransposing(songId);
-    try {
-      await onResetTransposition(songId);
-    } finally {
-      setTransposing(null);
-    }
-  };
-
-  const toggleExpanded = (songId: string) => {
-    setExpandedSongId(expandedSongId === songId ? null : songId);
-  };
-
   return (
     <SongsGrid>
-      {songs.map((song) => {
-        const isExpanded = expandedSongId === song.id;
-        const hasDetails = song.lyrics || song.chords;
-
-        return (
-          <SongCard key={song.id} $isExpanded={isExpanded}>
-            <SongHeader>
-              <SongClickArea onClick={() => hasDetails && toggleExpanded(song.id)}>
-                <SongIconWrapper>
-                  <SongIcon>
-                    <i className="bi bi-music-note-beamed"></i>
-                  </SongIcon>
-                  {song.has_backing_tracks && (
-                    <BackingTracksBadge title={t('songs.hasBackingTracksShort')}>
-                      <i className="bi bi-headphones-fill"></i>
-                    </BackingTracksBadge>
-                  )}
-                </SongIconWrapper>
-
-                <SongInfo>
-                  <SongTitle>{song.title}</SongTitle>
-                  {song.artist && <SongArtist>{t('songs.by')} {song.artist}</SongArtist>}
-                  <MetadataRow>
-                    {song.key && (
-                      <MetadataBadge>
-                        <i className="bi bi-music-note-beamed"></i>
-                        {song.key}
-                      </MetadataBadge>
-                    )}
-                    {song.tempo && (
-                      <MetadataBadge>
-                        <i className="bi bi-speedometer2"></i>
-                        {song.tempo} BPM
-                      </MetadataBadge>
-                    )}
-                    {song.duration && (
-                      <MetadataBadge>
-                        <i className="bi bi-clock"></i>
-                        {formatDuration(song.duration)}
-                      </MetadataBadge>
-                    )}
-                  </MetadataRow>
-                  {song.tags && song.tags.length > 0 && (
-                    <TagsRow>
-                      {song.tags.map((tag, index) => (
-                        <Tag key={index}>{tag}</Tag>
-                      ))}
-                    </TagsRow>
-                  )}
-                </SongInfo>
-
-                {hasDetails && (
-                  <ExpandButton>
-                    <i className={`bi bi-chevron-${isExpanded ? "up" : "down"}`}></i>
-                  </ExpandButton>
-                )}
-              </SongClickArea>
-
-              {canEdit && (
-                <ActionButtons>
-                  <ActionButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(song);
-                    }}
-                    title={t('songs.editSongTooltip')}
-                    $variant="edit"
-                  >
-                    <i className="bi bi-pencil"></i>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(song);
-                    }}
-                    title={t('songs.deleteSongTooltip')}
-                    $variant="delete"
-                  >
-                    <i className="bi bi-trash"></i>
-                  </ActionButton>
-                  {onRequestAction && (
-                    <MoreMenuWrapper>
-                      <ActionButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMenuOpenSongId(menuOpenSongId === song.id ? null : song.id);
-                        }}
-                        title={t('songs.moreActions')}
-                        $variant="edit"
-                      >
-                        <i className="bi bi-three-dots-vertical"></i>
-                      </ActionButton>
-                      {menuOpenSongId === song.id && (
-                        <MoreMenu onClick={(e) => e.stopPropagation()}>
-                          <MenuItem
-                            onClick={() => {
-                              onRequestAction(song, "backing_track");
-                              setMenuOpenSongId(null);
-                            }}
-                          >
-                            <i className="bi bi-soundwave"></i>
-                            {t('songs.requestBackingTrack')}
-                          </MenuItem>
-                          <MenuItem
-                            onClick={() => {
-                              onRequestAction(song, "song_change");
-                              setMenuOpenSongId(null);
-                            }}
-                          >
-                            <i className="bi bi-pencil-square"></i>
-                            {t('songs.requestChange')}
-                          </MenuItem>
-                        </MoreMenu>
-                      )}
-                    </MoreMenuWrapper>
-                  )}
-                </ActionButtons>
-              )}
-            </SongHeader>
-
-            {isExpanded && hasDetails && (
-              <SongDetails>
-                {song.chords && (
-                  <DetailsSection>
-                    <ChordsHeader>
-                      <DetailsLabel>
-                        <i className="bi bi-music-note"></i>
-                        {t('songs.chords')}
-                      </DetailsLabel>
-                      {canEdit && onTranspose && (
-                        <TranspositionControls>
-                          {song.original_key && song.original_key !== song.key && (
-                            <OriginalKeyBadge title={t('songs.originalKey')}>
-                              {t('songs.originalKeyShort')}: {song.original_key}
-                            </OriginalKeyBadge>
-                          )}
-                          <TransposeButton
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleTranspose(song.id, -1);
-                            }}
-                            disabled={transposing === song.id}
-                            title={t('songs.transposeDown')}
-                          >
-                            <i className="bi bi-dash"></i>
-                          </TransposeButton>
-                          <TransposeLabel>{t('songs.transpose')}</TransposeLabel>
-                          <TransposeButton
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleTranspose(song.id, 1);
-                            }}
-                            disabled={transposing === song.id}
-                            title={t('songs.transposeUp')}
-                          >
-                            <i className="bi bi-plus"></i>
-                          </TransposeButton>
-                          {song.original_key && song.original_key !== song.key && (
-                            <ResetButton
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleResetTransposition(song.id);
-                              }}
-                              disabled={transposing === song.id}
-                              title={t('songs.resetTransposition')}
-                            >
-                              <i className="bi bi-arrow-counterclockwise"></i>
-                            </ResetButton>
-                          )}
-                        </TranspositionControls>
-                      )}
-                    </ChordsHeader>
-                    <ChordsContent>{song.chords}</ChordsContent>
-                  </DetailsSection>
-                )}
-
-                {song.lyrics && (
-                  <DetailsSection>
-                    <DetailsLabel>
-                      <i className="bi bi-file-text"></i>
-                      {t('songs.lyrics')}
-                    </DetailsLabel>
-                    <LyricsContent>{song.lyrics}</LyricsContent>
-                  </DetailsSection>
-                )}
-              </SongDetails>
-            )}
-          </SongCard>
-        );
-      })}
+      {songs.map((song) => (
+        <SongCardItem
+          key={song.id}
+          song={song}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onTranspose={onTranspose}
+          onResetTransposition={onResetTransposition}
+          onRequestAction={onRequestAction}
+          canEdit={canEdit}
+        />
+      ))}
     </SongsGrid>
   );
 };
@@ -315,66 +329,42 @@ const SongClickArea = styled.div`
   min-width: 0;
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: ${theme.space[2]};
-  opacity: 0;
-  transition: opacity ${theme.transitions.fast} ease;
-
-  ${SongHeader}:hover & {
-    opacity: 1;
-  }
-
-  /* Always visible on touch devices */
-  @media (max-width: ${theme.breakpoints.md}) {
-    opacity: 1;
-  }
-
-  @media (hover: none) {
-    opacity: 1;
-  }
-`;
-
-const ActionButton = styled.button<{ $variant: "edit" | "delete" }>`
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: ${(props) =>
-    props.$variant === "delete" ? theme.colors.semantic.error : 'var(--color-text-secondary)'};
-  width: 36px;
-  height: 36px;
-  border-radius: ${theme.radius.base};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
+const DropdownWrapper = styled.div`
   flex-shrink: 0;
 
-  &:hover {
-    background: ${(props) =>
-      props.$variant === "delete"
-        ? theme.colors.semantic.errorBgDark
-        : 'var(--color-bg-elevated)'};
-    border-color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
-    color: ${(props) =>
-      props.$variant === "delete" ? theme.colors.semantic.error : theme.colors.brand.primary};
-    transform: translateY(-1px);
-  }
+  .actions-toggle {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    width: 36px;
+    height: 36px;
+    border-radius: ${theme.radius.base};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all ${theme.transitions.fast} ease;
+    font-size: ${theme.fontSizes.body};
 
-  &:active {
-    transform: translateY(0);
-    background: ${(props) =>
-      props.$variant === "delete"
-        ? theme.colors.semantic.errorBgDark
-        : 'var(--color-bg-elevated)'};
+    &:hover,
+    &:focus {
+      background: var(--color-bg-elevated);
+      border-color: ${theme.colors.brand.primary};
+      color: ${theme.colors.brand.primary};
+    }
+
+    &::after {
+      display: none; /* Remove default caret */
+    }
   }
 
   /* Larger touch targets on mobile */
   @media (max-width: ${theme.breakpoints.md}) {
-    width: 44px;
-    height: 44px;
-    font-size: ${theme.fontSizes.bodyLg};
+    .actions-toggle {
+      width: 40px;
+      height: 40px;
+      font-size: ${theme.fontSizes.bodyLg};
+    }
   }
 `;
 
@@ -687,49 +677,3 @@ const OriginalKeyBadge = styled.span`
   margin-right: ${theme.space[2]};
 `;
 
-const MoreMenuWrapper = styled.div`
-  position: relative;
-`;
-
-const MoreMenu = styled.div`
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: ${theme.space[1]};
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.base};
-  box-shadow: var(--shadow-lg);
-  min-width: 200px;
-  z-index: ${theme.zIndex.dropdown};
-  overflow: hidden;
-`;
-
-const MenuItem = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-  width: 100%;
-  padding: ${theme.space[3]} ${theme.space[4]};
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  font-size: ${theme.fontSizes.bodySm};
-  text-align: left;
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-
-  i {
-    color: ${theme.colors.brand.primary};
-    font-size: ${theme.fontSizes.body};
-  }
-
-  &:hover {
-    background: var(--color-bg-tertiary);
-    color: ${theme.colors.brand.primary};
-  }
-
-  &:not(:last-child) {
-    border-bottom: 1px solid var(--color-border);
-  }
-`;
