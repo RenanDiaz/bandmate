@@ -21,6 +21,9 @@ import RequestDetailView from "./components/RequestDetailView";
 import { BandSettings } from "./components/BandSettings";
 import { AcceptInvitation } from "./components/AcceptInvitation";
 import About from "./components/About";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsOfService from "./components/TermsOfService";
+import Footer from "./components/Footer";
 import { BandSelector } from "./components/BandSelector";
 import { Logo } from "./components/Logo";
 import { Navbar, Nav, NavItem, Button } from "reactstrap";
@@ -343,10 +346,17 @@ const AppContent: FC = () => {
             <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
             <Route path="/invite/accept" element={<AcceptInvitation />} />
             <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         )}
       </MainContent>
+      {/* Show footer only on About page, Privacy, Terms, or Home when not logged in */}
+      {(location.pathname === "/about" ||
+        location.pathname === "/privacy" ||
+        location.pathname === "/terms" ||
+        (location.pathname === "/" && !user)) && <Footer />}
     </AppWrapper>
   );
 };
