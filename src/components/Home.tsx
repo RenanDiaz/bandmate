@@ -12,8 +12,15 @@ import { getBandSetlists } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 import { getUpcomingShows } from "../services/showsService";
 import type { Show } from "../services/showsService";
+import { getUpcomingRehearsals } from "../services/rehearsalsService";
+import type { Rehearsal } from "../services/rehearsalsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
+
+// Unified event type for shows and rehearsals
+type UpcomingEvent =
+  | { type: 'show'; data: Show; date: string }
+  | { type: 'rehearsal'; data: Rehearsal; date: string };
 
 const Home = () => {
   const { t, i18n } = useTranslation();
@@ -21,7 +28,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
-  const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const currentLocale = i18n.language.startsWith('es') ? 'es-ES' : 'en-US';
@@ -33,11 +40,27 @@ const Home = () => {
         getBandSongs(selectedBand.id),
         getBandSetlists(selectedBand.id),
         getUpcomingShows(selectedBand.id),
+        getUpcomingRehearsals(selectedBand.id),
       ])
-        .then(([songsData, setlistsData, showsData]) => {
+        .then(([songsData, setlistsData, showsData, rehearsalsData]) => {
           setSongs(songsData);
           setSetlists(setlistsData);
-          setUpcomingShows(showsData);
+
+          // Combine and sort shows and rehearsals by date
+          const events: UpcomingEvent[] = [
+            ...showsData.map((show): UpcomingEvent => ({
+              type: 'show',
+              data: show,
+              date: show.event_date,
+            })),
+            ...rehearsalsData.map((rehearsal): UpcomingEvent => ({
+              type: 'rehearsal',
+              data: rehearsal,
+              date: rehearsal.rehearsal_date,
+            })),
+          ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+          setUpcomingEvents(events);
         })
         .catch(console.error)
         .finally(() => setLoading(false));
@@ -146,55 +169,74 @@ const Home = () => {
                       <i className="bi bi-calendar-event"></i>
                     </StatIcon>
                     <StatInfo>
-                      <StatNumber>{upcomingShows.length}</StatNumber>
-                      <StatLabel>{t('home.upcomingShows')}</StatLabel>
+                      <StatNumber>{upcomingEvents.length}</StatNumber>
+                      <StatLabel>{t('home.upcomingEvents')}</StatLabel>
                     </StatInfo>
                   </StatCard>
                 </StatsGrid>
 
                 {/* Widgets Grid */}
                 <WidgetsGrid>
-                  {/* Upcoming Shows Widget */}
+                  {/* Upcoming Events Widget */}
                   <Widget>
                     <WidgetHeader>
                       <WidgetTitle>
                         <i className="bi bi-calendar-event"></i>
-                        {t('home.upcomingShows')}
+                        {t('home.upcomingEvents')}
                       </WidgetTitle>
                       <WidgetAction as={Link} to="/shows">
                         {t('common.viewAll')} <i className="bi bi-arrow-right"></i>
                       </WidgetAction>
                     </WidgetHeader>
                     <WidgetContent>
-                      {upcomingShows.length === 0 ? (
+                      {upcomingEvents.length === 0 ? (
                         <EmptyState>
                           <i className="bi bi-calendar-x"></i>
-                          <p>{t('home.noUpcomingShows')}</p>
+                          <p>{t('home.noUpcomingEvents')}</p>
                           <EmptyStateAction as={Link} to="/shows">
                             {t('home.scheduleShow')}
                           </EmptyStateAction>
                         </EmptyState>
                       ) : (
                         <ShowsList>
-                          {upcomingShows.slice(0, 4).map((show) => (
-                            <ShowItem key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
-                              <ShowDate>
+                          {upcomingEvents.slice(0, 4).map((event) => (
+                            <ShowItem
+                              key={`${event.type}-${event.data.id}`}
+                              onClick={() => navigate(event.type === 'show' ? `/shows/${event.data.id}` : `/rehearsals/${event.data.id}`)}
+                            >
+                              <ShowDate $isRehearsal={event.type === 'rehearsal'}>
                                 <ShowDay>
-                                  {new Date(show.event_date + "T00:00:00").getDate()}
+                                  {new Date(event.date + "T00:00:00").getDate()}
                                 </ShowDay>
                                 <ShowMonth>
-                                  {new Date(show.event_date + "T00:00:00").toLocaleDateString(currentLocale, {
+                                  {new Date(event.date + "T00:00:00").toLocaleDateString(currentLocale, {
                                     month: "short",
                                   })}
                                 </ShowMonth>
                               </ShowDate>
                               <ShowDetails>
-                                <ShowName>{show.name}</ShowName>
-                                {show.venue && <ShowVenue>{show.venue}</ShowVenue>}
+                                <EventTypeRow>
+                                  <EventTypeBadge $isRehearsal={event.type === 'rehearsal'}>
+                                    <i className={event.type === 'show' ? 'bi bi-mic' : 'bi bi-music-note-beamed'}></i>
+                                    {event.type === 'show' ? t('home.show') : t('home.rehearsal')}
+                                  </EventTypeBadge>
+                                </EventTypeRow>
+                                <ShowName>{event.data.name}</ShowName>
+                                {event.type === 'show' && (event.data as Show).venue && (
+                                  <ShowVenue>{(event.data as Show).venue}</ShowVenue>
+                                )}
+                                {event.type === 'rehearsal' && (event.data as Rehearsal).location && (
+                                  <ShowVenue>{(event.data as Rehearsal).location}</ShowVenue>
+                                )}
                                 <ShowMeta>
-                                  <span>{formatDate(show.event_date)}</span>
-                                  {show.event_time && <span> {t('home.at')} {formatTime(show.event_time)}</span>}
-                                  <CountdownBadge>{getDaysUntil(show.event_date)}</CountdownBadge>
+                                  <span>{formatDate(event.date)}</span>
+                                  {event.type === 'show' && (event.data as Show).event_time && (
+                                    <span> {t('home.at')} {formatTime((event.data as Show).event_time!)}</span>
+                                  )}
+                                  {event.type === 'rehearsal' && (event.data as Rehearsal).start_time && (
+                                    <span> {t('home.at')} {formatTime((event.data as Rehearsal).start_time!)}</span>
+                                  )}
+                                  <CountdownBadge>{getDaysUntil(event.date)}</CountdownBadge>
                                 </ShowMeta>
                               </ShowDetails>
                             </ShowItem>
@@ -924,10 +966,10 @@ const ShowItem = styled.div`
   }
 `;
 
-const ShowDate = styled.div`
+const ShowDate = styled.div<{ $isRehearsal?: boolean }>`
   width: 48px;
   height: 48px;
-  background: ${theme.gradients.brandPrimary};
+  background: ${(props) => props.$isRehearsal ? theme.colors.accent.cyan : theme.gradients.brandPrimary};
   border-radius: ${theme.radius.md};
   display: flex;
   flex-direction: column;
@@ -972,6 +1014,25 @@ const ShowVenue = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+`;
+
+const EventTypeRow = styled.div`
+  margin-bottom: ${theme.space[1]};
+`;
+
+const EventTypeBadge = styled.span<{ $isRehearsal?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${(props) => props.$isRehearsal ? theme.colors.accent.cyan : theme.colors.brand.primary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
 `;
 
 const ShowMeta = styled.div`
