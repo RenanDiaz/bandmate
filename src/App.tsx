@@ -352,7 +352,11 @@ const AppContent: FC = () => {
           </Routes>
         )}
       </MainContent>
-      <Footer />
+      {/* Show footer only on About page, Privacy, Terms, or Home when not logged in */}
+      {(location.pathname === "/about" ||
+        location.pathname === "/privacy" ||
+        location.pathname === "/terms" ||
+        (location.pathname === "/" && !user)) && <Footer />}
     </AppWrapper>
   );
 };
