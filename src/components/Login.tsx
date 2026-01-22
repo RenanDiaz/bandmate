@@ -82,6 +82,17 @@ export const Login = () => {
             {error && <ErrorMessage><i className="bi bi-exclamation-circle"></i> {error}</ErrorMessage>}
             {message && <SuccessMessage><i className="bi bi-check-circle"></i> {message}</SuccessMessage>}
 
+            <GoogleButton onClick={handleGoogleLogin} disabled={loading}>
+              <i className="bi bi-google"></i>
+              {t('auth.continueWithGoogle')}
+            </GoogleButton>
+
+            <Divider>
+              <DividerLine />
+              <DividerText>{t('common.or')}</DividerText>
+              <DividerLine />
+            </Divider>
+
             <Form onSubmit={handleEmailAuth}>
               <FormGroup>
                 <Label htmlFor="email">{t('auth.email')}</Label>
@@ -124,17 +135,6 @@ export const Login = () => {
                 )}
               </SubmitButton>
             </Form>
-
-            <Divider>
-              <DividerLine />
-              <DividerText>{t('common.or')}</DividerText>
-              <DividerLine />
-            </Divider>
-
-            <GoogleButton onClick={handleGoogleLogin} disabled={loading}>
-              <i className="bi bi-google"></i>
-              {t('auth.continueWithGoogle')}
-            </GoogleButton>
 
             <ToggleText>
               {isSignUp ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{" "}
