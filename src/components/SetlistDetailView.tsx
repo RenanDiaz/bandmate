@@ -31,6 +31,7 @@ import { SEO } from "./SEO";
 import { NewRequestModal } from "./NewRequestModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
+import { useBandContext } from "../context/useBandContext";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -276,6 +277,7 @@ const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { selectedBand } = useBandContext();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
@@ -463,8 +465,9 @@ const SetlistDetailView: FC = () => {
         artist: song.artist || undefined,
       }));
 
+      const playlistTitle = selectedBand ? `${selectedBand.name}: ${setlist.name}` : setlist.name;
       const result = await youtubeService.createPlaylistFromSetlist(
-        setlist.name,
+        playlistTitle,
         songs,
         setlist.description || `Setlist created with Bandmate`,
         (current, total, songTitle) => {
