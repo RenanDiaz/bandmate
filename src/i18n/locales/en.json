@@ -888,5 +888,122 @@
     "playlistExists": "Playlist Already Created",
     "playlistExistsDescription": "You have already created a YouTube Music playlist for this setlist.",
     "createNewPlaylist": "Create a new playlist instead"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "description": "Learn how Bandmate collects, uses, and protects your personal information",
+    "lastUpdated": "Last updated",
+    "introduction": {
+      "title": "Introduction",
+      "text": "Welcome to Bandmate. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service."
+    },
+    "dataCollection": {
+      "title": "Information We Collect",
+      "text": "We collect information that you provide directly to us when using Bandmate:",
+      "items": {
+        "account": "Account information: email address and authentication data from OAuth providers (Google, GitHub)",
+        "content": "Content you create: songs, setlists, shows, band information, and related data",
+        "usage": "Usage information: how you interact with the service, features used, and preferences"
+      }
+    },
+    "dataUse": {
+      "title": "How We Use Your Information",
+      "text": "We use the information we collect to:",
+      "items": {
+        "service": "Provide, maintain, and improve our services",
+        "communication": "Send you important notifications about your account and service updates",
+        "improvement": "Analyze usage patterns to enhance user experience and develop new features"
+      }
+    },
+    "dataSharing": {
+      "title": "Information Sharing",
+      "text": "We do not sell, trade, or rent your personal information to third parties. We may share your information only with band members you invite to collaborate, and with service providers who assist in operating our platform (such as Supabase for database and authentication services)."
+    },
+    "security": {
+      "title": "Data Security",
+      "text": "We implement appropriate technical and organizational security measures to protect your personal information. This includes encryption of data in transit and at rest, secure authentication through OAuth providers, and regular security assessments."
+    },
+    "cookies": {
+      "title": "Cookies and Local Storage",
+      "text": "Bandmate uses local storage to remember your preferences (such as selected band and language settings) and to keep you logged in. We do not use tracking cookies or third-party analytics that track individual users."
+    },
+    "rights": {
+      "title": "Your Rights",
+      "text": "You have the right to:",
+      "items": {
+        "access": "Access the personal information we hold about you",
+        "correction": "Request correction of inaccurate information",
+        "deletion": "Request deletion of your account and associated data",
+        "export": "Export your data in a portable format"
+      }
+    },
+    "contact": {
+      "title": "Contact Us",
+      "text": "If you have any questions about this Privacy Policy or our data practices, please contact us through our GitHub repository or the contact information provided in the application."
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "description": "Read the terms and conditions for using Bandmate",
+    "lastUpdated": "Last updated",
+    "acceptance": {
+      "title": "Acceptance of Terms",
+      "text": "By accessing or using Bandmate, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service."
+    },
+    "serviceDescription": {
+      "title": "Description of Service",
+      "text": "Bandmate is a web-based platform that helps musicians manage their bands, songs, setlists, and shows. The service allows you to create and manage content, collaborate with band members, and organize your musical activities."
+    },
+    "userAccounts": {
+      "title": "User Accounts",
+      "text": "To use Bandmate, you must create an account using a supported OAuth provider (Google or GitHub). You are responsible for:",
+      "items": {
+        "accurate": "Providing accurate account information",
+        "secure": "Maintaining the security of your account credentials",
+        "responsible": "All activities that occur under your account"
+      }
+    },
+    "userContent": {
+      "title": "User Content",
+      "text": "You retain ownership of all content you create in Bandmate (songs, setlists, shows, etc.). By using the service, you grant us a limited license to store, display, and process your content solely to provide the service to you and your collaborators."
+    },
+    "acceptableUse": {
+      "title": "Acceptable Use",
+      "text": "When using Bandmate, you agree to:",
+      "items": {
+        "lawful": "Use the service only for lawful purposes",
+        "respectful": "Respect other users and their content",
+        "noHarm": "Not attempt to harm, disrupt, or exploit the service",
+        "noInfringe": "Not upload content that infringes on intellectual property rights"
+      }
+    },
+    "intellectualProperty": {
+      "title": "Intellectual Property",
+      "text": "The Bandmate platform, including its design, code, and branding, is owned by the Bandmate team. You may not copy, modify, or distribute our platform without permission. User-generated content remains the property of its creators."
+    },
+    "termination": {
+      "title": "Termination",
+      "text": "We reserve the right to suspend or terminate your account if you violate these terms or engage in behavior that harms other users or the service. You may also delete your account at any time through the application settings."
+    },
+    "disclaimers": {
+      "title": "Disclaimers",
+      "text": "Bandmate is provided \"as is\" without warranties of any kind. We do not guarantee that the service will be uninterrupted, secure, or error-free. We are not responsible for any loss of data, though we make reasonable efforts to maintain backups."
+    },
+    "liability": {
+      "title": "Limitation of Liability",
+      "text": "To the maximum extent permitted by law, Bandmate and its team shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the service."
+    },
+    "changes": {
+      "title": "Changes to Terms",
+      "text": "We may update these Terms of Service from time to time. We will notify users of significant changes through the application or via email. Continued use of the service after changes constitutes acceptance of the new terms."
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "If you have any questions about these Terms of Service, please contact us through our GitHub repository or the contact information provided in the application."
+    }
   }
 }
