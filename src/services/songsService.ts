@@ -21,7 +21,9 @@ export interface LineTiming {
 }
 
 export interface TimingData {
-  sectionTimings?: SectionTiming[];
+  sectionTimings?: SectionTiming[]; // Legacy: used when only one content type exists
+  chordSectionTimings?: SectionTiming[]; // Sections for chords
+  lyricsSectionTimings?: SectionTiming[]; // Sections for lyrics
   lineTimings?: LineTiming[];
 }
 

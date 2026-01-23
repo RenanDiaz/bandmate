@@ -7,8 +7,10 @@ import { useTranslation } from "react-i18next";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  sections: SectionTiming[];
-  onSectionsChange: (sections: SectionTiming[]) => void;
+  chordSections: SectionTiming[];
+  lyricsSections: SectionTiming[];
+  onChordSectionsChange: (sections: SectionTiming[]) => void;
+  onLyricsSectionsChange: (sections: SectionTiming[]) => void;
   songTitle: string;
 }
 
@@ -41,13 +43,29 @@ const SECTION_COLORS = [
   { bg: "rgba(234, 179, 8, 0.15)", border: "rgba(234, 179, 8, 0.5)", text: "#facc15" },
 ];
 
+type ContentType = "chords" | "lyrics";
+
 export const TimingSyncModal = ({
   isOpen,
   onClose,
-  sections,
-  onSectionsChange,
+  chordSections,
+  lyricsSections,
+  onChordSectionsChange,
+  onLyricsSectionsChange,
   songTitle,
 }: Props) => {
+  const hasChordSections = chordSections.length > 0;
+  const hasLyricsSections = lyricsSections.length > 0;
+  const hasBoth = hasChordSections && hasLyricsSections;
+
+  // Default to chords if available, otherwise lyrics
+  const [activeTab, setActiveTab] = useState<ContentType>(
+    hasChordSections ? "chords" : "lyrics"
+  );
+
+  // Get current sections based on active tab
+  const sections = activeTab === "chords" ? chordSections : lyricsSections;
+  const onSectionsChange = activeTab === "chords" ? onChordSectionsChange : onLyricsSectionsChange;
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -241,6 +259,30 @@ export const TimingSyncModal = ({
         </ModalHeader>
 
         <ModalContent>
+          {/* Tabs - shown when song has both chord and lyrics sections */}
+          {hasBoth && (
+            <TabsContainer>
+              <Tab
+                $active={activeTab === "chords"}
+                onClick={() => setActiveTab("chords")}
+                type="button"
+              >
+                <i className="bi bi-music-note"></i>
+                {t("sectionEditor.chords")}
+                <TabBadge>{chordSections.length}</TabBadge>
+              </Tab>
+              <Tab
+                $active={activeTab === "lyrics"}
+                onClick={() => setActiveTab("lyrics")}
+                type="button"
+              >
+                <i className="bi bi-file-text"></i>
+                {t("sectionEditor.lyrics")}
+                <TabBadge>{lyricsSections.length}</TabBadge>
+              </Tab>
+            </TabsContainer>
+          )}
+
           {/* Audio File Section */}
           <AudioSection>
             <HiddenFileInput
@@ -536,6 +578,52 @@ const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[5]};
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  background: var(--color-bg-secondary);
+  padding: ${theme.space[1]};
+  border-radius: ${theme.radius.base};
+  border: 1px solid var(--color-border);
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border: none;
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : 'transparent'};
+  color: ${(props) =>
+    props.$active ? 'white' : 'var(--color-text-secondary)'};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover:not(:disabled) {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-tertiary)'};
+  }
+`;
+
+const TabBadge = styled.span`
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0 ${theme.space[2]};
+  border-radius: ${theme.radius.full};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
 `;
 
 const AudioSection = styled.div`
