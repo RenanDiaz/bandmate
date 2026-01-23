@@ -5,9 +5,12 @@ import type { SectionTiming } from "../services/songsService";
 import { useTranslation } from "react-i18next";
 
 interface Props {
-  text: string;
-  sections: SectionTiming[];
-  onSectionsChange: (sections: SectionTiming[]) => void;
+  chordsText?: string;
+  lyricsText?: string;
+  chordSections: SectionTiming[];
+  lyricsSections: SectionTiming[];
+  onChordSectionsChange: (sections: SectionTiming[]) => void;
+  onLyricsSectionsChange: (sections: SectionTiming[]) => void;
   disabled?: boolean;
 }
 
@@ -35,14 +38,45 @@ const DEFAULT_SECTION_NAMES = [
   "Interlude",
 ];
 
-export const SectionEditor = ({ text, sections, onSectionsChange, disabled }: Props) => {
+type ContentType = "chords" | "lyrics";
+
+export const SectionEditor = ({
+  chordsText,
+  lyricsText,
+  chordSections,
+  lyricsSections,
+  onChordSectionsChange,
+  onLyricsSectionsChange,
+  disabled,
+}: Props) => {
   const { t } = useTranslation();
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [newSectionName, setNewSectionName] = useState("");
   const [editingSection, setEditingSection] = useState<number | null>(null);
 
+  const hasChords = Boolean(chordsText?.trim());
+  const hasLyrics = Boolean(lyricsText?.trim());
+  const hasBoth = hasChords && hasLyrics;
+
+  // Default to chords if available, otherwise lyrics
+  const [activeTab, setActiveTab] = useState<ContentType>(hasChords ? "chords" : "lyrics");
+
+  // Get current text and sections based on active tab
+  const text = activeTab === "chords" ? (chordsText || "") : (lyricsText || "");
+  const sections = activeTab === "chords" ? chordSections : lyricsSections;
+  const onSectionsChange = activeTab === "chords" ? onChordSectionsChange : onLyricsSectionsChange;
+
   const lines = useMemo(() => text.split("\n"), [text]);
+
+  // Reset selection when switching tabs
+  const handleTabChange = (tab: ContentType) => {
+    setActiveTab(tab);
+    setSelectionStart(null);
+    setSelectionEnd(null);
+    setNewSectionName("");
+    setEditingSection(null);
+  };
 
   const getSectionForLine = (lineIndex: number): { section: SectionTiming; colorIndex: number } | null => {
     const sectionIndex = sections.findIndex(
@@ -152,6 +186,36 @@ export const SectionEditor = ({ text, sections, onSectionsChange, disabled }: Pr
         </HeaderTitle>
         <HeaderHint>{t("sectionEditor.hint")}</HeaderHint>
       </Header>
+
+      {/* Tabs - shown when song has both chords and lyrics */}
+      {hasBoth && (
+        <TabsContainer>
+          <Tab
+            $active={activeTab === "chords"}
+            onClick={() => handleTabChange("chords")}
+            disabled={disabled}
+            type="button"
+          >
+            <i className="bi bi-music-note"></i>
+            {t("sectionEditor.chords")}
+            {chordSections.length > 0 && (
+              <TabBadge>{chordSections.length}</TabBadge>
+            )}
+          </Tab>
+          <Tab
+            $active={activeTab === "lyrics"}
+            onClick={() => handleTabChange("lyrics")}
+            disabled={disabled}
+            type="button"
+          >
+            <i className="bi bi-file-text"></i>
+            {t("sectionEditor.lyrics")}
+            {lyricsSections.length > 0 && (
+              <TabBadge>{lyricsSections.length}</TabBadge>
+            )}
+          </Tab>
+        </TabsContainer>
+      )}
 
       {/* Section List */}
       {sections.length > 0 && (
@@ -309,6 +373,57 @@ const HeaderTitle = styled.div`
 const HeaderHint = styled.div`
   font-size: ${theme.fontSizes.bodyXs};
   color: var(--color-text-tertiary);
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  background: var(--color-bg-secondary);
+  padding: ${theme.space[1]};
+  border-radius: ${theme.radius.base};
+  border: 1px solid var(--color-border);
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border: none;
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : 'transparent'};
+  color: ${(props) =>
+    props.$active ? 'white' : 'var(--color-text-secondary)'};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover:not(:disabled) {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : 'var(--color-bg-tertiary)'};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const TabBadge = styled.span`
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0 ${theme.space[2]};
+  border-radius: ${theme.radius.full};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
 `;
 
 const SectionList = styled.div`

@@ -509,6 +509,25 @@ const SetlistPerformanceView: FC = () => {
 
   const displayContent = getDisplayContent();
 
+  // Get the correct sections based on content type being displayed
+  const getDisplaySections = () => {
+    if (!currentSong?.timing_data) return [];
+    const timingData = currentSong.timing_data;
+
+    // Use the new separate sections format if available
+    if (displayContent.type === "chords" && timingData.chordSectionTimings?.length) {
+      return timingData.chordSectionTimings;
+    }
+    if (displayContent.type === "lyrics" && timingData.lyricsSectionTimings?.length) {
+      return timingData.lyricsSectionTimings;
+    }
+
+    // Fallback to legacy sectionTimings
+    return timingData.sectionTimings || [];
+  };
+
+  const displaySections = getDisplaySections();
+
   return (
     <PerformanceContainer>
       <SEO
@@ -767,11 +786,11 @@ const SetlistPerformanceView: FC = () => {
               </SongHeader>
 
               <SongContent>
-                {displayContent.type !== "none" && (currentSong.timing_data?.sectionTimings?.length || currentSong.timing_data?.lineTimings?.length) ? (
+                {displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
                   <SyncedLyricsDisplay
                     content={displayContent.content}
                     contentType={displayContent.type}
-                    sections={currentSong.timing_data?.sectionTimings || []}
+                    sections={displaySections}
                     lineTimings={currentSong.timing_data?.lineTimings}
                     currentTime={displayAudioTime}
                     isPlaying={displayIsPlaying}

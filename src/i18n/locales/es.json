@@ -716,7 +716,9 @@
     "overlapError": "Las secciones no pueden superponerse. Por favor selecciona líneas diferentes.",
     "noContent": "Agrega letra o acordes para definir secciones",
     "defineSections": "Definir Secciones",
-    "sectionsHelp": "Organiza tu canción en secciones para facilitar la navegación y sincronización"
+    "sectionsHelp": "Organiza tu canción en secciones para facilitar la navegación y sincronización",
+    "chords": "Acordes",
+    "lyrics": "Letra"
   },
   "timingSync": {
     "title": "Sincronizar Tiempos",

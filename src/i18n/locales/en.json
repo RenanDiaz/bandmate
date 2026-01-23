@@ -716,7 +716,9 @@
     "overlapError": "Sections cannot overlap. Please select different lines.",
     "noContent": "Add lyrics or chords to define sections",
     "defineSections": "Define Sections",
-    "sectionsHelp": "Organize your song into sections for easier navigation and sync"
+    "sectionsHelp": "Organize your song into sections for easier navigation and sync",
+    "chords": "Chords",
+    "lyrics": "Lyrics"
   },
   "timingSync": {
     "title": "Sync Timing",
