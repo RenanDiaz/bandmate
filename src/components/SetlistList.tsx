@@ -2,6 +2,7 @@ import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { Setlist } from "../services/setlistsService";
+import { isSongItem } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
 import {
@@ -30,7 +31,7 @@ const SetlistCardItem: FC<{
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
   const { t } = useTranslation();
 
-  const songCount = setlist.songs?.length || 0;
+  const songCount = setlist.songs?.filter(isSongItem).length || 0;
 
   return (
     <SetlistCard onClick={() => onView(setlist.id)} $clickable>
