@@ -872,7 +872,7 @@ const SetlistPerformanceView: FC = () => {
 
               <SongContent $fullHeight={contentView === "sheetMusic"}>
                 {contentView === "sheetMusic" && sheetMusicList.length > 0 ? (
-                  <>
+                  <SheetMusicWrapper>
                     {/* Sheet Music Selector - only show if multiple exist */}
                     {sheetMusicList.length > 1 && (
                       <SheetMusicSelector>
@@ -906,7 +906,7 @@ const SetlistPerformanceView: FC = () => {
                         <p>{t("sheetMusic.loadError", "Failed to load sheet music")}</p>
                       </EmptyContent>
                     )}
-                  </>
+                  </SheetMusicWrapper>
                 ) : displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
                   <SyncedLyricsDisplay
                     content={displayContent.content}
@@ -1570,6 +1570,13 @@ const SongContent = styled.div<{ $fullHeight?: boolean }>`
   `}
 `;
 
+const SheetMusicWrapper = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
 const SheetMusicSelector = styled.div`
   display: flex;
   gap: ${theme.space[2]};
@@ -1579,6 +1586,7 @@ const SheetMusicSelector = styled.div`
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
   margin-bottom: ${theme.space[4]};
+  flex-shrink: 0;
 `;
 
 const SheetMusicSelectorItem = styled.button<{ $active: boolean }>`

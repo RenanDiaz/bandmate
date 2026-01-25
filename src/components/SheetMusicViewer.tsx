@@ -22,7 +22,8 @@ interface SheetMusicViewerProps {
 const ViewerContainer = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: ${theme.colors.dark.bg.primary};
   display: flex;
   flex-direction: column;
@@ -31,6 +32,7 @@ const ViewerContainer = styled.div`
 
 const PDFContainer = styled.div`
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
