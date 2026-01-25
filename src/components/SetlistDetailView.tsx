@@ -22,7 +22,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
-import type { Setlist, SetlistItem } from "../services/setlistsService";
+import type { Setlist, SetlistItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
+
+// Helper to generate unique IDs for special items
+const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
@@ -275,6 +278,69 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
   );
 };
 
+// Sortable special item card component for reorder mode
+interface SortableSpecialItemCardProps {
+  item: SetlistBreakItem | SetlistSectionItem | SetlistNoteItem;
+  itemId: string;
+}
+
+const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
+  item,
+  itemId,
+}) => {
+  const { t } = useTranslation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: itemId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const getIcon = () => {
+    if (isBreakItem(item)) return "bi-pause-circle";
+    if (isSectionItem(item)) return "bi-bookmark";
+    return "bi-sticky";
+  };
+
+  const getTypeLabel = () => {
+    if (isBreakItem(item)) return t("setlists.items.break");
+    if (isSectionItem(item)) return t("setlists.items.section");
+    return t("setlists.items.note");
+  };
+
+  return (
+    <SortableSpecialItemCardWrapper
+      ref={setNodeRef}
+      style={style}
+      $isDragging={isDragging}
+      $type={item.type}
+    >
+      <DragHandle {...attributes} {...listeners}>
+        <i className="bi bi-grip-vertical"></i>
+      </DragHandle>
+      <SpecialItemIconReorder $type={item.type}>
+        <i className={`bi ${getIcon()}`}></i>
+      </SpecialItemIconReorder>
+      <SpecialItemInfoReorder>
+        <SpecialItemTypeReorder>{getTypeLabel()}</SpecialItemTypeReorder>
+        <SpecialItemLabelReorder>{item.label}</SpecialItemLabelReorder>
+        {isBreakItem(item) && item.duration && (
+          <SpecialItemDurationReorder>
+            <i className="bi bi-clock"></i> {item.duration} min
+          </SpecialItemDurationReorder>
+        )}
+      </SpecialItemInfoReorder>
+    </SortableSpecialItemCardWrapper>
+  );
+};
+
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
@@ -283,6 +349,7 @@ const SetlistDetailView: FC = () => {
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
+  const [itemIds, setItemIds] = useState<Map<SetlistItem, string>>(new Map());
   const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -337,6 +404,15 @@ const SetlistDetailView: FC = () => {
     })
   );
 
+  // Get the stable ID for an item
+  const getStableItemId = (item: SetlistItem): string => {
+    const existingId = itemIds.get(item);
+    if (existingId) return existingId;
+
+    // Generate new ID if not found
+    return isSongItem(item) ? item.song_id : generateItemId();
+  };
+
   // Get only song items for reordering
   const songItemsOnly = setlistItems.filter(isSongItem);
   const songsForReorder = songItemsOnly
@@ -347,35 +423,19 @@ const SetlistDetailView: FC = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = songsForReorder.findIndex((song) => song.id === active.id);
-      const newIndex = songsForReorder.findIndex((song) => song.id === over.id);
+      setSetlistItems((items) => {
+        const oldIndex = items.findIndex((item) => getStableItemId(item) === active.id);
+        const newIndex = items.findIndex((item) => getStableItemId(item) === over.id);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const reorderedSongs = arrayMove(songsForReorder, oldIndex, newIndex);
+        if (oldIndex === -1 || newIndex === -1) return items;
 
-        // Update setlistItems with new song order
-        const newSongItems: SetlistItem[] = reorderedSongs.map((song, index) => {
-          const existingItem = songItemsOnly.find((item) => item.song_id === song.id);
-          return {
-            type: "song" as const,
-            song_id: song.id,
-            position: index,
-            notes: existingItem?.notes || "",
-          };
-        });
-
-        // Non-song items get placed after songs
-        const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
-        const updatedItems: SetlistItem[] = [
-          ...newSongItems,
-          ...nonSongItems.map((item, index) => ({
-            ...item,
-            position: newSongItems.length + index,
-          })),
-        ];
-
-        setSetlistItems(updatedItems);
-      }
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        // Reindex positions
+        return reordered.map((item, index) => ({
+          ...item,
+          position: index,
+        }));
+      });
     }
   };
 
@@ -480,8 +540,14 @@ const SetlistDetailView: FC = () => {
         const songsData = await getBandSongs(setlistData.band_id);
         setAllSongs(songsData);
 
-        // Load all items in order
+        // Load all items in order and generate stable IDs
         const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
+        const newItemIds = new Map<SetlistItem, string>();
+        orderedItems.forEach((item) => {
+          const id = isSongItem(item) ? item.song_id : generateItemId();
+          newItemIds.set(item, id);
+        });
+        setItemIds(newItemIds);
         setSetlistItems(orderedItems);
 
         // Load shows that use this setlist
@@ -900,18 +966,38 @@ const SetlistDetailView: FC = () => {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={songsForReorder.map((s) => s.id)}
+                items={setlistItems.map((item) => getStableItemId(item))}
                 strategy={verticalListSortingStrategy}
               >
-                {songsForReorder.map((song, index) => (
-                  <SortableSongCard
-                    key={song.id}
-                    song={song}
-                    index={index}
-                    notes={getSetlistSongNotes(song.id)}
-                    formatDuration={formatDuration}
-                  />
-                ))}
+                {(() => {
+                  let songNumber = 0;
+                  return setlistItems.map((item) => {
+                    if (isSongItem(item)) {
+                      const song = getSongById(item.song_id);
+                      if (!song) return null;
+                      songNumber++;
+                      return (
+                        <SortableSongCard
+                          key={item.song_id}
+                          song={song}
+                          index={songNumber - 1}
+                          notes={getSetlistSongNotes(song.id)}
+                          formatDuration={formatDuration}
+                        />
+                      );
+                    } else {
+                      // Special item (break, section, note)
+                      const itemId = getStableItemId(item);
+                      return (
+                        <SortableSpecialItemCard
+                          key={itemId}
+                          item={item}
+                          itemId={itemId}
+                        />
+                      );
+                    }
+                  });
+                })()}
               </SortableContext>
             </DndContext>
           </SongsList>
@@ -1916,6 +2002,109 @@ const SpecialItemLabel = styled.div`
 `;
 
 const SpecialItemDuration = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+
+  i {
+    color: ${theme.colors.semantic.warning};
+  }
+`;
+
+// Sortable special item card styles for reorder mode
+const SortableSpecialItemCardWrapper = styled.div<{ $isDragging?: boolean; $type: string }>`
+  background: ${(props) =>
+    props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-secondary)'};
+  border: 1px solid ${(props) =>
+    props.$isDragging ? theme.colors.brand.primary : 'var(--color-border)'};
+  border-left: 3px solid ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return 'var(--color-border)';
+    }
+  }};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  transition: all ${theme.transitions.fast} ease;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: var(--shadow-sm);
+  }
+`;
+
+const SpecialItemIconReorder = styled.div<{ $type: string }>`
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  flex-shrink: 0;
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warningBgDark;
+      case "section":
+        return theme.colors.semantic.infoBgDark;
+      case "note":
+        return theme.colors.semantic.successBgDark;
+      default:
+        return 'var(--color-bg-tertiary)';
+    }
+  }};
+  color: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return 'var(--color-text-secondary)';
+    }
+  }};
+`;
+
+const SpecialItemInfoReorder = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
+  min-width: 0;
+`;
+
+const SpecialItemTypeReorder = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const SpecialItemLabelReorder = styled.div`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+`;
+
+const SpecialItemDurationReorder = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-secondary);
   display: flex;
