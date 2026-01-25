@@ -45,13 +45,13 @@ export interface GroqCompletionOptions {
 // Available models on Groq free tier
 export const GROQ_MODELS = {
   // Fast and efficient for most tasks
-  LLAMA_3_8B: "llama3-8b-8192",
-  // More capable, still fast
-  LLAMA_3_70B: "llama3-70b-8192",
+  LLAMA_3_1_8B: "llama-3.1-8b-instant",
+  // More capable, versatile model (recommended)
+  LLAMA_3_3_70B: "llama-3.3-70b-versatile",
   // Mixtral for diverse tasks
   MIXTRAL: "mixtral-8x7b-32768",
   // Gemma for lightweight tasks
-  GEMMA_7B: "gemma-7b-it",
+  GEMMA_2_9B: "gemma2-9b-it",
 } as const;
 
 class GroqService {
@@ -87,7 +87,7 @@ class GroqService {
     }
 
     const {
-      model = GROQ_MODELS.LLAMA_3_70B,
+      model = GROQ_MODELS.LLAMA_3_3_70B,
       temperature = 0.7,
       maxTokens = 2048,
       topP = 1,
