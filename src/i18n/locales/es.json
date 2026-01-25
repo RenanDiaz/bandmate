@@ -1048,6 +1048,13 @@
       "low": "Baja Energía",
       "medium": "Energía Media",
       "high": "Alta Energía"
-    }
+    },
+    "suggestedChanges": "Cambios Sugeridos",
+    "newOrder": "Nuevo Orden",
+    "moveFrom": "Mover de posición",
+    "moveTo": "a posición",
+    "applyChanges": "Aplicar Cambios",
+    "noChangesNeeded": "No se necesitan cambios - ¡el orden de tu setlist ya es óptimo!",
+    "optimizeDescription": "La IA analizará tu setlist y sugerirá un orden optimizado basado en flujo de energía, transiciones de tempo y compatibilidad de tonalidades."
   }
 }
