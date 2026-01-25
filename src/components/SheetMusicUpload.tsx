@@ -602,7 +602,7 @@ export default function SheetMusicUpload({
           <i className="bi bi-file-earmark-music" />
           {t("sheetMusic.title")}
         </Title>
-        <AddButton onClick={openModal}>
+        <AddButton type="button" onClick={openModal}>
           <i className="bi bi-plus-lg" />
           {t("sheetMusic.upload")}
         </AddButton>
@@ -636,12 +636,14 @@ export default function SheetMusicUpload({
               </ItemInfo>
               <ItemActions>
                 <IconButton
+                  type="button"
                   onClick={() => openTimingModal(item)}
                   title={t("sheetMusic.syncTimings", "Sync page timings")}
                 >
                   <i className="bi bi-clock-history" />
                 </IconButton>
                 <IconButton
+                  type="button"
                   onClick={() => handleDelete(item)}
                   $variant="danger"
                   disabled={deleting === item.id}
@@ -668,7 +670,7 @@ export default function SheetMusicUpload({
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>{t("sheetMusic.upload")}</ModalTitle>
-              <CloseButton onClick={closeModal}>
+              <CloseButton type="button" onClick={closeModal}>
                 <i className="bi bi-x" />
               </CloseButton>
             </ModalHeader>
@@ -739,10 +741,11 @@ export default function SheetMusicUpload({
               )}
             </ModalBody>
             <ModalFooter>
-              <Button onClick={closeModal} disabled={uploading}>
+              <Button type="button" onClick={closeModal} disabled={uploading}>
                 {t("common.cancel")}
               </Button>
               <Button
+                type="button"
                 $variant="primary"
                 onClick={handleUpload}
                 disabled={!selectedFile || !name.trim() || uploading}
