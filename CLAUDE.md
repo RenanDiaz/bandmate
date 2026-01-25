@@ -145,6 +145,12 @@ Optional for metadata features:
 VITE_SPOTIFY_CLIENT_ID=<spotify_client_id>
 ```
 
+Optional for AI-powered features:
+```
+VITE_GROQ_API_KEY=<groq_api_key>
+```
+Get a free API key at https://console.groq.com. Enables AI-powered setlist generation and optimization.
+
 ## Database Migrations
 
 SQL migrations are stored in `/migrations/`. Apply via Supabase Dashboard SQL Editor.

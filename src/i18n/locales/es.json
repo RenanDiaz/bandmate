@@ -1007,5 +1007,47 @@
       "title": "Contacto",
       "text": "Si tienes alguna pregunta sobre estos Términos de Servicio, por favor contáctanos a través de nuestro repositorio de GitHub o la información de contacto proporcionada en la aplicación."
     }
+  },
+  "ai": {
+    "title": "Funciones con IA",
+    "notConfigured": "Agrega VITE_GROQ_API_KEY a tu archivo .env para habilitar la generación de setlists con IA.",
+    "generateWithAI": "Generar Setlist con IA",
+    "generateSetlist": "Generador de Setlists con IA",
+    "generateDescription": "Deja que la IA cree un setlist optimizado de tus {{count}} canciones basado en tus preferencias.",
+    "mood": "Ambiente del Setlist",
+    "moods": {
+      "energetic": "Energético",
+      "chill": "Relajado",
+      "mixed": "Variado",
+      "building": "Progresivo"
+    },
+    "setlistLength": "Duración del Setlist",
+    "bySongs": "Por Canciones",
+    "byDuration": "Por Duración",
+    "targetDuration": "Duración Objetivo",
+    "numberOfSongs": "Número de Canciones",
+    "divideSets": "Dividir en múltiples sets",
+    "sets": "sets",
+    "customInstructions": "Instrucciones Personalizadas",
+    "customInstructionsPlaceholder": "Ej: Empezar con un favorito del público, terminar con nuestro mejor cierre, evitar canciones en la misma tonalidad seguidas...",
+    "generateButton": "Generar Setlist",
+    "generating": "Generando...",
+    "needMoreSongs": "Necesitas al menos 3 canciones en tu catálogo para generar un setlist.",
+    "generationError": "Error al generar el setlist. Por favor intenta de nuevo.",
+    "reasoning": "Razonamiento de la IA",
+    "regenerate": "Intentar de Nuevo",
+    "saveAndEdit": "Guardar y Editar",
+    "optimizeOrder": "Optimizar Orden",
+    "optimizing": "Optimizando...",
+    "suggestSongs": "Sugerir Nuevas Canciones",
+    "suggesting": "Buscando sugerencias...",
+    "songSuggestions": "Sugerencias de Canciones",
+    "addToRepertoire": "Agregar al Repertorio",
+    "similarTo": "Similar a",
+    "energy": {
+      "low": "Baja Energía",
+      "medium": "Energía Media",
+      "high": "Alta Energía"
+    }
   }
 }

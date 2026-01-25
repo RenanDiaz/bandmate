@@ -1007,5 +1007,47 @@
       "title": "Contact",
       "text": "If you have any questions about these Terms of Service, please contact us through our GitHub repository or the contact information provided in the application."
     }
+  },
+  "ai": {
+    "title": "AI-Powered Features",
+    "notConfigured": "Add VITE_GROQ_API_KEY to your .env file to enable AI-powered setlist generation.",
+    "generateWithAI": "Generate Setlist with AI",
+    "generateSetlist": "AI Setlist Generator",
+    "generateDescription": "Let AI create an optimized setlist from your {{count}} songs based on your preferences.",
+    "mood": "Setlist Mood",
+    "moods": {
+      "energetic": "Energetic",
+      "chill": "Chill",
+      "mixed": "Mixed",
+      "building": "Building"
+    },
+    "setlistLength": "Setlist Length",
+    "bySongs": "By Songs",
+    "byDuration": "By Duration",
+    "targetDuration": "Target Duration",
+    "numberOfSongs": "Number of Songs",
+    "divideSets": "Divide into multiple sets",
+    "sets": "sets",
+    "customInstructions": "Custom Instructions",
+    "customInstructionsPlaceholder": "e.g., Start with a crowd favorite, end with our best closer, avoid songs in the same key back-to-back...",
+    "generateButton": "Generate Setlist",
+    "generating": "Generating...",
+    "needMoreSongs": "You need at least 3 songs in your catalog to generate a setlist.",
+    "generationError": "Failed to generate setlist. Please try again.",
+    "reasoning": "AI Reasoning",
+    "regenerate": "Try Again",
+    "saveAndEdit": "Save & Edit",
+    "optimizeOrder": "Optimize Order",
+    "optimizing": "Optimizing...",
+    "suggestSongs": "Suggest New Songs",
+    "suggesting": "Finding suggestions...",
+    "songSuggestions": "Song Suggestions",
+    "addToRepertoire": "Add to Repertoire",
+    "similarTo": "Similar to",
+    "energy": {
+      "low": "Low Energy",
+      "medium": "Medium Energy",
+      "high": "High Energy"
+    }
   }
 }
