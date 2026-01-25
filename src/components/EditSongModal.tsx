@@ -6,6 +6,7 @@ import { metadataService } from "../services/metadataService";
 import { SectionEditor } from "./SectionEditor";
 import { TimingSyncModal } from "./TimingSyncModal";
 import { LineSyncModal } from "./LineSyncModal";
+import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -36,6 +37,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
   const [chordSections, setChordSections] = useState<SectionTiming[]>([]);
   const [lyricsSections, setLyricsSections] = useState<SectionTiming[]>([]);
   const [lineTimings, setLineTimings] = useState<LineTiming[]>([]);
+  const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [metadataFetched, setMetadataFetched] = useState(false);
@@ -80,6 +82,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         setLyricsSections([]);
       }
       setLineTimings(timingData?.lineTimings || []);
+      setSheetMusicUrl(song.sheet_music_url || null);
       // Reset metadata button state when switching songs
       setMetadataFetched(false);
       setIsFetchingMetadata(false);
@@ -547,6 +550,15 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               </SyncButtonsRow>
             </>
           )}
+
+          {/* Sheet Music Upload */}
+          <SectionDivider>{t("sheetMusic.title")}</SectionDivider>
+          <SheetMusicUpload
+            songId={song.id}
+            bandId={song.band_id}
+            sheetMusicUrl={sheetMusicUrl}
+            onUpdate={setSheetMusicUrl}
+          />
 
           <FormActions>
             <CancelButton type="button" onClick={onClose} disabled={isSaving}>
