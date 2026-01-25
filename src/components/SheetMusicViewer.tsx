@@ -240,8 +240,9 @@ export default function SheetMusicViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [navVisible, setNavVisible] = useState(true);
-  const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastInteractionRef = useRef<number>(Date.now());
 
@@ -290,14 +291,23 @@ export default function SheetMusicViewer({
 
   // Handle container resize
   useEffect(() => {
-    const container = containerRef.current;
+    const container = pdfContainerRef.current;
     if (!container) return;
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width - 32; // Account for padding
-        setContainerWidth(Math.min(width, 1200));
-      }
+    const updateWidth = () => {
+      const rect = container.getBoundingClientRect();
+      const padding = 32; // Account for padding (16px each side)
+      const availableWidth = rect.width - padding;
+      // Ensure minimum width of 280px for small screens, max 1200px for large screens
+      const width = Math.max(280, Math.min(availableWidth, 1200));
+      setContainerWidth(width);
+    };
+
+    // Capture initial width immediately
+    updateWidth();
+
+    const observer = new ResizeObserver(() => {
+      updateWidth();
     });
 
     observer.observe(container);
@@ -389,26 +399,28 @@ export default function SheetMusicViewer({
 
   return (
     <ViewerContainer ref={containerRef}>
-      <PDFContainer>
-        {loading && (
+      <PDFContainer ref={pdfContainerRef}>
+        {(loading || containerWidth === null) && (
           <LoadingContainer>
             <Spinner />
             <div>{t("sheetMusic.loading", "Loading sheet music...")}</div>
           </LoadingContainer>
         )}
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={handleDocumentLoadSuccess}
-          onLoadError={handleDocumentLoadError}
-          loading={null}
-        >
-          <Page
-            pageNumber={currentPage}
-            width={containerWidth}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        </Document>
+        {containerWidth !== null && (
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={handleDocumentLoadSuccess}
+            onLoadError={handleDocumentLoadError}
+            loading={null}
+          >
+            <Page
+              pageNumber={currentPage}
+              width={containerWidth}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          </Document>
+        )}
       </PDFContainer>
 
       {/* Mini navigation when full nav is hidden */}

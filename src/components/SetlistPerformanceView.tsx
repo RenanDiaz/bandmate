@@ -816,10 +816,10 @@ const SetlistPerformanceView: FC = () => {
         )}
 
         {/* Song/Item Display */}
-        <SongDisplay data-song-display>
+        <SongDisplay data-song-display $isSheetMusic={contentView === "sheetMusic" && sheetMusicList.length > 0}>
           {isCurrentItemSong && currentSong ? (
             <>
-              <SongHeader>
+              <SongHeader $compact={contentView === "sheetMusic" && sheetMusicList.length > 0}>
                 <SongTitleLarge>{currentSong.title}</SongTitleLarge>
                 {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
 
@@ -1458,24 +1458,30 @@ const SongListIndicator = styled.div`
   flex-shrink: 0;
 `;
 
-const SongDisplay = styled.div`
+const SongDisplay = styled.div<{ $isSheetMusic?: boolean }>`
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  padding: ${theme.space[8]} ${theme.space[10]};
+  overflow-y: ${({ $isSheetMusic }) => ($isSheetMusic ? "hidden" : "auto")};
+  min-height: 0;
+  padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[4]} ${theme.space[4]}` : `${theme.space[8]} ${theme.space[10]}`)};
 
   @media (max-width: ${theme.breakpoints.lg}) {
-    padding: ${theme.space[6]} ${theme.space[6]};
+    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[3]} ${theme.space[3]}` : `${theme.space[6]} ${theme.space[6]}`)};
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
-    padding: ${theme.space[4]} ${theme.space[4]};
+    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[2]} ${theme.space[2]}` : `${theme.space[4]} ${theme.space[4]}`)};
   }
 `;
 
-const SongHeader = styled.div`
-  margin-bottom: ${theme.space[8]};
+const SongHeader = styled.div<{ $compact?: boolean }>`
+  margin-bottom: ${({ $compact }) => ($compact ? theme.space[3] : theme.space[8])};
+  flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    margin-bottom: ${({ $compact }) => ($compact ? theme.space[2] : theme.space[4])};
+  }
 `;
 
 const SongTitleLarge = styled.h1`
