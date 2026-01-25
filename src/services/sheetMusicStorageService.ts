@@ -11,12 +11,13 @@ export interface UploadResult {
 
 /**
  * Uploads a PDF file to Supabase Storage
- * Files are organized by band: {bandId}/{songId}.pdf
+ * Files are organized by band and song: {bandId}/{songId}/{sheetMusicId}.pdf
  */
 export async function uploadSheetMusic(
   file: File,
   bandId: number,
-  songId: string
+  songId: string,
+  sheetMusicId: string
 ): Promise<UploadResult> {
   // Validate file type
   if (file.type !== "application/pdf") {
@@ -34,8 +35,8 @@ export async function uploadSheetMusic(
     throw new Error("You don't have permission to upload files for this band");
   }
 
-  // Create file path: bandId/songId.pdf
-  const filePath = `${bandId}/${songId}.pdf`;
+  // Create file path: bandId/songId/sheetMusicId.pdf
+  const filePath = `${bandId}/${songId}/${sheetMusicId}.pdf`;
 
   // Upload file (upsert to allow replacing existing file)
   const { error: uploadError } = await supabase.storage
@@ -84,18 +85,7 @@ export async function getSheetMusicUrl(filePath: string): Promise<string> {
 /**
  * Deletes a sheet music file from storage
  */
-export async function deleteSheetMusic(
-  bandId: number,
-  songId: string
-): Promise<void> {
-  // Check user permission
-  const hasPermission = await canUserEditContent(bandId);
-  if (!hasPermission) {
-    throw new Error("You don't have permission to delete files for this band");
-  }
-
-  const filePath = `${bandId}/${songId}.pdf`;
-
+export async function deleteSheetMusicFile(filePath: string): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath]);
 
   if (error) {
@@ -105,22 +95,33 @@ export async function deleteSheetMusic(
 }
 
 /**
- * Checks if a sheet music file exists
+ * Deletes all sheet music files for a song
  */
-export async function sheetMusicExists(
+export async function deleteAllSheetMusicForSong(
   bandId: number,
   songId: string
-): Promise<boolean> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .list(String(bandId), {
-      search: `${songId}.pdf`,
-    });
+): Promise<void> {
+  const folderPath = `${bandId}/${songId}`;
 
-  if (error) {
-    console.error("Check exists error:", error);
-    return false;
+  // List all files in the folder
+  const { data: files, error: listError } = await supabase.storage
+    .from(BUCKET_NAME)
+    .list(folderPath);
+
+  if (listError) {
+    console.error("List error:", listError);
+    throw new Error(`Failed to list files: ${listError.message}`);
   }
 
-  return data.length > 0;
+  if (files && files.length > 0) {
+    const filePaths = files.map((file) => `${folderPath}/${file.name}`);
+    const { error: deleteError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove(filePaths);
+
+    if (deleteError) {
+      console.error("Delete error:", deleteError);
+      throw new Error(`Failed to delete files: ${deleteError.message}`);
+    }
+  }
 }
