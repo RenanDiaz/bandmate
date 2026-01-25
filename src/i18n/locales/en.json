@@ -1048,6 +1048,13 @@
       "low": "Low Energy",
       "medium": "Medium Energy",
       "high": "High Energy"
-    }
+    },
+    "suggestedChanges": "Suggested Changes",
+    "newOrder": "New Order",
+    "moveFrom": "Move from position",
+    "moveTo": "to position",
+    "applyChanges": "Apply Changes",
+    "noChangesNeeded": "No changes needed - your setlist order is already optimal!",
+    "optimizeDescription": "AI will analyze your setlist and suggest an optimized order based on energy flow, tempo transitions, and key compatibility."
   }
 }
