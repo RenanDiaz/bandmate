@@ -25,6 +25,8 @@ import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, is
 import type { Setlist, SetlistItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
+import { groqService } from "../services/groqService";
 import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
@@ -296,6 +298,12 @@ const SetlistDetailView: FC = () => {
   // Propose setlist modal state
   const [showProposeModal, setShowProposeModal] = useState(false);
 
+  // AI Optimization state
+  const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimization, setOptimization] = useState<SetlistOptimization | null>(null);
+  const [optimizeError, setOptimizeError] = useState<string | null>(null);
+
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
     return allSongs.find((s) => s.id === songId);
@@ -406,6 +414,57 @@ const SetlistDetailView: FC = () => {
       setSetlistItems(orderedItems);
     }
     setIsReorderMode(false);
+  };
+
+  // AI Optimization handlers
+  const handleOptimizeOrder = async () => {
+    if (!setlist) return;
+
+    setOptimizing(true);
+    setOptimizeError(null);
+    setOptimization(null);
+    setIsOptimizeModalOpen(true);
+
+    try {
+      const result = await optimizeSetlistOrder(setlist, allSongs);
+      setOptimization(result);
+    } catch (error) {
+      console.error("Failed to optimize setlist:", error);
+      setOptimizeError(
+        error instanceof Error ? error.message : t("ai.generationError")
+      );
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  const handleApplyOptimization = () => {
+    if (!optimization) return;
+
+    // Create new order based on suggested order
+    const newSongItems: SetlistItem[] = optimization.suggestedOrder.map((songId, index) => {
+      const existingItem = songItemsOnly.find((item) => item.song_id === songId);
+      return {
+        type: "song" as const,
+        song_id: songId,
+        position: index,
+        notes: existingItem?.notes || "",
+      };
+    });
+
+    // Non-song items get placed after songs
+    const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
+    const updatedItems: SetlistItem[] = [
+      ...newSongItems,
+      ...nonSongItems.map((item, index) => ({
+        ...item,
+        position: newSongItems.length + index,
+      })),
+    ];
+
+    setSetlistItems(updatedItems);
+    setIsOptimizeModalOpen(false);
+    setOptimization(null);
   };
 
   useEffect(() => {
@@ -684,15 +743,21 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={handleCancelReorder}
                     $variant="edit"
-                    disabled={saving}
+                    disabled={saving || optimizing}
                   >
                     <i className="bi bi-x-lg"></i>
                     <span>{t('common.cancel')}</span>
                   </ActionButton>
+                  {groqService.isConfigured() && songsForReorder.length >= 3 && (
+                    <OptimizeButton onClick={handleOptimizeOrder} disabled={saving || optimizing}>
+                      <i className="bi bi-magic"></i>
+                      <span>{t("ai.optimizeOrder")}</span>
+                    </OptimizeButton>
+                  )}
                   <ActionButton
                     onClick={handleSaveOrder}
                     $variant="perform"
-                    disabled={saving}
+                    disabled={saving || optimizing}
                   >
                     {saving ? (
                       <>
@@ -1302,6 +1367,99 @@ const SetlistDetailView: FC = () => {
           prefillType="setlist_proposal"
         />
       )}
+
+      {/* AI Optimization Modal */}
+      <Modal isOpen={isOptimizeModalOpen} toggle={() => !optimizing && setIsOptimizeModalOpen(false)} size="lg">
+        <ModalHeader toggle={() => !optimizing && setIsOptimizeModalOpen(false)}>
+          <i className="bi bi-magic" style={{ marginRight: "8px", color: theme.colors.brand.primary }}></i>
+          {t("ai.optimizeOrder")}
+        </ModalHeader>
+        <ModalBody>
+          {optimizing && (
+            <OptimizingContainer>
+              <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
+              <OptimizingText>{t("ai.optimizing")}</OptimizingText>
+            </OptimizingContainer>
+          )}
+
+          {optimizeError && (
+            <OptimizeErrorMessage>
+              <i className="bi bi-exclamation-triangle"></i>
+              {optimizeError}
+            </OptimizeErrorMessage>
+          )}
+
+          {optimization && !optimizing && (
+            <>
+              <OptimizationSection>
+                <OptimizationSectionTitle>
+                  <i className="bi bi-lightbulb"></i>
+                  {t("ai.reasoning")}
+                </OptimizationSectionTitle>
+                <ReasoningText>{optimization.overallReasoning}</ReasoningText>
+              </OptimizationSection>
+
+              {optimization.changes.length > 0 && (
+                <OptimizationSection>
+                  <OptimizationSectionTitle>
+                    <i className="bi bi-arrow-left-right"></i>
+                    {t("ai.suggestedChanges")}
+                  </OptimizationSectionTitle>
+                  <ChangesList>
+                    {optimization.changes.map((change, index) => (
+                      <ChangeItem key={index}>
+                        <ChangeIcon>
+                          <i className="bi bi-arrow-right"></i>
+                        </ChangeIcon>
+                        <ChangeContent>
+                          <ChangeSongTitle>"{change.songTitle}"</ChangeSongTitle>
+                          <ChangeMove>
+                            {t("ai.moveFrom")} #{change.from + 1} {t("ai.moveTo")} #{change.to + 1}
+                          </ChangeMove>
+                          <ChangeReason>{change.reason}</ChangeReason>
+                        </ChangeContent>
+                      </ChangeItem>
+                    ))}
+                  </ChangesList>
+                </OptimizationSection>
+              )}
+
+              <OptimizationSection>
+                <OptimizationSectionTitle>
+                  <i className="bi bi-list-ol"></i>
+                  {t("ai.newOrder")}
+                </OptimizationSectionTitle>
+                <NewOrderList>
+                  {optimization.suggestedOrder.map((songId, index) => {
+                    const song = getSongById(songId);
+                    if (!song) return null;
+                    return (
+                      <NewOrderItem key={songId}>
+                        <NewOrderPosition>{index + 1}</NewOrderPosition>
+                        <NewOrderSong>
+                          <strong>{song.title}</strong>
+                          {song.artist && <span> - {song.artist}</span>}
+                        </NewOrderSong>
+                      </NewOrderItem>
+                    );
+                  })}
+                </NewOrderList>
+              </OptimizationSection>
+            </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
+            {t("common.cancel")}
+          </Button>
+          {optimization && !optimizing && (
+            <Button color="primary" onClick={handleApplyOptimization}>
+              <i className="bi bi-check-circle" style={{ marginRight: "8px" }}></i>
+              {t("ai.applyChanges")}
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     </ViewContainer>
   );
 };
@@ -2092,6 +2250,188 @@ const CreateShowLink = styled.button`
   &:hover {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
+  }
+`;
+
+// AI Optimization Styles
+const OptimizeButton = styled.button`
+  background: linear-gradient(135deg, ${theme.colors.brand.primary}, #6366f1);
+  border: none;
+  color: white;
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex: 1;
+    justify-content: center;
+    min-width: calc(50% - ${theme.space[1]});
+  }
+`;
+
+const OptimizingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.space[10]} 0;
+  gap: ${theme.space[4]};
+`;
+
+const OptimizingText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  margin: 0;
+`;
+
+const OptimizeErrorMessage = styled.div`
+  background: ${theme.colors.semantic.errorBgDark};
+  border: 1px solid ${theme.colors.semantic.error};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+  color: ${theme.colors.semantic.error};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+
+  i {
+    font-size: ${theme.fontSizes.h3};
+  }
+`;
+
+const OptimizationSection = styled.div`
+  margin-bottom: ${theme.space[5]};
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const OptimizationSectionTitle = styled.h4`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin: 0 0 ${theme.space[3]} 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const ReasoningText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  line-height: ${theme.lineHeights.relaxed};
+  margin: 0;
+  background: var(--color-bg-tertiary);
+  padding: ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  border-left: 3px solid ${theme.colors.brand.primary};
+`;
+
+const ChangesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const ChangeItem = styled.div`
+  display: flex;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[3]};
+  background: var(--color-bg-tertiary);
+  border-radius: ${theme.radius.base};
+`;
+
+const ChangeIcon = styled.div`
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodyLg};
+  flex-shrink: 0;
+  margin-top: 2px;
+`;
+
+const ChangeContent = styled.div`
+  flex: 1;
+`;
+
+const ChangeSongTitle = styled.div`
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin-bottom: ${theme.space[1]};
+`;
+
+const ChangeMove = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.brand.primary};
+  margin-bottom: ${theme.space[1]};
+`;
+
+const ChangeReason = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+`;
+
+const NewOrderList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const NewOrderItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.sm};
+`;
+
+const NewOrderPosition = styled.div`
+  background: ${theme.gradients.brandPrimary};
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: ${theme.fontWeights.semibold};
+  font-size: ${theme.fontSizes.bodySm};
+  flex-shrink: 0;
+`;
+
+const NewOrderSong = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-primary);
+
+  span {
+    color: var(--color-text-secondary);
   }
 `;
 
