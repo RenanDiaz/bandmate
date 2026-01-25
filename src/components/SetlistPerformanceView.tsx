@@ -32,6 +32,13 @@ import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
 import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
+import SheetMusicViewer from "./SheetMusicViewer";
+import { getSheetMusicUrl } from "../services/sheetMusicStorageService";
+import {
+  getSheetMusicForSong,
+  type SheetMusic,
+  getInstrumentIcon,
+} from "../services/songSheetMusicService";
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -98,7 +105,11 @@ const SetlistPerformanceView: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
-  const [contentView, setContentView] = useState<"chords" | "lyrics">("chords");
+  const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">("chords");
+  const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
+  const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
+  const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
+  const [sheetMusicLoading, setSheetMusicLoading] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
@@ -345,6 +356,65 @@ const SetlistPerformanceView: FC = () => {
     }
   }, [showSongList]);
 
+  // Load sheet music list when song changes
+  useEffect(() => {
+    const loadSheetMusicList = async () => {
+      // Get current song from state
+      const currentItem = setlistItems[currentIndex];
+      const isItemSong = currentItem && isSongItem(currentItem);
+      const songForItem = isItemSong ? allSongs.find((s) => s.id === currentItem.song_id) : null;
+
+      if (!songForItem) {
+        setSheetMusicList([]);
+        setSelectedSheetMusicId(null);
+        setSheetMusicUrl(null);
+        return;
+      }
+
+      try {
+        const list = await getSheetMusicForSong(songForItem.id);
+        setSheetMusicList(list);
+        // Always select first sheet music when song changes
+        if (list.length > 0) {
+          setSelectedSheetMusicId(list[0].id);
+        } else {
+          setSelectedSheetMusicId(null);
+        }
+      } catch (err) {
+        console.error("Failed to load sheet music list:", err);
+        setSheetMusicList([]);
+        setSelectedSheetMusicId(null);
+      }
+    };
+
+    loadSheetMusicList();
+  }, [currentIndex, setlistItems, allSongs]);
+
+  // Load sheet music URL when selected sheet music changes
+  useEffect(() => {
+    const loadSheetMusicUrl = async () => {
+      const selectedSheetMusic = sheetMusicList.find((sm) => sm.id === selectedSheetMusicId);
+
+      if (!selectedSheetMusic?.file_url) {
+        setSheetMusicUrl(null);
+        return;
+      }
+
+      setSheetMusicLoading(true);
+      try {
+        const url = await getSheetMusicUrl(selectedSheetMusic.file_url);
+        setSheetMusicUrl(url);
+      } catch (err) {
+        console.error("Failed to load sheet music URL:", err);
+        setSheetMusicUrl(null);
+      } finally {
+        setSheetMusicLoading(false);
+      }
+    };
+
+    loadSheetMusicUrl();
+  }, [selectedSheetMusicId, sheetMusicList]);
+
   // Handle audio time update (host syncs to viewers)
   const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
     setAudioCurrentTime(timeInSeconds);
@@ -424,9 +494,14 @@ const SetlistPerformanceView: FC = () => {
     setIsFullscreen(false);
   };
 
-  const toggleContentView = () => {
-    setContentView((prev) => (prev === "chords" ? "lyrics" : "chords"));
-  };
+  const toggleContentView = useCallback(() => {
+    setContentView((prev) => {
+      if (prev === "chords") return "lyrics";
+      // Will check for sheet music in the toggle - if no sheet music, go back to chords
+      if (prev === "lyrics") return "sheetMusic";
+      return "chords";
+    });
+  }, []);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -595,19 +670,29 @@ const SetlistPerformanceView: FC = () => {
                 <ViewToggleButton
                   onClick={() => setContentView("chords")}
                   $active={contentView === "chords"}
-                  title="Show Chords"
+                  title={t("performance.showChords", "Show Chords")}
                 >
                   <i className="bi bi-music-note"></i>
-                  Chords
+                  {t("performance.chords", "Chords")}
                 </ViewToggleButton>
                 <ViewToggleButton
                   onClick={() => setContentView("lyrics")}
                   $active={contentView === "lyrics"}
-                  title="Show Lyrics"
+                  title={t("performance.showLyrics", "Show Lyrics")}
                 >
                   <i className="bi bi-mic"></i>
-                  Lyrics
+                  {t("performance.lyrics", "Lyrics")}
                 </ViewToggleButton>
+                {sheetMusicList.length > 0 && (
+                  <ViewToggleButton
+                    onClick={() => setContentView("sheetMusic")}
+                    $active={contentView === "sheetMusic"}
+                    title={t("performance.showSheetMusic", "Show Sheet Music")}
+                  >
+                    <i className="bi bi-file-earmark-music"></i>
+                    {t("performance.sheetMusic", "Sheet")}
+                  </ViewToggleButton>
+                )}
               </ViewToggleGroup>
               <IconButton
                 onClick={toggleReorderMode}
@@ -785,8 +870,44 @@ const SetlistPerformanceView: FC = () => {
                 )}
               </SongHeader>
 
-              <SongContent>
-                {displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
+              <SongContent $fullHeight={contentView === "sheetMusic"}>
+                {contentView === "sheetMusic" && sheetMusicList.length > 0 ? (
+                  <>
+                    {/* Sheet Music Selector - only show if multiple exist */}
+                    {sheetMusicList.length > 1 && (
+                      <SheetMusicSelector>
+                        {sheetMusicList.map((sm) => (
+                          <SheetMusicSelectorItem
+                            key={sm.id}
+                            $active={sm.id === selectedSheetMusicId}
+                            onClick={() => setSelectedSheetMusicId(sm.id)}
+                          >
+                            <i className={getInstrumentIcon(sm.instrument)} />
+                            <span>{sm.name}</span>
+                          </SheetMusicSelectorItem>
+                        ))}
+                      </SheetMusicSelector>
+                    )}
+                    {sheetMusicLoading ? (
+                      <EmptyContent>
+                        <i className="bi bi-hourglass-split"></i>
+                        <p>{t("sheetMusic.loading", "Loading sheet music...")}</p>
+                      </EmptyContent>
+                    ) : sheetMusicUrl ? (
+                      <SheetMusicViewer
+                        pdfUrl={sheetMusicUrl}
+                        pageTimings={sheetMusicList.find((sm) => sm.id === selectedSheetMusicId)?.page_timings}
+                        currentTime={displayAudioTime}
+                        isPlaying={displayIsPlaying}
+                      />
+                    ) : (
+                      <EmptyContent>
+                        <i className="bi bi-file-earmark-x"></i>
+                        <p>{t("sheetMusic.loadError", "Failed to load sheet music")}</p>
+                      </EmptyContent>
+                    )}
+                  </>
+                ) : displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
                   <SyncedLyricsDisplay
                     content={displayContent.content}
                     contentType={displayContent.type}
@@ -801,7 +922,7 @@ const SetlistPerformanceView: FC = () => {
                       <ContentSection>
                         <SectionLabel>
                           <i className="bi bi-music-note"></i>
-                          Chords
+                          {t("performance.chords", "Chords")}
                         </SectionLabel>
                         <ContentText>{displayContent.content}</ContentText>
                       </ContentSection>
@@ -811,7 +932,7 @@ const SetlistPerformanceView: FC = () => {
                       <ContentSection>
                         <SectionLabel>
                           <i className="bi bi-mic"></i>
-                          Lyrics
+                          {t("performance.lyrics", "Lyrics")}
                         </SectionLabel>
                         <ContentText>{displayContent.content}</ContentText>
                       </ContentSection>
@@ -895,8 +1016,14 @@ const SetlistPerformanceView: FC = () => {
 
       {/* Mobile Floating Toggle Button */}
       <MobileToggleButton onClick={toggleContentView} $contentType={contentView}>
-        <i className={`bi bi-${contentView === "chords" ? "music-note" : "mic"}`}></i>
-        <MobileToggleLabel>{contentView === "chords" ? "Chords" : "Lyrics"}</MobileToggleLabel>
+        <i className={`bi bi-${contentView === "chords" ? "music-note" : contentView === "sheetMusic" ? "file-earmark-music" : "mic"}`}></i>
+        <MobileToggleLabel>
+          {contentView === "chords"
+            ? t("performance.chords", "Chords")
+            : contentView === "sheetMusic"
+            ? t("performance.sheet", "Sheet")
+            : t("performance.lyrics", "Lyrics")}
+        </MobileToggleLabel>
       </MobileToggleButton>
     </PerformanceContainer>
   );
@@ -1427,10 +1554,53 @@ const NotesText = styled.div`
   white-space: pre-wrap;
 `;
 
-const SongContent = styled.div`
+const SongContent = styled.div<{ $fullHeight?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[8]};
+  ${(props) => props.$fullHeight && `
+    flex: 1;
+    min-height: 0;
+  `}
+`;
+
+const SheetMusicSelector = styled.div`
+  display: flex;
+  gap: ${theme.space[2]};
+  flex-wrap: wrap;
+  padding: ${theme.space[2]};
+  background: ${theme.colors.dark.bg.secondary};
+  border: 1px solid ${theme.colors.dark.border.default};
+  border-radius: ${theme.radius.base};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const SheetMusicSelectorItem = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: ${(props) =>
+    props.$active ? theme.colors.brand.primary : "transparent"};
+  border: 1px solid ${(props) =>
+    props.$active ? theme.colors.brand.primary : theme.colors.dark.border.default};
+  border-radius: ${theme.radius.sm};
+  color: ${(props) =>
+    props.$active ? "white" : theme.colors.dark.text.primary};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
+    border-color: ${theme.colors.brand.primary};
+  }
 `;
 
 const ContentSection = styled.div`
@@ -1650,7 +1820,7 @@ const BackButton = styled.button`
   }
 `;
 
-const MobileToggleButton = styled.button<{ $contentType: "chords" | "lyrics" }>`
+const MobileToggleButton = styled.button<{ $contentType: "chords" | "lyrics" | "sheetMusic" }>`
   position: fixed;
   bottom: 120px;
   right: ${theme.space[4]};
@@ -1660,6 +1830,8 @@ const MobileToggleButton = styled.button<{ $contentType: "chords" | "lyrics" }>`
   background: ${(props) =>
     props.$contentType === "chords"
       ? theme.colors.brand.primary
+      : props.$contentType === "sheetMusic"
+      ? theme.colors.accent.amber
       : theme.colors.semantic.info};
   border: none;
   color: white;

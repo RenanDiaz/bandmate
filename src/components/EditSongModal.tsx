@@ -6,6 +6,7 @@ import { metadataService } from "../services/metadataService";
 import { SectionEditor } from "./SectionEditor";
 import { TimingSyncModal } from "./TimingSyncModal";
 import { LineSyncModal } from "./LineSyncModal";
+import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -547,6 +548,13 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
               </SyncButtonsRow>
             </>
           )}
+
+          {/* Sheet Music Upload */}
+          <SectionDivider>{t("sheetMusic.title")}</SectionDivider>
+          <SheetMusicUpload
+            songId={song.id}
+            bandId={song.band_id}
+          />
 
           <FormActions>
             <CancelButton type="button" onClick={onClose} disabled={isSaving}>
