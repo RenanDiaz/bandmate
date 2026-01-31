@@ -1106,6 +1106,9 @@
     "moveTo": "to position",
     "applyChanges": "Apply Changes",
     "noChangesNeeded": "No changes needed - your setlist order is already optimal!",
-    "optimizeDescription": "AI will analyze your setlist and suggest an optimized order based on energy flow, tempo transitions, and key compatibility."
+    "optimizeDescription": "AI will analyze your setlist and suggest an optimized order based on energy flow, tempo transitions, and key compatibility.",
+    "sectionsDetected": "{{count}} section(s) detected",
+    "sectionsPreserved": "Section structure and special items will be preserved",
+    "optimizingPerSection": "Optimizing each section independently while preserving structure..."
   }
 }

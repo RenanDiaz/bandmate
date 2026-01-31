@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem, isNoteItem } from "../services/setlistsService";
 import type { Setlist, SetlistItem, SetlistSongItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -446,27 +446,143 @@ const SetlistEditor: FC = () => {
   const handleApplyOptimization = () => {
     if (!optimization) return;
 
-    // Get current song items only (preserve non-song items at end)
-    const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
+    const reorderedItems: SetlistItem[] = [];
 
-    // Create new order based on suggested order
-    const newSongItems: SetlistSongItem[] = [];
-    optimization.suggestedOrder.forEach((songId) => {
-      const existingItem = setlistItems.find(
-        (item) => isSongItem(item) && item.song_id === songId
-      ) as SetlistSongItem | undefined;
-      if (existingItem) {
-        newSongItems.push(existingItem);
+    // Check if we have section-aware optimization
+    const hasSections = optimization.sections && optimization.sections.length > 0;
+    const hasOptimizedSections = optimization.optimizedSections && optimization.optimizedSections.length > 0;
+
+    if (hasSections && hasOptimizedSections) {
+      // Rebuild the setlist section by section, preserving structure
+      let currentItemIndex = 0;
+
+      // Build a map of songId -> notes that should appear before it
+      const notesBeforeSong: Record<string, SetlistNoteItem[]> = {};
+      let pendingNotes: SetlistNoteItem[] = [];
+
+      for (const item of setlistItems) {
+        if (isNoteItem(item)) {
+          pendingNotes.push(item);
+        } else if (isSongItem(item)) {
+          if (pendingNotes.length > 0) {
+            notesBeforeSong[item.song_id] = [...pendingNotes];
+            pendingNotes = [];
+          }
+        } else if (isSectionItem(item) || isBreakItem(item)) {
+          // Section/break resets pending notes
+          pendingNotes = [];
+        }
       }
-    });
 
-    // Combine songs with non-song items and reindex positions
-    const reorderedItems: SetlistItem[] = [...newSongItems, ...nonSongItems].map(
-      (item, index) => ({
-        ...item,
-        position: index,
-      })
-    );
+      // Iterate through optimized sections and rebuild
+      optimization.optimizedSections!.forEach((optSection, idx) => {
+        // Find the matching original section
+        const originalSection = optimization.sections![idx];
+        if (originalSection?.label) {
+          // Find the divider item in the original setlist
+          const dividerItem = setlistItems.find(
+            (item) =>
+              (isSectionItem(item) || isBreakItem(item)) &&
+              item.label === originalSection.label
+          );
+          if (dividerItem) {
+            reorderedItems.push({ ...dividerItem, position: currentItemIndex++ });
+          }
+        }
+
+        // Add songs in optimized order, with their attached notes
+        optSection.suggestedOrder.forEach((songId) => {
+          // Add notes that should appear before this song
+          const notes = notesBeforeSong[songId];
+          if (notes) {
+            notes.forEach((note) => {
+              reorderedItems.push({ ...note, position: currentItemIndex++ });
+            });
+          }
+
+          // Add the song
+          const songItem = setlistItems.find(
+            (item) => isSongItem(item) && item.song_id === songId
+          ) as SetlistSongItem | undefined;
+          if (songItem) {
+            reorderedItems.push({ ...songItem, position: currentItemIndex++ });
+          }
+        });
+      });
+
+      // Add any remaining notes that weren't attached to songs
+      // (these would be notes at the very end after all songs)
+      const usedNoteLabels = new Set(
+        Object.values(notesBeforeSong).flat().map((n) => n.label + n.position)
+      );
+      setlistItems.forEach((item) => {
+        if (isNoteItem(item)) {
+          const itemKey = item.label + item.position;
+          if (!usedNoteLabels.has(itemKey)) {
+            // Check if this note was already added
+            const alreadyAdded = reorderedItems.some(
+              (r) => isNoteItem(r) && r.label === item.label
+            );
+            if (!alreadyAdded) {
+              reorderedItems.push({ ...item, position: currentItemIndex++ });
+            }
+          }
+        }
+      });
+    } else {
+      // No sections - use simpler approach but still preserve notes attached to songs
+      const notesBeforeSong: Record<string, SetlistNoteItem[]> = {};
+      let pendingNotes: SetlistNoteItem[] = [];
+
+      for (const item of setlistItems) {
+        if (isNoteItem(item)) {
+          pendingNotes.push(item);
+        } else if (isSongItem(item)) {
+          if (pendingNotes.length > 0) {
+            notesBeforeSong[item.song_id] = [...pendingNotes];
+            pendingNotes = [];
+          }
+        }
+      }
+
+      let currentIndex = 0;
+
+      // Add songs in optimized order with their attached notes
+      optimization.suggestedOrder.forEach((songId) => {
+        // Add notes before this song
+        const notes = notesBeforeSong[songId];
+        if (notes) {
+          notes.forEach((note) => {
+            reorderedItems.push({ ...note, position: currentIndex++ });
+          });
+        }
+
+        // Add the song
+        const songItem = setlistItems.find(
+          (item) => isSongItem(item) && item.song_id === songId
+        ) as SetlistSongItem | undefined;
+        if (songItem) {
+          reorderedItems.push({ ...songItem, position: currentIndex++ });
+        }
+      });
+
+      // Add section/break items at the end (they shouldn't be here if there are no sections, but just in case)
+      setlistItems.forEach((item) => {
+        if (isSectionItem(item) || isBreakItem(item)) {
+          reorderedItems.push({ ...item, position: currentIndex++ });
+        }
+      });
+
+      // Add any unattached notes at the end
+      const attachedNoteLabels = new Set(
+        Object.values(notesBeforeSong).flat().map((n) => n.label)
+      );
+      setlistItems.forEach((item) => {
+        if (isNoteItem(item) && !attachedNoteLabels.has(item.label)) {
+          reorderedItems.push({ ...item, position: currentIndex++ });
+        }
+      });
+    }
 
     setSetlistItems(reorderedItems);
     setIsOptimizeModalOpen(false);
@@ -798,6 +914,10 @@ const SetlistEditor: FC = () => {
             <OptimizingContainer>
               <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
               <OptimizingText>{t("ai.optimizing")}</OptimizingText>
+              {/* Show section info while optimizing */}
+              {setlistItems.some((item) => isSectionItem(item) || isBreakItem(item)) && (
+                <OptimizingSubtext>{t("ai.optimizingPerSection")}</OptimizingSubtext>
+              )}
             </OptimizingContainer>
           )}
 
@@ -810,6 +930,16 @@ const SetlistEditor: FC = () => {
 
           {optimization && !optimizing && (
             <>
+              {/* Show sections detected info */}
+              {optimization.sections && optimization.sections.length > 1 && (
+                <SectionsInfoBanner>
+                  <i className="bi bi-layers"></i>
+                  <span>
+                    {t("ai.sectionsDetected", { count: optimization.sections.length })} — {t("ai.sectionsPreserved")}
+                  </span>
+                </SectionsInfoBanner>
+              )}
+
               <OptimizationSection>
                 <OptimizationSectionTitle>
                   <i className="bi bi-lightbulb"></i>
@@ -1622,6 +1752,30 @@ const OptimizingText = styled.p`
   font-size: ${theme.fontSizes.body};
   color: var(--color-text-secondary);
   margin: 0;
+`;
+
+const OptimizingSubtext = styled.p`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-tertiary);
+  margin: ${theme.space[2]} 0 0 0;
+  font-style: italic;
+`;
+
+const SectionsInfoBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  margin-bottom: ${theme.space[4]};
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodySm};
+
+  i {
+    font-size: ${theme.fontSizes.bodyLg};
+  }
 `;
 
 const ErrorMessage = styled.div`

@@ -11,8 +11,13 @@
 
 import { groqService, GROQ_MODELS } from "./groqService";
 import type { Song } from "./songsService";
-import type { Setlist, SetlistSongItem } from "./setlistsService";
-import { isSongItem } from "./setlistsService";
+import type { Setlist, SetlistItem, SetlistSongItem } from "./setlistsService";
+import {
+  isSongItem,
+  isBreakItem,
+  isSectionItem,
+  isNoteItem,
+} from "./setlistsService";
 
 // ============================================
 // Types
@@ -51,6 +56,18 @@ export interface GeneratedSetlist {
   estimatedDuration: number;
 }
 
+/** Represents a section/set in the setlist for optimization */
+export interface SetlistSection {
+  /** Label of the section (e.g., "Set 1", "Encore") or null for implicit section */
+  label: string | null;
+  /** Type of the divider that starts this section */
+  dividerType: "section" | "break" | null;
+  /** Song IDs in this section in their current order */
+  songIds: string[];
+  /** Notes attached to specific songs in this section (songId -> note labels) */
+  attachedNotes: Record<string, string[]>;
+}
+
 export interface SetlistOptimization {
   currentOrder: string[];
   suggestedOrder: string[];
@@ -61,6 +78,13 @@ export interface SetlistOptimization {
     reason: string;
   }[];
   overallReasoning: string;
+  /** Sections detected in the setlist - used to preserve structure */
+  sections?: SetlistSection[];
+  /** Optimized sections with new song order per section */
+  optimizedSections?: {
+    label: string | null;
+    suggestedOrder: string[];
+  }[];
 }
 
 export interface SongSuggestion {
@@ -75,6 +99,116 @@ export interface SongSuggestion {
 // ============================================
 // Helper Functions
 // ============================================
+
+/**
+ * Parses a setlist into sections based on section/break items.
+ * Also tracks notes that are attached to songs (notes that appear
+ * immediately before or after a song are considered attached to it).
+ */
+function parseSetlistSections(
+  items: SetlistItem[],
+  songMap: Map<string, Song>
+): SetlistSection[] {
+  const sections: SetlistSection[] = [];
+  let currentSection: SetlistSection = {
+    label: null,
+    dividerType: null,
+    songIds: [],
+    attachedNotes: {},
+  };
+
+  // Track pending notes that haven't been attached to a song yet
+  let pendingNotes: string[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (isSectionItem(item) || isBreakItem(item)) {
+      // Start a new section if current one has songs
+      if (currentSection.songIds.length > 0) {
+        sections.push(currentSection);
+      }
+      currentSection = {
+        label: item.label,
+        dividerType: item.type as "section" | "break",
+        songIds: [],
+        attachedNotes: {},
+      };
+      // Reset pending notes for new section
+      pendingNotes = [];
+    } else if (isNoteItem(item)) {
+      // Notes are attached to the next song
+      pendingNotes.push(item.label);
+    } else if (isSongItem(item)) {
+      const song = songMap.get(item.song_id);
+      if (song) {
+        currentSection.songIds.push(item.song_id);
+        // Attach any pending notes to this song
+        if (pendingNotes.length > 0) {
+          currentSection.attachedNotes[item.song_id] = [
+            ...(currentSection.attachedNotes[item.song_id] || []),
+            ...pendingNotes,
+          ];
+          pendingNotes = [];
+        }
+      }
+    }
+  }
+
+  // Don't forget the last section
+  if (currentSection.songIds.length > 0) {
+    sections.push(currentSection);
+  }
+
+  return sections;
+}
+
+/**
+ * Formats sections for the AI prompt, including context about dividers and notes.
+ */
+function formatSectionsForPrompt(
+  sections: SetlistSection[],
+  songMap: Map<string, Song>
+): string {
+  if (sections.length <= 1 && !sections[0]?.label) {
+    // No explicit sections, just format as a flat list
+    const allSongs = sections.flatMap((s) => s.songIds);
+    return allSongs
+      .map((songId, index) => {
+        const song = songMap.get(songId);
+        if (!song) return null;
+        const notes = sections[0]?.attachedNotes[songId];
+        const noteStr = notes?.length ? ` [Notes: ${notes.join(", ")}]` : "";
+        return `${index + 1}. ID:${song.id} | ${formatSongForPrompt(song)}${noteStr}`;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  // Multiple sections - format with section headers
+  let result = "";
+  let songIndex = 1;
+
+  sections.forEach((section, sectionIdx) => {
+    const sectionHeader = section.label
+      ? `\n--- ${section.dividerType === "break" ? "BREAK: " : ""}${section.label} ---\n`
+      : sectionIdx > 0
+      ? `\n--- Set ${sectionIdx + 1} ---\n`
+      : "";
+    result += sectionHeader;
+
+    section.songIds.forEach((songId) => {
+      const song = songMap.get(songId);
+      if (!song) return;
+      const notes = section.attachedNotes[songId];
+      const noteStr = notes?.length ? ` [Notes: ${notes.join(", ")}]` : "";
+      result += `${songIndex}. ID:${song.id} | ${formatSongForPrompt(song)}${noteStr}\n`;
+      songIndex++;
+    });
+  });
+
+  return result.trim();
+}
 
 function formatSongForPrompt(song: Song): string {
   const parts = [`"${song.title}"`];
@@ -208,7 +342,8 @@ Respond with a JSON object in this exact format:
 }
 
 /**
- * Optimize an existing setlist's song order for better flow
+ * Optimize an existing setlist's song order for better flow.
+ * Respects section dividers (Set 1, Set 2, breaks) and keeps notes attached to their songs.
  */
 export async function optimizeSetlistOrder(
   setlist: Setlist,
@@ -225,14 +360,24 @@ export async function optimizeSetlistOrder(
     throw new Error("Need at least 3 songs to optimize order");
   }
 
-  const currentOrderInfo = songItems
-    .map((item, index) => {
-      const song = songMap.get(item.song_id);
-      if (!song) return null;
-      return `${index + 1}. ID:${song.id} | ${formatSongForPrompt(song)}`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  // Parse the setlist into sections
+  const sections = parseSetlistSections(setlist.songs, songMap);
+  const hasSections = sections.length > 1 || sections[0]?.label !== null;
+
+  // Format the setlist with section context
+  const currentOrderInfo = formatSectionsForPrompt(sections, songMap);
+
+  // Build section-aware prompt
+  const sectionContext = hasSections
+    ? `\n\nIMPORTANT: This setlist is divided into ${sections.length} section(s). You MUST:
+1. Optimize each section INDEPENDENTLY - do not move songs between sections
+2. Respect the section boundaries as they represent actual set divisions in the performance
+3. Each section should have its own energy arc (build, peak, resolve)
+4. Notes attached to songs (like "Tune to Drop D") indicate constraints - keep those songs in positions where the note makes sense
+
+Sections detected:
+${sections.map((s, i) => `- ${s.label || `Section ${i + 1}`}: ${s.songIds.length} songs`).join("\n")}`
+    : "";
 
   const systemPrompt = `You are an expert at optimizing setlist flow for live performances.
 
@@ -242,6 +387,7 @@ Analyze the current song order and suggest improvements based on:
 3. Tempo variation and pacing
 4. Building to peaks and memorable endings
 5. Audience engagement patterns
+${hasSections ? "\nCRITICAL: When the setlist has multiple sections (sets), optimize EACH SECTION SEPARATELY. Never move songs between sections." : ""}
 
 Always respond with valid JSON only, no additional text.`;
 
@@ -249,11 +395,18 @@ Always respond with valid JSON only, no additional text.`;
 
 Current order:
 ${currentOrderInfo}
+${sectionContext}
 
-Suggest an optimized order that improves the flow. Respond with JSON:
+Suggest an optimized order that improves the flow.${hasSections ? " Remember to keep songs within their original sections!" : ""} Respond with JSON:
 {
   "currentOrder": ["song_id_1", "song_id_2", ...],
   "suggestedOrder": ["song_id_in_new_order", ...],
+  ${hasSections ? `"optimizedSections": [
+    {
+      "label": "Section label or null",
+      "suggestedOrder": ["song_ids_in_optimized_order_for_this_section"]
+    }
+  ],` : ""}
   "changes": [
     {
       "from": 3,
@@ -262,7 +415,7 @@ Suggest an optimized order that improves the flow. Respond with JSON:
       "reason": "Why this song should be moved"
     }
   ],
-  "overallReasoning": "Explanation of the optimization strategy"
+  "overallReasoning": "Explanation of the optimization strategy${hasSections ? " including how each section was optimized" : ""}"
 }`;
 
   const response = await groqService.complete(userPrompt, systemPrompt, {
@@ -271,7 +424,12 @@ Suggest an optimized order that improves the flow. Respond with JSON:
     maxTokens: 2048,
   });
 
-  return groqService.parseJsonResponse<SetlistOptimization>(response);
+  const result = groqService.parseJsonResponse<SetlistOptimization>(response);
+
+  // Attach the parsed sections for use in the UI
+  result.sections = sections;
+
+  return result;
 }
 
 /**
