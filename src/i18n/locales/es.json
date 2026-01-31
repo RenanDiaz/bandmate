@@ -1106,6 +1106,9 @@
     "moveTo": "a posición",
     "applyChanges": "Aplicar Cambios",
     "noChangesNeeded": "No se necesitan cambios - ¡el orden de tu setlist ya es óptimo!",
-    "optimizeDescription": "La IA analizará tu setlist y sugerirá un orden optimizado basado en flujo de energía, transiciones de tempo y compatibilidad de tonalidades."
+    "optimizeDescription": "La IA analizará tu setlist y sugerirá un orden optimizado basado en flujo de energía, transiciones de tempo y compatibilidad de tonalidades.",
+    "sectionsDetected": "{{count}} sección(es) detectada(s)",
+    "sectionsPreserved": "La estructura de secciones e ítems especiales se preservará",
+    "optimizingPerSection": "Optimizando cada sección independientemente mientras se preserva la estructura..."
   }
 }
