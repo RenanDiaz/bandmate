@@ -243,10 +243,13 @@ export default function SheetMusicViewer({
   const [error, setError] = useState<string | null>(null);
   const [navVisible, setNavVisible] = useState(true);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const [containerHeight, setContainerHeight] = useState<number | null>(null);
+  const [pageAspectRatio, setPageAspectRatio] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastInteractionRef = useRef<number>(Date.now());
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-hide navigation after inactivity
   const HIDE_DELAY = 3000;
@@ -291,29 +294,52 @@ export default function SheetMusicViewer({
     };
   }, [handleInteraction, showNavigation]);
 
-  // Handle container resize
+  // Handle container resize - track both width and height for fit-to-page
   useEffect(() => {
     const container = pdfContainerRef.current;
     if (!container) return;
 
-    const updateWidth = () => {
+    const updateDimensions = () => {
       const rect = container.getBoundingClientRect();
       const padding = 32; // Account for padding (16px each side)
-      const availableWidth = rect.width - padding;
-      // Ensure minimum width of 280px for small screens, max 1200px for large screens
+      let availableWidth = rect.width - padding;
+      let availableHeight = rect.height - padding;
+
+      // Fallback for cases where layout hasn't resolved yet (iPad/tablet)
+      if (availableWidth <= 0 || availableHeight <= 0) {
+        availableWidth = Math.max(availableWidth, window.innerWidth - 64);
+        availableHeight = Math.max(availableHeight, window.innerHeight * 0.6);
+
+        // Schedule a retry to get real dimensions once layout settles
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => {
+          const retryRect = container.getBoundingClientRect();
+          if (retryRect.width > 0 && retryRect.height > 0) {
+            const w = Math.max(280, Math.min(retryRect.width - padding, 1200));
+            const h = retryRect.height - padding;
+            setContainerWidth(w);
+            setContainerHeight(h);
+          }
+        }, 100);
+      }
+
       const width = Math.max(280, Math.min(availableWidth, 1200));
       setContainerWidth(width);
+      setContainerHeight(availableHeight);
     };
 
-    // Capture initial width immediately
-    updateWidth();
+    // Capture initial dimensions immediately
+    updateDimensions();
 
     const observer = new ResizeObserver(() => {
-      updateWidth();
+      updateDimensions();
     });
 
     observer.observe(container);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, []);
 
   // Sync page with audio timing
@@ -347,6 +373,30 @@ export default function SheetMusicViewer({
     setError(err.message);
     setLoading(false);
   };
+
+  const handlePageLoadSuccess = (page: { originalWidth: number; originalHeight: number }) => {
+    if (page.originalWidth > 0 && page.originalHeight > 0) {
+      setPageAspectRatio(page.originalWidth / page.originalHeight);
+    }
+  };
+
+  // Calculate the optimal width to fit the page within the container (fit-to-page)
+  const renderWidth = (() => {
+    if (containerWidth === null || containerHeight === null) return null;
+    if (!pageAspectRatio) return containerWidth; // Before page loads, use container width
+
+    // Calculate what height the page would be at full container width
+    const heightAtFullWidth = containerWidth / pageAspectRatio;
+
+    if (heightAtFullWidth <= containerHeight) {
+      // Page fits vertically at full width - use full width
+      return containerWidth;
+    }
+
+    // Page would overflow vertically - constrain by height instead
+    const widthFromHeight = containerHeight * pageAspectRatio;
+    return Math.max(280, Math.min(widthFromHeight, containerWidth));
+  })();
 
   const goToPage = useCallback(
     (page: number) => {
@@ -402,13 +452,13 @@ export default function SheetMusicViewer({
   return (
     <ViewerContainer ref={containerRef}>
       <PDFContainer ref={pdfContainerRef}>
-        {(loading || containerWidth === null) && (
+        {(loading || renderWidth === null) && (
           <LoadingContainer>
             <Spinner />
             <div>{t("sheetMusic.loading", "Loading sheet music...")}</div>
           </LoadingContainer>
         )}
-        {containerWidth !== null && (
+        {renderWidth !== null && (
           <Document
             file={pdfUrl}
             onLoadSuccess={handleDocumentLoadSuccess}
@@ -417,9 +467,10 @@ export default function SheetMusicViewer({
           >
             <Page
               pageNumber={currentPage}
-              width={containerWidth}
+              width={renderWidth}
               renderTextLayer={false}
               renderAnnotationLayer={false}
+              onLoadSuccess={handlePageLoadSuccess}
             />
           </Document>
         )}

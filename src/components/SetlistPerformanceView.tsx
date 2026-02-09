@@ -823,35 +823,40 @@ const SetlistPerformanceView: FC = () => {
                 <SongTitleLarge>{currentSong.title}</SongTitleLarge>
                 {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
 
-                <SongMetadataBar>
-                  {currentSong.key && (
-                    <MetaBadgeLarge>
-                      <i className="bi bi-music-note-beamed"></i>
-                      Key: {currentSong.key}
-                    </MetaBadgeLarge>
-                  )}
-                  {currentSong.tempo && (
-                    <MetaBadgeLarge>
-                      <i className="bi bi-speedometer2"></i>
-                      {currentSong.tempo} BPM
-                    </MetaBadgeLarge>
-                  )}
-                  {currentSong.duration && (
-                    <MetaBadgeLarge>
-                      <i className="bi bi-clock"></i>
-                      {formatDuration(currentSong.duration)}
-                    </MetaBadgeLarge>
-                  )}
-                </SongMetadataBar>
+                {/* Hide metadata and notes in sheet music mode to maximize PDF space */}
+                {!(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
+                  <>
+                    <SongMetadataBar>
+                      {currentSong.key && (
+                        <MetaBadgeLarge>
+                          <i className="bi bi-music-note-beamed"></i>
+                          Key: {currentSong.key}
+                        </MetaBadgeLarge>
+                      )}
+                      {currentSong.tempo && (
+                        <MetaBadgeLarge>
+                          <i className="bi bi-speedometer2"></i>
+                          {currentSong.tempo} BPM
+                        </MetaBadgeLarge>
+                      )}
+                      {currentSong.duration && (
+                        <MetaBadgeLarge>
+                          <i className="bi bi-clock"></i>
+                          {formatDuration(currentSong.duration)}
+                        </MetaBadgeLarge>
+                      )}
+                    </SongMetadataBar>
 
-                {currentNotes && (
-                  <NotesBox>
-                    <NotesLabel>
-                      <i className="bi bi-sticky"></i>
-                      Notes:
-                    </NotesLabel>
-                    <NotesText>{currentNotes}</NotesText>
-                  </NotesBox>
+                    {currentNotes && (
+                      <NotesBox>
+                        <NotesLabel>
+                          <i className="bi bi-sticky"></i>
+                          Notes:
+                        </NotesLabel>
+                        <NotesText>{currentNotes}</NotesText>
+                      </NotesBox>
+                    )}
+                  </>
                 )}
 
                 {/* Backing Track Player - only visible to host or when not in sync mode */}
@@ -1476,11 +1481,11 @@ const SongDisplay = styled.div<{ $isSheetMusic?: boolean }>`
 `;
 
 const SongHeader = styled.div<{ $compact?: boolean }>`
-  margin-bottom: ${({ $compact }) => ($compact ? theme.space[3] : theme.space[8])};
+  margin-bottom: ${({ $compact }) => ($compact ? theme.space[2] : theme.space[8])};
   flex-shrink: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    margin-bottom: ${({ $compact }) => ($compact ? theme.space[2] : theme.space[4])};
+    margin-bottom: ${({ $compact }) => ($compact ? theme.space[1] : theme.space[4])};
   }
 `;
 
