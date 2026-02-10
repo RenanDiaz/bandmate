@@ -264,6 +264,8 @@
     "createNewSetlist": "Create New Setlist",
     "editSetlist": "Edit Setlist",
     "deleteSetlist": "Delete Setlist",
+    "renameSetlist": "Rename Setlist",
+    "updateError": "Failed to update setlist. Please try again.",
     "setlistName": "Setlist Name",
     "description": "Description",
     "descriptionNotes": "Description / Notes",

@@ -34,6 +34,7 @@ import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from 
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
 import { NewRequestModal } from "./NewRequestModal";
+import { EditSetlistModal } from "./EditSetlistModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
@@ -364,6 +365,9 @@ const SetlistDetailView: FC = () => {
 
   // Propose setlist modal state
   const [showProposeModal, setShowProposeModal] = useState(false);
+
+  // Edit setlist modal state
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // AI Optimization state
   const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
@@ -851,12 +855,21 @@ const SetlistDetailView: FC = () => {
                     <span>{t('setlists.detail.reorder')}</span>
                   </ActionButton>
                   <ActionButton
+                    onClick={() => setShowEditModal(true)}
+                    $variant="edit"
+                    $iconOnly
+                    title={t('setlists.renameSetlist')}
+                  >
+                    <i className="bi bi-pencil"></i>
+                    <span>{t('setlists.renameSetlist')}</span>
+                  </ActionButton>
+                  <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/edit`)}
                     $variant="edit"
                     $iconOnly
                     title={t('setlists.editSetlist')}
                   >
-                    <i className="bi bi-pencil"></i>
+                    <i className="bi bi-music-note-list"></i>
                     <span>{t('setlists.editSetlist')}</span>
                   </ActionButton>
                   <ActionButton
@@ -1453,6 +1466,17 @@ const SetlistDetailView: FC = () => {
           prefillType="setlist_proposal"
         />
       )}
+
+      {/* Edit Setlist Modal */}
+      <EditSetlistModal
+        setlist={setlist}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onUpdated={(updatedSetlist) => {
+          setSetlist(updatedSetlist);
+          setShowEditModal(false);
+        }}
+      />
 
       {/* AI Optimization Modal */}
       <Modal isOpen={isOptimizeModalOpen} toggle={() => !optimizing && setIsOptimizeModalOpen(false)} size="lg">

@@ -264,6 +264,8 @@
     "createNewSetlist": "Crear Nuevo Setlist",
     "editSetlist": "Editar Setlist",
     "deleteSetlist": "Eliminar Setlist",
+    "renameSetlist": "Renombrar Setlist",
+    "updateError": "Error al actualizar el setlist. Por favor intenta de nuevo.",
     "setlistName": "Nombre del Setlist",
     "description": "Descripción",
     "descriptionNotes": "Descripción / Notas",
