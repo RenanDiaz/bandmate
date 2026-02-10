@@ -11,6 +11,7 @@ import type { Setlist } from "../services/setlistsService";
 import { NewSetlistForm } from "./NewSetlistForm";
 import { SetlistList } from "./SetlistList";
 import { SEO } from "./SEO";
+import { AISetlistGenerator } from "./AISetlistGenerator";
 
 interface Props {
   user: User | null;
@@ -123,6 +124,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
         </PageHeader>
 
         <ContentSection>
+          <AISetlistGenerator bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
           <NewSetlistForm bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
 
           {loading ? (

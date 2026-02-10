@@ -22,9 +22,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
-import type { Setlist, SetlistItem } from "../services/setlistsService";
+import type { Setlist, SetlistItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
+
+// Helper to generate unique IDs for special items
+const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
+import { groqService } from "../services/groqService";
 import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
@@ -274,6 +279,69 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
   );
 };
 
+// Sortable special item card component for reorder mode
+interface SortableSpecialItemCardProps {
+  item: SetlistBreakItem | SetlistSectionItem | SetlistNoteItem;
+  itemId: string;
+}
+
+const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
+  item,
+  itemId,
+}) => {
+  const { t } = useTranslation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: itemId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const getIcon = () => {
+    if (isBreakItem(item)) return "bi-pause-circle";
+    if (isSectionItem(item)) return "bi-bookmark";
+    return "bi-sticky";
+  };
+
+  const getTypeLabel = () => {
+    if (isBreakItem(item)) return t("setlists.items.break");
+    if (isSectionItem(item)) return t("setlists.items.section");
+    return t("setlists.items.note");
+  };
+
+  return (
+    <SortableSpecialItemCardWrapper
+      ref={setNodeRef}
+      style={style}
+      $isDragging={isDragging}
+      $type={item.type}
+    >
+      <DragHandle {...attributes} {...listeners}>
+        <i className="bi bi-grip-vertical"></i>
+      </DragHandle>
+      <SpecialItemIconReorder $type={item.type}>
+        <i className={`bi ${getIcon()}`}></i>
+      </SpecialItemIconReorder>
+      <SpecialItemInfoReorder>
+        <SpecialItemTypeReorder>{getTypeLabel()}</SpecialItemTypeReorder>
+        <SpecialItemLabelReorder>{item.label}</SpecialItemLabelReorder>
+        {isBreakItem(item) && item.duration && (
+          <SpecialItemDurationReorder>
+            <i className="bi bi-clock"></i> {item.duration} min
+          </SpecialItemDurationReorder>
+        )}
+      </SpecialItemInfoReorder>
+    </SortableSpecialItemCardWrapper>
+  );
+};
+
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
@@ -282,6 +350,7 @@ const SetlistDetailView: FC = () => {
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
+  const [itemIds, setItemIds] = useState<Map<SetlistItem, string>>(new Map());
   const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -299,6 +368,12 @@ const SetlistDetailView: FC = () => {
 
   // Edit setlist modal state
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // AI Optimization state
+  const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimization, setOptimization] = useState<SetlistOptimization | null>(null);
+  const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
@@ -333,6 +408,15 @@ const SetlistDetailView: FC = () => {
     })
   );
 
+  // Get the stable ID for an item
+  const getStableItemId = (item: SetlistItem): string => {
+    const existingId = itemIds.get(item);
+    if (existingId) return existingId;
+
+    // Generate new ID if not found
+    return isSongItem(item) ? item.song_id : generateItemId();
+  };
+
   // Get only song items for reordering
   const songItemsOnly = setlistItems.filter(isSongItem);
   const songsForReorder = songItemsOnly
@@ -343,35 +427,19 @@ const SetlistDetailView: FC = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = songsForReorder.findIndex((song) => song.id === active.id);
-      const newIndex = songsForReorder.findIndex((song) => song.id === over.id);
+      setSetlistItems((items) => {
+        const oldIndex = items.findIndex((item) => getStableItemId(item) === active.id);
+        const newIndex = items.findIndex((item) => getStableItemId(item) === over.id);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const reorderedSongs = arrayMove(songsForReorder, oldIndex, newIndex);
+        if (oldIndex === -1 || newIndex === -1) return items;
 
-        // Update setlistItems with new song order
-        const newSongItems: SetlistItem[] = reorderedSongs.map((song, index) => {
-          const existingItem = songItemsOnly.find((item) => item.song_id === song.id);
-          return {
-            type: "song" as const,
-            song_id: song.id,
-            position: index,
-            notes: existingItem?.notes || "",
-          };
-        });
-
-        // Non-song items get placed after songs
-        const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
-        const updatedItems: SetlistItem[] = [
-          ...newSongItems,
-          ...nonSongItems.map((item, index) => ({
-            ...item,
-            position: newSongItems.length + index,
-          })),
-        ];
-
-        setSetlistItems(updatedItems);
-      }
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        // Reindex positions
+        return reordered.map((item, index) => ({
+          ...item,
+          position: index,
+        }));
+      });
     }
   };
 
@@ -412,6 +480,57 @@ const SetlistDetailView: FC = () => {
     setIsReorderMode(false);
   };
 
+  // AI Optimization handlers
+  const handleOptimizeOrder = async () => {
+    if (!setlist) return;
+
+    setOptimizing(true);
+    setOptimizeError(null);
+    setOptimization(null);
+    setIsOptimizeModalOpen(true);
+
+    try {
+      const result = await optimizeSetlistOrder(setlist, allSongs);
+      setOptimization(result);
+    } catch (error) {
+      console.error("Failed to optimize setlist:", error);
+      setOptimizeError(
+        error instanceof Error ? error.message : t("ai.generationError")
+      );
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  const handleApplyOptimization = () => {
+    if (!optimization) return;
+
+    // Create new order based on suggested order
+    const newSongItems: SetlistItem[] = optimization.suggestedOrder.map((songId, index) => {
+      const existingItem = songItemsOnly.find((item) => item.song_id === songId);
+      return {
+        type: "song" as const,
+        song_id: songId,
+        position: index,
+        notes: existingItem?.notes || "",
+      };
+    });
+
+    // Non-song items get placed after songs
+    const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
+    const updatedItems: SetlistItem[] = [
+      ...newSongItems,
+      ...nonSongItems.map((item, index) => ({
+        ...item,
+        position: newSongItems.length + index,
+      })),
+    ];
+
+    setSetlistItems(updatedItems);
+    setIsOptimizeModalOpen(false);
+    setOptimization(null);
+  };
+
   useEffect(() => {
     if (!setlistId) return;
 
@@ -425,8 +544,14 @@ const SetlistDetailView: FC = () => {
         const songsData = await getBandSongs(setlistData.band_id);
         setAllSongs(songsData);
 
-        // Load all items in order
+        // Load all items in order and generate stable IDs
         const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
+        const newItemIds = new Map<SetlistItem, string>();
+        orderedItems.forEach((item) => {
+          const id = isSongItem(item) ? item.song_id : generateItemId();
+          newItemIds.set(item, id);
+        });
+        setItemIds(newItemIds);
         setSetlistItems(orderedItems);
 
         // Load shows that use this setlist
@@ -688,15 +813,21 @@ const SetlistDetailView: FC = () => {
                   <ActionButton
                     onClick={handleCancelReorder}
                     $variant="edit"
-                    disabled={saving}
+                    disabled={saving || optimizing}
                   >
                     <i className="bi bi-x-lg"></i>
                     <span>{t('common.cancel')}</span>
                   </ActionButton>
+                  {groqService.isConfigured() && songsForReorder.length >= 3 && (
+                    <OptimizeButton onClick={handleOptimizeOrder} disabled={saving || optimizing}>
+                      <i className="bi bi-magic"></i>
+                      <span>{t("ai.optimizeOrder")}</span>
+                    </OptimizeButton>
+                  )}
                   <ActionButton
                     onClick={handleSaveOrder}
                     $variant="perform"
-                    disabled={saving}
+                    disabled={saving || optimizing}
                   >
                     {saving ? (
                       <>
@@ -848,18 +979,38 @@ const SetlistDetailView: FC = () => {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={songsForReorder.map((s) => s.id)}
+                items={setlistItems.map((item) => getStableItemId(item))}
                 strategy={verticalListSortingStrategy}
               >
-                {songsForReorder.map((song, index) => (
-                  <SortableSongCard
-                    key={song.id}
-                    song={song}
-                    index={index}
-                    notes={getSetlistSongNotes(song.id)}
-                    formatDuration={formatDuration}
-                  />
-                ))}
+                {(() => {
+                  let songNumber = 0;
+                  return setlistItems.map((item) => {
+                    if (isSongItem(item)) {
+                      const song = getSongById(item.song_id);
+                      if (!song) return null;
+                      songNumber++;
+                      return (
+                        <SortableSongCard
+                          key={item.song_id}
+                          song={song}
+                          index={songNumber - 1}
+                          notes={getSetlistSongNotes(song.id)}
+                          formatDuration={formatDuration}
+                        />
+                      );
+                    } else {
+                      // Special item (break, section, note)
+                      const itemId = getStableItemId(item);
+                      return (
+                        <SortableSpecialItemCard
+                          key={itemId}
+                          item={item}
+                          itemId={itemId}
+                        />
+                      );
+                    }
+                  });
+                })()}
               </SortableContext>
             </DndContext>
           </SongsList>
@@ -1326,6 +1477,99 @@ const SetlistDetailView: FC = () => {
           setShowEditModal(false);
         }}
       />
+
+      {/* AI Optimization Modal */}
+      <Modal isOpen={isOptimizeModalOpen} toggle={() => !optimizing && setIsOptimizeModalOpen(false)} size="lg">
+        <ModalHeader toggle={() => !optimizing && setIsOptimizeModalOpen(false)}>
+          <i className="bi bi-magic" style={{ marginRight: "8px", color: theme.colors.brand.primary }}></i>
+          {t("ai.optimizeOrder")}
+        </ModalHeader>
+        <ModalBody>
+          {optimizing && (
+            <OptimizingContainer>
+              <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
+              <OptimizingText>{t("ai.optimizing")}</OptimizingText>
+            </OptimizingContainer>
+          )}
+
+          {optimizeError && (
+            <OptimizeErrorMessage>
+              <i className="bi bi-exclamation-triangle"></i>
+              {optimizeError}
+            </OptimizeErrorMessage>
+          )}
+
+          {optimization && !optimizing && (
+            <>
+              <OptimizationSection>
+                <OptimizationSectionTitle>
+                  <i className="bi bi-lightbulb"></i>
+                  {t("ai.reasoning")}
+                </OptimizationSectionTitle>
+                <ReasoningText>{optimization.overallReasoning}</ReasoningText>
+              </OptimizationSection>
+
+              {optimization.changes.length > 0 && (
+                <OptimizationSection>
+                  <OptimizationSectionTitle>
+                    <i className="bi bi-arrow-left-right"></i>
+                    {t("ai.suggestedChanges")}
+                  </OptimizationSectionTitle>
+                  <ChangesList>
+                    {optimization.changes.map((change, index) => (
+                      <ChangeItem key={index}>
+                        <ChangeIcon>
+                          <i className="bi bi-arrow-right"></i>
+                        </ChangeIcon>
+                        <ChangeContent>
+                          <ChangeSongTitle>"{change.songTitle}"</ChangeSongTitle>
+                          <ChangeMove>
+                            {t("ai.moveFrom")} #{change.from + 1} {t("ai.moveTo")} #{change.to + 1}
+                          </ChangeMove>
+                          <ChangeReason>{change.reason}</ChangeReason>
+                        </ChangeContent>
+                      </ChangeItem>
+                    ))}
+                  </ChangesList>
+                </OptimizationSection>
+              )}
+
+              <OptimizationSection>
+                <OptimizationSectionTitle>
+                  <i className="bi bi-list-ol"></i>
+                  {t("ai.newOrder")}
+                </OptimizationSectionTitle>
+                <NewOrderList>
+                  {optimization.suggestedOrder.map((songId, index) => {
+                    const song = getSongById(songId);
+                    if (!song) return null;
+                    return (
+                      <NewOrderItem key={songId}>
+                        <NewOrderPosition>{index + 1}</NewOrderPosition>
+                        <NewOrderSong>
+                          <strong>{song.title}</strong>
+                          {song.artist && <span> - {song.artist}</span>}
+                        </NewOrderSong>
+                      </NewOrderItem>
+                    );
+                  })}
+                </NewOrderList>
+              </OptimizationSection>
+            </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
+            {t("common.cancel")}
+          </Button>
+          {optimization && !optimizing && (
+            <Button color="primary" onClick={handleApplyOptimization}>
+              <i className="bi bi-check-circle" style={{ marginRight: "8px" }}></i>
+              {t("ai.applyChanges")}
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     </ViewContainer>
   );
 };
@@ -1793,6 +2037,109 @@ const SpecialItemDuration = styled.div`
   }
 `;
 
+// Sortable special item card styles for reorder mode
+const SortableSpecialItemCardWrapper = styled.div<{ $isDragging?: boolean; $type: string }>`
+  background: ${(props) =>
+    props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-secondary)'};
+  border: 1px solid ${(props) =>
+    props.$isDragging ? theme.colors.brand.primary : 'var(--color-border)'};
+  border-left: 3px solid ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return 'var(--color-border)';
+    }
+  }};
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[4]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  transition: all ${theme.transitions.fast} ease;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: var(--shadow-sm);
+  }
+`;
+
+const SpecialItemIconReorder = styled.div<{ $type: string }>`
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${theme.fontSizes.h3};
+  flex-shrink: 0;
+  background: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warningBgDark;
+      case "section":
+        return theme.colors.semantic.infoBgDark;
+      case "note":
+        return theme.colors.semantic.successBgDark;
+      default:
+        return 'var(--color-bg-tertiary)';
+    }
+  }};
+  color: ${(props) => {
+    switch (props.$type) {
+      case "break":
+        return theme.colors.semantic.warning;
+      case "section":
+        return theme.colors.semantic.info;
+      case "note":
+        return theme.colors.semantic.success;
+      default:
+        return 'var(--color-text-secondary)';
+    }
+  }};
+`;
+
+const SpecialItemInfoReorder = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
+  min-width: 0;
+`;
+
+const SpecialItemTypeReorder = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const SpecialItemLabelReorder = styled.div`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+`;
+
+const SpecialItemDurationReorder = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+
+  i {
+    color: ${theme.colors.semantic.warning};
+  }
+`;
+
 // YouTube Export Modal Styles
 const YouTubeAuthPrompt = styled.div`
   display: flex;
@@ -2116,6 +2463,188 @@ const CreateShowLink = styled.button`
   &:hover {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
+  }
+`;
+
+// AI Optimization Styles
+const OptimizeButton = styled.button`
+  background: linear-gradient(135deg, ${theme.colors.brand.primary}, #6366f1);
+  border: none;
+  color: white;
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    font-size: ${theme.fontSizes.body};
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex: 1;
+    justify-content: center;
+    min-width: calc(50% - ${theme.space[1]});
+  }
+`;
+
+const OptimizingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${theme.space[10]} 0;
+  gap: ${theme.space[4]};
+`;
+
+const OptimizingText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  margin: 0;
+`;
+
+const OptimizeErrorMessage = styled.div`
+  background: ${theme.colors.semantic.errorBgDark};
+  border: 1px solid ${theme.colors.semantic.error};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]};
+  color: ${theme.colors.semantic.error};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+
+  i {
+    font-size: ${theme.fontSizes.h3};
+  }
+`;
+
+const OptimizationSection = styled.div`
+  margin-bottom: ${theme.space[5]};
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const OptimizationSectionTitle = styled.h4`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin: 0 0 ${theme.space[3]} 0;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const ReasoningText = styled.p`
+  font-size: ${theme.fontSizes.body};
+  color: var(--color-text-secondary);
+  line-height: ${theme.lineHeights.relaxed};
+  margin: 0;
+  background: var(--color-bg-tertiary);
+  padding: ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  border-left: 3px solid ${theme.colors.brand.primary};
+`;
+
+const ChangesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[3]};
+`;
+
+const ChangeItem = styled.div`
+  display: flex;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[3]};
+  background: var(--color-bg-tertiary);
+  border-radius: ${theme.radius.base};
+`;
+
+const ChangeIcon = styled.div`
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodyLg};
+  flex-shrink: 0;
+  margin-top: 2px;
+`;
+
+const ChangeContent = styled.div`
+  flex: 1;
+`;
+
+const ChangeSongTitle = styled.div`
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin-bottom: ${theme.space[1]};
+`;
+
+const ChangeMove = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.brand.primary};
+  margin-bottom: ${theme.space[1]};
+`;
+
+const ChangeReason = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+`;
+
+const NewOrderList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const NewOrderItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.sm};
+`;
+
+const NewOrderPosition = styled.div`
+  background: ${theme.gradients.brandPrimary};
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: ${theme.radius.sm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: ${theme.fontWeights.semibold};
+  font-size: ${theme.fontSizes.bodySm};
+  flex-shrink: 0;
+`;
+
+const NewOrderSong = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-primary);
+
+  span {
+    color: var(--color-text-secondary);
   }
 `;
 

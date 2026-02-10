@@ -6,6 +6,7 @@ import { metadataService } from "../services/metadataService";
 import { SectionEditor } from "./SectionEditor";
 import { TimingSyncModal } from "./TimingSyncModal";
 import { LineSyncModal } from "./LineSyncModal";
+import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -33,7 +34,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     country: "",
     hasBackingTracks: false,
   });
-  const [sections, setSections] = useState<SectionTiming[]>([]);
+  const [chordSections, setChordSections] = useState<SectionTiming[]>([]);
+  const [lyricsSections, setLyricsSections] = useState<SectionTiming[]>([]);
   const [lineTimings, setLineTimings] = useState<LineTiming[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
@@ -59,8 +61,26 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         country: song.country || "",
         hasBackingTracks: song.has_backing_tracks || false,
       });
-      setSections(song.timing_data?.sectionTimings || []);
-      setLineTimings(song.timing_data?.lineTimings || []);
+      // Load sections - support both new separate format and legacy format
+      const timingData = song.timing_data;
+      if (timingData?.chordSectionTimings || timingData?.lyricsSectionTimings) {
+        // New format: separate sections for chords and lyrics
+        setChordSections(timingData.chordSectionTimings || []);
+        setLyricsSections(timingData.lyricsSectionTimings || []);
+      } else if (timingData?.sectionTimings) {
+        // Legacy format: single sections array - assign based on content
+        if (song.chords?.trim()) {
+          setChordSections(timingData.sectionTimings);
+          setLyricsSections([]);
+        } else {
+          setChordSections([]);
+          setLyricsSections(timingData.sectionTimings);
+        }
+      } else {
+        setChordSections([]);
+        setLyricsSections([]);
+      }
+      setLineTimings(timingData?.lineTimings || []);
       // Reset metadata button state when switching songs
       setMetadataFetched(false);
       setIsFetchingMetadata(false);
@@ -129,10 +149,15 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     setIsSaving(true);
     try {
       // Build timing_data from current state
-      const timingData = sections.length > 0 || lineTimings.length > 0
+      const hasChordSections = chordSections.length > 0;
+      const hasLyricsSections = lyricsSections.length > 0;
+      const hasLineTimings = lineTimings.length > 0;
+
+      const timingData = hasChordSections || hasLyricsSections || hasLineTimings
         ? {
-            sectionTimings: sections.length > 0 ? sections : undefined,
-            lineTimings: lineTimings.length > 0 ? lineTimings : undefined,
+            chordSectionTimings: hasChordSections ? chordSections : undefined,
+            lyricsSectionTimings: hasLyricsSections ? lyricsSections : undefined,
+            lineTimings: hasLineTimings ? lineTimings : undefined,
           }
         : null;
 
@@ -481,16 +506,19 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
                 {t("sectionEditor.sectionsHelp")}
               </SectionEditorHelp>
               <SectionEditor
-                text={formData.chords.trim() || formData.lyrics.trim()}
-                sections={sections}
-                onSectionsChange={setSections}
+                chordsText={formData.chords}
+                lyricsText={formData.lyrics}
+                chordSections={chordSections}
+                lyricsSections={lyricsSections}
+                onChordSectionsChange={setChordSections}
+                onLyricsSectionsChange={setLyricsSections}
                 disabled={isSaving}
               />
 
               {/* Timing Sync Buttons */}
               <SyncButtonsRow>
                 {/* Section Timing Sync - shown when there are sections */}
-                {sections.length > 0 && (
+                {(chordSections.length > 0 || lyricsSections.length > 0) && (
                   <TimingSyncButton
                     type="button"
                     onClick={() => setIsTimingSyncOpen(true)}
@@ -521,6 +549,13 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
             </>
           )}
 
+          {/* Sheet Music Upload */}
+          <SectionDivider>{t("sheetMusic.title")}</SectionDivider>
+          <SheetMusicUpload
+            songId={song.id}
+            bandId={song.band_id}
+          />
+
           <FormActions>
             <CancelButton type="button" onClick={onClose} disabled={isSaving}>
               Cancel
@@ -546,8 +581,10 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
       <TimingSyncModal
         isOpen={isTimingSyncOpen}
         onClose={() => setIsTimingSyncOpen(false)}
-        sections={sections}
-        onSectionsChange={setSections}
+        chordSections={chordSections}
+        lyricsSections={lyricsSections}
+        onChordSectionsChange={setChordSections}
+        onLyricsSectionsChange={setLyricsSections}
         songTitle={formData.title}
       />
 

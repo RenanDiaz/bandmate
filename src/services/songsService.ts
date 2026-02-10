@@ -21,8 +21,16 @@ export interface LineTiming {
 }
 
 export interface TimingData {
-  sectionTimings?: SectionTiming[];
+  sectionTimings?: SectionTiming[]; // Legacy: used when only one content type exists
+  chordSectionTimings?: SectionTiming[]; // Sections for chords
+  lyricsSectionTimings?: SectionTiming[]; // Sections for lyrics
   lineTimings?: LineTiming[];
+}
+
+// Page timing for syncing PDF sheet music with audio
+export interface PageTiming {
+  page: number; // 1-indexed page number
+  startTime: number; // Start time in seconds
 }
 
 export interface Song {
@@ -50,6 +58,8 @@ export interface Song {
   created_at: string;
   has_backing_tracks?: boolean;
   timing_data?: TimingData;
+  sheet_music_url?: string;
+  sheet_music_page_timings?: PageTiming[];
 }
 
 export async function getMySongs(): Promise<Song[]> {
@@ -115,6 +125,8 @@ export interface UpdateSongInput {
   country?: string;
   has_backing_tracks?: boolean;
   timing_data?: TimingData | null;
+  sheet_music_url?: string | null;
+  sheet_music_page_timings?: PageTiming[] | null;
 }
 
 export async function createSong(song: CreateSongInput) {
