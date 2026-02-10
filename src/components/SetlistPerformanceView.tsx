@@ -859,8 +859,8 @@ const SetlistPerformanceView: FC = () => {
                   </>
                 )}
 
-                {/* Backing Track Player - only visible to host or when not in sync mode */}
-                {(syncRole === "host" || syncRole === null) && (
+                {/* Backing Track Player - only visible to host or when not in sync mode, and only for songs with backing tracks */}
+                {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && (
                   <BackingTrackPlayer
                     songId={currentSong.id}
                     trackUrl={getTrackUrl(currentSong.id)}
