@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { Component, type FC, type ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
@@ -39,6 +39,46 @@ import {
   type SheetMusic,
   getInstrumentIcon,
 } from "../services/songSheetMusicService";
+
+// Error Boundary to prevent PDF viewer crashes from taking down the entire app
+interface PDFErrorBoundaryProps {
+  children: ReactNode;
+  fallbackMessage: string;
+}
+
+interface PDFErrorBoundaryState {
+  hasError: boolean;
+}
+
+class PDFErrorBoundary extends Component<PDFErrorBoundaryProps, PDFErrorBoundaryState> {
+  state: PDFErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): PDFErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("SheetMusicViewer crashed:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "1rem", padding: "2rem", textAlign: "center", color: "var(--color-text-secondary)" }}>
+          <i className="bi bi-exclamation-triangle" style={{ fontSize: "3rem", color: "var(--color-text-tertiary)" }} />
+          <p style={{ margin: 0, fontSize: "1rem" }}>{this.props.fallbackMessage}</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-primary)", padding: "0.5rem 1rem", borderRadius: "0.5rem", cursor: "pointer" }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Sortable song list item for reorder mode
 interface SortableSongListItemProps {
@@ -899,12 +939,14 @@ const SetlistPerformanceView: FC = () => {
                         <p>{t("sheetMusic.loading", "Loading sheet music...")}</p>
                       </EmptyContent>
                     ) : sheetMusicUrl ? (
-                      <SheetMusicViewer
-                        pdfUrl={sheetMusicUrl}
-                        pageTimings={sheetMusicList.find((sm) => sm.id === selectedSheetMusicId)?.page_timings}
-                        currentTime={displayAudioTime}
-                        isPlaying={displayIsPlaying}
-                      />
+                      <PDFErrorBoundary fallbackMessage={t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")}>
+                        <SheetMusicViewer
+                          pdfUrl={sheetMusicUrl}
+                          pageTimings={sheetMusicList.find((sm) => sm.id === selectedSheetMusicId)?.page_timings}
+                          currentTime={displayAudioTime}
+                          isPlaying={displayIsPlaying}
+                        />
+                      </PDFErrorBoundary>
                     ) : (
                       <EmptyContent>
                         <i className="bi bi-file-earmark-x"></i>
