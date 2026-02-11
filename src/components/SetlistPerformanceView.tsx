@@ -33,6 +33,7 @@ import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
 import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 import SheetMusicViewer from "./SheetMusicViewer";
+import type { SheetMusicViewerHandle } from "./SheetMusicViewer";
 import { getSheetMusicUrl } from "../services/sheetMusicStorageService";
 import {
   getSheetMusicForSong,
@@ -154,7 +155,10 @@ const SetlistPerformanceView: FC = () => {
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
+  const [pdfNumPages, setPdfNumPages] = useState<number | null>(null);
   const songListRef = useRef<HTMLDivElement>(null);
+  const sheetMusicViewerRef = useRef<SheetMusicViewerHandle>(null);
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
@@ -348,10 +352,10 @@ const SetlistPerformanceView: FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
-        handleNextSong();
+        handleNextNav();
       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         e.preventDefault();
-        handlePrevSong();
+        handlePrevNav();
       } else if (e.key === "Escape") {
         e.preventDefault();
         if (isFullscreen) {
@@ -384,6 +388,9 @@ const SetlistPerformanceView: FC = () => {
     // Reset audio tracking state
     setAudioCurrentTime(0);
     setIsAudioPlaying(false);
+    // Reset PDF page tracking
+    setPdfCurrentPage(1);
+    setPdfNumPages(null);
   }, [currentIndex]);
 
   // Auto-scroll to active song when song list opens
@@ -503,6 +510,27 @@ const SetlistPerformanceView: FC = () => {
       if (syncRole === "host") {
         syncSongIndex(newIndex);
       }
+    }
+  };
+
+  // Navigation wrappers: in sheet music mode, navigate PDF pages first, then songs
+  const handlePrevNav = () => {
+    if (syncRole === "viewer") return;
+    if (sheetMusicViewerRef.current) {
+      const navigated = sheetMusicViewerRef.current.goToPrevPage();
+      if (!navigated) handlePrevSong();
+    } else {
+      handlePrevSong();
+    }
+  };
+
+  const handleNextNav = () => {
+    if (syncRole === "viewer") return;
+    if (sheetMusicViewerRef.current) {
+      const navigated = sheetMusicViewerRef.current.goToNextPage();
+      if (!navigated) handleNextSong();
+    } else {
+      handleNextSong();
     }
   };
 
@@ -860,8 +888,13 @@ const SetlistPerformanceView: FC = () => {
           {isCurrentItemSong && currentSong ? (
             <>
               <SongHeader $compact={contentView === "sheetMusic" && sheetMusicList.length > 0}>
-                <SongTitleLarge>{currentSong.title}</SongTitleLarge>
-                {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
+                <SongTitleLarge $compact={contentView === "sheetMusic" && sheetMusicList.length > 0}>
+                  {currentSong.title}
+                  {currentSong.artist && contentView === "sheetMusic" && sheetMusicList.length > 0 && (
+                    <SongArtistInline> — {currentSong.artist}</SongArtistInline>
+                  )}
+                </SongTitleLarge>
+                {currentSong.artist && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
 
                 {/* Hide metadata and notes in sheet music mode to maximize PDF space */}
                 {!(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
@@ -899,8 +932,8 @@ const SetlistPerformanceView: FC = () => {
                   </>
                 )}
 
-                {/* Backing Track Player - only visible to host or when not in sync mode, and only for songs with backing tracks */}
-                {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && (
+                {/* Backing Track Player - only visible to host or when not in sync mode, hidden in sheet music mode */}
+                {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
                   <BackingTrackPlayer
                     songId={currentSong.id}
                     trackUrl={getTrackUrl(currentSong.id)}
@@ -941,10 +974,13 @@ const SetlistPerformanceView: FC = () => {
                     ) : sheetMusicUrl ? (
                       <PDFErrorBoundary fallbackMessage={t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")}>
                         <SheetMusicViewer
+                          ref={sheetMusicViewerRef}
                           pdfUrl={sheetMusicUrl}
                           pageTimings={sheetMusicList.find((sm) => sm.id === selectedSheetMusicId)?.page_timings}
                           currentTime={displayAudioTime}
                           isPlaying={displayIsPlaying}
+                          onPageChange={(page) => setPdfCurrentPage(page)}
+                          onNumPagesLoaded={(numPages) => setPdfNumPages(numPages)}
                         />
                       </PDFErrorBoundary>
                     ) : (
@@ -1014,8 +1050,8 @@ const SetlistPerformanceView: FC = () => {
             </SpecialItemDisplay>
           )}
 
-          {/* Up Next Indicator */}
-          {nextItemInfo && (
+          {/* Up Next Indicator - hidden in sheet music mode to maximize PDF space */}
+          {nextItemInfo && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
             <UpNextBar $type={nextItemInfo.type}>
               <UpNextLabel>{t("setlists.items.upNext")}:</UpNextLabel>
               <UpNextContent>
@@ -1034,8 +1070,8 @@ const SetlistPerformanceView: FC = () => {
       {/* Bottom Navigation */}
       <BottomNav>
         <NavButton
-          onClick={handlePrevSong}
-          disabled={currentIndex === 0 || syncRole === "viewer"}
+          onClick={handlePrevNav}
+          disabled={syncRole === "viewer" || (currentIndex === 0 && pdfCurrentPage <= 1)}
         >
           <i className="bi bi-chevron-left"></i>
           <span>Previous</span>
@@ -1053,8 +1089,8 @@ const SetlistPerformanceView: FC = () => {
         </NavCenter>
 
         <NavButton
-          onClick={handleNextSong}
-          disabled={currentIndex === setlistItems.length - 1 || syncRole === "viewer"}
+          onClick={handleNextNav}
+          disabled={syncRole === "viewer" || (currentIndex === setlistItems.length - 1 && pdfCurrentPage >= (pdfNumPages || 1))}
         >
           <span>Next</span>
           <i className="bi bi-chevron-right"></i>
@@ -1511,36 +1547,47 @@ const SongDisplay = styled.div<{ $isSheetMusic?: boolean }>`
   flex-direction: column;
   overflow-y: ${({ $isSheetMusic }) => ($isSheetMusic ? "hidden" : "auto")};
   min-height: 0;
-  padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[4]} ${theme.space[4]}` : `${theme.space[8]} ${theme.space[10]}`)};
+  padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[2]} ${theme.space[3]}` : `${theme.space[8]} ${theme.space[10]}`)};
 
   @media (max-width: ${theme.breakpoints.lg}) {
-    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[3]} ${theme.space[3]}` : `${theme.space[6]} ${theme.space[6]}`)};
+    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[2]} ${theme.space[2]}` : `${theme.space[6]} ${theme.space[6]}`)};
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
-    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[2]} ${theme.space[2]}` : `${theme.space[4]} ${theme.space[4]}`)};
+    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[1]} ${theme.space[1]}` : `${theme.space[4]} ${theme.space[4]}`)};
   }
 `;
 
 const SongHeader = styled.div<{ $compact?: boolean }>`
-  margin-bottom: ${({ $compact }) => ($compact ? theme.space[2] : theme.space[8])};
+  margin-bottom: ${({ $compact }) => ($compact ? theme.space[1] : theme.space[8])};
   flex-shrink: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    margin-bottom: ${({ $compact }) => ($compact ? theme.space[1] : theme.space[4])};
+    margin-bottom: ${({ $compact }) => ($compact ? '0' : theme.space[4])};
   }
 `;
 
-const SongTitleLarge = styled.h1`
-  font-size: ${theme.fontSizes.displayLg};
+const SongTitleLarge = styled.h1<{ $compact?: boolean }>`
+  font-size: ${({ $compact }) => $compact ? theme.fontSizes.h3 : theme.fontSizes.displayLg};
   font-weight: ${theme.fontWeights.bold};
   color: var(--color-text-primary);
-  margin: 0 0 ${theme.space[3]} 0;
+  margin: 0 0 ${({ $compact }) => $compact ? '0' : theme.space[3]} 0;
   line-height: ${theme.lineHeights.tight};
+  ${({ $compact }) => $compact && `
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `}
 
   @media (max-width: ${theme.breakpoints.md}) {
-    font-size: ${theme.fontSizes.displayMd};
+    font-size: ${({ $compact }) => $compact ? theme.fontSizes.body : theme.fontSizes.displayMd};
   }
+`;
+
+const SongArtistInline = styled.span`
+  font-weight: ${theme.fontWeights.regular};
+  color: var(--color-text-secondary);
+  font-size: ${theme.fontSizes.body};
 `;
 
 const SongArtistLarge = styled.div`
@@ -1628,11 +1675,11 @@ const SheetMusicSelector = styled.div`
   display: flex;
   gap: ${theme.space[2]};
   flex-wrap: wrap;
-  padding: ${theme.space[2]};
+  padding: ${theme.space[1]} ${theme.space[2]};
   background: ${theme.colors.dark.bg.secondary};
   border: 1px solid ${theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
-  margin-bottom: ${theme.space[4]};
+  margin-bottom: ${theme.space[2]};
   flex-shrink: 0;
 `;
 
