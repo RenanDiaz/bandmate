@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,13 @@ interface SheetMusicViewerProps {
   currentTime?: number;
   isPlaying?: boolean;
   onPageChange?: (page: number) => void;
+  onNumPagesLoaded?: (numPages: number) => void;
   initialPage?: number;
+}
+
+export interface SheetMusicViewerHandle {
+  goToNextPage: () => boolean;
+  goToPrevPage: () => boolean;
 }
 
 const ViewerContainer = styled.div`
@@ -37,7 +43,7 @@ const PDFContainer = styled.div`
   align-items: center;
   justify-content: center;
   overflow: auto;
-  padding: ${theme.space[2]};
+  padding: ${theme.space[1]};
 
   .react-pdf__Document {
     display: flex;
@@ -228,14 +234,15 @@ const KeyboardHint = styled.div`
   }
 `;
 
-export default function SheetMusicViewer({
+const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProps>(function SheetMusicViewer({
   pdfUrl,
   pageTimings,
   currentTime = 0,
   isPlaying = false,
   onPageChange,
+  onNumPagesLoaded,
   initialPage = 1,
-}: SheetMusicViewerProps) {
+}: SheetMusicViewerProps, ref) {
   const { t } = useTranslation();
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -301,7 +308,7 @@ export default function SheetMusicViewer({
 
     const updateDimensions = () => {
       const rect = container.getBoundingClientRect();
-      const padding = 32; // Account for padding (16px each side)
+      const padding = 16; // Account for padding (8px each side)
       let availableWidth = rect.width - padding;
       let availableHeight = rect.height - padding;
 
@@ -315,7 +322,7 @@ export default function SheetMusicViewer({
         retryTimerRef.current = setTimeout(() => {
           const retryRect = container.getBoundingClientRect();
           if (retryRect.width > 0 && retryRect.height > 0) {
-            const w = Math.max(280, Math.min(retryRect.width - padding, 1200));
+            const w = Math.max(280, retryRect.width - padding);
             const h = retryRect.height - padding;
             setContainerWidth(w);
             setContainerHeight(h);
@@ -323,7 +330,7 @@ export default function SheetMusicViewer({
         }, 100);
       }
 
-      const width = Math.max(280, Math.min(availableWidth, 1200));
+      const width = Math.max(280, availableWidth);
       setContainerWidth(width);
       setContainerHeight(availableHeight);
     };
@@ -366,6 +373,7 @@ export default function SheetMusicViewer({
     setNumPages(numPages);
     setLoading(false);
     setError(null);
+    onNumPagesLoaded?.(numPages);
   };
 
   const handleDocumentLoadError = (err: Error) => {
@@ -417,14 +425,27 @@ export default function SheetMusicViewer({
     goToPage(currentPage + 1);
   }, [currentPage, goToPage]);
 
-  // Expose navigation methods for parent component
+  // Expose navigation methods for parent component via ref
+  useImperativeHandle(ref, () => ({
+    goToNextPage: () => {
+      if (!numPages || currentPage >= numPages) return false;
+      goToPage(currentPage + 1);
+      return true;
+    },
+    goToPrevPage: () => {
+      if (currentPage <= 1) return false;
+      goToPage(currentPage - 1);
+      return true;
+    },
+  }), [numPages, currentPage, goToPage]);
+
+  // Keyboard navigation for PageUp/PageDown
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if this component is focused/active
-      if (e.key === "PageUp" || (e.key === "ArrowLeft" && e.shiftKey)) {
+      if (e.key === "PageUp") {
         e.preventDefault();
         goToPrevPage();
-      } else if (e.key === "PageDown" || (e.key === "ArrowRight" && e.shiftKey)) {
+      } else if (e.key === "PageDown") {
         e.preventDefault();
         goToNextPage();
       }
@@ -519,10 +540,12 @@ export default function SheetMusicViewer({
             <ProgressFill $progress={progress} />
           </ProgressBar>
           <KeyboardHint>
-            <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> {t("sheetMusic.toNavigate", "to navigate pages")}
+            <kbd>←</kbd>/<kbd>→</kbd> {t("sheetMusic.toNavigate", "to navigate pages")}
           </KeyboardHint>
         </div>
       </NavigationOverlay>
     </ViewerContainer>
   );
-}
+});
+
+export default SheetMusicViewer;
