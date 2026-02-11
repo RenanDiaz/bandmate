@@ -748,7 +748,8 @@
     "clearTiming": "Borrar tiempo",
     "playPause": "Reproducir/Pausar",
     "markTiming": "Marcar tiempo",
-    "changePage": "Cambiar página"
+    "changePage": "Cambiar página",
+    "invertColors": "Invertir Colores (D)"
   },
   "performance": {
     "chords": "Acordes",

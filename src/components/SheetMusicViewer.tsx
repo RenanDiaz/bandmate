@@ -18,6 +18,7 @@ interface SheetMusicViewerProps {
   onPageChange?: (page: number) => void;
   onNumPagesLoaded?: (numPages: number) => void;
   initialPage?: number;
+  invertColors?: boolean;
 }
 
 export interface SheetMusicViewerHandle {
@@ -36,7 +37,7 @@ const ViewerContainer = styled.div`
   overflow: hidden;
 `;
 
-const PDFContainer = styled.div`
+const PDFContainer = styled.div<{ $invertColors?: boolean }>`
   flex: 1;
   min-height: 0;
   display: flex;
@@ -56,6 +57,9 @@ const PDFContainer = styled.div`
     box-shadow: ${theme.shadows.lg};
     border-radius: ${theme.radius.base};
     overflow: hidden;
+    ${({ $invertColors }) => $invertColors && `
+      filter: invert(0.88) hue-rotate(180deg);
+    `}
 
     canvas {
       max-width: 100%;
@@ -242,6 +246,7 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
   onPageChange,
   onNumPagesLoaded,
   initialPage = 1,
+  invertColors = false,
 }: SheetMusicViewerProps, ref) {
   const { t } = useTranslation();
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -472,7 +477,7 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
 
   return (
     <ViewerContainer ref={containerRef}>
-      <PDFContainer ref={pdfContainerRef}>
+      <PDFContainer ref={pdfContainerRef} $invertColors={invertColors}>
         {(loading || renderWidth === null) && (
           <LoadingContainer>
             <Spinner />
