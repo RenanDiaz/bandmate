@@ -748,7 +748,8 @@
     "clearTiming": "Clear timing",
     "playPause": "Play/Pause",
     "markTiming": "Mark timing",
-    "changePage": "Change page"
+    "changePage": "Change page",
+    "invertColors": "Invert Colors (D)"
   },
   "performance": {
     "chords": "Chords",

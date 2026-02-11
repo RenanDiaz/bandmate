@@ -157,6 +157,9 @@ const SetlistPerformanceView: FC = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
   const [pdfNumPages, setPdfNumPages] = useState<number | null>(null);
+  const [invertPdfColors, setInvertPdfColors] = useState(() => {
+    return localStorage.getItem("bandmate_invert_pdf") === "true";
+  });
   const songListRef = useRef<HTMLDivElement>(null);
   const sheetMusicViewerRef = useRef<SheetMusicViewerHandle>(null);
 
@@ -372,6 +375,9 @@ const SetlistPerformanceView: FC = () => {
       } else if (e.key === "t" || e.key === "T") {
         e.preventDefault();
         toggleContentView();
+      } else if (e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        toggleInvertPdfColors();
       }
     };
 
@@ -571,6 +577,14 @@ const SetlistPerformanceView: FC = () => {
     });
   }, []);
 
+  const toggleInvertPdfColors = useCallback(() => {
+    setInvertPdfColors((prev) => {
+      const next = !prev;
+      localStorage.setItem("bandmate_invert_pdf", String(next));
+      return next;
+    });
+  }, []);
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -762,6 +776,15 @@ const SetlistPerformanceView: FC = () => {
                   </ViewToggleButton>
                 )}
               </ViewToggleGroup>
+              {contentView === "sheetMusic" && sheetMusicList.length > 0 && (
+                <IconButton
+                  onClick={toggleInvertPdfColors}
+                  title={t("sheetMusic.invertColors", "Invert Colors (D)")}
+                  $active={invertPdfColors}
+                >
+                  <i className={`bi bi-${invertPdfColors ? "sun" : "moon"}`}></i>
+                </IconButton>
+              )}
               <IconButton
                 onClick={toggleReorderMode}
                 title="Reorder Songs (R)"
@@ -981,6 +1004,7 @@ const SetlistPerformanceView: FC = () => {
                           isPlaying={displayIsPlaying}
                           onPageChange={(page) => setPdfCurrentPage(page)}
                           onNumPagesLoaded={(numPages) => setPdfNumPages(numPages)}
+                          invertColors={invertPdfColors}
                         />
                       </PDFErrorBoundary>
                     ) : (
