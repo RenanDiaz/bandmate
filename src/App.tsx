@@ -398,6 +398,10 @@ const NavBrandContainer = styled.div`
   flex-shrink: 1;
   min-width: 0;
   position: relative;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex: 1;
+  }
 `;
 
 const DesktopLogo = styled(Link)`
@@ -500,12 +504,8 @@ const BandTriggerName = styled.span`
   white-space: nowrap;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    max-width: 120px;
+    max-width: none;
     font-size: ${theme.fontSizes.bodyXs};
-  }
-
-  @media (max-width: ${theme.breakpoints.sm}) {
-    max-width: 80px;
   }
 `;
 
