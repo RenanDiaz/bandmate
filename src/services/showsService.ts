@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserManageEvents } from "./bandMembersService";
+import { getLocalToday } from "../lib/dateUtils";
 
 export type ShowStatus = "upcoming" | "completed" | "cancelled";
 
@@ -66,7 +67,7 @@ export async function getBandShows(bandId: number): Promise<Show[]> {
  * Get upcoming shows for a band
  */
 export async function getUpcomingShows(bandId: number): Promise<Show[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   const { data, error } = await supabase
     .from("shows")
@@ -84,7 +85,7 @@ export async function getUpcomingShows(bandId: number): Promise<Show[]> {
  * Get past shows for a band
  */
 export async function getPastShows(bandId: number): Promise<Show[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   const { data, error } = await supabase
     .from("shows")
@@ -262,7 +263,7 @@ export async function getShowsBySetlistId(setlistId: string): Promise<Show[]> {
  * Get upcoming shows for a band that don't have a setlist linked
  */
 export async function getUpcomingShowsWithoutSetlist(bandId: number): Promise<Show[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   const { data, error } = await supabase
     .from("shows")

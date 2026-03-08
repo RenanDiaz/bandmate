@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserManageEvents } from "./bandMembersService";
+import { getLocalToday } from "../lib/dateUtils";
 
 export type RehearsalStatus = "scheduled" | "completed" | "cancelled";
 
@@ -63,7 +64,7 @@ export async function getBandRehearsals(bandId: number): Promise<Rehearsal[]> {
  * Get upcoming rehearsals for a band
  */
 export async function getUpcomingRehearsals(bandId: number): Promise<Rehearsal[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   const { data, error } = await supabase
     .from("rehearsals")
@@ -81,7 +82,7 @@ export async function getUpcomingRehearsals(bandId: number): Promise<Rehearsal[]
  * Get past rehearsals for a band
  */
 export async function getPastRehearsals(bandId: number): Promise<Rehearsal[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   const { data, error } = await supabase
     .from("rehearsals")

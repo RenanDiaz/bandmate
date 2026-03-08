@@ -460,7 +460,10 @@
     "inWeeks": "En {{count}} semana",
     "inWeeks_plural": "En {{count}} semanas",
     "inWeeksDays": "En {{weeks}} semana y {{days}} día",
-    "inWeeksDays_plural": "En {{weeks}} semanas y {{days}} días"
+    "inWeeksDays_plural": "En {{weeks}} semanas y {{days}} días",
+    "happeningNow": "En vivo ahora",
+    "viewShow": "Ver show",
+    "todayCount": "Hoy"
   },
   "rehearsals": {
     "title": "Ensayos",

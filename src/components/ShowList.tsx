@@ -5,6 +5,7 @@ import type { Show } from "../services/showsService";
 import { markShowCompleted, markShowCancelled } from "../services/showsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { getLocalToday, isToday } from "../lib/dateUtils";
 import {
   Dropdown,
   DropdownToggle,
@@ -42,10 +43,11 @@ const formatTime = (timeString: string): string => {
 };
 
 const getStatusColor = (status: string, eventDate: string) => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
   if (status === "cancelled") return theme.colors.semantic.error;
   if (status === "completed" || eventDate < today) return 'var(--color-text-tertiary)';
-  return theme.colors.semantic.success;
+  if (isToday(eventDate)) return theme.colors.semantic.success;
+  return theme.colors.brand.primary;
 };
 
 // Individual show card component to manage its own dropdown state
@@ -62,10 +64,11 @@ const ShowCardItem: FC<{
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
   const isPast = show.event_date < today;
   const isCancelled = show.status === "cancelled";
   const isCompleted = show.status === "completed";
+  const isShowToday = isToday(show.event_date) && !isCancelled && !isCompleted;
   const canChangeStatus = !isCancelled && !isCompleted;
   const isUpcoming = !isPast && !isCancelled && show.status === "upcoming";
 
@@ -73,6 +76,7 @@ const ShowCardItem: FC<{
     if (show.status === "cancelled") return t('shows.statusCancelled');
     if (show.status === "completed") return t('shows.statusCompleted');
     if (show.event_date < today) return t('shows.past');
+    if (isShowToday) return t('shows.happeningNow');
     return t('shows.statusUpcoming');
   };
 
@@ -99,7 +103,7 @@ const ShowCardItem: FC<{
   };
 
   return (
-    <ShowCard $isPast={isPast} $isCancelled={isCancelled} onClick={() => onView(show.id)} $clickable>
+    <ShowCard $isPast={isPast} $isCancelled={isCancelled} $isToday={isShowToday} onClick={() => onView(show.id)} $clickable>
       <ShowHeader>
         <DateBadge $isPast={isPast} $isCancelled={isCancelled}>
           <DateDay>
@@ -317,17 +321,18 @@ const ShowsGrid = styled.div`
   }
 `;
 
-const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean; $clickable?: boolean }>`
+const ShowCard = styled.div<{ $isPast: boolean; $isCancelled: boolean; $isToday?: boolean; $clickable?: boolean }>`
   background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  border: 1px solid ${(props) => props.$isToday ? `${theme.colors.semantic.success}50` : 'var(--color-border)'};
   border-radius: ${theme.radius.lg};
   overflow: hidden;
   transition: all ${theme.transitions.base} ease;
   opacity: ${(props) => (props.$isPast || props.$isCancelled ? 0.7 : 1)};
   cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
+  ${(props) => props.$isToday && `box-shadow: 0 0 0 1px ${theme.colors.semantic.success}30;`}
 
   &:hover {
-    border-color: ${theme.colors.brand.primary};
+    border-color: ${(props) => props.$isToday ? theme.colors.semantic.success : theme.colors.brand.primary};
     box-shadow: var(--shadow-md);
     opacity: 1;
   }

@@ -2,11 +2,13 @@ import type { FC } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner, Container, ButtonGroup, Button } from "reactstrap";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
 import { getBandShows, deleteShow } from "../services/showsService";
+import { getLocalToday, isToday } from "../lib/dateUtils";
 import type { Show } from "../services/showsService";
 import { NewShowForm } from "./NewShowForm";
 import { ShowList } from "./ShowList";
@@ -22,8 +24,20 @@ interface Props {
 type FilterType = "all" | "upcoming" | "past";
 type ViewMode = "list" | "calendar";
 
+const formatTime = (timeString: string): string => {
+  const [hours, minutes] = timeString.split(":");
+  const date = new Date();
+  date.setHours(parseInt(hours), parseInt(minutes));
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingShow, setEditingShow] = useState<Show | null>(null);
@@ -78,8 +92,16 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
     }
   };
 
+  const todayShows = shows.filter(
+    (s) => isToday(s.event_date) && s.status !== "completed" && s.status !== "cancelled"
+  );
+
   const filteredShows = shows.filter((show) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalToday();
+    // Exclude shows already displayed in the "Happening Now" section
+    if (isToday(show.event_date) && show.status !== "completed" && show.status !== "cancelled") {
+      return false;
+    }
     if (filter === "upcoming") {
       return show.event_date >= today && show.status !== "cancelled";
     }
@@ -90,12 +112,12 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   });
 
   const upcomingCount = shows.filter((s) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalToday();
     return s.event_date >= today && s.status !== "cancelled";
   }).length;
 
   const pastCount = shows.filter((s) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalToday();
     return s.event_date < today || s.status === "completed";
   }).length;
 
@@ -155,6 +177,15 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
               <StatLabel>{t("shows.upcoming")}</StatLabel>
             </StatItem>
             <StatDivider />
+            {todayShows.length > 0 && (
+              <>
+                <StatItem>
+                  <StatValue $highlight>{todayShows.length}</StatValue>
+                  <StatLabel>{t("shows.todayCount")}</StatLabel>
+                </StatItem>
+                <StatDivider />
+              </>
+            )}
             <StatItem>
               <StatValue>{pastCount}</StatValue>
               <StatLabel>{t("shows.past")}</StatLabel>
@@ -164,6 +195,39 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
 
         <ContentSection>
           <NewShowForm bandId={selectedBand.id} onShowCreated={loadShows} />
+
+          {todayShows.length > 0 && (
+            <HappeningNowSection>
+              <HappeningNowHeader>
+                <PulsingDot />
+                <HappeningNowTitle>{t("shows.happeningNow")}</HappeningNowTitle>
+              </HappeningNowHeader>
+              {todayShows.map((show) => (
+                <HappeningNowCard key={show.id} onClick={() => navigate(`/shows/${show.id}`)}>
+                  <HappeningNowInfo>
+                    <HappeningNowName>{show.name}</HappeningNowName>
+                    <HappeningNowMeta>
+                      {show.venue && (
+                        <span><i className="bi bi-geo-alt" /> {show.venue}</span>
+                      )}
+                      {show.event_time && (
+                        <span><i className="bi bi-clock" /> {formatTime(show.event_time)}</span>
+                      )}
+                    </HappeningNowMeta>
+                  </HappeningNowInfo>
+                  {show.setlist_id ? (
+                    <PerformButton onClick={(e: React.MouseEvent) => { e.stopPropagation(); navigate(`/setlists/${show.setlist_id}/perform`); }}>
+                      <i className="bi bi-play-circle-fill" /> {t("setlists.detail.startPerformance")}
+                    </PerformButton>
+                  ) : (
+                    <ViewShowButton>
+                      <i className="bi bi-arrow-right" /> {t("shows.viewShow")}
+                    </ViewShowButton>
+                  )}
+                </HappeningNowCard>
+              ))}
+            </HappeningNowSection>
+          )}
 
           <ControlsSection>
             <FilterSection>
@@ -337,10 +401,10 @@ const StatItem = styled.div`
   text-align: center;
 `;
 
-const StatValue = styled.div`
+const StatValue = styled.div<{ $highlight?: boolean }>`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
-  color: ${theme.colors.brand.primary};
+  color: ${(props) => props.$highlight ? theme.colors.semantic.success : theme.colors.brand.primary};
   line-height: 1;
   margin-bottom: ${theme.space[2]};
 `;
@@ -516,6 +580,126 @@ const EmptyText = styled.p`
   color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
+`;
+
+// Happening Now section
+
+const pulse = keyframes`
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+  100% { opacity: 1; transform: scale(1); }
+`;
+
+const HappeningNowSection = styled.div`
+  margin-top: ${theme.space[6]};
+  background: ${theme.colors.semantic.success}10;
+  border: 1px solid ${theme.colors.semantic.success}40;
+  border-radius: ${theme.radius.lg};
+  padding: ${theme.space[5]};
+`;
+
+const HappeningNowHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  margin-bottom: ${theme.space[4]};
+`;
+
+const PulsingDot = styled.div`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${theme.colors.semantic.success};
+  animation: ${pulse} 2s ease-in-out infinite;
+`;
+
+const HappeningNowTitle = styled.h3`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.bold};
+  color: ${theme.colors.semantic.success};
+  margin: 0;
+`;
+
+const HappeningNowCard = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[4]};
+  background: var(--color-bg-secondary);
+  border: 1px solid ${theme.colors.semantic.success}30;
+  border-left: 3px solid ${theme.colors.semantic.success};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[4]} ${theme.space[5]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    border-color: ${theme.colors.semantic.success}60;
+  }
+
+  & + & {
+    margin-top: ${theme.space[3]};
+  }
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const HappeningNowInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const HappeningNowName = styled.div`
+  font-size: ${theme.fontSizes.bodyLg};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  margin-bottom: ${theme.space[1]};
+`;
+
+const HappeningNowMeta = styled.div`
+  display: flex;
+  gap: ${theme.space[4]};
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+
+  i {
+    margin-right: ${theme.space[1]};
+  }
+`;
+
+const PerformButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: ${theme.colors.semantic.success};
+  color: white;
+  border: none;
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+`;
+
+const ViewShowButton = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  color: var(--color-text-secondary);
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
 `;
 
 export default ShowsView;
