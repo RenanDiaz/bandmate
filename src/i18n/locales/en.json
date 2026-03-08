@@ -52,6 +52,13 @@
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode"
   },
+  "bandSwitcher": {
+    "myBands": "My Bands",
+    "noBands": "You don't have any bands yet",
+    "invitations": "Invitations",
+    "switchBand": "Switch Band",
+    "createOrManage": "Create or manage bands"
+  },
   "auth": {
     "signIn": "Sign in",
     "signUp": "Sign up",
