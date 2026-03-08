@@ -25,6 +25,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import TermsOfService from "./components/TermsOfService";
 import Footer from "./components/Footer";
 import { BandSelector } from "./components/BandSelector";
+import { BandSwitcher } from "./components/BandSwitcher";
 import { Logo } from "./components/Logo";
 import { Navbar, Nav, NavItem, Button } from "reactstrap";
 import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/CustomOffcanvas";
@@ -37,6 +38,7 @@ const AppContent: FC = () => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [isOpen, setIsOpen] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const location = useLocation();
   const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector } =
     useBandContext();
@@ -57,30 +59,29 @@ const AppContent: FC = () => {
       <StyledNavbar expand="md" $mode={mode}>
         <NavbarContainer>
           <NavBrandContainer>
-            <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+            <DesktopLogo to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
               <Logo size={32} variant="full" theme={mode} />
-            </Link>
-            {selectedBand && (
-              <BandInfoContainer>
+            </DesktopLogo>
+            <MobileLogo to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+              <Logo size={28} variant="icon" theme={mode} />
+            </MobileLogo>
+            {selectedBand && user && (
+              <BandSwitcherTriggerWrapper>
                 <BandDivider />
-                <BandName>{selectedBand.name}</BandName>
-                <BandSettingsButton
-                  size="sm"
-                  onClick={() => navigate(`/bands/${selectedBand.id}/settings`)}
-                  aria-label={t('nav.bandSettings')}
-                  title={t('nav.bandSettings')}
-                >
-                  <i className="bi bi-gear"></i>
-                </BandSettingsButton>
-                <SwitchBandButton
-                  size="sm"
-                  onClick={() => setShowBandSelector(true)}
+                <BandSwitcherTrigger
+                  onClick={() => setIsSwitcherOpen((v) => !v)}
                   aria-label={t('nav.switchBand')}
-                  title={t('nav.switchBand')}
+                  aria-expanded={isSwitcherOpen}
                 >
-                  <i className="bi bi-arrow-left-right"></i>
-                </SwitchBandButton>
-              </BandInfoContainer>
+                  <BandTriggerName>{selectedBand.name}</BandTriggerName>
+                  <i className={`bi bi-chevron-${isSwitcherOpen ? 'up' : 'down'}`}></i>
+                </BandSwitcherTrigger>
+                <BandSwitcher
+                  isOpen={isSwitcherOpen}
+                  onClose={() => setIsSwitcherOpen(false)}
+                  onManageBands={() => setShowBandSelector(true)}
+                />
+              </BandSwitcherTriggerWrapper>
             )}
           </NavBrandContainer>
 
@@ -201,17 +202,6 @@ const AppContent: FC = () => {
                 >
                   <i className="bi bi-gear"></i>
                 </BandSettingsButton>
-                <SwitchBandButton
-                  size="sm"
-                  onClick={() => {
-                    setShowBandSelector(true);
-                    setIsOpen(false);
-                  }}
-                  aria-label={t('nav.switchBand')}
-                  title={t('nav.switchBand')}
-                >
-                  <i className="bi bi-arrow-left-right"></i>
-                </SwitchBandButton>
               </MobileBandActions>
             </MobileBandInfo>
           )}
@@ -404,8 +394,24 @@ const NavbarContainer = styled.div`
 const NavBrandContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[4]};
-  flex-shrink: 0;
+  gap: ${theme.space[3]};
+  flex-shrink: 1;
+  min-width: 0;
+  position: relative;
+`;
+
+const DesktopLogo = styled(Link)`
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none !important;
+  }
+`;
+
+const MobileLogo = styled(Link)`
+  display: none !important;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: flex !important;
+  }
 `;
 
 const StyledNavbarToggler = styled.button`
@@ -435,14 +441,12 @@ const StyledNavbarToggler = styled.button`
   }
 `;
 
-const BandInfoContainer = styled.div`
+const BandSwitcherTriggerWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
-  }
+  position: relative;
+  min-width: 0;
 `;
 
 const BandDivider = styled.div`
@@ -450,16 +454,59 @@ const BandDivider = styled.div`
   height: 24px;
   background: var(--color-border);
   opacity: 0.5;
+  flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    height: 20px;
+  }
 `;
 
-const BandName = styled.span`
+const BandSwitcherTrigger = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  min-width: 0;
+  color: ${theme.colors.brand.primary};
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+    flex-shrink: 0;
+    transition: transform ${theme.transitions.fast} ease;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border);
+  }
+
+  &[aria-expanded="true"] {
+    background: var(--color-bg-tertiary);
+    border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const BandTriggerName = styled.span`
   font-weight: ${theme.fontWeights.semibold};
   font-size: ${theme.fontSizes.bodySm};
-  color: ${theme.colors.brand.primary};
-  max-width: 150px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    max-width: 120px;
+    font-size: ${theme.fontSizes.bodyXs};
+  }
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    max-width: 80px;
+  }
 `;
 
 const MobileBandInfo = styled.div`
@@ -486,23 +533,6 @@ const MobileBandName = styled.div`
 
   i {
     font-size: ${theme.fontSizes.body};
-  }
-`;
-
-const SwitchBandButton = styled(Button)`
-  background: ${theme.colors.brand.primary} !important;
-  border: none !important;
-  border-radius: ${theme.radius.base} !important;
-  padding: ${theme.space[1]} ${theme.space[2]} !important;
-  transition: all ${theme.transitions.fast} ease !important;
-
-  &:hover {
-    background: ${theme.colors.brand.primaryHover} !important;
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
   }
 `;
 

@@ -52,6 +52,13 @@
     "lightMode": "Modo Claro",
     "darkMode": "Modo Oscuro"
   },
+  "bandSwitcher": {
+    "myBands": "Mis Bandas",
+    "noBands": "Aún no tienes bandas",
+    "invitations": "Invitaciones",
+    "switchBand": "Cambiar Banda",
+    "createOrManage": "Crear o administrar bandas"
+  },
   "auth": {
     "signIn": "Iniciar sesión",
     "signUp": "Registrarse",
