@@ -7,6 +7,7 @@ import { theme } from "../theme";
 import { createRehearsal } from "../services/rehearsalsService";
 import { getBandSetlists } from "../services/setlistsService";
 import { getUpcomingShows } from "../services/showsService";
+import { getLocalToday } from "../lib/dateUtils";
 import type { Setlist } from "../services/setlistsService";
 import type { Show } from "../services/showsService";
 
@@ -23,7 +24,7 @@ export const NewRehearsalForm: FC<Props> = ({ bandId, onRehearsalCreated }) => {
   const [shows, setShows] = useState<Show[]>([]);
 
   // Get today's date for default and min validation
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   // Form state
   const [name, setName] = useState("");
@@ -55,7 +56,7 @@ export const NewRehearsalForm: FC<Props> = ({ bandId, onRehearsalCreated }) => {
   const resetForm = () => {
     setName("");
     setLocation("");
-    setRehearsalDate(new Date().toISOString().split("T")[0]);
+    setRehearsalDate(getLocalToday());
     setStartTime("");
     setEndTime("");
     setShowId("");

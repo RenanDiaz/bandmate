@@ -6,6 +6,7 @@ import styled from "styled-components";
 import { theme } from "../theme";
 import { createShow } from "../services/showsService";
 import { getBandSetlists } from "../services/setlistsService";
+import { getLocalToday } from "../lib/dateUtils";
 import type { Setlist } from "../services/setlistsService";
 
 interface Props {
@@ -20,7 +21,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
   const [setlists, setSetlists] = useState<Setlist[]>([]);
 
   // Get today's date for default and min validation
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   // Form state
   const [name, setName] = useState("");
@@ -43,7 +44,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
     setName("");
     setVenue("");
     setVenueAddress("");
-    setEventDate(new Date().toISOString().split("T")[0]);
+    setEventDate(getLocalToday());
     setEventTime("");
     setDoorsTime("");
     setSoundcheckTime("");

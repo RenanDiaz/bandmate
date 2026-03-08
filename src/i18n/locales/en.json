@@ -460,7 +460,10 @@
     "inWeeks": "In {{count}} week",
     "inWeeks_plural": "In {{count}} weeks",
     "inWeeksDays": "In {{weeks}} week and {{days}} day",
-    "inWeeksDays_plural": "In {{weeks}} weeks and {{days}} days"
+    "inWeeksDays_plural": "In {{weeks}} weeks and {{days}} days",
+    "happeningNow": "Happening Now",
+    "viewShow": "View Show",
+    "todayCount": "Today"
   },
   "rehearsals": {
     "title": "Rehearsals",
