@@ -164,6 +164,9 @@ const SetlistPerformanceView: FC = () => {
     const saved = localStorage.getItem("bandmate_performance_font_size");
     return saved ? Number(saved) : 100;
   });
+  const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
+  const fontSizeDropdownRef = useRef<HTMLDivElement>(null);
+  const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
   const songListRef = useRef<HTMLDivElement>(null);
   const sheetMusicViewerRef = useRef<SheetMusicViewerHandle>(null);
 
@@ -397,6 +400,23 @@ const SetlistPerformanceView: FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, setlistItems.length, isFullscreen, navigate]);
+
+  // Close font size dropdown on click outside
+  useEffect(() => {
+    if (!showFontSizeDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        fontSizeDropdownRef.current &&
+        !fontSizeDropdownRef.current.contains(e.target as Node) &&
+        fontSizeButtonRef.current &&
+        !fontSizeButtonRef.current.contains(e.target as Node)
+      ) {
+        setShowFontSizeDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showFontSizeDropdown]);
 
   // Scroll to top and reset audio time when song changes
   useEffect(() => {
@@ -824,28 +844,40 @@ const SetlistPerformanceView: FC = () => {
                 </IconButton>
               )}
               {contentView !== "sheetMusic" && (
-                <FontSizeControls>
+                <FontSizeButtonWrapper>
                   <IconButton
-                    onClick={decreaseFontSize}
-                    title={t("performance.decreaseFontSize", "Decrease font size (-)")}
-                    disabled={fontSize <= FONT_SIZE_MIN}
+                    ref={fontSizeButtonRef}
+                    onClick={() => setShowFontSizeDropdown((v) => !v)}
+                    title={t("performance.fontSize", "Font size")}
+                    $active={showFontSizeDropdown}
                   >
-                    <i className="bi bi-dash"></i>
+                    <i className="bi bi-fonts"></i>
                   </IconButton>
-                  <FontSizeLabel
-                    onClick={resetFontSize}
-                    title={t("performance.resetFontSize", "Reset font size (0)")}
-                  >
-                    {fontSize}%
-                  </FontSizeLabel>
-                  <IconButton
-                    onClick={increaseFontSize}
-                    title={t("performance.increaseFontSize", "Increase font size (+)")}
-                    disabled={fontSize >= FONT_SIZE_MAX}
-                  >
-                    <i className="bi bi-plus"></i>
-                  </IconButton>
-                </FontSizeControls>
+                  {showFontSizeDropdown && (
+                    <FontSizeDropdown ref={fontSizeDropdownRef}>
+                      <IconButton
+                        onClick={decreaseFontSize}
+                        title={t("performance.decreaseFontSize", "Decrease font size (-)")}
+                        disabled={fontSize <= FONT_SIZE_MIN}
+                      >
+                        <i className="bi bi-dash"></i>
+                      </IconButton>
+                      <FontSizeLabel
+                        onClick={resetFontSize}
+                        title={t("performance.resetFontSize", "Reset font size (0)")}
+                      >
+                        {fontSize}%
+                      </FontSizeLabel>
+                      <IconButton
+                        onClick={increaseFontSize}
+                        title={t("performance.increaseFontSize", "Increase font size (+)")}
+                        disabled={fontSize >= FONT_SIZE_MAX}
+                      >
+                        <i className="bi bi-plus"></i>
+                      </IconButton>
+                    </FontSizeDropdown>
+                  )}
+                </FontSizeButtonWrapper>
               )}
               <IconButton
                 onClick={toggleReorderMode}
@@ -1184,19 +1216,6 @@ const SetlistPerformanceView: FC = () => {
         </NavButton>
       </BottomNav>
 
-      {/* Mobile Floating Font Size Controls */}
-      {contentView !== "sheetMusic" && (
-        <MobileFontSizeControls>
-          <MobileFontSizeButton onClick={decreaseFontSize} disabled={fontSize <= FONT_SIZE_MIN}>
-            <i className="bi bi-dash"></i>
-          </MobileFontSizeButton>
-          <MobileFontSizeValue onClick={resetFontSize}>{fontSize}%</MobileFontSizeValue>
-          <MobileFontSizeButton onClick={increaseFontSize} disabled={fontSize >= FONT_SIZE_MAX}>
-            <i className="bi bi-plus"></i>
-          </MobileFontSizeButton>
-        </MobileFontSizeControls>
-      )}
-
       {/* Mobile Floating Toggle Button */}
       <MobileToggleButton onClick={toggleContentView} $contentType={contentView}>
         <i className={`bi bi-${contentView === "chords" ? "music-note" : contentView === "sheetMusic" ? "file-earmark-music" : "mic"}`}></i>
@@ -1405,14 +1424,23 @@ const IconButton = styled.button<{ $active?: boolean }>`
   }
 `;
 
-const FontSizeControls = styled.div`
+const FontSizeButtonWrapper = styled.div`
+  position: relative;
+`;
+
+const FontSizeDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + ${theme.space[2]});
+  right: 0;
   display: flex;
   align-items: center;
   gap: ${theme.space[1]};
-  background: var(--color-bg-tertiary);
+  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[1]};
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: ${theme.zIndex.dropdown};
 `;
 
 const FontSizeLabel = styled.button`
@@ -2054,67 +2082,6 @@ const BackButton = styled.button`
   &:hover {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
-  }
-`;
-
-const MobileFontSizeControls = styled.div`
-  position: fixed;
-  bottom: 120px;
-  left: ${theme.space[4]};
-  display: none;
-  align-items: center;
-  gap: ${theme.space[1]};
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.full};
-  padding: ${theme.space[1]} ${theme.space[2]};
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  z-index: 10;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: flex;
-  }
-`;
-
-const MobileFontSizeButton = styled.button`
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  width: 32px;
-  height: 32px;
-  border-radius: ${theme.radius.full};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: ${theme.fontSizes.bodyLg};
-  transition: all ${theme.transitions.fast} ease;
-
-  &:hover:not(:disabled) {
-    background: var(--color-bg-elevated);
-    color: ${theme.colors.brand.primary};
-  }
-
-  &:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-`;
-
-const MobileFontSizeValue = styled.button`
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  font-size: ${theme.fontSizes.bodyXs};
-  font-family: ${theme.fonts.mono};
-  font-weight: ${theme.fontWeights.medium};
-  min-width: 2.5rem;
-  text-align: center;
-  cursor: pointer;
-  padding: 0;
-
-  &:hover {
-    color: ${theme.colors.brand.primary};
   }
 `;
 
