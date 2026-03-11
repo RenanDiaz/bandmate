@@ -768,7 +768,11 @@
     "sheet": "Partitura",
     "showChords": "Mostrar Acordes",
     "showLyrics": "Mostrar Letra",
-    "showSheetMusic": "Mostrar Partitura"
+    "showSheetMusic": "Mostrar Partitura",
+    "increaseFontSize": "Aumentar tamaño de fuente",
+    "decreaseFontSize": "Reducir tamaño de fuente",
+    "resetFontSize": "Restablecer tamaño de fuente",
+    "fontSize": "Tamaño de fuente"
   },
   "sectionEditor": {
     "title": "Secciones de la Canción",

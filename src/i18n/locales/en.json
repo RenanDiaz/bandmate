@@ -768,7 +768,11 @@
     "sheet": "Sheet",
     "showChords": "Show Chords",
     "showLyrics": "Show Lyrics",
-    "showSheetMusic": "Show Sheet Music"
+    "showSheetMusic": "Show Sheet Music",
+    "increaseFontSize": "Increase font size",
+    "decreaseFontSize": "Decrease font size",
+    "resetFontSize": "Reset font size",
+    "fontSize": "Font size"
   },
   "sectionEditor": {
     "title": "Song Sections",
