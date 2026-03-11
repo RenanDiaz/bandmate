@@ -13,6 +13,7 @@ interface Props {
   isPlaying: boolean;
   onSectionClick?: (startTime: number) => void;
   onLineClick?: (startTime: number) => void;
+  fontScale?: number;
 }
 
 const SECTION_COLORS = [
@@ -35,6 +36,7 @@ export const SyncedLyricsDisplay = ({
   isPlaying,
   onSectionClick,
   onLineClick,
+  fontScale = 1,
 }: Props) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -271,7 +273,7 @@ export const SyncedLyricsDisplay = ({
   };
 
   return (
-    <Container ref={containerRef}>
+    <Container ref={containerRef} $fontScale={fontScale}>
       <ContentWrapper>
         {hasSyncedSections && currentSectionIndex >= 0 && (
           <CurrentSectionIndicator>
@@ -293,10 +295,11 @@ const formatTime = (seconds: number): string => {
 
 // Styled Components
 
-const Container = styled.div`
+const Container = styled.div<{ $fontScale?: number }>`
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
+  --font-scale: ${(props) => props.$fontScale || 1};
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -348,7 +351,7 @@ const CurrentSectionIndicator = styled.div`
 const PlainContent = styled.pre<{ $contentType: "chords" | "lyrics" }>`
   font-family: ${(props) =>
     props.$contentType === "chords" ? theme.fonts.mono : theme.fonts.sans};
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: calc(${theme.fontSizes.bodyLg} * var(--font-scale, 1));
   color: var(--color-text-primary);
   white-space: pre-wrap;
   word-break: break-word;
@@ -432,7 +435,7 @@ const PlayingIndicator = styled.span`
 const SectionContent = styled.div<{ $contentType: "chords" | "lyrics" }>`
   font-family: ${(props) =>
     props.$contentType === "chords" ? theme.fonts.mono : theme.fonts.sans};
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: calc(${theme.fontSizes.bodyLg} * var(--font-scale, 1));
   color: var(--color-text-primary);
   line-height: ${theme.lineHeights.loose};
 `;
@@ -477,7 +480,7 @@ const UnsectionedBlock = styled.div`
   padding: ${theme.space[2]} ${theme.space[3]};
   opacity: 0.7;
   font-family: ${theme.fonts.mono};
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: calc(${theme.fontSizes.bodyLg} * var(--font-scale, 1));
   color: var(--color-text-secondary);
   line-height: ${theme.lineHeights.loose};
 `;

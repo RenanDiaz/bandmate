@@ -160,6 +160,10 @@ const SetlistPerformanceView: FC = () => {
   const [invertPdfColors, setInvertPdfColors] = useState(() => {
     return localStorage.getItem("bandmate_invert_pdf") === "true";
   });
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = localStorage.getItem("bandmate_performance_font_size");
+    return saved ? Number(saved) : 100;
+  });
   const songListRef = useRef<HTMLDivElement>(null);
   const sheetMusicViewerRef = useRef<SheetMusicViewerHandle>(null);
 
@@ -378,6 +382,15 @@ const SetlistPerformanceView: FC = () => {
       } else if (e.key === "d" || e.key === "D") {
         e.preventDefault();
         toggleInvertPdfColors();
+      } else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        increaseFontSize();
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        decreaseFontSize();
+      } else if (e.key === "0") {
+        e.preventDefault();
+        resetFontSize();
       }
     };
 
@@ -585,6 +598,31 @@ const SetlistPerformanceView: FC = () => {
     });
   }, []);
 
+  const FONT_SIZE_MIN = 50;
+  const FONT_SIZE_MAX = 200;
+  const FONT_SIZE_STEP = 10;
+
+  const increaseFontSize = useCallback(() => {
+    setFontSize((prev) => {
+      const next = Math.min(prev + FONT_SIZE_STEP, FONT_SIZE_MAX);
+      localStorage.setItem("bandmate_performance_font_size", String(next));
+      return next;
+    });
+  }, []);
+
+  const decreaseFontSize = useCallback(() => {
+    setFontSize((prev) => {
+      const next = Math.max(prev - FONT_SIZE_STEP, FONT_SIZE_MIN);
+      localStorage.setItem("bandmate_performance_font_size", String(next));
+      return next;
+    });
+  }, []);
+
+  const resetFontSize = useCallback(() => {
+    setFontSize(100);
+    localStorage.setItem("bandmate_performance_font_size", "100");
+  }, []);
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -785,6 +823,30 @@ const SetlistPerformanceView: FC = () => {
                   <i className={`bi bi-${invertPdfColors ? "sun" : "moon"}`}></i>
                 </IconButton>
               )}
+              {contentView !== "sheetMusic" && (
+                <FontSizeControls>
+                  <IconButton
+                    onClick={decreaseFontSize}
+                    title={t("performance.decreaseFontSize", "Decrease font size (-)")}
+                    disabled={fontSize <= FONT_SIZE_MIN}
+                  >
+                    <i className="bi bi-dash"></i>
+                  </IconButton>
+                  <FontSizeLabel
+                    onClick={resetFontSize}
+                    title={t("performance.resetFontSize", "Reset font size (0)")}
+                  >
+                    {fontSize}%
+                  </FontSizeLabel>
+                  <IconButton
+                    onClick={increaseFontSize}
+                    title={t("performance.increaseFontSize", "Increase font size (+)")}
+                    disabled={fontSize >= FONT_SIZE_MAX}
+                  >
+                    <i className="bi bi-plus"></i>
+                  </IconButton>
+                </FontSizeControls>
+              )}
               <IconButton
                 onClick={toggleReorderMode}
                 title="Reorder Songs (R)"
@@ -971,7 +1033,7 @@ const SetlistPerformanceView: FC = () => {
                 )}
               </SongHeader>
 
-              <SongContent $fullHeight={contentView === "sheetMusic"}>
+              <SongContent $fullHeight={contentView === "sheetMusic"} $fontScale={fontSize}>
                 {contentView === "sheetMusic" && sheetMusicList.length > 0 ? (
                   <SheetMusicWrapper>
                     {/* Sheet Music Selector - only show if multiple exist */}
@@ -1022,6 +1084,7 @@ const SetlistPerformanceView: FC = () => {
                     lineTimings={currentSong.timing_data?.lineTimings}
                     currentTime={displayAudioTime}
                     isPlaying={displayIsPlaying}
+                    fontScale={fontSize / 100}
                   />
                 ) : (
                   <>
@@ -1120,6 +1183,19 @@ const SetlistPerformanceView: FC = () => {
           <i className="bi bi-chevron-right"></i>
         </NavButton>
       </BottomNav>
+
+      {/* Mobile Floating Font Size Controls */}
+      {contentView !== "sheetMusic" && (
+        <MobileFontSizeControls>
+          <MobileFontSizeButton onClick={decreaseFontSize} disabled={fontSize <= FONT_SIZE_MIN}>
+            <i className="bi bi-dash"></i>
+          </MobileFontSizeButton>
+          <MobileFontSizeValue onClick={resetFontSize}>{fontSize}%</MobileFontSizeValue>
+          <MobileFontSizeButton onClick={increaseFontSize} disabled={fontSize >= FONT_SIZE_MAX}>
+            <i className="bi bi-plus"></i>
+          </MobileFontSizeButton>
+        </MobileFontSizeControls>
+      )}
 
       {/* Mobile Floating Toggle Button */}
       <MobileToggleButton onClick={toggleContentView} $contentType={contentView}>
@@ -1326,6 +1402,34 @@ const IconButton = styled.button<{ $active?: boolean }>`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+`;
+
+const FontSizeControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[1]};
+`;
+
+const FontSizeLabel = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: ${theme.fontSizes.bodySm};
+  font-family: ${theme.fonts.mono};
+  font-weight: ${theme.fontWeights.medium};
+  padding: 0 ${theme.space[1]};
+  min-width: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: color ${theme.transitions.fast} ease;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
   }
 `;
 
@@ -1678,10 +1782,11 @@ const NotesText = styled.div`
   white-space: pre-wrap;
 `;
 
-const SongContent = styled.div<{ $fullHeight?: boolean }>`
+const SongContent = styled.div<{ $fullHeight?: boolean; $fontScale?: number }>`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[8]};
+  --performance-font-scale: ${(props) => (props.$fontScale || 100) / 100};
   ${(props) => props.$fullHeight && `
     flex: 1;
     min-height: 0;
@@ -1758,14 +1863,14 @@ const SectionLabel = styled.div`
 
 const ContentText = styled.pre`
   font-family: ${theme.fonts.mono};
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: calc(${theme.fontSizes.bodyLg} * var(--performance-font-scale, 1));
   color: var(--color-text-primary);
   line-height: ${theme.lineHeights.loose};
   white-space: pre-wrap;
   margin: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    font-size: ${theme.fontSizes.body};
+    font-size: calc(${theme.fontSizes.body} * var(--performance-font-scale, 1));
   }
 `;
 
@@ -1949,6 +2054,67 @@ const BackButton = styled.button`
   &:hover {
     background: ${theme.colors.brand.primaryHover};
     transform: translateY(-1px);
+  }
+`;
+
+const MobileFontSizeControls = styled.div`
+  position: fixed;
+  bottom: 120px;
+  left: ${theme.space[4]};
+  display: none;
+  align-items: center;
+  gap: ${theme.space[1]};
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.full};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: flex;
+  }
+`;
+
+const MobileFontSizeButton = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: ${theme.radius.full};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: ${theme.fontSizes.bodyLg};
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-elevated);
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const MobileFontSizeValue = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: ${theme.fontSizes.bodyXs};
+  font-family: ${theme.fonts.mono};
+  font-weight: ${theme.fontWeights.medium};
+  min-width: 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: ${theme.colors.brand.primary};
   }
 `;
 
