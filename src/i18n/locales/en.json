@@ -463,7 +463,29 @@
     "inWeeksDays_plural": "In {{weeks}} weeks and {{days}} days",
     "happeningNow": "Happening Now",
     "viewShow": "View Show",
-    "todayCount": "Today"
+    "todayCount": "Today",
+    "addToCalendar": "Add to Calendar"
+  },
+  "calendar": {
+    "title": "Calendar Subscription",
+    "subscribeToCalendar": "Subscribe to Calendar",
+    "subscriptionActive": "Your calendar subscription is active. Any calendar app that supports iCal feeds will automatically sync your shows.",
+    "feedUrl": "Calendar Feed URL",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "howToSubscribe": "How to subscribe:",
+    "instructionsGoogle": "Settings > Add calendar > From URL > Paste the URL",
+    "instructionsApple": "File > New Calendar Subscription > Paste the URL",
+    "instructionsOutlook": "Add calendar > Subscribe from web > Paste the URL",
+    "refreshNote": "Calendar apps typically refresh every 12-24 hours. Changes to your shows will sync automatically on the next refresh.",
+    "regenerateToken": "Regenerate URL",
+    "regenerateConfirm": "This will invalidate the current URL. Any calendar subscriptions using the old URL will stop working. Continue?",
+    "removeSubscription": "Remove Subscription",
+    "deleteConfirm": "This will remove the calendar subscription. Any calendar apps using this URL will stop receiving updates. Continue?",
+    "noSubscription": "Subscribe to Shows",
+    "noSubscriptionDesc": "Generate a calendar feed URL to automatically sync {{bandName}}'s shows with your favorite calendar app (Google Calendar, Apple Calendar, Outlook, etc.)",
+    "generateLink": "Generate Calendar Link",
+    "createError": "Failed to create calendar subscription. Please try again."
   },
   "rehearsals": {
     "title": "Rehearsals",

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { Show } from "../services/showsService";
 import { markShowCompleted, markShowCancelled } from "../services/showsService";
+import { downloadShowICS } from "../lib/calendarExport";
 import styled from "styled-components";
 import { theme } from "../theme";
 import { getLocalToday, isToday } from "../lib/dateUtils";
@@ -198,6 +199,16 @@ const ShowCardItem: FC<{
             >
               <i className="bi bi-trash"></i>
             </ActionButton>
+            <ActionButton
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadShowICS(show);
+              }}
+              title={t('shows.addToCalendar')}
+              $variant="view"
+            >
+              <i className="bi bi-calendar-plus"></i>
+            </ActionButton>
           </ActionButtons>
         )}
 
@@ -231,6 +242,12 @@ const ShowCardItem: FC<{
                     </DropdownItem>
                   </>
                 )}
+                <DropdownItem onClick={(e) => {
+                  e.stopPropagation();
+                  downloadShowICS(show);
+                }}>
+                  <i className="bi bi-calendar-plus me-2"></i> {t('shows.addToCalendar')}
+                </DropdownItem>
                 <DropdownItem divider />
                 <DropdownItem onClick={(e) => {
                   e.stopPropagation();
