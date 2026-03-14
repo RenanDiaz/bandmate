@@ -14,6 +14,7 @@ import { NewShowForm } from "./NewShowForm";
 import { ShowList } from "./ShowList";
 import { ShowCalendar } from "./ShowCalendar";
 import { EditShowModal } from "./EditShowModal";
+import { CalendarSubscriptionModal } from "./CalendarSubscriptionModal";
 import { SEO } from "./SEO";
 
 interface Props {
@@ -44,6 +45,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [filter, setFilter] = useState<FilterType>("upcoming");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
 
   const loadShows = async () => {
     if (!selectedBand) {
@@ -254,22 +256,31 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
               </ButtonGroup>
             </FilterSection>
 
-            <ViewToggle>
-              <ViewToggleButton
-                $active={viewMode === "list"}
-                onClick={() => setViewMode("list")}
-                title={t("shows.listView")}
+            <RightControls>
+              <SubscribeButton
+                onClick={() => setIsCalendarSubOpen(true)}
+                title={t("calendar.subscribeToCalendar")}
               >
-                <i className="bi bi-list-ul"></i>
-              </ViewToggleButton>
-              <ViewToggleButton
-                $active={viewMode === "calendar"}
-                onClick={() => setViewMode("calendar")}
-                title={t("shows.calendarView")}
-              >
-                <i className="bi bi-calendar3"></i>
-              </ViewToggleButton>
-            </ViewToggle>
+                <i className="bi bi-calendar-plus"></i>
+                <SubscribeButtonText>{t("calendar.subscribeToCalendar")}</SubscribeButtonText>
+              </SubscribeButton>
+              <ViewToggle>
+                <ViewToggleButton
+                  $active={viewMode === "list"}
+                  onClick={() => setViewMode("list")}
+                  title={t("shows.listView")}
+                >
+                  <i className="bi bi-list-ul"></i>
+                </ViewToggleButton>
+                <ViewToggleButton
+                  $active={viewMode === "calendar"}
+                  onClick={() => setViewMode("calendar")}
+                  title={t("shows.calendarView")}
+                >
+                  <i className="bi bi-calendar3"></i>
+                </ViewToggleButton>
+              </ViewToggle>
+            </RightControls>
           </ControlsSection>
 
           {loading ? (
@@ -311,6 +322,13 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
           onClose={() => setIsEditModalOpen(false)}
           onReload={loadShows}
           bandId={selectedBand.id}
+        />
+
+        <CalendarSubscriptionModal
+          isOpen={isCalendarSubOpen}
+          onClose={() => setIsCalendarSubOpen(false)}
+          bandId={selectedBand.id}
+          bandName={selectedBand.name}
         />
       </Container>
     </PageWrapper>
@@ -446,6 +464,39 @@ const FilterSection = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[3]};
+`;
+
+const RightControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const SubscribeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: ${theme.colors.brand.primary}20;
+  border: 1px solid ${theme.colors.brand.primary}40;
+  border-radius: ${theme.radius.base};
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${theme.colors.brand.primary}30;
+    border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SubscribeButtonText = styled.span`
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: none;
+  }
 `;
 
 const ViewToggle = styled.div`

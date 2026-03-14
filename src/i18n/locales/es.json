@@ -466,6 +466,27 @@
     "todayCount": "Hoy",
     "addToCalendar": "Agregar al Calendario"
   },
+  "calendar": {
+    "title": "Suscripción de Calendario",
+    "subscribeToCalendar": "Suscribirse al Calendario",
+    "subscriptionActive": "Tu suscripción de calendario está activa. Cualquier app de calendario que soporte feeds iCal sincronizará tus shows automáticamente.",
+    "feedUrl": "URL del Feed de Calendario",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "howToSubscribe": "Cómo suscribirse:",
+    "instructionsGoogle": "Configuración > Agregar calendario > Desde URL > Pegar la URL",
+    "instructionsApple": "Archivo > Nueva Suscripción de Calendario > Pegar la URL",
+    "instructionsOutlook": "Agregar calendario > Suscribirse desde web > Pegar la URL",
+    "refreshNote": "Las apps de calendario normalmente se actualizan cada 12-24 horas. Los cambios en tus shows se sincronizarán automáticamente en la siguiente actualización.",
+    "regenerateToken": "Regenerar URL",
+    "regenerateConfirm": "Esto invalidará la URL actual. Las suscripciones de calendario que usen la URL anterior dejarán de funcionar. ¿Continuar?",
+    "removeSubscription": "Eliminar Suscripción",
+    "deleteConfirm": "Esto eliminará la suscripción de calendario. Las apps de calendario que usen esta URL dejarán de recibir actualizaciones. ¿Continuar?",
+    "noSubscription": "Suscribirse a Shows",
+    "noSubscriptionDesc": "Genera una URL de feed de calendario para sincronizar automáticamente los shows de {{bandName}} con tu app de calendario favorita (Google Calendar, Apple Calendar, Outlook, etc.)",
+    "generateLink": "Generar Enlace de Calendario",
+    "createError": "Error al crear la suscripción de calendario. Por favor intenta de nuevo."
+  },
   "rehearsals": {
     "title": "Ensayos",
     "subtitle": "Programa y gestiona las sesiones de práctica de tu banda",
