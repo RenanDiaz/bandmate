@@ -10,6 +10,7 @@ import { getSetlist, getBandSetlists, isSongItem } from "../services/setlistsSer
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
+import { downloadShowICS } from "../lib/calendarExport";
 import { SEO } from "./SEO";
 
 const formatDate = (dateString: string): string => {
@@ -296,6 +297,10 @@ const ShowDetailView: FC = () => {
               <i className="bi bi-trash"></i>
               Delete
             </HeaderButton>
+            <CalendarButton onClick={() => downloadShowICS(show)}>
+              <i className="bi bi-calendar-plus"></i>
+              Add to Calendar
+            </CalendarButton>
           </ActionButtonsHeader>
         </ShowHeader>
 
@@ -1039,6 +1044,22 @@ const ErrorTitle = styled.h2`
 const ErrorText = styled.p`
   margin: 0 0 ${theme.space[4]} 0;
   color: var(--color-text-secondary);
+`;
+
+const CalendarButton = styled(Button)`
+  background: ${theme.colors.brand.primary}20 !important;
+  border: 1px solid ${theme.colors.brand.primary}40 !important;
+  color: ${theme.colors.brand.primary} !important;
+  padding: ${theme.space[2]} ${theme.space[3]} !important;
+  font-size: ${theme.fontSizes.bodySm} !important;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  white-space: nowrap;
+
+  &:hover {
+    background: ${theme.colors.brand.primary}30 !important;
+  }
 `;
 
 const BackButton = styled(Button)`

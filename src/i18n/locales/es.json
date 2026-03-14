@@ -463,7 +463,8 @@
     "inWeeksDays_plural": "En {{weeks}} semanas y {{days}} días",
     "happeningNow": "En vivo ahora",
     "viewShow": "Ver show",
-    "todayCount": "Hoy"
+    "todayCount": "Hoy",
+    "addToCalendar": "Agregar al Calendario"
   },
   "rehearsals": {
     "title": "Ensayos",
