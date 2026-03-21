@@ -1049,19 +1049,21 @@ const SetlistPerformanceView: FC = () => {
                   </>
                 )}
 
-                {/* Backing Track Player - only visible to host or when not in sync mode, hidden in sheet music mode */}
-                {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
-                  <BackingTrackPlayer
-                    songId={currentSong.id}
-                    trackUrl={getTrackUrl(currentSong.id)}
-                    trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
-                    hadTrackPreviously={hadTrackPreviously(currentSong.id)}
-                    onLoadTrack={loadTrack}
-                    onRemoveTrack={removeTrack}
-                    isHost={syncRole === "host" || syncRole === null}
-                    onTimeUpdate={handleAudioTimeUpdate}
-                    onPlayingChange={handleAudioPlayingChange}
-                  />
+                {/* Backing Track Player - only visible to host or when not in sync mode, hidden (not unmounted) in sheet music mode to preserve playback */}
+                {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && (
+                  <div style={contentView === "sheetMusic" && sheetMusicList.length > 0 ? { display: "none" } : undefined}>
+                    <BackingTrackPlayer
+                      songId={currentSong.id}
+                      trackUrl={getTrackUrl(currentSong.id)}
+                      trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
+                      hadTrackPreviously={hadTrackPreviously(currentSong.id)}
+                      onLoadTrack={loadTrack}
+                      onRemoveTrack={removeTrack}
+                      isHost={syncRole === "host" || syncRole === null}
+                      onTimeUpdate={handleAudioTimeUpdate}
+                      onPlayingChange={handleAudioPlayingChange}
+                    />
+                  </div>
                 )}
               </SongHeader>
 
