@@ -31,6 +31,7 @@ import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
+import type { BackingTrackPlayerHandle } from "./BackingTrackPlayer";
 import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 import SheetMusicViewer from "./SheetMusicViewer";
 import type { SheetMusicViewerHandle } from "./SheetMusicViewer";
@@ -169,6 +170,7 @@ const SetlistPerformanceView: FC = () => {
   const fontSizeButtonRef = useRef<HTMLButtonElement>(null);
   const songListRef = useRef<HTMLDivElement>(null);
   const sheetMusicViewerRef = useRef<SheetMusicViewerHandle>(null);
+  const backingTrackRef = useRef<BackingTrackPlayerHandle>(null);
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
@@ -1053,6 +1055,7 @@ const SetlistPerformanceView: FC = () => {
                 {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && (
                   <div style={contentView === "sheetMusic" && sheetMusicList.length > 0 ? { display: "none" } : undefined}>
                     <BackingTrackPlayer
+                      ref={backingTrackRef}
                       songId={currentSong.id}
                       trackUrl={getTrackUrl(currentSong.id)}
                       trackFileName={getTrackInfo(currentSong.id)?.fileName || null}
@@ -1108,6 +1111,27 @@ const SetlistPerformanceView: FC = () => {
                         <i className="bi bi-file-earmark-x"></i>
                         <p>{t("sheetMusic.loadError", "Failed to load sheet music")}</p>
                       </EmptyContent>
+                    )}
+                    {/* Mini audio controls overlay for sheet music view */}
+                    {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && getTrackUrl(currentSong.id) && (
+                      <MiniAudioOverlay>
+                        <MiniAudioButton
+                          onClick={() => backingTrackRef.current?.stop()}
+                          title={t("backingTrack.stop", "Stop")}
+                        >
+                          <i className="bi bi-stop-fill" />
+                        </MiniAudioButton>
+                        <MiniAudioPlayButton
+                          onClick={() => backingTrackRef.current?.togglePlayPause()}
+                          $isPlaying={displayIsPlaying}
+                          title={displayIsPlaying ? t("backingTrack.pause", "Pause") : t("backingTrack.play", "Play")}
+                        >
+                          <i className={`bi bi-${displayIsPlaying ? "pause-fill" : "play-fill"}`} />
+                        </MiniAudioPlayButton>
+                        <MiniAudioTime>
+                          {formatDuration(Math.floor(displayAudioTime))}
+                        </MiniAudioTime>
+                      </MiniAudioOverlay>
                     )}
                   </SheetMusicWrapper>
                 ) : displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
@@ -1828,6 +1852,72 @@ const SheetMusicWrapper = styled.div`
   min-height: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+`;
+
+const MiniAudioOverlay = styled.div`
+  position: absolute;
+  top: ${theme.space[2]};
+  right: ${theme.space[2]};
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: rgba(10, 10, 11, 0.85);
+  backdrop-filter: blur(8px);
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border-radius: ${theme.radius.full};
+  border: 1px solid ${theme.colors.dark.border.default};
+  z-index: 15;
+  transition: opacity 0.2s ease;
+`;
+
+const MiniAudioButton = styled.button`
+  width: 32px;
+  height: 32px;
+  border-radius: ${theme.radius.full};
+  border: 1px solid ${theme.colors.dark.border.default};
+  background: transparent;
+  color: ${theme.colors.dark.text.secondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: ${theme.fontSizes.body};
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${theme.colors.dark.bg.elevated};
+    color: ${theme.colors.dark.text.primary};
+  }
+`;
+
+const MiniAudioPlayButton = styled.button<{ $isPlaying: boolean }>`
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.full};
+  border: none;
+  background: ${({ $isPlaying }) =>
+    $isPlaying ? theme.colors.brand.primary : theme.colors.brand.primary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: ${theme.fontSizes.bodyLg};
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${theme.colors.brand.primaryHover};
+    transform: scale(1.05);
+  }
+`;
+
+const MiniAudioTime = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  font-family: ${theme.fonts.mono};
+  color: ${theme.colors.dark.text.secondary};
+  min-width: 40px;
+  text-align: center;
 `;
 
 const SheetMusicSelector = styled.div`

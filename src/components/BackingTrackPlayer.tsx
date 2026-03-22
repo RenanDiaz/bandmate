@@ -1,5 +1,4 @@
-import type { FC } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
@@ -16,7 +15,12 @@ interface BackingTrackPlayerProps {
   onPlayingChange?: (isPlaying: boolean) => void;
 }
 
-export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
+export interface BackingTrackPlayerHandle {
+  togglePlayPause: () => void;
+  stop: () => void;
+}
+
+export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTrackPlayerProps>(function BackingTrackPlayer({
   songId,
   trackUrl,
   trackFileName,
@@ -26,7 +30,7 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
   isHost,
   onTimeUpdate,
   onPlayingChange,
-}) => {
+}, ref) {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +154,12 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Expose control methods for external use (e.g., mini player in sheet music view)
+  useImperativeHandle(ref, () => ({
+    togglePlayPause: handlePlayPause,
+    stop: handleStop,
+  }), [handlePlayPause, handleStop]);
 
   const triggerFileSelect = () => {
     fileInputRef.current?.click();
@@ -276,7 +286,7 @@ export const BackingTrackPlayer: FC<BackingTrackPlayerProps> = ({
       )}
     </PlayerContainer>
   );
-};
+});
 
 // Styled Components
 
