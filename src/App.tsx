@@ -40,7 +40,7 @@ const AppContent: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const location = useLocation();
-  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector, isResolvingBand } =
+  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector, isResolvingBand, isCheckingAuth } =
     useBandContext();
   const navigate = useNavigate();
 
@@ -308,7 +308,7 @@ const AppContent: FC = () => {
       </CustomOffcanvas>
 
       <MainContent>
-        {user && isResolvingBand ? (
+        {isCheckingAuth || (user && isResolvingBand) ? (
           <LoadingContainer>
             <Spinner color="light" />
           </LoadingContainer>

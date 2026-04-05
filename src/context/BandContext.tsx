@@ -15,6 +15,7 @@ interface BandContextType {
   bands: Band[];
   refreshBands: () => void;
   isResolvingBand: boolean;
+  isCheckingAuth: boolean;
 }
 
 const BandContext = createContext<BandContextType | undefined>(undefined);
@@ -97,6 +98,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         bands,
         refreshBands,
         isResolvingBand,
+        isCheckingAuth: !hasCheckedAuth,
       }}
     >
       {children}
