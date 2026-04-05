@@ -951,6 +951,9 @@
       "fast": "Rápido (121-160)",
       "very": "Muy Rápido (> 160)"
     },
+    "countryDistribution": "Canciones por País",
+    "song": "canción",
+    "songs_count": "canciones",
     "topVenues": "Lugares Más Frecuentes",
     "unusedSongs": "Canciones Sin Usar",
     "andMore": "y {{count}} más...",

@@ -951,6 +951,9 @@
       "fast": "Fast (121-160)",
       "very": "Very Fast (> 160)"
     },
+    "countryDistribution": "Songs by Country",
+    "song": "song",
+    "songs_count": "songs",
     "topVenues": "Top Venues",
     "unusedSongs": "Unused Songs",
     "andMore": "and {{count}} more...",

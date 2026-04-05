@@ -12,6 +12,7 @@ import type {
   TempoDistribution,
   MonthlyActivity,
   VenueStats,
+  CountryDistribution,
 } from "../services/reportsService";
 import {
   getBandOverviewStats,
@@ -21,6 +22,7 @@ import {
   getTempoDistribution,
   getMonthlyActivity,
   getTopVenues,
+  getCountryDistribution,
 } from "../services/reportsService";
 import type { Song } from "../services/songsService";
 
@@ -39,6 +41,7 @@ export const BandReports: FC<Props> = ({ band }) => {
   const [tempoDistribution, setTempoDistribution] = useState<TempoDistribution[]>([]);
   const [monthlyActivity, setMonthlyActivity] = useState<MonthlyActivity[]>([]);
   const [topVenues, setTopVenues] = useState<VenueStats[]>([]);
+  const [countryDistribution, setCountryDistribution] = useState<CountryDistribution[]>([]);
 
   useEffect(() => {
     loadReports();
@@ -47,7 +50,7 @@ export const BandReports: FC<Props> = ({ band }) => {
   const loadReports = async () => {
     setLoading(true);
     try {
-      const [overview, mostUsed, unused, keys, tempos, monthly, venues] = await Promise.all([
+      const [overview, mostUsed, unused, keys, tempos, monthly, venues, countries] = await Promise.all([
         getBandOverviewStats(band.id),
         getMostUsedSongs(band.id, 10),
         getUnusedSongs(band.id),
@@ -55,6 +58,7 @@ export const BandReports: FC<Props> = ({ band }) => {
         getTempoDistribution(band.id),
         getMonthlyActivity(band.id, 6),
         getTopVenues(band.id, 5),
+        getCountryDistribution(band.id),
       ]);
 
       setOverviewStats(overview);
@@ -64,6 +68,7 @@ export const BandReports: FC<Props> = ({ band }) => {
       setTempoDistribution(tempos);
       setMonthlyActivity(monthly);
       setTopVenues(venues);
+      setCountryDistribution(countries);
     } catch (error) {
       console.error("Failed to load reports:", error);
     }
@@ -253,6 +258,34 @@ export const BandReports: FC<Props> = ({ band }) => {
               </KeyBadge>
             ))}
           </KeyGrid>
+        </Section>
+      )}
+
+      {/* Country Distribution */}
+      {countryDistribution.length > 0 && (
+        <Section>
+          <SectionTitle>
+            <i className="bi bi-globe-americas"></i>
+            {t("reports.countryDistribution")}
+          </SectionTitle>
+          <CountryList>
+            {countryDistribution.map((item, index) => (
+              <CountryItem key={item.country}>
+                <CountryRank>{index + 1}</CountryRank>
+                <CountryName>{item.country}</CountryName>
+                <CountryBarTrack>
+                  <CountryBarFill
+                    $percentage={
+                      (item.count / Math.max(...countryDistribution.map((c) => c.count))) * 100
+                    }
+                  />
+                </CountryBarTrack>
+                <CountryCount>
+                  {item.count} {item.count === 1 ? t("reports.song") : t("reports.songs_count")}
+                </CountryCount>
+              </CountryItem>
+            ))}
+          </CountryList>
         </Section>
       )}
 
@@ -631,6 +664,70 @@ const KeyName = styled.span`
 const KeyCount = styled.span`
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-tertiary);
+`;
+
+const CountryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+`;
+
+const CountryItem = styled.div`
+  display: grid;
+  grid-template-columns: 28px 120px 1fr 80px;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: var(--color-bg-primary);
+  border-radius: ${theme.radius.base};
+
+  @media (min-width: ${theme.breakpoints.md}) {
+    grid-template-columns: 28px 160px 1fr 100px;
+  }
+`;
+
+const CountryRank = styled.div`
+  width: 24px;
+  height: 24px;
+  border-radius: ${theme.radius.full};
+  background: ${theme.colors.accent.cyan}20;
+  color: ${theme.colors.accent.cyan};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const CountryName = styled.div`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const CountryBarTrack = styled.div`
+  height: 8px;
+  background: var(--color-bg-secondary);
+  border-radius: ${theme.radius.full};
+  overflow: hidden;
+`;
+
+const CountryBarFill = styled.div<{ $percentage: number }>`
+  height: 100%;
+  width: ${(props) => props.$percentage}%;
+  border-radius: ${theme.radius.full};
+  background: ${theme.colors.accent.cyan};
+  transition: width 0.3s ease;
+`;
+
+const CountryCount = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  text-align: right;
 `;
 
 const TempoList = styled.div`
