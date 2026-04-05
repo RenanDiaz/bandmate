@@ -49,6 +49,11 @@ export interface VenueStats {
   showCount: number;
 }
 
+export interface CountryDistribution {
+  country: string;
+  count: number;
+}
+
 // ============================================
 // Report Functions
 // ============================================
@@ -303,4 +308,33 @@ export async function getTopVenues(bandId: number, limit = 5): Promise<VenueStat
   });
 
   return result.sort((a, b) => b.showCount - a.showCount).slice(0, limit);
+}
+
+/**
+ * Get country distribution of songs (artist origin)
+ */
+export async function getCountryDistribution(bandId: number): Promise<CountryDistribution[]> {
+  const { data, error } = await supabase
+    .from("songs")
+    .select("country")
+    .eq("band_id", bandId)
+    .not("country", "is", null)
+    .neq("country", "");
+
+  if (error) throw error;
+
+  const countryMap = new Map<string, number>();
+
+  (data || []).forEach((song: { country: string | null }) => {
+    if (song.country) {
+      countryMap.set(song.country, (countryMap.get(song.country) || 0) + 1);
+    }
+  });
+
+  const result: CountryDistribution[] = [];
+  countryMap.forEach((count, country) => {
+    result.push({ country, count });
+  });
+
+  return result.sort((a, b) => b.count - a.count);
 }
