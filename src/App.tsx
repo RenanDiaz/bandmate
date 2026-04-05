@@ -27,7 +27,7 @@ import Footer from "./components/Footer";
 import { BandSelector } from "./components/BandSelector";
 import { BandSwitcher } from "./components/BandSwitcher";
 import { Logo } from "./components/Logo";
-import { Navbar, Nav, NavItem, Button } from "reactstrap";
+import { Navbar, Nav, NavItem, Button, Spinner } from "reactstrap";
 import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/CustomOffcanvas";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
@@ -40,7 +40,7 @@ const AppContent: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const location = useLocation();
-  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector } =
+  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector, isResolvingBand } =
     useBandContext();
   const navigate = useNavigate();
 
@@ -308,7 +308,11 @@ const AppContent: FC = () => {
       </CustomOffcanvas>
 
       <MainContent>
-        {user && (!selectedBand || showBandSelector) ? (
+        {user && isResolvingBand ? (
+          <LoadingContainer>
+            <Spinner color="light" />
+          </LoadingContainer>
+        ) : user && (!selectedBand || showBandSelector) ? (
           <BandSelector
             onSelect={(band) => {
               setSelectedBand(band);
@@ -709,6 +713,13 @@ const MainContent = styled.main`
   flex: 1;
   display: flex;
   flex-direction: column;
+`;
+
+const LoadingContainer = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 export default App;
