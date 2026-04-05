@@ -14,6 +14,7 @@ interface BandContextType {
   showBandSelector: boolean;
   bands: Band[];
   refreshBands: () => void;
+  isResolvingBand: boolean;
 }
 
 const BandContext = createContext<BandContextType | undefined>(undefined);
@@ -24,6 +25,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [showBandSelector, setShowBandSelector] = useState(false);
   const [bands, setBands] = useState<Band[]>([]);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [isResolvingBand, setIsResolvingBand] = useState(!!BandStorage.getSelectedBandId());
 
   // Auth state
   useEffect(() => {
@@ -61,9 +63,11 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
           // Auto-select when user has only one band and nothing saved
           setSelectedBand(bands[0]);
         }
+        setIsResolvingBand(false);
       });
     } else {
       setSelectedBand(null);
+      setIsResolvingBand(false);
     }
   }, [user]);
 
@@ -92,6 +96,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         showBandSelector,
         bands,
         refreshBands,
+        isResolvingBand,
       }}
     >
       {children}
