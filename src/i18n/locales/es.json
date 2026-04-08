@@ -1127,6 +1127,7 @@
     "generating": "Generando...",
     "needMoreSongs": "Necesitas al menos 3 canciones en tu catálogo para generar un setlist.",
     "generationError": "Error al generar el setlist. Por favor intenta de nuevo.",
+    "requestTooLarge": "Demasiadas canciones para procesar con IA. Intenta reducir tu catálogo o excluir algunas canciones.",
     "reasoning": "Razonamiento de la IA",
     "regenerate": "Intentar de Nuevo",
     "saveAndEdit": "Guardar y Editar",

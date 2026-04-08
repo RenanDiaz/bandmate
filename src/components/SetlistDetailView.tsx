@@ -29,7 +29,7 @@ const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).su
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
-import { groqService } from "../services/groqService";
+import { groqService, GroqApiError } from "../services/groqService";
 import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
 import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
@@ -494,9 +494,13 @@ const SetlistDetailView: FC = () => {
       setOptimization(result);
     } catch (error) {
       console.error("Failed to optimize setlist:", error);
-      setOptimizeError(
-        error instanceof Error ? error.message : t("ai.generationError")
-      );
+      if (error instanceof GroqApiError && error.status === 413) {
+        setOptimizeError(t("ai.requestTooLarge"));
+      } else {
+        setOptimizeError(
+          error instanceof Error ? error.message : t("ai.generationError")
+        );
+      }
     } finally {
       setOptimizing(false);
     }

@@ -1127,6 +1127,7 @@
     "generating": "Generating...",
     "needMoreSongs": "You need at least 3 songs in your catalog to generate a setlist.",
     "generationError": "Failed to generate setlist. Please try again.",
+    "requestTooLarge": "Too many songs for AI to process. Try reducing your catalog or excluding some songs.",
     "reasoning": "AI Reasoning",
     "regenerate": "Try Again",
     "saveAndEdit": "Save & Edit",
