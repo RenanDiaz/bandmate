@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
-import { groqService } from "../services/groqService";
+import { groqService, GroqApiError } from "../services/groqService";
 import {
   generateSetlist,
   type SetlistGenerationOptions,
@@ -94,7 +94,11 @@ export const AISetlistGenerator = ({ bandId, onSetlistCreated }: Props) => {
       setGeneratedSetlist(result);
     } catch (err) {
       console.error("Failed to generate setlist:", err);
-      setError(err instanceof Error ? err.message : t("ai.generationError"));
+      if (err instanceof GroqApiError && err.status === 413) {
+        setError(t("ai.requestTooLarge"));
+      } else {
+        setError(err instanceof Error ? err.message : t("ai.generationError"));
+      }
     } finally {
       setIsLoading(false);
     }

@@ -9,7 +9,7 @@
  * - Suggest new songs to add to repertoire
  */
 
-import { groqService, GROQ_MODELS } from "./groqService";
+import { groqService, GROQ_MODELS, GroqApiError } from "./groqService";
 import type { Song } from "./songsService";
 import type { Setlist, SetlistItem, SetlistSongItem } from "./setlistsService";
 import {
@@ -168,7 +168,8 @@ function parseSetlistSections(
  */
 function formatSectionsForPrompt(
   sections: SetlistSection[],
-  songMap: Map<string, Song>
+  songMap: Map<string, Song>,
+  compact = false
 ): string {
   if (sections.length <= 1 && !sections[0]?.label) {
     // No explicit sections, just format as a flat list
@@ -179,7 +180,7 @@ function formatSectionsForPrompt(
         if (!song) return null;
         const notes = sections[0]?.attachedNotes[songId];
         const noteStr = notes?.length ? ` [Notes: ${notes.join(", ")}]` : "";
-        return `${index + 1}. ID:${song.id} | ${formatSongForPrompt(song)}${noteStr}`;
+        return `${index + 1}. ID:${song.id} | ${formatSongForPrompt(song, compact)}${noteStr}`;
       })
       .filter(Boolean)
       .join("\n");
@@ -202,7 +203,7 @@ function formatSectionsForPrompt(
       if (!song) return;
       const notes = section.attachedNotes[songId];
       const noteStr = notes?.length ? ` [Notes: ${notes.join(", ")}]` : "";
-      result += `${songIndex}. ID:${song.id} | ${formatSongForPrompt(song)}${noteStr}\n`;
+      result += `${songIndex}. ID:${song.id} | ${formatSongForPrompt(song, compact)}${noteStr}\n`;
       songIndex++;
     });
   });
@@ -210,20 +211,23 @@ function formatSectionsForPrompt(
   return result.trim();
 }
 
-function formatSongForPrompt(song: Song): string {
+function formatSongForPrompt(song: Song, compact = false): string {
   const parts = [`"${song.title}"`];
   if (song.artist) parts.push(`by ${song.artist}`);
-  if (song.key) parts.push(`(Key: ${song.key})`);
-  if (song.tempo) parts.push(`(${song.tempo} BPM)`);
-  if (song.duration) parts.push(`(${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")})`);
-  if (song.energy !== undefined) parts.push(`(Energy: ${(song.energy * 10).toFixed(0)}/10)`);
-  if (song.tags?.length) parts.push(`[${song.tags.join(", ")}]`);
+  if (!compact) {
+    if (song.key) parts.push(`(Key: ${song.key})`);
+    if (song.tempo) parts.push(`(${song.tempo} BPM)`);
+    if (song.duration) parts.push(`(${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")})`);
+    if (song.energy !== undefined) parts.push(`(Energy: ${(song.energy * 10).toFixed(0)}/10)`);
+    if (song.tags?.length) parts.push(`[${song.tags.join(", ")}]`);
+  }
   return parts.join(" ");
 }
 
 function formatSetlistForPrompt(
   setlist: Setlist,
-  songs: Song[]
+  songs: Song[],
+  compact = false
 ): string {
   const songMap = new Map(songs.map((s) => [s.id, s]));
   const songItems = setlist.songs.filter(isSongItem);
@@ -232,7 +236,7 @@ function formatSetlistForPrompt(
     .map((item, index) => {
       const song = songMap.get(item.song_id);
       if (!song) return null;
-      return `${index + 1}. ${formatSongForPrompt(song)}`;
+      return `${index + 1}. ${formatSongForPrompt(song, compact)}`;
     })
     .filter(Boolean)
     .join("\n");
@@ -247,19 +251,17 @@ function formatSetlistForPrompt(
 /**
  * Generate a new setlist using AI based on band's catalog and preferences
  */
-export async function generateSetlist(
+/**
+ * Build the prompt parts for setlist generation.
+ * When compact=true, song metadata is reduced to title+artist only and
+ * fewer previous setlists are included.
+ */
+function buildGeneratePrompt(
   songs: Song[],
   previousSetlists: Setlist[],
-  options: SetlistGenerationOptions = {}
-): Promise<GeneratedSetlist> {
-  if (!groqService.isConfigured()) {
-    throw new Error("AI features require Groq API configuration");
-  }
-
-  if (songs.length === 0) {
-    throw new Error("No songs available to create a setlist");
-  }
-
+  options: SetlistGenerationOptions,
+  compact: boolean
+): { systemPrompt: string; userPrompt: string } {
   const {
     targetDuration,
     songCount,
@@ -273,21 +275,31 @@ export async function generateSetlist(
 
   // Build the song catalog
   const availableSongs = songs.filter((s) => !excludeSongs.includes(s.id));
-  const songCatalog = availableSongs.map((s) => `- ID:${s.id} | ${formatSongForPrompt(s)}`).join("\n");
+  const songCatalog = availableSongs
+    .map((s) => `- ID:${s.id} | ${formatSongForPrompt(s, compact)}`)
+    .join("\n");
 
-  // Build previous setlists context (last 5)
-  const recentSetlists = previousSetlists.slice(0, 5);
-  const setlistHistory = recentSetlists.length > 0
-    ? recentSetlists.map((sl) => formatSetlistForPrompt(sl, songs)).join("\n\n")
-    : "No previous setlists available.";
+  // Build previous setlists context — fewer when compact
+  const maxSetlists = compact ? 2 : 5;
+  const recentSetlists = previousSetlists.slice(0, maxSetlists);
+  const setlistHistory =
+    recentSetlists.length > 0
+      ? recentSetlists
+          .map((sl) => formatSetlistForPrompt(sl, songs, compact))
+          .join("\n\n")
+      : "No previous setlists available.";
 
   // Build must-include list
-  const mustIncludeInfo = mustIncludeSongs.length > 0
-    ? `\n\nMUST INCLUDE these songs:\n${mustIncludeSongs.map((id) => {
-        const song = songs.find((s) => s.id === id);
-        return song ? `- ${song.title}` : null;
-      }).filter(Boolean).join("\n")}`
-    : "";
+  const mustIncludeInfo =
+    mustIncludeSongs.length > 0
+      ? `\n\nMUST INCLUDE these songs:\n${mustIncludeSongs
+          .map((id) => {
+            const song = songs.find((s) => s.id === id);
+            return song ? `- ${song.title}` : null;
+          })
+          .filter(Boolean)
+          .join("\n")}`
+      : "";
 
   const systemPrompt = `You are an expert music director and setlist curator. Your job is to create optimal setlists for live performances.
 
@@ -332,13 +344,56 @@ Respond with a JSON object in this exact format:
   "estimatedDuration": 90
 }`;
 
-  const response = await groqService.complete(userPrompt, systemPrompt, {
-    model: GROQ_MODELS.LLAMA_3_3_70B,
-    temperature: 0.8,
-    maxTokens: 2048,
-  });
+  return { systemPrompt, userPrompt };
+}
 
-  return groqService.parseJsonResponse<GeneratedSetlist>(response);
+export async function generateSetlist(
+  songs: Song[],
+  previousSetlists: Setlist[],
+  options: SetlistGenerationOptions = {}
+): Promise<GeneratedSetlist> {
+  if (!groqService.isConfigured()) {
+    throw new Error("AI features require Groq API configuration");
+  }
+
+  if (songs.length === 0) {
+    throw new Error("No songs available to create a setlist");
+  }
+
+  // Use compact mode automatically for large catalogs (>40 songs)
+  const useCompact = songs.length > 40;
+  const { systemPrompt, userPrompt } = buildGeneratePrompt(
+    songs,
+    previousSetlists,
+    options,
+    useCompact
+  );
+
+  try {
+    const response = await groqService.complete(userPrompt, systemPrompt, {
+      model: GROQ_MODELS.LLAMA_3_3_70B,
+      temperature: 0.8,
+      maxTokens: 2048,
+    });
+
+    return groqService.parseJsonResponse<GeneratedSetlist>(response);
+  } catch (error) {
+    // On 413 (payload too large), retry with compact mode if not already using it
+    if (error instanceof GroqApiError && error.status === 413 && !useCompact) {
+      const compact = buildGeneratePrompt(songs, previousSetlists, options, true);
+      const response = await groqService.complete(
+        compact.userPrompt,
+        compact.systemPrompt,
+        {
+          model: GROQ_MODELS.LLAMA_3_3_70B,
+          temperature: 0.8,
+          maxTokens: 2048,
+        }
+      );
+      return groqService.parseJsonResponse<GeneratedSetlist>(response);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -364,8 +419,11 @@ export async function optimizeSetlistOrder(
   const sections = parseSetlistSections(setlist.songs, songMap);
   const hasSections = sections.length > 1 || sections[0]?.label !== null;
 
+  // Use compact mode for large setlists
+  const compact = songItems.length > 30;
+
   // Format the setlist with section context
-  const currentOrderInfo = formatSectionsForPrompt(sections, songMap);
+  const currentOrderInfo = formatSectionsForPrompt(sections, songMap, compact);
 
   // Build section-aware prompt
   const sectionContext = hasSections
@@ -450,9 +508,11 @@ export async function suggestNewSongs(
 
   const { count = 5, style, forEvent } = options;
 
-  // Build current catalog summary
-  const catalogSummary = currentSongs.length > 0
-    ? currentSongs.map((s) => `- "${s.title}" by ${s.artist || "Unknown"}`).join("\n")
+  // Build current catalog summary — cap at 50 songs to avoid oversized prompts
+  const cappedSongs = currentSongs.slice(0, 50);
+  const catalogSummary = cappedSongs.length > 0
+    ? cappedSongs.map((s) => `- "${s.title}" by ${s.artist || "Unknown"}`).join("\n") +
+      (currentSongs.length > 50 ? `\n... and ${currentSongs.length - 50} more songs` : "")
     : "Empty catalog - this is a new band.";
 
   // Extract artists and styles from catalog

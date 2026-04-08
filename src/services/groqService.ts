@@ -10,6 +10,15 @@
  * 3. Add to .env: VITE_GROQ_API_KEY
  */
 
+export class GroqApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "GroqApiError";
+  }
+}
+
 export interface GroqMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -115,6 +124,9 @@ class GroqService {
 
         if (response.status === 401) {
           throw new Error("Invalid Groq API key. Please check your VITE_GROQ_API_KEY.");
+        }
+        if (response.status === 413) {
+          throw new GroqApiError("Request too large for Groq API. Try reducing the amount of data sent.", 413);
         }
         if (response.status === 429) {
           throw new Error("Groq API rate limit exceeded. Please try again later.");
