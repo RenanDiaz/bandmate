@@ -18,6 +18,7 @@ interface BackingTrackPlayerProps {
 export interface BackingTrackPlayerHandle {
   togglePlayPause: () => void;
   stop: () => void;
+  expand: () => void;
 }
 
 const VOLUMES_STORAGE_KEY = "bandmate_backing_track_volumes";
@@ -252,6 +253,7 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
   useImperativeHandle(ref, () => ({
     togglePlayPause: handlePlayPause,
     stop: handleStop,
+    expand: () => setIsExpanded(true),
   }), [handlePlayPause, handleStop]);
 
   const triggerFileSelect = () => {

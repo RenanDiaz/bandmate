@@ -740,7 +740,8 @@
     "expand": "Expandir controles",
     "collapse": "Contraer controles",
     "channelTrack": "Pista",
-    "channelClick": "Clic / Qs"
+    "channelClick": "Clic / Qs",
+    "openFullPlayer": "Abrir reproductor completo"
   },
   "sheetMusic": {
     "title": "Partitura",

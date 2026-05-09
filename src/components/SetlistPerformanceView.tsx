@@ -158,6 +158,8 @@ const SetlistPerformanceView: FC = () => {
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [showFullPlayerInSheet, setShowFullPlayerInSheet] = useState(false);
+  const fullPlayerHideTimerRef = useRef<number | null>(null);
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
   const [pdfNumPages, setPdfNumPages] = useState<number | null>(null);
   const [invertPdfColors, setInvertPdfColors] = useState(() => {
@@ -434,7 +436,61 @@ const SetlistPerformanceView: FC = () => {
     // Reset PDF page tracking
     setPdfCurrentPage(1);
     setPdfNumPages(null);
+    // Hide the temporary full-player overlay when switching songs
+    setShowFullPlayerInSheet(false);
+    if (fullPlayerHideTimerRef.current !== null) {
+      window.clearTimeout(fullPlayerHideTimerRef.current);
+      fullPlayerHideTimerRef.current = null;
+    }
   }, [currentIndex]);
+
+  // Cleanup the overlay timer on unmount
+  useEffect(() => {
+    return () => {
+      if (fullPlayerHideTimerRef.current !== null) {
+        window.clearTimeout(fullPlayerHideTimerRef.current);
+        fullPlayerHideTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Hide overlay when leaving sheet music view
+  useEffect(() => {
+    if (contentView !== "sheetMusic") {
+      setShowFullPlayerInSheet(false);
+      if (fullPlayerHideTimerRef.current !== null) {
+        window.clearTimeout(fullPlayerHideTimerRef.current);
+        fullPlayerHideTimerRef.current = null;
+      }
+    }
+  }, [contentView]);
+
+  // Show the full backing-track player as a temporary overlay in sheet view,
+  // and (re)start the auto-hide timer.
+  const FULL_PLAYER_HIDE_MS = 7000;
+  const showFullPlayerTemporarily = useCallback(() => {
+    setShowFullPlayerInSheet(true);
+    backingTrackRef.current?.expand();
+    if (fullPlayerHideTimerRef.current !== null) {
+      window.clearTimeout(fullPlayerHideTimerRef.current);
+    }
+    fullPlayerHideTimerRef.current = window.setTimeout(() => {
+      setShowFullPlayerInSheet(false);
+      fullPlayerHideTimerRef.current = null;
+    }, FULL_PLAYER_HIDE_MS);
+  }, []);
+
+  // Reset the auto-hide timer (e.g., when user interacts with the overlay).
+  const extendFullPlayerTimer = useCallback(() => {
+    if (!showFullPlayerInSheet) return;
+    if (fullPlayerHideTimerRef.current !== null) {
+      window.clearTimeout(fullPlayerHideTimerRef.current);
+    }
+    fullPlayerHideTimerRef.current = window.setTimeout(() => {
+      setShowFullPlayerInSheet(false);
+      fullPlayerHideTimerRef.current = null;
+    }, FULL_PLAYER_HIDE_MS);
+  }, [showFullPlayerInSheet]);
 
   // Auto-scroll to active song when song list opens
   useEffect(() => {
@@ -1054,7 +1110,11 @@ const SetlistPerformanceView: FC = () => {
 
                 {/* Backing Track Player - only visible to host or when not in sync mode, hidden (not unmounted) in sheet music mode to preserve playback */}
                 {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && (
-                  <div style={contentView === "sheetMusic" && sheetMusicList.length > 0 ? { display: "none" } : undefined}>
+                  <BackingTrackPlayerWrapper
+                    $sheetMode={contentView === "sheetMusic" && sheetMusicList.length > 0}
+                    $overlayVisible={showFullPlayerInSheet}
+                    onClickCapture={showFullPlayerInSheet ? extendFullPlayerTimer : undefined}
+                  >
                     <BackingTrackPlayer
                       ref={backingTrackRef}
                       songId={currentSong.id}
@@ -1067,7 +1127,7 @@ const SetlistPerformanceView: FC = () => {
                       onTimeUpdate={handleAudioTimeUpdate}
                       onPlayingChange={handleAudioPlayingChange}
                     />
-                  </div>
+                  </BackingTrackPlayerWrapper>
                 )}
               </SongHeader>
 
@@ -1114,7 +1174,7 @@ const SetlistPerformanceView: FC = () => {
                       </EmptyContent>
                     )}
                     {/* Mini audio controls overlay for sheet music view */}
-                    {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && getTrackUrl(currentSong.id) && (
+                    {(syncRole === "host" || syncRole === null) && currentSong?.has_backing_tracks && getTrackUrl(currentSong.id) && !showFullPlayerInSheet && (
                       <MiniAudioOverlay>
                         <MiniAudioButton
                           onClick={() => backingTrackRef.current?.stop()}
@@ -1129,9 +1189,15 @@ const SetlistPerformanceView: FC = () => {
                         >
                           <i className={`bi bi-${displayIsPlaying ? "pause-fill" : "play-fill"}`} />
                         </MiniAudioPlayButton>
-                        <MiniAudioTime>
+                        <MiniAudioTimeButton
+                          type="button"
+                          onClick={showFullPlayerTemporarily}
+                          title={t("backingTrack.openFullPlayer", "Open full player")}
+                          aria-label={t("backingTrack.openFullPlayer", "Open full player")}
+                        >
                           {formatDuration(Math.floor(displayAudioTime))}
-                        </MiniAudioTime>
+                          <i className="bi bi-chevron-down" aria-hidden="true" />
+                        </MiniAudioTimeButton>
                       </MiniAudioOverlay>
                     )}
                   </SheetMusicWrapper>
@@ -1765,6 +1831,7 @@ const SongDisplay = styled.div<{ $isSheetMusic?: boolean }>`
   flex: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
   overflow-y: ${({ $isSheetMusic }) => ($isSheetMusic ? "hidden" : "auto")};
   min-height: 0;
   padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[2]} ${theme.space[3]}` : `${theme.space[8]} ${theme.space[10]}`)};
@@ -1950,12 +2017,63 @@ const MiniAudioPlayButton = styled.button<{ $isPlaying: boolean }>`
   }
 `;
 
-const MiniAudioTime = styled.span`
+const MiniAudioTimeButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
   font-size: ${theme.fontSizes.bodySm};
   font-family: ${theme.fonts.mono};
   color: ${theme.colors.dark.text.secondary};
   min-width: 40px;
-  text-align: center;
+  padding: ${theme.space[1]} ${theme.space[2]};
+  border: 1px solid transparent;
+  border-radius: ${theme.radius.full};
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: ${theme.fontSizes.bodySm};
+    opacity: 0.7;
+  }
+
+  &:hover {
+    color: ${theme.colors.dark.text.primary};
+    background: ${theme.colors.dark.bg.elevated};
+    border-color: ${theme.colors.dark.border.default};
+
+    i {
+      opacity: 1;
+    }
+  }
+`;
+
+const BackingTrackPlayerWrapper = styled.div<{ $sheetMode: boolean; $overlayVisible: boolean }>`
+  ${({ $sheetMode, $overlayVisible }) => {
+    if (!$sheetMode) return "";
+    if (!$overlayVisible) return "display: none;";
+    return `
+      position: absolute;
+      top: ${theme.space[2]};
+      left: ${theme.space[2]};
+      right: ${theme.space[2]};
+      z-index: 25;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      border-radius: ${theme.radius.lg};
+      animation: backingTrackOverlayIn 0.2s ease;
+
+      @keyframes backingTrackOverlayIn {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+  }}
 `;
 
 const SheetMusicSelector = styled.div`
