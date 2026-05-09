@@ -740,7 +740,8 @@
     "expand": "Expand controls",
     "collapse": "Collapse controls",
     "channelTrack": "Track",
-    "channelClick": "Click / Cues"
+    "channelClick": "Click / Cues",
+    "openFullPlayer": "Open full player"
   },
   "sheetMusic": {
     "title": "Sheet Music",
