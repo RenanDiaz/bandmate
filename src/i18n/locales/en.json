@@ -738,7 +738,9 @@
     "change": "Change file",
     "remove": "Remove",
     "expand": "Expand controls",
-    "collapse": "Collapse controls"
+    "collapse": "Collapse controls",
+    "channelTrack": "Track",
+    "channelClick": "Click / Cues"
   },
   "sheetMusic": {
     "title": "Sheet Music",

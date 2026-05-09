@@ -738,7 +738,9 @@
     "change": "Cambiar archivo",
     "remove": "Quitar",
     "expand": "Expandir controles",
-    "collapse": "Contraer controles"
+    "collapse": "Contraer controles",
+    "channelTrack": "Pista",
+    "channelClick": "Clic / Qs"
   },
   "sheetMusic": {
     "title": "Partitura",

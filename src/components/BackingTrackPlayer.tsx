@@ -20,6 +20,40 @@ export interface BackingTrackPlayerHandle {
   stop: () => void;
 }
 
+const VOLUMES_STORAGE_KEY = "bandmate_backing_track_volumes";
+
+interface ChannelVolumes {
+  l: number;
+  r: number;
+}
+
+function loadStoredVolumes(songId: string): ChannelVolumes {
+  try {
+    const raw = localStorage.getItem(VOLUMES_STORAGE_KEY);
+    if (!raw) return { l: 1, r: 1 };
+    const parsed = JSON.parse(raw) as Record<string, ChannelVolumes>;
+    const stored = parsed[songId];
+    if (!stored) return { l: 1, r: 1 };
+    return {
+      l: typeof stored.l === "number" ? stored.l : 1,
+      r: typeof stored.r === "number" ? stored.r : 1,
+    };
+  } catch {
+    return { l: 1, r: 1 };
+  }
+}
+
+function persistVolumes(songId: string, volumes: ChannelVolumes) {
+  try {
+    const raw = localStorage.getItem(VOLUMES_STORAGE_KEY);
+    const parsed = (raw ? JSON.parse(raw) : {}) as Record<string, ChannelVolumes>;
+    parsed[songId] = volumes;
+    localStorage.setItem(VOLUMES_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    // ignore persistence errors
+  }
+}
+
 export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTrackPlayerProps>(function BackingTrackPlayer({
   songId,
   trackUrl,
@@ -35,13 +69,20 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const gainLRef = useRef<GainNode | null>(null);
+  const gainRRef = useRef<GainNode | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
+  const initialVolumes = loadStoredVolumes(songId);
+  const [volumeL, setVolumeL] = useState(initialVolumes.l);
+  const [volumeR, setVolumeR] = useState(initialVolumes.r);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Reset player state when song changes
+  // Reset player state and load stored volumes when song changes
   useEffect(() => {
     setIsPlaying(false);
     setCurrentTime(0);
@@ -50,7 +91,56 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+    const stored = loadStoredVolumes(songId);
+    setVolumeL(stored.l);
+    setVolumeR(stored.r);
   }, [songId]);
+
+  // Lazily build the Web Audio graph: source → splitter → [gainL, gainR] → merger → destination.
+  // Must run inside a user gesture (play click) so iOS Safari unlocks the AudioContext.
+  const ensureAudioGraph = useCallback(() => {
+    if (audioContextRef.current || !audioRef.current) return;
+    type WebkitWindow = typeof window & { webkitAudioContext?: typeof AudioContext };
+    const Ctor = window.AudioContext || (window as WebkitWindow).webkitAudioContext;
+    if (!Ctor) return;
+
+    const ctx = new Ctor();
+    const source = ctx.createMediaElementSource(audioRef.current);
+    const splitter = ctx.createChannelSplitter(2);
+    const gainL = ctx.createGain();
+    const gainR = ctx.createGain();
+    const merger = ctx.createChannelMerger(2);
+
+    source.connect(splitter);
+    splitter.connect(gainL, 0);
+    splitter.connect(gainR, 1);
+    gainL.connect(merger, 0, 0);
+    gainR.connect(merger, 0, 1);
+    merger.connect(ctx.destination);
+
+    gainL.gain.value = volumeL;
+    gainR.gain.value = volumeR;
+
+    audioContextRef.current = ctx;
+    sourceRef.current = source;
+    gainLRef.current = gainL;
+    gainRRef.current = gainR;
+  }, [volumeL, volumeR]);
+
+  // Keep gain nodes in sync with state and persist to localStorage
+  useEffect(() => {
+    if (gainLRef.current) gainLRef.current.gain.value = volumeL;
+    if (gainRRef.current) gainRRef.current.gain.value = volumeR;
+    persistVolumes(songId, { l: volumeL, r: volumeR });
+  }, [songId, volumeL, volumeR]);
+
+  // Tear down the AudioContext on unmount
+  useEffect(() => {
+    return () => {
+      audioContextRef.current?.close().catch(() => undefined);
+      audioContextRef.current = null;
+    };
+  }, []);
 
   // Handle audio events
   useEffect(() => {
@@ -109,10 +199,14 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
 
     if (isPlaying) {
       audio.pause();
-    } else {
-      audio.play();
+      return;
     }
-  }, [isPlaying, trackUrl]);
+
+    ensureAudioGraph();
+    // iOS Safari ships AudioContext suspended until a user gesture resumes it
+    audioContextRef.current?.resume().catch(() => undefined);
+    audio.play().catch(() => undefined);
+  }, [isPlaying, trackUrl, ensureAudioGraph]);
 
   const handleSeek = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
@@ -123,13 +217,12 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     setCurrentTime(time);
   }, []);
 
-  const handleVolumeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-    const newVolume = parseFloat(event.target.value);
-    setVolume(newVolume);
-    if (audio) {
-      audio.volume = newVolume;
-    }
+  const handleVolumeLChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setVolumeL(parseFloat(event.target.value));
+  }, []);
+
+  const handleVolumeRChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setVolumeR(parseFloat(event.target.value));
   }, []);
 
   const handleStop = useCallback(() => {
@@ -177,9 +270,8 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
         onChange={handleFileSelect}
       />
 
-      {trackUrl && (
-        <audio ref={audioRef} src={trackUrl} preload="metadata" />
-      )}
+      <audio ref={audioRef} src={trackUrl ?? undefined} preload="metadata" />
+
 
       <PlayerHeader onClick={() => trackUrl && setIsExpanded(!isExpanded)}>
         <HeaderLeft>
@@ -259,19 +351,44 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
               </ControlButton>
             </ControlGroup>
 
-            <VolumeSection>
-              <VolumeIcon $muted={volume === 0}>
-                <i className={`bi bi-volume-${volume === 0 ? "mute" : volume < 0.5 ? "down" : "up"}-fill`}></i>
-              </VolumeIcon>
-              <VolumeSlider
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={handleVolumeChange}
-              />
-            </VolumeSection>
+            <ChannelMixer>
+              <ChannelRow>
+                <ChannelLabel>
+                  <ChannelTag>L</ChannelTag>
+                  {t("backingTrack.channelTrack")}
+                </ChannelLabel>
+                <VolumeIcon $muted={volumeL === 0}>
+                  <i className={`bi bi-volume-${volumeL === 0 ? "mute" : volumeL < 0.5 ? "down" : "up"}-fill`}></i>
+                </VolumeIcon>
+                <VolumeSlider
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volumeL}
+                  onChange={handleVolumeLChange}
+                  aria-label={t("backingTrack.channelTrack")}
+                />
+              </ChannelRow>
+              <ChannelRow>
+                <ChannelLabel>
+                  <ChannelTag>R</ChannelTag>
+                  {t("backingTrack.channelClick")}
+                </ChannelLabel>
+                <VolumeIcon $muted={volumeR === 0}>
+                  <i className={`bi bi-volume-${volumeR === 0 ? "mute" : volumeR < 0.5 ? "down" : "up"}-fill`}></i>
+                </VolumeIcon>
+                <VolumeSlider
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volumeR}
+                  onChange={handleVolumeRChange}
+                  aria-label={t("backingTrack.channelClick")}
+                />
+              </ChannelRow>
+            </ChannelMixer>
 
             <ControlGroup>
               <ControlButton onClick={triggerFileSelect} title={t("backingTrack.change")}>
@@ -555,19 +672,49 @@ const ControlButton = styled.button<{ $primary?: boolean; $danger?: boolean }>`
   }
 `;
 
-const VolumeSection = styled.div`
+const ChannelMixer = styled.div`
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: ${theme.space[2]};
   flex: 1;
-  max-width: 150px;
+  max-width: 280px;
 
   @media (max-width: ${theme.breakpoints.md}) {
     order: 3;
     width: 100%;
     max-width: none;
-    justify-content: center;
   }
+`;
+
+const ChannelRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const ChannelLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  min-width: 110px;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    min-width: 100px;
+  }
+`;
+
+const ChannelTag = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  font-family: ${theme.fonts.mono};
+  font-weight: ${theme.fontWeights.semibold};
+  color: ${theme.colors.brand.primary};
+  background: ${theme.colors.brand.primary}20;
+  border-radius: ${theme.radius.base};
+  padding: 0 ${theme.space[2]};
+  min-width: 22px;
+  text-align: center;
 `;
 
 const VolumeIcon = styled.div<{ $muted: boolean }>`
