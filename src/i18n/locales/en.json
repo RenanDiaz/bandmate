@@ -793,6 +793,8 @@
     "showChords": "Show Chords",
     "showLyrics": "Show Lyrics",
     "showSheetMusic": "Show Sheet Music",
+    "noSheetMusicForSong": "No PDF uploaded for this song",
+    "addSheetMusic": "Add PDF",
     "increaseFontSize": "Increase font size",
     "decreaseFontSize": "Decrease font size",
     "resetFontSize": "Reset font size",

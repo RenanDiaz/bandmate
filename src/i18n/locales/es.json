@@ -793,6 +793,8 @@
     "showChords": "Mostrar Acordes",
     "showLyrics": "Mostrar Letra",
     "showSheetMusic": "Mostrar Partitura",
+    "noSheetMusicForSong": "No hay PDF cargado para esta canción",
+    "addSheetMusic": "Agregar PDF",
     "increaseFontSize": "Aumentar tamaño de fuente",
     "decreaseFontSize": "Reducir tamaño de fuente",
     "resetFontSize": "Restablecer tamaño de fuente",

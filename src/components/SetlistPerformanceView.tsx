@@ -35,6 +35,7 @@ import type { BackingTrackPlayerHandle } from "./BackingTrackPlayer";
 import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 import SheetMusicViewer from "./SheetMusicViewer";
 import type { SheetMusicViewerHandle } from "./SheetMusicViewer";
+import SheetMusicUpload from "./SheetMusicUpload";
 import { getSheetMusicUrl } from "../services/sheetMusicStorageService";
 import {
   getSheetMusicForSong,
@@ -152,6 +153,7 @@ const SetlistPerformanceView: FC = () => {
   const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
   const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
   const [sheetMusicLoading, setSheetMusicLoading] = useState(false);
+  const [showAddPdfModal, setShowAddPdfModal] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
@@ -445,38 +447,37 @@ const SetlistPerformanceView: FC = () => {
   }, [showSongList]);
 
   // Load sheet music list when song changes
-  useEffect(() => {
-    const loadSheetMusicList = async () => {
-      // Get current song from state
-      const currentItem = setlistItems[currentIndex];
-      const isItemSong = currentItem && isSongItem(currentItem);
-      const songForItem = isItemSong ? allSongs.find((s) => s.id === currentItem.song_id) : null;
+  const loadSheetMusicList = useCallback(async () => {
+    const currentItem = setlistItems[currentIndex];
+    const isItemSong = currentItem && isSongItem(currentItem);
+    const songForItem = isItemSong ? allSongs.find((s) => s.id === currentItem.song_id) : null;
 
-      if (!songForItem) {
-        setSheetMusicList([]);
-        setSelectedSheetMusicId(null);
-        setSheetMusicUrl(null);
-        return;
-      }
+    if (!songForItem) {
+      setSheetMusicList([]);
+      setSelectedSheetMusicId(null);
+      setSheetMusicUrl(null);
+      return;
+    }
 
-      try {
-        const list = await getSheetMusicForSong(songForItem.id);
-        setSheetMusicList(list);
-        // Always select first sheet music when song changes
-        if (list.length > 0) {
-          setSelectedSheetMusicId(list[0].id);
-        } else {
-          setSelectedSheetMusicId(null);
-        }
-      } catch (err) {
-        console.error("Failed to load sheet music list:", err);
-        setSheetMusicList([]);
+    try {
+      const list = await getSheetMusicForSong(songForItem.id);
+      setSheetMusicList(list);
+      // Always select first sheet music when song changes
+      if (list.length > 0) {
+        setSelectedSheetMusicId(list[0].id);
+      } else {
         setSelectedSheetMusicId(null);
       }
-    };
-
-    loadSheetMusicList();
+    } catch (err) {
+      console.error("Failed to load sheet music list:", err);
+      setSheetMusicList([]);
+      setSelectedSheetMusicId(null);
+    }
   }, [currentIndex, setlistItems, allSongs]);
+
+  useEffect(() => {
+    loadSheetMusicList();
+  }, [loadSheetMusicList]);
 
   // Load sheet music URL when selected sheet music changes
   useEffect(() => {
@@ -825,7 +826,7 @@ const SetlistPerformanceView: FC = () => {
                   <i className="bi bi-mic"></i>
                   {t("performance.lyrics", "Lyrics")}
                 </ViewToggleButton>
-                {sheetMusicList.length > 0 && (
+                {isCurrentItemSong && (
                   <ViewToggleButton
                     onClick={() => setContentView("sheetMusic")}
                     $active={contentView === "sheetMusic"}
@@ -1134,6 +1135,15 @@ const SetlistPerformanceView: FC = () => {
                       </MiniAudioOverlay>
                     )}
                   </SheetMusicWrapper>
+                ) : contentView === "sheetMusic" ? (
+                  <EmptyContent>
+                    <i className="bi bi-file-earmark-music"></i>
+                    <p>{t("performance.noSheetMusicForSong", "No PDF uploaded for this song")}</p>
+                    <AddPdfButton type="button" onClick={() => setShowAddPdfModal(true)}>
+                      <i className="bi bi-cloud-arrow-up"></i>
+                      {t("performance.addSheetMusic", "Add PDF")}
+                    </AddPdfButton>
+                  </EmptyContent>
                 ) : displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
                   <SyncedLyricsDisplay
                     content={displayContent.content}
@@ -1253,6 +1263,34 @@ const SetlistPerformanceView: FC = () => {
             : t("performance.lyrics", "Lyrics")}
         </MobileToggleLabel>
       </MobileToggleButton>
+
+      {/* Add PDF Modal */}
+      {showAddPdfModal && currentSong && setlist && (
+        <AddPdfModalOverlay onClick={() => setShowAddPdfModal(false)}>
+          <AddPdfModalContainer onClick={(e) => e.stopPropagation()}>
+            <AddPdfModalHeader>
+              <AddPdfModalTitle>
+                <i className="bi bi-file-earmark-music"></i>
+                {t("sheetMusic.title")} — {currentSong.title}
+              </AddPdfModalTitle>
+              <AddPdfModalCloseButton
+                type="button"
+                onClick={() => setShowAddPdfModal(false)}
+                aria-label="Close"
+              >
+                <i className="bi bi-x-lg"></i>
+              </AddPdfModalCloseButton>
+            </AddPdfModalHeader>
+            <AddPdfModalBody>
+              <SheetMusicUpload
+                songId={currentSong.id}
+                bandId={setlist.band_id}
+                onUpdate={loadSheetMusicList}
+              />
+            </AddPdfModalBody>
+          </AddPdfModalContainer>
+        </AddPdfModalOverlay>
+      )}
     </PerformanceContainer>
   );
 };
@@ -1998,10 +2036,14 @@ const EmptyContent = styled.div`
   text-align: center;
   padding: ${theme.space[12]} ${theme.space[6]};
   color: var(--color-text-tertiary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${theme.space[4]};
 
   i {
     font-size: ${theme.fontSizes.displayLg};
-    margin-bottom: ${theme.space[4]};
+    margin-bottom: 0;
     opacity: 0.5;
   }
 
@@ -2009,6 +2051,112 @@ const EmptyContent = styled.div`
     font-size: ${theme.fontSizes.bodyLg};
     margin: 0;
   }
+`;
+
+const AddPdfButton = styled.button`
+  background: ${theme.colors.brand.primary};
+  border: none;
+  color: white;
+  padding: ${theme.space[3]} ${theme.space[5]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: ${theme.colors.brand.primaryHover};
+  }
+
+  i {
+    font-size: ${theme.fontSizes.body};
+    margin-bottom: 0;
+    opacity: 1;
+  }
+`;
+
+const AddPdfModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: ${theme.zIndex.modal};
+  padding: ${theme.space[4]};
+  animation: fadeIn 0.2s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const AddPdfModalContainer = styled.div`
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.lg};
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+`;
+
+const AddPdfModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${theme.space[4]} ${theme.space[5]};
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+`;
+
+const AddPdfModalTitle = styled.h2`
+  margin: 0;
+  font-size: ${theme.fontSizes.h4};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+`;
+
+const AddPdfModalCloseButton = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+`;
+
+const AddPdfModalBody = styled.div`
+  padding: ${theme.space[5]};
+  overflow-y: auto;
 `;
 
 const BottomNav = styled.div`
