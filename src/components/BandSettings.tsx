@@ -25,18 +25,21 @@ export const BandSettings: FC<Props> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"members" | "details" | "reports">("members");
+  // Bumped on member/invitation changes so child lists refresh without
+  // remounting the page (which would tear down the open invite modal).
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     loadBand();
   }, [bandId]);
 
-  const loadBand = async () => {
+  const loadBand = async (showSpinner = true) => {
     if (!bandId) {
       navigate("/");
       return;
     }
 
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
       const bands = await getMyBands();
       const foundBand = bands.find((b) => b.id === parseInt(bandId));
@@ -53,11 +56,14 @@ export const BandSettings: FC<Props> = ({ user }) => {
       alert(t('bands.loadError'));
       navigate("/");
     }
-    setLoading(false);
+    if (showSpinner) setLoading(false);
   };
 
   const handleMemberChange = () => {
-    loadBand();
+    // Refresh quietly: keep the full-page spinner (and the invite modal) out
+    // of it so the modal's success feedback survives.
+    setRefreshKey((key) => key + 1);
+    loadBand(false);
   };
 
   if (loading) {
@@ -128,6 +134,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
             <BandMembers
               band={band}
               currentUserId={user.id}
+              refreshKey={refreshKey}
               onMemberChange={handleMemberChange}
               onInviteClick={() => setIsInviteModalOpen(true)}
             />

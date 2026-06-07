@@ -14,19 +14,34 @@ import {
   revokeInvitation,
 } from "../services/bandMembersService";
 import type { BandMember, BandRole, BandInvitation } from "../services/bandMembersService";
+import { ConfirmModal } from "./ConfirmModal";
 
 interface Props {
   band: Band;
   currentUserId: string;
+  /** Bumped by the parent to force a reload of members/invitations. */
+  refreshKey?: number;
   onMemberChange: () => void;
   onInviteClick: () => void;
 }
 
-export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, onInviteClick }) => {
+type Feedback = { type: "success" | "error"; message: string };
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  action: () => Promise<void>;
+};
+
+export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemberChange, onInviteClick }) => {
   const { t } = useTranslation();
   const [members, setMembers] = useState<BandMember[]>([]);
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const isOwner = band.user_role === "owner";
   const currentMember = members.find((m) => m.user_id === currentUserId);
@@ -36,7 +51,26 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
     if (isOwner) {
       loadInvitations();
     }
-  }, [band.id, isOwner]);
+  }, [band.id, isOwner, refreshKey]);
+
+  // Auto-dismiss success feedback; errors stay until the next action.
+  useEffect(() => {
+    if (feedback?.type === "success") {
+      const timer = setTimeout(() => setFeedback(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadMembers = async () => {
     setLoading(true);
@@ -58,30 +92,32 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
     }
   };
 
-  const handleRemoveMember = async (member: BandMember) => {
+  const handleRemoveMember = (member: BandMember) => {
     if (member.role === "owner") {
-      alert(t("bands.cannotRemoveOwner"));
+      setFeedback({ type: "error", message: t("bands.cannotRemoveOwner") });
       return;
     }
 
-    const confirmed = window.confirm(
-      t("bands.confirmRemoveMember", { email: member.email || t("common.unknown") })
-    );
-    if (!confirmed) return;
-
-    try {
-      await removeBandMember(member.id);
-      await loadMembers();
-      onMemberChange();
-    } catch (error) {
-      console.error("Failed to remove member:", error);
-      alert(t("bands.removeError"));
-    }
+    setConfirm({
+      title: t("bands.removeMember"),
+      message: t("bands.confirmRemoveMember", { email: member.email || t("common.unknown") }),
+      confirmLabel: t("bands.removeMember"),
+      action: async () => {
+        try {
+          await removeBandMember(member.id);
+          await loadMembers();
+          onMemberChange();
+        } catch (error) {
+          console.error("Failed to remove member:", error);
+          setFeedback({ type: "error", message: t("bands.removeError") });
+        }
+      },
+    });
   };
 
   const handleChangeRole = async (member: BandMember, newRole: BandRole) => {
     if (member.role === "owner" && newRole !== "owner") {
-      alert(t("bands.cannotChangeOwnerRole"));
+      setFeedback({ type: "error", message: t("bands.cannotChangeOwnerRole") });
       return;
     }
 
@@ -91,29 +127,31 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
       onMemberChange();
     } catch (error) {
       console.error("Failed to update member role:", error);
-      alert(t("bands.updateRoleError"));
+      setFeedback({ type: "error", message: t("bands.updateRoleError") });
     }
   };
 
-  const handleLeaveBand = async () => {
+  const handleLeaveBand = () => {
     if (currentMember?.role === "owner") {
-      alert(t("bands.ownerCannotLeave"));
+      setFeedback({ type: "error", message: t("bands.ownerCannotLeave") });
       return;
     }
 
-    const confirmed = window.confirm(
-      t("bands.confirmLeaveBand", { name: band.name })
-    );
-    if (!confirmed) return;
-
-    try {
-      await leaveBand(band.id);
-      onMemberChange();
-      // The parent component should handle navigation after leaving
-    } catch (error) {
-      console.error("Failed to leave band:", error);
-      alert(t("bands.leaveError"));
-    }
+    setConfirm({
+      title: t("bands.leaveBand"),
+      message: t("bands.confirmLeaveBand", { name: band.name }),
+      confirmLabel: t("bands.leaveBand"),
+      action: async () => {
+        try {
+          await leaveBand(band.id);
+          onMemberChange();
+          // The parent component should handle navigation after leaving
+        } catch (error) {
+          console.error("Failed to leave band:", error);
+          setFeedback({ type: "error", message: t("bands.leaveError") });
+        }
+      },
+    });
   };
 
   const getRoleBadgeColor = (role: BandRole) => {
@@ -150,25 +188,33 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
     return email.charAt(0).toUpperCase();
   };
 
-  const handleRevokeInvitation = async (invitation: BandInvitation) => {
-    const confirmed = window.confirm(
-      t("bands.confirmRevokeInvitation", { email: invitation.email })
-    );
-    if (!confirmed) return;
-
-    try {
-      await revokeInvitation(invitation.id);
-      await loadInvitations();
-    } catch (error) {
-      console.error("Failed to revoke invitation:", error);
-      alert(t("bands.revokeError"));
-    }
+  const handleRevokeInvitation = (invitation: BandInvitation) => {
+    setConfirm({
+      title: t("bands.revokeInvitation"),
+      message: t("bands.confirmRevokeInvitation", { email: invitation.email }),
+      confirmLabel: t("bands.revokeInvitation"),
+      action: async () => {
+        try {
+          await revokeInvitation(invitation.id);
+          await loadInvitations();
+        } catch (error) {
+          console.error("Failed to revoke invitation:", error);
+          setFeedback({ type: "error", message: t("bands.revokeError") });
+        }
+      },
+    });
   };
 
-  const copyInvitationLink = (invitation: BandInvitation) => {
+  const copyInvitationLink = async (invitation: BandInvitation) => {
     const link = `${window.location.origin}/invite/accept?token=${invitation.token}`;
-    navigator.clipboard.writeText(link);
-    alert(t("bands.invitationCopied"));
+    try {
+      await navigator.clipboard.writeText(link);
+      setFeedback({ type: "success", message: t("bands.invitationCopied") });
+    } catch {
+      // Clipboard can be unavailable (e.g. non-secure context); surface the
+      // link so the owner can copy it manually.
+      setFeedback({ type: "error", message: link });
+    }
   };
 
   if (loading) {
@@ -182,6 +228,13 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
 
   return (
     <Container>
+      {feedback && (
+        <FeedbackBanner $type={feedback.type} role="status" aria-live="polite">
+          <i className={`bi ${feedback.type === "success" ? "bi-check-circle-fill" : "bi-x-circle-fill"}`}></i>
+          <span>{feedback.message}</span>
+        </FeedbackBanner>
+      )}
+
       <Header>
         <HeaderLeft>
           <Title>
@@ -319,6 +372,17 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, onMemberChange, on
           </InvitationsSection>
         </>
       )}
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </Container>
   );
 };
@@ -330,6 +394,38 @@ const Container = styled.div`
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
+`;
+
+const FeedbackBanner = styled.div<{ $type: "success" | "error" }>`
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.space[2]};
+  margin: ${theme.space[4]} ${theme.space[4]} 0;
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  line-height: 1.4;
+  border: 1px solid;
+  word-break: break-word;
+
+  ${({ $type }) =>
+    $type === "success"
+      ? `
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.4);
+        color: #4ade80;
+      `
+      : `
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #f87171;
+      `}
+
+  i {
+    flex-shrink: 0;
+    font-size: ${theme.fontSizes.bodyLg};
+    margin-top: 1px;
+  }
 `;
 
 const Header = styled.div`

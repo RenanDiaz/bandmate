@@ -48,6 +48,17 @@ const AppContent: FC = () => {
     document.documentElement.setAttribute("data-bs-theme", mode);
   }, [mode]);
 
+  // Resume a pending invitation after the user logs in. OAuth/email logins
+  // redirect back to the origin ("/"), so a token stashed by AcceptInvitation
+  // would otherwise be lost — bounce the user back to finish accepting.
+  useEffect(() => {
+    if (isCheckingAuth || !user) return;
+    const pendingToken = sessionStorage.getItem("pendingInviteToken");
+    if (pendingToken && location.pathname !== "/invite/accept") {
+      navigate(`/invite/accept?token=${pendingToken}`);
+    }
+  }, [user, isCheckingAuth, location.pathname, navigate]);
+
   const toggleMode = () => {
     setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
   };
@@ -312,7 +323,7 @@ const AppContent: FC = () => {
           <LoadingContainer>
             <Spinner color="light" />
           </LoadingContainer>
-        ) : user && (!selectedBand || showBandSelector) ? (
+        ) : user && (!selectedBand || showBandSelector) && location.pathname !== "/invite/accept" ? (
           <BandSelector
             onSelect={(band) => {
               setSelectedBand(band);

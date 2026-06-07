@@ -652,7 +652,15 @@
     "decline": "Rechazar",
     "accepting": "Aceptando...",
     "youveBeenInvited": "Has sido invitado a unirte a",
-    "asRole": "como {{role}}"
+    "asRole": "como {{role}}",
+    "verifying": "Aceptando tu invitación...",
+    "successTitle": "¡Invitación Aceptada!",
+    "successMessage": "Te has unido a la banda exitosamente. Redirigiendo...",
+    "errorTitle": "Error de Invitación",
+    "goHome": "Ir al Inicio",
+    "needsAuthTitle": "¡Ya casi!",
+    "needsAuthMessage": "Inicia sesión o crea una cuenta para aceptar tu invitación.",
+    "logIn": "Inicia sesión para aceptar"
   },
   "about": {
     "title": "Acerca de Bandmate",

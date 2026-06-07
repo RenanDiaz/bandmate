@@ -1,83 +1,91 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useBandContext } from "../context/useBandContext";
 import {
   getInvitationByToken,
   acceptInvitation,
 } from "../services/bandMembersService";
-import type { BandInvitation } from "../services/bandMembersService";
+
+const PENDING_TOKEN_KEY = "pendingInviteToken";
+
+type Status = "working" | "needsAuth" | "success" | "error";
 
 export const AcceptInvitation: FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user, isCheckingAuth, refreshBands } = useBandContext();
   const token = searchParams.get("token");
 
-  const [loading, setLoading] = useState(true);
-  const [accepting, setAccepting] = useState(false);
-  const [invitation, setInvitation] = useState<BandInvitation | null>(null);
+  const [status, setStatus] = useState<Status>("working");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  // Ensures we only run the acceptance flow once even if auth state settles
+  // through several renders.
+  const attemptedRef = useRef(false);
 
   useEffect(() => {
-    loadInvitation();
-  }, [token]);
+    // Wait until we know whether the user is authenticated.
+    if (isCheckingAuth) return;
 
-  const loadInvitation = async () => {
     if (!token) {
-      setError("Invalid invitation link - missing token");
-      setLoading(false);
+      setStatus("error");
+      setError(t("invitations.invalidLink"));
       return;
     }
 
-    setLoading(true);
+    if (!user) {
+      // Stash the token so we can resume once the user logs in (OAuth/email
+      // logins redirect back to the origin and lose this route).
+      sessionStorage.setItem(PENDING_TOKEN_KEY, token);
+      setStatus("needsAuth");
+      return;
+    }
+
+    if (attemptedRef.current) return;
+    attemptedRef.current = true;
+    sessionStorage.removeItem(PENDING_TOKEN_KEY);
+    void acceptFlow(token);
+  }, [isCheckingAuth, user, token, t]);
+
+  const acceptFlow = async (tok: string) => {
+    setStatus("working");
     try {
-      const invite = await getInvitationByToken(token);
+      const invite = await getInvitationByToken(tok);
       if (!invite) {
-        setError("Invitation not found or has already been used");
-      } else if (new Date(invite.expires_at) < new Date()) {
-        setError("This invitation has expired");
-      } else {
-        setInvitation(invite);
+        setStatus("error");
+        setError(t("invitations.notFound"));
+        return;
       }
+      if (new Date(invite.expires_at) < new Date()) {
+        setStatus("error");
+        setError(t("invitations.expired"));
+        return;
+      }
+
+      await acceptInvitation(invite.id);
+      refreshBands();
+      setStatus("success");
+      setTimeout(() => navigate("/"), 2000);
     } catch (err) {
-      console.error("Failed to load invitation:", err);
-      setError("Failed to load invitation. Please try again.");
-    }
-    setLoading(false);
-  };
-
-  const handleAccept = async () => {
-    if (!invitation) return;
-
-    setAccepting(true);
-    try {
-      await acceptInvitation(invitation.id);
-      setSuccess(true);
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
-    } catch (err: any) {
       console.error("Failed to accept invitation:", err);
-      setError(err.message || "Failed to accept invitation. Please try again.");
+      setStatus("error");
+      setError(err instanceof Error ? err.message : t("invitations.loadError"));
     }
-    setAccepting(false);
   };
 
-  const handleDecline = () => {
-    navigate("/");
-  };
-
-  if (loading) {
+  if (isCheckingAuth || status === "working") {
     return (
       <PageWrapper>
         <Container>
           <Card>
             <LoadingContainer>
               <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-              <LoadingText>Loading invitation...</LoadingText>
+              <LoadingText>{t("invitations.verifying")}</LoadingText>
             </LoadingContainer>
           </Card>
         </Container>
@@ -85,20 +93,21 @@ export const AcceptInvitation: FC = () => {
     );
   }
 
-  if (error) {
+  if (status === "needsAuth") {
     return (
       <PageWrapper>
         <Container>
           <Card>
-            <Icon $type="error">
-              <i className="bi bi-exclamation-triangle"></i>
+            <Icon $type="invite">
+              <i className="bi bi-envelope-open"></i>
             </Icon>
-            <Title>Invitation Error</Title>
-            <Message>{error}</Message>
+            <Title>{t("invitations.needsAuthTitle")}</Title>
+            <Message>{t("invitations.needsAuthMessage")}</Message>
             <Actions>
-              <SecondaryButton onClick={() => navigate("/")}>
-                Go to Home
-              </SecondaryButton>
+              <PrimaryButton onClick={() => navigate("/login")}>
+                <i className="bi bi-box-arrow-in-right"></i>
+                {t("invitations.logIn")}
+              </PrimaryButton>
             </Actions>
           </Card>
         </Container>
@@ -106,7 +115,7 @@ export const AcceptInvitation: FC = () => {
     );
   }
 
-  if (success) {
+  if (status === "success") {
     return (
       <PageWrapper>
         <Container>
@@ -114,97 +123,28 @@ export const AcceptInvitation: FC = () => {
             <Icon $type="success">
               <i className="bi bi-check-circle"></i>
             </Icon>
-            <Title>Invitation Accepted!</Title>
-            <Message>You've successfully joined the band. Redirecting...</Message>
+            <Title>{t("invitations.successTitle")}</Title>
+            <Message>{t("invitations.successMessage")}</Message>
           </Card>
         </Container>
       </PageWrapper>
     );
   }
 
-  if (!invitation) {
-    return (
-      <PageWrapper>
-        <Container>
-          <Card>
-            <Icon $type="error">
-              <i className="bi bi-exclamation-triangle"></i>
-            </Icon>
-            <Title>Invitation Not Found</Title>
-            <Message>This invitation link is invalid or has been used.</Message>
-            <Actions>
-              <SecondaryButton onClick={() => navigate("/")}>
-                Go to Home
-              </SecondaryButton>
-            </Actions>
-          </Card>
-        </Container>
-      </PageWrapper>
-    );
-  }
-
+  // status === "error"
   return (
     <PageWrapper>
       <Container>
         <Card>
-          <Icon $type="invite">
-            <i className="bi bi-envelope-open"></i>
+          <Icon $type="error">
+            <i className="bi bi-exclamation-triangle"></i>
           </Icon>
-          <Title>Band Invitation</Title>
-          <Message>
-            You've been invited to join a band as a{" "}
-            <RoleBadge $role={invitation.role}>
-              {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
-            </RoleBadge>
-          </Message>
-
-          <InvitationDetails>
-            <DetailRow>
-              <DetailLabel>
-                <i className="bi bi-envelope"></i>
-                Email
-              </DetailLabel>
-              <DetailValue>{invitation.email}</DetailValue>
-            </DetailRow>
-            <DetailRow>
-              <DetailLabel>
-                <i className="bi bi-person-badge"></i>
-                Role
-              </DetailLabel>
-              <DetailValue>
-                {invitation.role === "member"
-                  ? "Member - Full access to songs and setlists"
-                  : "Guest - Limited access (expires after 30 days)"}
-              </DetailValue>
-            </DetailRow>
-            <DetailRow>
-              <DetailLabel>
-                <i className="bi bi-calendar"></i>
-                Expires
-              </DetailLabel>
-              <DetailValue>
-                {new Date(invitation.expires_at).toLocaleDateString()}
-              </DetailValue>
-            </DetailRow>
-          </InvitationDetails>
-
+          <Title>{t("invitations.errorTitle")}</Title>
+          <Message>{error}</Message>
           <Actions>
-            <SecondaryButton onClick={handleDecline} disabled={accepting}>
-              Decline
+            <SecondaryButton onClick={() => navigate("/")}>
+              {t("invitations.goHome")}
             </SecondaryButton>
-            <PrimaryButton onClick={handleAccept} disabled={accepting}>
-              {accepting ? (
-                <>
-                  <Spinner size="sm" />
-                  Accepting...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-check-lg"></i>
-                  Accept Invitation
-                </>
-              )}
-            </PrimaryButton>
           </Actions>
         </Card>
       </Container>
@@ -264,68 +204,6 @@ const Message = styled.p`
   color: var(--color-text-secondary);
   margin-bottom: ${theme.space[6]};
   line-height: ${theme.lineHeights.relaxed};
-`;
-
-const RoleBadge = styled.span<{ $role: string }>`
-  background: ${(props) =>
-    props.$role === "member"
-      ? 'var(--color-bg-tertiary)'
-      : theme.colors.semantic.warningBgDark};
-  color: ${(props) =>
-    props.$role === "member"
-      ? theme.colors.brand.primary
-      : theme.colors.semantic.warning};
-  padding: ${theme.space[1]} ${theme.space[3]};
-  border-radius: ${theme.radius.base};
-  font-weight: ${theme.fontWeights.semibold};
-  font-size: ${theme.fontSizes.bodySm};
-`;
-
-const InvitationDetails = styled.div`
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.lg};
-  padding: ${theme.space[5]};
-  margin-bottom: ${theme.space[6]};
-  text-align: left;
-`;
-
-const DetailRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: ${theme.space[3]} 0;
-  border-bottom: 1px solid var(--color-border);
-
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  &:first-child {
-    padding-top: 0;
-  }
-`;
-
-const DetailLabel = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
-  font-weight: ${theme.fontWeights.medium};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-
-  i {
-    color: ${theme.colors.brand.primary};
-  }
-`;
-
-const DetailValue = styled.div`
-  font-size: ${theme.fontSizes.body};
-  color: var(--color-text-primary);
-  font-weight: ${theme.fontWeights.medium};
-  text-align: right;
-  max-width: 60%;
 `;
 
 const Actions = styled.div`
