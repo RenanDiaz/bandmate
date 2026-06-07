@@ -84,7 +84,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Bandmate <noreply@bandmate.space>',
+        from: 'Bandmate <invitations@bandmate.space>',
         to: [invitation.email],
         subject: `You've been invited to join ${invitation.band.name}`,
         html: `
