@@ -46,6 +46,14 @@ export interface CreateInvitationInput {
   expires_in_days?: number;
 }
 
+export interface CreateInvitationResult {
+  invitation: BandInvitation;
+  /** Whether the invitation email was successfully dispatched via the Edge Function. */
+  emailSent: boolean;
+  /** Present when emailSent is false: the reason the email could not be sent. */
+  emailError?: string;
+}
+
 export interface UpdateMemberRoleInput {
   role: BandRole;
 }
@@ -216,7 +224,7 @@ export async function leaveBand(bandId: number): Promise<void> {
  */
 export async function createBandInvitation(
   invitation: CreateInvitationInput
-): Promise<BandInvitation> {
+): Promise<CreateInvitationResult> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
 
@@ -245,19 +253,34 @@ export async function createBandInvitation(
 
   if (error) throw error;
 
-  // Send email via Edge Function (non-blocking)
-  // If this fails, invitation is still created (user can copy link manually)
+  // Send email via Edge Function (non-blocking).
+  // The invitation is already created at this point, so email failures must NOT
+  // throw - instead we report them back so the caller can tell the user the
+  // invitation exists but the email didn't go out (they can share the link).
+  //
+  // Note: supabase.functions.invoke only throws on transport-level failures.
+  // When the Edge Function itself responds with a non-2xx status, the failure
+  // is returned in the `error` field (a FunctionsHttpError), so we must inspect
+  // it explicitly rather than relying on try/catch alone.
+  let emailSent = false;
+  let emailError: string | undefined;
   try {
-    await supabase.functions.invoke("send-invitation-email", {
-      body: { invitationId: data.id },
-    });
-  } catch (emailError) {
-    console.warn("Failed to send invitation email:", emailError);
-    // Don't throw - invitation was created successfully
-    // User can still copy and share the link manually
+    const { error: invokeError } = await supabase.functions.invoke(
+      "send-invitation-email",
+      { body: { invitationId: data.id } }
+    );
+    if (invokeError) {
+      emailError = invokeError.message || "Failed to send invitation email";
+      console.warn("Failed to send invitation email:", invokeError);
+    } else {
+      emailSent = true;
+    }
+  } catch (err) {
+    emailError = err instanceof Error ? err.message : "Failed to send invitation email";
+    console.warn("Failed to send invitation email:", err);
   }
 
-  return data;
+  return { invitation: data, emailSent, emailError };
 }
 
 /**

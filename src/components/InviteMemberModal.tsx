@@ -15,58 +15,97 @@ interface Props {
   onSuccess: () => void;
 }
 
+type Feedback = { type: "success" | "warning" | "error"; message: string };
+
 export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose, onSuccess }) => {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Exclude<BandRole, "owner">>("member");
   const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim()) {
-      alert(t('bands.enterEmail'));
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setFeedback({ type: "error", message: t("bands.enterEmail") });
       return;
     }
 
     setSubmitting(true);
+    setFeedback(null);
     try {
-      await createBandInvitation({
+      const result = await createBandInvitation({
         band_id: bandId,
-        email: email.trim().toLowerCase(),
+        email: trimmedEmail.toLowerCase(),
         role,
         expires_in_days: role === "guest" ? 30 : undefined,
       });
 
-      alert(`Invitation sent to ${email}`);
+      // Refresh the parent's invitation list regardless of email outcome.
+      onSuccess();
+
+      if (result.emailSent) {
+        setFeedback({
+          type: "success",
+          message: t("bands.invitationSent", { email: trimmedEmail }),
+        });
+      } else {
+        // Invitation was created but the email could not be delivered.
+        // Keep the modal open so the owner can copy/share the link manually.
+        setFeedback({
+          type: "warning",
+          message: t("bands.invitationCreatedEmailFailed", { email: trimmedEmail }),
+        });
+      }
       setEmail("");
       setRole("member");
-      onSuccess();
-      onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to send invitation:", error);
-      alert(error.message || "Failed to send invitation. Please try again.");
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : t("bands.sendInvitationError"),
+      });
     }
     setSubmitting(false);
   };
 
+  const handleClose = () => {
+    setFeedback(null);
+    onClose();
+  };
+
   return (
     <>
-      <Overlay onClick={onClose} />
+      <Overlay onClick={handleClose} />
       <ModalContainer>
         <ModalHeader>
           <Title>
             <i className="bi bi-person-plus"></i>
             {t('bands.inviteMemberTo', { bandName })}
           </Title>
-          <CloseButton onClick={onClose}>
+          <CloseButton onClick={handleClose}>
             <i className="bi bi-x"></i>
           </CloseButton>
         </ModalHeader>
 
         <Form onSubmit={handleSubmit}>
+          {feedback && (
+            <FeedbackBanner $type={feedback.type} role="status" aria-live="polite">
+              <i className={`bi ${
+                feedback.type === "success"
+                  ? "bi-check-circle-fill"
+                  : feedback.type === "warning"
+                  ? "bi-exclamation-triangle-fill"
+                  : "bi-x-circle-fill"
+              }`}></i>
+              <span>{feedback.message}</span>
+            </FeedbackBanner>
+          )}
+
           <FormGroup>
             <Label>{t('bands.emailAddress')}</Label>
             <Input
@@ -89,7 +128,7 @@ export const InviteMemberModal: FC<Props> = ({ bandId, bandName, isOpen, onClose
           </FormGroup>
 
           <Actions>
-            <CancelButton type="button" onClick={onClose} disabled={submitting}>
+            <CancelButton type="button" onClick={handleClose} disabled={submitting}>
               {t('common.cancel')}
             </CancelButton>
             <SubmitButton type="submit" disabled={submitting}>
@@ -210,6 +249,46 @@ const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[2]};
+`;
+
+const FeedbackBanner = styled.div<{ $type: "success" | "warning" | "error" }>`
+  display: flex;
+  align-items: flex-start;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  line-height: 1.4;
+  border: 1px solid;
+
+  ${({ $type }) => {
+    switch ($type) {
+      case "success":
+        return `
+          background: rgba(34, 197, 94, 0.1);
+          border-color: rgba(34, 197, 94, 0.4);
+          color: #4ade80;
+        `;
+      case "warning":
+        return `
+          background: rgba(234, 179, 8, 0.1);
+          border-color: rgba(234, 179, 8, 0.4);
+          color: #facc15;
+        `;
+      case "error":
+        return `
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.4);
+          color: #f87171;
+        `;
+    }
+  }}
+
+  i {
+    flex-shrink: 0;
+    font-size: ${theme.fontSizes.bodyLg};
+    margin-top: 1px;
+  }
 `;
 
 const Label = styled.label`
