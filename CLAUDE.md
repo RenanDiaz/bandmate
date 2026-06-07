@@ -108,6 +108,26 @@ Reference `src/theme.ts` for the design system. Key patterns:
 - Icons: Bootstrap Icons (`bi-*` classes)
 - Print styles: Components hide navbar and use `@media print` for print views
 
+### User Feedback & Dialogs
+
+**Do NOT use the browser's native `alert()`, `confirm()`, or `prompt()`.** They
+break the dark theme, can't be styled, and feel out of place in the app. Use
+well-designed, in-app UI instead:
+
+- **Confirmations** (destructive actions, irreversible changes): use a styled
+  confirmation modal, following the pattern in existing modals (e.g.
+  `InviteMemberModal.tsx`) — Overlay + ModalContainer + Actions with
+  Cancel/Confirm buttons.
+- **Success / error / warning messages**: surface them inline within the
+  relevant view or modal (e.g. the `FeedbackBanner` pattern in
+  `InviteMemberModal.tsx`), not via blocking dialogs.
+- Always localize user-facing copy through `t()` (add keys to both `en.json`
+  and `es.json`).
+
+> Note: much of the existing codebase still uses `alert()`/`confirm()`. These
+> are legacy and should be migrated to in-app UI when touched. Do not add new
+> ones.
+
 ## Database Schema Notes
 
 All tables use Supabase RLS policies. Key tables:
