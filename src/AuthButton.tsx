@@ -23,7 +23,10 @@ export const AuthButton: FC = () => {
       if (mounted) setUser(user);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      // Avoid re-rendering on token refreshes that don't change the user (e.g.
+      // when the tab regains focus after switching apps).
+      const nextUser = session?.user ?? null;
+      setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
     });
     return () => {
       mounted = false;
