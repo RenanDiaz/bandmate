@@ -1,8 +1,36 @@
 import type { Song } from "../services/songsService";
-import type { SortOption, FilterOptions } from "../components/SongSearchFilter";
+
+export type SortOption =
+  | "artist_title_asc"
+  | "date_desc"
+  | "date_asc"
+  | "title_asc"
+  | "title_desc"
+  | "artist_asc"
+  | "artist_desc"
+  | "tempo_asc"
+  | "tempo_desc"
+  | "duration_asc"
+  | "duration_desc";
+
+export type FilterField = "chords" | "lyrics" | "key" | "tempo" | "duration" | "tags";
+
+// "any" = ignore the field, "has" = must have it, "none" = must not have it
+export type FilterState = "any" | "has" | "none";
+
+export type FilterOptions = Record<FilterField, FilterState>;
+
+export const DEFAULT_FILTERS: FilterOptions = {
+  chords: "any",
+  lyrics: "any",
+  key: "any",
+  tempo: "any",
+  duration: "any",
+  tags: "any",
+};
 
 /**
- * Filter songs by search query (searches title and artist)
+ * Filter songs by search query (searches title, artist, and tags)
  */
 export function filterBySearch(songs: Song[], query: string): Song[] {
   if (!query.trim()) return songs;
@@ -12,41 +40,38 @@ export function filterBySearch(songs: Song[], query: string): Song[] {
   return songs.filter((song) => {
     const titleMatch = song.title.toLowerCase().includes(lowerQuery);
     const artistMatch = song.artist?.toLowerCase().includes(lowerQuery) || false;
-    return titleMatch || artistMatch;
+    const tagsMatch = song.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery)) || false;
+    return titleMatch || artistMatch || tagsMatch;
   });
 }
 
 /**
- * Filter songs by content options (has chords, has lyrics, has key, etc.)
+ * Predicates describing whether a song "has" each filterable field.
+ */
+const fieldPredicates: Record<FilterField, (song: Song) => boolean> = {
+  chords: (song) => !!song.chords && song.chords.trim().length > 0,
+  lyrics: (song) => !!song.lyrics && song.lyrics.trim().length > 0,
+  key: (song) => !!song.key && song.key.trim().length > 0,
+  tempo: (song) => song.tempo !== undefined && song.tempo > 0,
+  duration: (song) => song.duration !== undefined && song.duration > 0,
+  tags: (song) => !!song.tags && song.tags.length > 0,
+};
+
+/**
+ * Filter songs by content options. Each field can require the song to have
+ * the field ("has"), to be missing it ("none"), or be ignored ("any").
  */
 export function filterByOptions(songs: Song[], filters: FilterOptions): Song[] {
-  let filtered = songs;
+  const fields = Object.keys(fieldPredicates) as FilterField[];
 
-  if (filters.hasChords) {
-    filtered = filtered.filter((song) => song.chords && song.chords.trim().length > 0);
-  }
-
-  if (filters.hasLyrics) {
-    filtered = filtered.filter((song) => song.lyrics && song.lyrics.trim().length > 0);
-  }
-
-  if (filters.hasKey) {
-    filtered = filtered.filter((song) => song.key && song.key.trim().length > 0);
-  }
-
-  if (filters.hasTempo) {
-    filtered = filtered.filter((song) => song.tempo !== undefined && song.tempo > 0);
-  }
-
-  if (filters.hasDuration) {
-    filtered = filtered.filter((song) => song.duration !== undefined && song.duration > 0);
-  }
-
-  if (filters.hasTags) {
-    filtered = filtered.filter((song) => song.tags && song.tags.length > 0);
-  }
-
-  return filtered;
+  return songs.filter((song) =>
+    fields.every((field) => {
+      const state = filters[field];
+      if (state === "any") return true;
+      const has = fieldPredicates[field](song);
+      return state === "has" ? has : !has;
+    })
+  );
 }
 
 /**

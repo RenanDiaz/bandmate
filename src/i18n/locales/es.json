@@ -222,17 +222,24 @@
       "country": "ej., USA, UK, México",
       "lyrics": "Ingresa la letra de la canción..."
     },
-    "searchPlaceholder": "Buscar canciones por título o artista...",
+    "searchPlaceholder": "Buscar canciones por título, artista o etiquetas...",
     "clearSearch": "Limpiar búsqueda",
     "toggleFilters": "Alternar filtros",
     "filters": "Filtros",
     "filterByContent": "Filtrar por contenido",
-    "hasChords": "Tiene Acordes",
-    "hasLyrics": "Tiene Letra",
-    "hasKey": "Tiene Tonalidad",
-    "hasTempo": "Tiene Tempo",
-    "hasDuration": "Tiene Duración",
-    "hasTags": "Tiene Etiquetas",
+    "filterFields": {
+      "chords": "Acordes",
+      "lyrics": "Letra",
+      "key": "Tonalidad",
+      "tempo": "Tempo",
+      "duration": "Duración",
+      "tags": "Etiquetas"
+    },
+    "filterState": {
+      "any": "Cualquiera",
+      "has": "Con",
+      "none": "Sin"
+    },
     "clearAllFilters": "Limpiar todos los filtros",
     "showingResults": "Mostrando {{resultsCount}} de {{totalCount}} canciones",
     "sortOptions": {
