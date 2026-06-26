@@ -35,7 +35,13 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
       setHasCheckedAuth(true);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const nextUser = session?.user ?? null;
+      // Only update the user state when it actually changes. Supabase refreshes
+      // the token (firing TOKEN_REFRESHED / SIGNED_IN) when the tab regains
+      // focus, e.g. after switching apps and coming back. Replacing `user` with
+      // a new reference on every such event would re-run the effects below and
+      // refetch all band data, making the app look like it reloads.
+      setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
       setHasCheckedAuth(true);
     });
     return () => listener.subscription.unsubscribe();
