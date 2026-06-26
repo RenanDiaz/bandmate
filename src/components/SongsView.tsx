@@ -16,8 +16,8 @@ import { SongList } from "./SongList";
 import { EditSongModal } from "./EditSongModal";
 import { ImportSongsModal } from "./ImportSongsModal";
 import { NewRequestModal } from "./NewRequestModal";
-import { SongSearchFilter, type SortOption, type FilterOptions } from "./SongSearchFilter";
-import { processSongs } from "../utils/songFilters";
+import { SongSearchFilter } from "./SongSearchFilter";
+import { processSongs, DEFAULT_FILTERS, type SortOption, type FilterOptions } from "../utils/songFilters";
 import { SEO } from "./SEO";
 
 interface Props {
@@ -40,14 +40,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("artist_title_asc");
-  const [filters, setFilters] = useState<FilterOptions>({
-    hasChords: false,
-    hasLyrics: false,
-    hasKey: false,
-    hasTempo: false,
-    hasDuration: false,
-    hasTags: false,
-  });
+  const [filters, setFilters] = useState<FilterOptions>({ ...DEFAULT_FILTERS });
 
   // Process songs with filters and search
   const filteredSongs = processSongs(songs, searchQuery, filters, sortBy);

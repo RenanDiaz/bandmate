@@ -224,17 +224,24 @@
       "country": "e.g., USA, UK, Mexico",
       "lyrics": "Enter song lyrics..."
     },
-    "searchPlaceholder": "Search songs by title or artist...",
+    "searchPlaceholder": "Search songs by title, artist, or tags...",
     "clearSearch": "Clear search",
     "toggleFilters": "Toggle filters",
     "filters": "Filters",
     "filterByContent": "Filter by content",
-    "hasChords": "Has Chords",
-    "hasLyrics": "Has Lyrics",
-    "hasKey": "Has Key",
-    "hasTempo": "Has Tempo",
-    "hasDuration": "Has Duration",
-    "hasTags": "Has Tags",
+    "filterFields": {
+      "chords": "Chords",
+      "lyrics": "Lyrics",
+      "key": "Key",
+      "tempo": "Tempo",
+      "duration": "Duration",
+      "tags": "Tags"
+    },
+    "filterState": {
+      "any": "Any",
+      "has": "Has",
+      "none": "Without"
+    },
     "clearAllFilters": "Clear all filters",
     "showingResults": "Showing {{resultsCount}} of {{totalCount}} songs",
     "sortOptions": {

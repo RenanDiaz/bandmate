@@ -2,28 +2,25 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { DEFAULT_FILTERS } from "../utils/songFilters";
+import type { SortOption, FilterField, FilterState, FilterOptions } from "../utils/songFilters";
 
-export type SortOption =
-  | "artist_title_asc"
-  | "date_desc"
-  | "date_asc"
-  | "title_asc"
-  | "title_desc"
-  | "artist_asc"
-  | "artist_desc"
-  | "tempo_asc"
-  | "tempo_desc"
-  | "duration_asc"
-  | "duration_desc";
+export type { SortOption, FilterField, FilterState, FilterOptions } from "../utils/songFilters";
 
-export interface FilterOptions {
-  hasChords: boolean;
-  hasLyrics: boolean;
-  hasKey: boolean;
-  hasTempo: boolean;
-  hasDuration: boolean;
-  hasTags: boolean;
-}
+const FILTER_FIELDS: { field: FilterField; icon: string; labelKey: string }[] = [
+  { field: "chords", icon: "bi-music-note", labelKey: "songs.filterFields.chords" },
+  { field: "lyrics", icon: "bi-file-text", labelKey: "songs.filterFields.lyrics" },
+  { field: "key", icon: "bi-music-note-beamed", labelKey: "songs.filterFields.key" },
+  { field: "tempo", icon: "bi-speedometer2", labelKey: "songs.filterFields.tempo" },
+  { field: "duration", icon: "bi-clock", labelKey: "songs.filterFields.duration" },
+  { field: "tags", icon: "bi-tags", labelKey: "songs.filterFields.tags" },
+];
+
+const FILTER_STATES: { state: FilterState; labelKey: string }[] = [
+  { state: "any", labelKey: "songs.filterState.any" },
+  { state: "has", labelKey: "songs.filterState.has" },
+  { state: "none", labelKey: "songs.filterState.none" },
+];
 
 interface Props {
   searchQuery: string;
@@ -49,8 +46,8 @@ export const SongSearchFilter = ({
   const { t } = useTranslation();
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-  const hasActiveFilters =
-    filters.hasChords || filters.hasLyrics || filters.hasKey || filters.hasTempo || filters.hasDuration || filters.hasTags;
+  const activeFilterCount = Object.values(filters).filter((state) => state !== "any").length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <SearchFilterContainer>
@@ -99,7 +96,7 @@ export const SongSearchFilter = ({
           >
             <i className="bi bi-funnel"></i>
             {t('songs.filters')}
-            {hasActiveFilters && <FilterBadge>{Object.values(filters).filter(Boolean).length}</FilterBadge>}
+            {hasActiveFilters && <FilterBadge>{activeFilterCount}</FilterBadge>}
           </FilterToggleButton>
         </ControlsGroup>
       </SearchRow>
@@ -107,98 +104,33 @@ export const SongSearchFilter = ({
       {isFilterExpanded && (
         <FilterPanel>
           <FilterTitle>{t('songs.filterByContent')}</FilterTitle>
-          <FilterOptions>
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasChords"
-                checked={filters.hasChords}
-                onChange={(e) => onFilterChange({ ...filters, hasChords: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasChords">
-                <i className="bi bi-music-note"></i>
-                {t('songs.hasChords')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasLyrics"
-                checked={filters.hasLyrics}
-                onChange={(e) => onFilterChange({ ...filters, hasLyrics: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasLyrics">
-                <i className="bi bi-file-text"></i>
-                {t('songs.hasLyrics')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasKey"
-                checked={filters.hasKey}
-                onChange={(e) => onFilterChange({ ...filters, hasKey: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasKey">
-                <i className="bi bi-music-note-beamed"></i>
-                {t('songs.hasKey')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasTempo"
-                checked={filters.hasTempo}
-                onChange={(e) => onFilterChange({ ...filters, hasTempo: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasTempo">
-                <i className="bi bi-speedometer2"></i>
-                {t('songs.hasTempo')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasDuration"
-                checked={filters.hasDuration}
-                onChange={(e) => onFilterChange({ ...filters, hasDuration: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasDuration">
-                <i className="bi bi-clock"></i>
-                {t('songs.hasDuration')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-
-            <FilterCheckbox>
-              <Checkbox
-                type="checkbox"
-                id="hasTags"
-                checked={filters.hasTags}
-                onChange={(e) => onFilterChange({ ...filters, hasTags: e.target.checked })}
-              />
-              <CheckboxLabel htmlFor="hasTags">
-                <i className="bi bi-tags"></i>
-                {t('songs.hasTags')}
-              </CheckboxLabel>
-            </FilterCheckbox>
-          </FilterOptions>
+          <FilterRows>
+            {FILTER_FIELDS.map(({ field, icon, labelKey }) => (
+              <FilterRow key={field}>
+                <FilterFieldLabel>
+                  <i className={`bi ${icon}`}></i>
+                  {t(labelKey)}
+                </FilterFieldLabel>
+                <SegmentedControl role="group">
+                  {FILTER_STATES.map(({ state, labelKey: stateLabelKey }) => (
+                    <SegmentButton
+                      key={state}
+                      type="button"
+                      $active={filters[field] === state}
+                      $variant={state}
+                      onClick={() => onFilterChange({ ...filters, [field]: state })}
+                    >
+                      {t(stateLabelKey)}
+                    </SegmentButton>
+                  ))}
+                </SegmentedControl>
+              </FilterRow>
+            ))}
+          </FilterRows>
 
           {hasActiveFilters && (
             <ClearFiltersButton
-              onClick={() =>
-                onFilterChange({
-                  hasChords: false,
-                  hasLyrics: false,
-                  hasKey: false,
-                  hasTempo: false,
-                  hasDuration: false,
-                  hasTags: false,
-                })
-              }
+              onClick={() => onFilterChange({ ...DEFAULT_FILTERS })}
               type="button"
             >
               {t('songs.clearAllFilters')}
@@ -408,34 +340,29 @@ const FilterTitle = styled.h4`
   margin: 0 0 ${theme.space[3]} 0;
 `;
 
-const FilterOptions = styled.div`
+const FilterRows = styled.div`
   display: flex;
-  gap: ${theme.space[4]};
+  flex-direction: column;
+  gap: ${theme.space[3]};
   margin-bottom: ${theme.space[4]};
+`;
+
+const FilterRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${theme.space[3]};
 
   @media (max-width: ${theme.breakpoints.sm}) {
     flex-direction: column;
-    gap: ${theme.space[3]};
+    align-items: stretch;
+    gap: ${theme.space[2]};
   }
 `;
 
-const FilterCheckbox = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-`;
-
-const Checkbox = styled.input`
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: ${theme.colors.brand.primary};
-`;
-
-const CheckboxLabel = styled.label`
+const FilterFieldLabel = styled.span`
   font-size: ${theme.fontSizes.body};
   color: var(--color-text-primary);
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
@@ -444,6 +371,49 @@ const CheckboxLabel = styled.label`
   i {
     color: ${theme.colors.brand.primary};
     font-size: ${theme.fontSizes.body};
+  }
+`;
+
+const SegmentedControl = styled.div`
+  display: inline-flex;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  padding: 2px;
+  gap: 2px;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    display: flex;
+  }
+`;
+
+const segmentActiveColor = (variant: FilterState) => {
+  if (variant === "has") return theme.colors.brand.primary;
+  if (variant === "none") return theme.colors.semantic.error;
+  return "var(--color-bg-elevated)";
+};
+
+const SegmentButton = styled.button<{ $active: boolean; $variant: FilterState }>`
+  flex: 1;
+  background: ${(props) => (props.$active ? segmentActiveColor(props.$variant) : "transparent")};
+  border: none;
+  color: ${(props) =>
+    props.$active
+      ? props.$variant === "any"
+        ? "var(--color-text-primary)"
+        : "white"
+      : "var(--color-text-secondary)"};
+  padding: ${theme.space[1]} ${theme.space[3]};
+  border-radius: ${theme.radius.sm};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  white-space: nowrap;
+  min-width: 64px;
+
+  &:hover {
+    color: ${(props) => (props.$active ? undefined : "var(--color-text-primary)")};
   }
 `;
 
