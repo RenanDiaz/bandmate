@@ -4,6 +4,7 @@ import { createSong, type CreateSongInput } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 
 interface Props {
   bandId: number;
@@ -12,6 +13,7 @@ interface Props {
 
 export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -39,7 +41,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
 
   const handleFetchMetadata = async () => {
     if (!formData.title.trim()) {
-      alert(t("songs.enterTitleFirst"));
+      toast.warning(t("songs.enterTitleFirst"));
       return;
     }
 
@@ -88,11 +90,11 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         if (metadata.lyrics) console.log(`📝 Lyrics: ${metadata.lyrics.length} characters`);
         if (metadata.genre) console.log(`🎸 Genre: ${metadata.genre}`);
       } else {
-        alert(t("songs.songNotFound"));
+        toast.warning(t("songs.songNotFound"));
       }
     } catch (error) {
       console.error("Failed to fetch metadata:", error);
-      alert(t("songs.fetchMetadataError"));
+      toast.error(t("songs.fetchMetadataError"));
     } finally {
       setIsFetchingMetadata(false);
     }
@@ -157,7 +159,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
       onSongCreated();
     } catch (error) {
       console.error("Failed to create song:", error);
-      alert(t("songs.createError"));
+      toast.error(t("songs.createError"));
     } finally {
       setIsSubmitting(false);
     }

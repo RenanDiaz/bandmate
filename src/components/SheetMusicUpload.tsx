@@ -14,6 +14,7 @@ import {
   type SheetMusic,
 } from "../services/songSheetMusicService";
 import PageTimingSyncModal from "./PageTimingSyncModal";
+import { ConfirmModal } from "./ConfirmModal";
 import type { PageTiming } from "../services/songsService";
 
 interface SheetMusicUploadProps {
@@ -22,6 +23,14 @@ interface SheetMusicUploadProps {
   backingTrackUrl?: string;
   onUpdate?: () => void;
 }
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
+};
 
 const Container = styled.div`
   background: ${theme.colors.dark.bg.secondary};
@@ -401,6 +410,8 @@ export default function SheetMusicUpload({
   onUpdate,
 }: SheetMusicUploadProps) {
   const { t } = useTranslation();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -528,25 +539,42 @@ export default function SheetMusicUpload({
     }
   };
 
-  const handleDelete = async (sheetMusic: SheetMusic) => {
-    if (!window.confirm(t("sheetMusic.confirmRemove"))) return;
-
-    setDeleting(sheetMusic.id);
-
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
     try {
-      // Delete the file from storage
-      await deleteSheetMusicFile(sheetMusic.file_url);
-      // Delete the database entry
-      await deleteSheetMusic(sheetMusic.id);
-      // Reload the list
-      await loadSheetMusic();
-      onUpdate?.();
-    } catch (err) {
-      console.error("Delete failed:", err);
-      setError(t("sheetMusic.removeError"));
+      await confirm.action();
     } finally {
-      setDeleting(null);
+      setConfirmBusy(false);
+      setConfirm(null);
     }
+  };
+
+  const handleDelete = async (sheetMusic: SheetMusic) => {
+    setConfirm({
+      title: t("sheetMusic.remove"),
+      message: t("sheetMusic.confirmRemove"),
+      confirmLabel: t("sheetMusic.remove"),
+      tone: "danger",
+      action: async () => {
+        setDeleting(sheetMusic.id);
+
+        try {
+          // Delete the file from storage
+          await deleteSheetMusicFile(sheetMusic.file_url);
+          // Delete the database entry
+          await deleteSheetMusic(sheetMusic.id);
+          // Reload the list
+          await loadSheetMusic();
+          onUpdate?.();
+        } catch (err) {
+          console.error("Delete failed:", err);
+          setError(t("sheetMusic.removeError"));
+        } finally {
+          setDeleting(null);
+        }
+      },
+    });
   };
 
   const getInstrumentColor = (inst?: string): string => {
@@ -779,6 +807,17 @@ export default function SheetMusicUpload({
           sheetMusicName={timingSheetMusic.name}
         />
       )}
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone={confirm?.tone ?? "danger"}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </Container>
   );
 }

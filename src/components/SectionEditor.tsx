@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { theme } from "../theme";
 import type { SectionTiming } from "../services/songsService";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../context/useToast";
 
 interface Props {
   chordsText?: string;
@@ -50,6 +51,7 @@ export const SectionEditor = ({
   disabled,
 }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [newSectionName, setNewSectionName] = useState("");
@@ -135,7 +137,7 @@ export const SectionEditor = ({
     );
 
     if (hasOverlap) {
-      alert(t("sectionEditor.overlapError"));
+      toast.error(t("sectionEditor.overlapError"));
       return;
     }
 

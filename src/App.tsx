@@ -32,6 +32,8 @@ import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/Cu
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
+import { ToastProvider } from "./context/ToastContext";
+import { PwaReloadPrompt } from "./components/PwaReloadPrompt";
 import { theme } from "./theme";
 
 const AppContent: FC = () => {
@@ -368,7 +370,10 @@ const AppContent: FC = () => {
 
 const App: FC = () => (
   <BandProvider>
-    <AppContent />
+    <ToastProvider>
+      <AppContent />
+      <PwaReloadPrompt />
+    </ToastProvider>
   </BandProvider>
 );
 

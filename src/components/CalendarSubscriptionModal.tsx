@@ -12,6 +12,8 @@ import {
   getCalendarFeedUrl,
 } from "../services/calendarSubscriptionService";
 import type { CalendarSubscription } from "../services/calendarSubscriptionService";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
 
 interface Props {
   isOpen: boolean;
@@ -20,6 +22,14 @@ interface Props {
   bandName: string;
 }
 
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
+};
+
 export const CalendarSubscriptionModal: FC<Props> = ({
   isOpen,
   onClose,
@@ -27,11 +37,25 @@ export const CalendarSubscriptionModal: FC<Props> = ({
   bandName,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [subscription, setSubscription] =
     useState<CalendarSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadSubscription = useCallback(async () => {
     setLoading(true);
@@ -57,35 +81,45 @@ export const CalendarSubscriptionModal: FC<Props> = ({
       setSubscription(sub);
     } catch (err) {
       console.error("Failed to create subscription:", err);
-      alert(t("calendar.createError"));
+      toast.error(t("calendar.createError"));
     }
     setCreating(false);
   };
 
   const handleRegenerate = async () => {
     if (!subscription) return;
-    const confirmed = window.confirm(t("calendar.regenerateConfirm"));
-    if (!confirmed) return;
-
-    try {
-      const updated = await regenerateSubscriptionToken(subscription.id);
-      setSubscription(updated);
-    } catch (err) {
-      console.error("Failed to regenerate token:", err);
-    }
+    setConfirm({
+      title: t("calendar.regenerate"),
+      message: t("calendar.regenerateConfirm"),
+      confirmLabel: t("calendar.regenerate"),
+      tone: "primary",
+      action: async () => {
+        try {
+          const updated = await regenerateSubscriptionToken(subscription.id);
+          setSubscription(updated);
+        } catch (err) {
+          console.error("Failed to regenerate token:", err);
+        }
+      },
+    });
   };
 
   const handleDelete = async () => {
     if (!subscription) return;
-    const confirmed = window.confirm(t("calendar.deleteConfirm"));
-    if (!confirmed) return;
-
-    try {
-      await deleteCalendarSubscription(subscription.id);
-      setSubscription(null);
-    } catch (err) {
-      console.error("Failed to delete subscription:", err);
-    }
+    setConfirm({
+      title: t("calendar.deleteSubscription"),
+      message: t("calendar.deleteConfirm"),
+      confirmLabel: t("common.delete"),
+      tone: "danger",
+      action: async () => {
+        try {
+          await deleteCalendarSubscription(subscription.id);
+          setSubscription(null);
+        } catch (err) {
+          console.error("Failed to delete subscription:", err);
+        }
+      },
+    });
   };
 
   const handleCopy = async () => {
@@ -197,6 +231,16 @@ export const CalendarSubscriptionModal: FC<Props> = ({
           </CreateContent>
         )}
       </ModalBody>
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone={confirm?.tone ?? "danger"}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </Modal>
   );
 };

@@ -12,6 +12,10 @@ import { NewSetlistForm } from "./NewSetlistForm";
 import { SetlistList } from "./SetlistList";
 import { SEO } from "./SEO";
 import { AISetlistGenerator } from "./AISetlistGenerator";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 interface Props {
   user: User | null;
@@ -20,8 +24,22 @@ interface Props {
 
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadSetlists = async () => {
     if (!selectedBand) {
@@ -51,18 +69,20 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   }, [user, selectedBand]);
 
   const handleDeleteSetlist = async (setlist: Setlist) => {
-    const confirmed = window.confirm(
-      t("setlists.confirmDelete", { name: setlist.name })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteSetlist(setlist.id);
-      await loadSetlists();
-    } catch (error) {
-      console.error("Failed to delete setlist:", error);
-      alert(t("setlists.deleteError"));
-    }
+    setConfirm({
+      title: t("setlists.deleteSetlist"),
+      message: t("setlists.confirmDelete", { name: setlist.name }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteSetlist(setlist.id);
+          await loadSetlists();
+        } catch (error) {
+          console.error("Failed to delete setlist:", error);
+          toast.error(t("setlists.deleteError"));
+        }
+      },
+    });
   };
 
   if (!user) {
@@ -149,6 +169,17 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
             />
           )}
         </ContentSection>
+
+        <ConfirmModal
+          isOpen={confirm !== null}
+          title={confirm?.title ?? ""}
+          message={confirm?.message ?? ""}
+          confirmLabel={confirm?.confirmLabel}
+          tone="danger"
+          busy={confirmBusy}
+          onConfirm={runConfirm}
+          onClose={() => setConfirm(null)}
+        />
       </Container>
     </PageWrapper>
   );

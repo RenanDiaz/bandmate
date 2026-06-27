@@ -16,6 +16,7 @@ import {
 } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import { updateRehearsal } from "../services/rehearsalsService";
 import type { Rehearsal, RehearsalStatus } from "../services/rehearsalsService";
 import { getBandSetlists } from "../services/setlistsService";
@@ -33,6 +34,7 @@ interface Props {
 
 export const EditRehearsalModal: FC<Props> = ({ rehearsal, isOpen, onClose, onReload, bandId }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [shows, setShows] = useState<Show[]>([]);
@@ -88,7 +90,7 @@ export const EditRehearsalModal: FC<Props> = ({ rehearsal, isOpen, onClose, onRe
       onReload();
     } catch (error) {
       console.error("Failed to update rehearsal:", error);
-      alert(t('rehearsals.updateError'));
+      toast.error(t('rehearsals.updateError'));
     }
     setLoading(false);
   };

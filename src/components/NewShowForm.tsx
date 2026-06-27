@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Form, FormGroup, Label, Input, Button, Collapse, Row, Col } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import { createShow } from "../services/showsService";
 import { getBandSetlists } from "../services/setlistsService";
 import { getLocalToday } from "../lib/dateUtils";
@@ -16,6 +17,7 @@ interface Props {
 
 export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -75,7 +77,7 @@ export const NewShowForm: FC<Props> = ({ bandId, onShowCreated }) => {
       onShowCreated();
     } catch (error) {
       console.error("Failed to create show:", error);
-      alert(t('shows.createError'));
+      toast.error(t('shows.createError'));
     }
     setLoading(false);
   };

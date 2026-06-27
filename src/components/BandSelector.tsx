@@ -22,6 +22,16 @@ import {
 import { BandList } from "./BandList";
 import { NewBandForm } from "./NewBandForm";
 import { EditBandModal } from "./EditBandModal";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
+};
 
 interface Props {
   selectedBand?: Band;
@@ -30,6 +40,9 @@ interface Props {
 
 export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   const { t } = useTranslation();
+  const toast = useToast();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [bands, setBands] = useState<Band[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +51,17 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
   const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(null);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadBands = async () => {
     setLoading(true);
@@ -72,9 +96,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadBands();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(`${t('bands.createError')}: ${e.message}`);
+        toast.error(`${t('bands.createError')}: ${e.message}`);
       } else {
-        alert(t('bands.createError'));
+        toast.error(t('bands.createError'));
       }
     }
   };
@@ -96,24 +120,27 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   };
 
   const handleDeleteBand = async (band: Band) => {
-    const confirmed = window.confirm(
-      t('bands.confirmDeleteBand', { name: band.name })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteBand(band.id);
-      if (selectedBand?.id === band.id) {
-        onSelect(null as unknown as Band);
-      }
-      await loadBands();
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(`${t('bands.deleteError')}: ${e.message}`);
-      } else {
-        alert(t('bands.deleteError'));
-      }
-    }
+    setConfirm({
+      title: t('bands.deleteBand'),
+      message: t('bands.confirmDeleteBand', { name: band.name }),
+      confirmLabel: t('common.delete'),
+      tone: "danger",
+      action: async () => {
+        try {
+          await deleteBand(band.id);
+          if (selectedBand?.id === band.id) {
+            onSelect(null as unknown as Band);
+          }
+          await loadBands();
+        } catch (e: unknown) {
+          if (e instanceof Error) {
+            toast.error(`${t('bands.deleteError')}: ${e.message}`);
+          } else {
+            toast.error(t('bands.deleteError'));
+          }
+        }
+      },
+    });
   };
 
   const handleAcceptInvitation = async (invitation: BandInvitation) => {
@@ -124,26 +151,29 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await loadBands();
     } catch (error: any) {
       console.error("Failed to accept invitation:", error);
-      alert(error.message || t('bands.acceptInvitationError'));
+      toast.error(error.message || t('bands.acceptInvitationError'));
     }
     setProcessingInvitationId(null);
   };
 
   const handleDeclineInvitation = async (invitation: BandInvitation) => {
-    const confirmed = window.confirm(
-      t('bands.declineInvitationConfirm')
-    );
-    if (!confirmed) return;
-
-    setProcessingInvitationId(invitation.id);
-    try {
-      await declineInvitation(invitation.id);
-      await loadInvitations();
-    } catch (error) {
-      console.error("Failed to decline invitation:", error);
-      alert(t('bands.declineInvitationError'));
-    }
-    setProcessingInvitationId(null);
+    setConfirm({
+      title: t('bands.declineInvitation'),
+      message: t('bands.declineInvitationConfirm'),
+      confirmLabel: t('bands.declineInvitation'),
+      tone: "danger",
+      action: async () => {
+        setProcessingInvitationId(invitation.id);
+        try {
+          await declineInvitation(invitation.id);
+          await loadInvitations();
+        } catch (error) {
+          console.error("Failed to decline invitation:", error);
+          toast.error(t('bands.declineInvitationError'));
+        }
+        setProcessingInvitationId(null);
+      },
+    });
   };
 
   useEffect(() => {
@@ -280,6 +310,17 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
           isOpen={isEditModalOpen}
           toggle={() => setIsEditModalOpen(false)}
           onSave={handleSaveBand}
+        />
+
+        <ConfirmModal
+          isOpen={confirm !== null}
+          title={confirm?.title ?? ""}
+          message={confirm?.message ?? ""}
+          confirmLabel={confirm?.confirmLabel}
+          tone={confirm?.tone ?? "danger"}
+          busy={confirmBusy}
+          onConfirm={runConfirm}
+          onClose={() => setConfirm(null)}
         />
       </Container>
     </SelectorWrapper>

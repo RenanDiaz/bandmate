@@ -16,6 +16,7 @@ import {
 } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import { updateShow } from "../services/showsService";
 import type { Show, ShowStatus } from "../services/showsService";
 import { getBandSetlists } from "../services/setlistsService";
@@ -31,6 +32,7 @@ interface Props {
 
 export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, bandId }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
 
@@ -87,7 +89,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
       onReload();
     } catch (error) {
       console.error("Failed to update show:", error);
-      alert(t('shows.updateError'));
+      toast.error(t('shows.updateError'));
     }
     setLoading(false);
   };

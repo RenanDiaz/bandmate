@@ -17,6 +17,8 @@ import {
   DropdownMenu,
   DropdownItem,
 } from "reactstrap";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
 
 interface Props {
   requests: Request[];
@@ -24,6 +26,13 @@ interface Props {
   onReload: () => void;
   canManage?: boolean;
 }
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  action: () => Promise<void>;
+};
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -201,7 +210,21 @@ export const RequestList: FC<Props> = ({
   canManage = false,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const handleViewRequest = (requestId: string) => {
     navigate(`/requests/${requestId}`);
@@ -213,23 +236,25 @@ export const RequestList: FC<Props> = ({
       onReload();
     } catch (error) {
       console.error("Failed to approve request:", error);
-      alert(t("requests.approveError"));
+      toast.error(t("requests.approveError"));
     }
   };
 
   const handleReject = async (request: Request) => {
-    const confirmed = window.confirm(
-      t("requests.confirmReject", { title: request.title })
-    );
-    if (!confirmed) return;
-
-    try {
-      await rejectRequest(request.id);
-      onReload();
-    } catch (error) {
-      console.error("Failed to reject request:", error);
-      alert(t("requests.rejectError"));
-    }
+    setConfirm({
+      title: t("requests.reject"),
+      message: t("requests.confirmReject", { title: request.title }),
+      confirmLabel: t("requests.reject"),
+      action: async () => {
+        try {
+          await rejectRequest(request.id);
+          onReload();
+        } catch (error) {
+          console.error("Failed to reject request:", error);
+          toast.error(t("requests.rejectError"));
+        }
+      },
+    });
   };
 
   const handleVote = async (request: Request, voteType: "up" | "down") => {
@@ -255,6 +280,16 @@ export const RequestList: FC<Props> = ({
           canManage={canManage}
         />
       ))}
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </RequestsGrid>
   );
 };

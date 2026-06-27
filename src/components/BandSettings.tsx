@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import { BandMembers } from "./BandMembers";
@@ -20,6 +21,7 @@ interface Props {
 
 export const BandSettings: FC<Props> = ({ user }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { bandId } = useParams<{ bandId: string }>();
   const navigate = useNavigate();
 
@@ -47,7 +49,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
       const foundBand = bands.find((b) => b.id === parseInt(bandId));
 
       if (!foundBand) {
-        alert(t('bands.notFoundOrNoAccess'));
+        toast.error(t('bands.notFoundOrNoAccess'));
         navigate("/");
         return;
       }
@@ -55,7 +57,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
       setBand(foundBand);
     } catch (error) {
       console.error("Failed to load band:", error);
-      alert(t('bands.loadError'));
+      toast.error(t('bands.loadError'));
       navigate("/");
     }
     if (showSpinner) setLoading(false);

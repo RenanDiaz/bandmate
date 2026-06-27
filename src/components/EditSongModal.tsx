@@ -8,6 +8,7 @@ import { TimingSyncModal } from "./TimingSyncModal";
 import { LineSyncModal } from "./LineSyncModal";
 import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../context/useToast";
 
 interface Props {
   song: Song | null;
@@ -18,6 +19,7 @@ interface Props {
 
 export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -89,7 +91,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
 
   const handleFetchMetadata = async () => {
     if (!formData.title.trim()) {
-      alert("Please enter a song title first");
+      toast.warning(t("songs.enterTitleFirst"));
       return;
     }
 
@@ -132,11 +134,11 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         if (metadata.lyrics) console.log(`📝 Lyrics: ${metadata.lyrics.length} characters`);
         if (metadata.genre) console.log(`🎸 Genre: ${metadata.genre}`);
       } else {
-        alert("Song not found. Try entering the artist name or check spelling.");
+        toast.warning(t("songs.songNotFound"));
       }
     } catch (error) {
       console.error("Failed to fetch metadata:", error);
-      alert("Failed to fetch song metadata. Please try again or enter details manually.");
+      toast.error(t("songs.fetchMetadataError"));
     } finally {
       setIsFetchingMetadata(false);
     }
@@ -181,7 +183,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
       onClose();
     } catch (error) {
       console.error("Failed to update song:", error);
-      alert("Failed to update song. Please try again.");
+      toast.error(t("songs.updateError"));
     } finally {
       setIsSaving(false);
     }

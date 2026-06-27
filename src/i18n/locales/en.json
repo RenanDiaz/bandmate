@@ -451,6 +451,7 @@
     },
     "doors": "Doors",
     "setlistLinked": "Setlist linked",
+    "linkSetlistError": "Failed to link setlist. Please try again.",
     "editShowTooltip": "Edit show",
     "markCompleted": "Mark as completed",
     "cancelShowTooltip": "Cancel show",
@@ -486,6 +487,8 @@
     "instructionsOutlook": "Add calendar > Subscribe from web > Paste the URL",
     "refreshNote": "Calendar apps typically refresh every 12-24 hours. Changes to your shows will sync automatically on the next refresh.",
     "regenerateToken": "Regenerate URL",
+    "regenerate": "Regenerate",
+    "deleteSubscription": "Delete subscription",
     "regenerateConfirm": "This will invalidate the current URL. Any calendar subscriptions using the old URL will stop working. Continue?",
     "removeSubscription": "Remove Subscription",
     "deleteConfirm": "This will remove the calendar subscription. Any calendar apps using this URL will stop receiving updates. Continue?",
@@ -616,6 +619,7 @@
     "role": "Role",
     "expired": "Expired",
     "accept": "Accept",
+    "declineInvitation": "Decline invitation",
     "declineInvitationConfirm": "Are you sure you want to decline this invitation?",
     "confirmDeleteBand": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "confirmRemoveMember": "Are you sure you want to remove {{email}} from the band?",
@@ -731,8 +735,9 @@
     "footerText": "Bandmate is in active development. We're constantly adding new features and improvements to help musicians collaborate better."
   },
   "pwa": {
-    "newContentAvailable": "New content available. Reload?",
-    "offlineReady": "App ready to work offline"
+    "newContentAvailable": "A new version is available.",
+    "offlineReady": "App ready to work offline",
+    "reload": "Reload"
   },
   "errors": {
     "generic": "An error occurred. Please try again.",
@@ -900,6 +905,7 @@
     "proposeSetlist": "Propose",
     "submitRequest": "Submit Request",
     "deleteRequest": "Delete Request",
+    "deleteComment": "Delete comment",
     "requestTitle": "Request Title",
     "type": "Request Type",
     "description": "Description",
