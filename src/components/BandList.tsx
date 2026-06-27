@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Band } from "../services/bandsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { BandAvatar } from "./BandAvatar";
 
 interface Props {
   bands: Band[];
@@ -47,9 +48,12 @@ export const BandList: FC<Props> = ({ bands, onSelect, onEdit, onDelete, selecte
         }}
       >
         <BandCardContent>
-          <BandIcon $isSelected={selectedBandId === band.id}>
-            <i className="bi bi-music-note-beamed"></i>
-          </BandIcon>
+          <BandAvatar
+            name={band.name}
+            avatarUrl={band.avatar_url}
+            size={56}
+            active={selectedBandId === band.id}
+          />
 
           <BandInfo>
             <BandNameRow>
@@ -168,23 +172,6 @@ const BandCardContent = styled.div`
   flex-direction: column;
   gap: ${theme.space[4]};
   margin-bottom: ${theme.space[4]};
-`;
-
-const BandIcon = styled.div<{ $isSelected: boolean }>`
-  width: 56px;
-  height: 56px;
-  background: ${props => props.$isSelected
-    ? theme.gradients.brandPrimary
-    : 'var(--color-bg-elevated)'};
-  border-radius: ${theme.radius.md};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: ${theme.fontSizes.h1};
-  color: ${props => props.$isSelected
-    ? 'white'
-    : 'var(--color-text-secondary)'};
-  transition: all ${theme.transitions.base} ease;
 `;
 
 const BandInfo = styled.div`

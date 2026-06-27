@@ -1,30 +1,36 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
 import type { Band, UpdateBandInput } from "../services/bandsService";
 import { updateBand, deleteBand } from "../services/bandsService";
+import { uploadBandAvatar, deleteBandAvatar } from "../services/bandAvatarStorageService";
 import { useBandContext } from "../context/useBandContext";
 import { useNavigate } from "react-router-dom";
 import { ConfirmModal } from "./ConfirmModal";
+import { BandAvatar } from "./BandAvatar";
+import { TransferOwnershipModal } from "./TransferOwnershipModal";
 
 interface Props {
   band: Band;
-  /** Called after a successful edit so the parent can refresh its band state. */
-  onUpdated: (updates: UpdateBandInput) => void;
+  /** Called after a successful field edit so the parent can merge band state. */
+  onUpdated: (updates: Partial<Pick<Band, "name" | "genre" | "description">>) => void;
+  /** Called after changes that need a full re-fetch (avatar, ownership). */
+  onRefresh: () => void;
 }
 
 type Feedback = { type: "success" | "error"; message: string };
 
-export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
+export const BandDetails: FC<Props> = ({ band, onUpdated, onRefresh }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { refreshBands, selectedBand, setSelectedBand } = useBandContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canEdit = band.user_role === "owner" || band.user_role === "admin";
-  const canDelete = band.user_role === "owner";
+  const isOwner = band.user_role === "owner";
 
   const [formData, setFormData] = useState<UpdateBandInput>({
     name: band.name,
@@ -35,6 +41,16 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+
+  // Keep the global band list / selected band in sync after a change.
+  const syncSelected = (patch: Partial<Band>) => {
+    refreshBands();
+    if (selectedBand?.id === band.id) {
+      setSelectedBand({ ...selectedBand, ...patch });
+    }
+  };
 
   // Keep the form in sync if the band prop changes (e.g. quiet refresh).
   useEffect(() => {
@@ -79,10 +95,7 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
     try {
       await updateBand(band.id, updates);
       // Keep global state in sync so the navbar/selector reflect the change.
-      refreshBands();
-      if (selectedBand?.id === band.id) {
-        setSelectedBand({ ...selectedBand, ...updates });
-      }
+      syncSelected(updates);
       onUpdated(updates);
       setFeedback({ type: "success", message: t("bands.bandUpdated") });
     } catch (error) {
@@ -107,6 +120,46 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
       setDeleting(false);
       setConfirmDelete(false);
     }
+  };
+
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input so selecting the same file again still fires onChange.
+    e.target.value = "";
+    if (!file || !canEdit) return;
+
+    setAvatarBusy(true);
+    setFeedback(null);
+    try {
+      const url = await uploadBandAvatar(file, band.id);
+      await updateBand(band.id, { avatar_url: url });
+      syncSelected({ avatar_url: url });
+      onRefresh();
+      setFeedback({ type: "success", message: t("bands.avatarUpdated") });
+    } catch (error) {
+      console.error("Failed to update avatar:", error);
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : t("bands.avatarError"),
+      });
+    }
+    setAvatarBusy(false);
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarBusy(true);
+    setFeedback(null);
+    try {
+      await deleteBandAvatar(band.id);
+      await updateBand(band.id, { avatar_url: null });
+      syncSelected({ avatar_url: undefined });
+      onRefresh();
+      setFeedback({ type: "success", message: t("bands.avatarRemoved") });
+    } catch (error) {
+      console.error("Failed to remove avatar:", error);
+      setFeedback({ type: "error", message: t("bands.avatarError") });
+    }
+    setAvatarBusy(false);
   };
 
   const createdLabel = band.created_at
@@ -141,6 +194,43 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
           </CardTitle>
           {!canEdit && <ReadOnlyNote>{t("bands.editRestricted")}</ReadOnlyNote>}
         </CardHeader>
+
+        <AvatarRow>
+          <BandAvatar name={band.name} avatarUrl={band.avatar_url} size={80} />
+          <AvatarControls>
+            <AvatarLabel>{t("bands.avatar")}</AvatarLabel>
+            {canEdit ? (
+              <>
+                <AvatarButtons>
+                  <SecondaryButton
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={avatarBusy}
+                  >
+                    {avatarBusy ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <i className="bi bi-upload"></i>
+                    )}
+                    {band.avatar_url ? t("bands.changeAvatar") : t("bands.uploadAvatar")}
+                  </SecondaryButton>
+                  {band.avatar_url && (
+                    <LinkButton type="button" onClick={handleRemoveAvatar} disabled={avatarBusy}>
+                      {t("common.remove")}
+                    </LinkButton>
+                  )}
+                </AvatarButtons>
+                <HelperText>{t("bands.avatarHint")}</HelperText>
+                <HiddenFileInput
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleAvatarSelect}
+                />
+              </>
+            ) : null}
+          </AvatarControls>
+        </AvatarRow>
 
         <Form onSubmit={handleSubmit}>
           <FormGroup>
@@ -222,7 +312,7 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
       </Card>
 
       {/* Danger zone (owner only) */}
-      {canDelete && (
+      {isOwner && (
         <DangerCard>
           <CardHeader>
             <CardTitle $danger>
@@ -230,6 +320,20 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
               {t("bands.dangerZone")}
             </CardTitle>
           </CardHeader>
+
+          <DangerRow>
+            <DangerInfo>
+              <DangerTitle>{t("bands.transferOwnership")}</DangerTitle>
+              <DangerText>{t("bands.transferOwnershipShort")}</DangerText>
+            </DangerInfo>
+            <OutlineButton type="button" onClick={() => setTransferOpen(true)}>
+              <i className="bi bi-arrow-left-right"></i>
+              {t("bands.transferOwnership")}
+            </OutlineButton>
+          </DangerRow>
+
+          <Divider />
+
           <DangerRow>
             <DangerInfo>
               <DangerTitle>{t("bands.deleteBand")}</DangerTitle>
@@ -242,6 +346,17 @@ export const BandDetails: FC<Props> = ({ band, onUpdated }) => {
           </DangerRow>
         </DangerCard>
       )}
+
+      <TransferOwnershipModal
+        bandId={band.id}
+        bandName={band.name}
+        isOpen={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        onSuccess={() => {
+          onRefresh();
+          setFeedback({ type: "success", message: t("bands.ownershipTransferred") });
+        }}
+      />
 
       <ConfirmModal
         isOpen={confirmDelete}
@@ -304,6 +419,113 @@ const CardTitle = styled.h3<{ $danger?: boolean }>`
 const ReadOnlyNote = styled.span`
   font-size: ${theme.fontSizes.bodyXs};
   color: var(--color-text-secondary);
+`;
+
+const AvatarRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[4]};
+  margin-bottom: ${theme.space[5]};
+  padding-bottom: ${theme.space[5]};
+  border-bottom: 1px solid var(--color-border);
+`;
+
+const AvatarControls = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[2]};
+`;
+
+const AvatarLabel = styled.span`
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+`;
+
+const AvatarButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+`;
+
+const SecondaryButton = styled.button`
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  &:hover:not(:disabled) {
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const LinkButton = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.semantic.error};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  padding: ${theme.space[1]} ${theme.space[2]};
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const Divider = styled.hr`
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: ${theme.space[5]} 0;
+`;
+
+const OutlineButton = styled.button`
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  padding: ${theme.space[3]} ${theme.space[5]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const Form = styled.form`

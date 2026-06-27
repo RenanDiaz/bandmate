@@ -10,6 +10,7 @@ import { getMyBands } from "../services/bandsService";
 import { BandMembers } from "./BandMembers";
 import { BandDetails } from "./BandDetails";
 import { BandReports } from "./BandReports";
+import { BandAvatar } from "./BandAvatar";
 import { InviteMemberModal } from "./InviteMemberModal";
 import { SEO } from "./SEO";
 
@@ -108,6 +109,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
             <BackButton onClick={() => navigate("/")}>
               <i className="bi bi-arrow-left"></i>
             </BackButton>
+            <BandAvatar name={band.name} avatarUrl={band.avatar_url} size={52} />
             <HeaderInfo>
               <BandName>{band.name}</BandName>
               <BreadcrumbText>{t('bands.settings')}</BreadcrumbText>
@@ -147,6 +149,7 @@ export const BandSettings: FC<Props> = ({ user }) => {
               onUpdated={(updates) =>
                 setBand((prev) => (prev ? { ...prev, ...updates } : prev))
               }
+              onRefresh={() => loadBand(false)}
             />
           )}
 

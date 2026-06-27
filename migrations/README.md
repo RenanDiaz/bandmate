@@ -10,6 +10,9 @@ This directory contains SQL migration files for the Bandmate database schema.
 - **[BAND_MEMBERS_MIGRATION_V3.sql](BAND_MEMBERS_MIGRATION_V3.sql)** - Third iteration with improved RLS policies
 - **[BAND_MEMBERS_MIGRATION_V4.sql](BAND_MEMBERS_MIGRATION_V4.sql)** - Latest version (use this one)
 
+### Band Settings
+- **[BAND_AVATAR_AND_OWNERSHIP_MIGRATION.sql](BAND_AVATAR_AND_OWNERSHIP_MIGRATION.sql)** - Adds `bands.avatar_url`, the public `band-avatars` storage bucket, widens the band UPDATE policy to owners + admins, and adds the `transfer_band_ownership()` RPC
+
 ### Supporting Functions & Fixes
 - **[ADD_GET_BAND_MEMBERS_FUNCTION.sql](ADD_GET_BAND_MEMBERS_FUNCTION.sql)** - Function to retrieve band members
 - **[FIX_RLS_RECURSION.sql](FIX_RLS_RECURSION.sql)** - Resolves Row Level Security recursion issues
