@@ -71,7 +71,7 @@ export const Login = () => {
       <LoginContainer>
         <LoginCard>
           <LogoSection>
-            <Logo size={60} variant="icon" />
+            <Logo size={60} variant="icon" onAccent />
             <BrandTitle>Bandmate</BrandTitle>
             <BrandSubtitle>{t('auth.manageYourBand')}</BrandSubtitle>
           </LogoSection>
@@ -210,8 +210,10 @@ const LogoSection = styled.div`
 `;
 
 const BrandTitle = styled.h1`
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   font-size: ${theme.fontSizes.h1};
   font-weight: ${theme.fontWeights.bold};
+  letter-spacing: -0.03em;
   color: white;
   margin: ${theme.space[3]} 0 ${theme.space[2]};
 `;
