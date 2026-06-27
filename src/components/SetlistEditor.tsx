@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
 import styled from "styled-components";
@@ -190,6 +190,7 @@ const SetlistEditor: FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Modal state for adding/editing special items
   const [isSpecialItemModalOpen, setIsSpecialItemModalOpen] = useState(false);
@@ -315,6 +316,12 @@ const SetlistEditor: FC = () => {
     });
 
     setSetlistItems([...setlistItems, newSong]);
+
+    // On desktop, return focus to the search input so the user can quickly
+    // look up and add the next song without reaching for the mouse again.
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      searchInputRef.current?.focus();
+    }
   };
 
   const handleRemoveItem = (index: number) => {
@@ -711,6 +718,7 @@ const SetlistEditor: FC = () => {
             <SearchBox>
               <i className="bi bi-search"></i>
               <SearchInput
+                ref={searchInputRef}
                 type="text"
                 placeholder={t('setlists.editor.searchSongs')}
                 value={searchQuery}
