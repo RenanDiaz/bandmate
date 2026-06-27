@@ -8,6 +8,7 @@ export interface Band {
   created_at: string;
   genre?: string;
   description?: string;
+  avatar_url?: string | null;
   // Additional fields for member context
   member_count?: number;
   user_role?: BandRole;
@@ -62,6 +63,7 @@ export interface UpdateBandInput {
   name?: string;
   genre?: string;
   description?: string;
+  avatar_url?: string | null;
 }
 
 export async function createBand(input: CreateBandInput) {
@@ -109,16 +111,34 @@ export async function updateBand(id: number, updates: UpdateBandInput) {
 
   if (userError || !user) throw new Error("User not authenticated");
 
+  // Owner/admin enforcement is handled by the bands UPDATE RLS policy; we no
+  // longer filter by owner_id here so admins can edit band details too.
   const { data, error } = await supabase
     .from("bands")
     .update(updates)
     .eq("id", id)
-    .eq("owner_id", user.id)
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Transfer band ownership to another member. The previous owner becomes an
+ * admin. Enforced server-side by the transfer_band_ownership() RPC, which
+ * verifies the caller is the current owner.
+ */
+export async function transferBandOwnership(
+  bandId: number,
+  newOwnerId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("transfer_band_ownership", {
+    p_band_id: bandId,
+    p_new_owner_id: newOwnerId,
+  });
+
+  if (error) throw error;
 }
 
 export async function deleteBand(id: number) {

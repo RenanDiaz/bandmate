@@ -7,6 +7,7 @@ import { Spinner } from "reactstrap";
 import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
 import { useBandContext } from "../context/useBandContext";
+import { BandAvatar } from "./BandAvatar";
 import type { Band } from "../services/bandsService";
 import {
   getMyInvitations,
@@ -156,9 +157,12 @@ export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
                     }
                   }}
                 >
-                  <BandItemIcon $isSelected={isSelected}>
-                    <i className="bi bi-music-note-beamed"></i>
-                  </BandItemIcon>
+                  <BandAvatar
+                    name={band.name}
+                    avatarUrl={band.avatar_url}
+                    size={40}
+                    active={isSelected}
+                  />
                   <BandItemInfo>
                     <BandItemName>{band.name}</BandItemName>
                     <BandItemMeta>
