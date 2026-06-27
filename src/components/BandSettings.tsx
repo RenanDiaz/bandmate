@@ -8,6 +8,7 @@ import { theme } from "../theme";
 import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import { BandMembers } from "./BandMembers";
+import { BandDetails } from "./BandDetails";
 import { BandReports } from "./BandReports";
 import { InviteMemberModal } from "./InviteMemberModal";
 import { SEO } from "./SEO";
@@ -141,15 +142,12 @@ export const BandSettings: FC<Props> = ({ user }) => {
           )}
 
           {activeTab === "details" && (
-            <DetailsPlaceholder>
-              <PlaceholderIcon>
-                <i className="bi bi-gear"></i>
-              </PlaceholderIcon>
-              <PlaceholderTitle>Band Details</PlaceholderTitle>
-              <PlaceholderText>
-                Band details management coming soon. Use the band selector to edit basic info.
-              </PlaceholderText>
-            </DetailsPlaceholder>
+            <BandDetails
+              band={band}
+              onUpdated={(updates) =>
+                setBand((prev) => (prev ? { ...prev, ...updates } : prev))
+              }
+            />
           )}
 
           {activeTab === "reports" && (
@@ -266,41 +264,6 @@ const Tab = styled.button<{ $active: boolean }>`
 
 const ContentArea = styled.div`
   margin-bottom: ${theme.space[8]};
-`;
-
-const DetailsPlaceholder = styled.div`
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.lg};
-  padding: ${theme.space[12]};
-  text-align: center;
-`;
-
-const PlaceholderIcon = styled.div`
-  font-size: ${theme.fontSizes.displayLg};
-  color: var(--color-text-tertiary);
-  margin-bottom: ${theme.space[4]};
-  opacity: 0.5;
-
-  i {
-    font-size: inherit;
-  }
-`;
-
-const PlaceholderTitle = styled.h3`
-  font-size: ${theme.fontSizes.h3};
-  font-weight: ${theme.fontWeights.semibold};
-  color: var(--color-text-primary);
-  margin-bottom: ${theme.space[2]};
-`;
-
-const PlaceholderText = styled.p`
-  font-size: ${theme.fontSizes.body};
-  color: var(--color-text-secondary);
-  margin: 0;
-  max-width: 500px;
-  margin: 0 auto;
-  line-height: ${theme.lineHeights.relaxed};
 `;
 
 const LoadingContainer = styled.div`

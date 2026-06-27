@@ -646,7 +646,16 @@
     "deleteBandTooltip": "Eliminar banda",
     "manageBandAriaLabel": "Administrar {{name}}",
     "editBandAriaLabel": "Editar {{name}}",
-    "deleteBandAriaLabel": "Eliminar {{name}}"
+    "deleteBandAriaLabel": "Eliminar {{name}}",
+    "generalSection": "General",
+    "aboutSection": "Acerca de",
+    "dangerZone": "Zona de Peligro",
+    "bandUpdated": "Banda actualizada correctamente.",
+    "nameRequired": "El nombre de la banda es obligatorio.",
+    "editRestricted": "Solo los propietarios y administradores pueden editar los detalles de la banda.",
+    "createdOn": "Creada",
+    "yourRole": "Tu rol",
+    "deleteBandWarning": "Elimina permanentemente esta banda junto con sus canciones, setlists y shows. Esta acción no se puede deshacer."
   },
   "invitations": {
     "title": "Invitación",
