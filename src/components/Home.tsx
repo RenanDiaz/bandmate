@@ -344,7 +344,7 @@ const Home = () => {
         <Container>
           <HeroContent>
             <LogoWrapper>
-              <Logo size={80} variant="icon" />
+              <Logo size={80} variant="icon" onAccent />
             </LogoWrapper>
 
             <HeroTitle>
