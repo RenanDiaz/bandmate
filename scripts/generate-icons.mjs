@@ -35,6 +35,13 @@ const targets = [
 
 for (const { name, size } of targets) {
   const svg = Buffer.from(appIconSVG(size));
-  await sharp(svg, { density: 384 }).resize(size, size).png().toFile(join(publicDir, name));
+  // Flatten onto an opaque background so the PNG has NO alpha channel. iOS mattes
+  // any apple-touch-icon that carries an alpha channel onto a white tile (the
+  // "white square" bug); a flat, fully-opaque, full-bleed icon avoids it.
+  await sharp(svg, { density: 384 })
+    .resize(size, size)
+    .flatten({ background: '#0a0a0b' })
+    .png()
+    .toFile(join(publicDir, name));
   console.log(`wrote public/${name} (${size}x${size})`);
 }
