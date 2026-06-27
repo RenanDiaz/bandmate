@@ -19,6 +19,10 @@ import { NewRequestModal } from "./NewRequestModal";
 import { SongSearchFilter } from "./SongSearchFilter";
 import { processSongs, DEFAULT_FILTERS, type SortOption, type FilterOptions } from "../utils/songFilters";
 import { SEO } from "./SEO";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 interface Props {
   user: User | null;
@@ -27,6 +31,7 @@ interface Props {
 
 const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +46,19 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("artist_title_asc");
   const [filters, setFilters] = useState<FilterOptions>({ ...DEFAULT_FILTERS });
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   // Process songs with filters and search
   const filteredSongs = processSongs(songs, searchQuery, filters, sortBy);
@@ -83,18 +101,20 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   };
 
   const handleDeleteSong = async (song: Song) => {
-    const confirmed = window.confirm(
-      t("songs.confirmDelete", { title: song.title })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteSong(song.id);
-      await loadSongs();
-    } catch (error) {
-      console.error("Failed to delete song:", error);
-      alert(t("songs.deleteError"));
-    }
+    setConfirm({
+      title: t("songs.deleteSong"),
+      message: t("songs.confirmDelete", { title: song.title }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteSong(song.id);
+          await loadSongs();
+        } catch (error) {
+          console.error("Failed to delete song:", error);
+          toast.error(t("songs.deleteError"));
+        }
+      },
+    });
   };
 
   const handleTransposeSong = async (songId: string, semitones: number) => {
@@ -106,7 +126,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       );
     } catch (error) {
       console.error("Failed to transpose song:", error);
-      alert(t("songs.transposeError"));
+      toast.error(t("songs.transposeError"));
     }
   };
 
@@ -119,7 +139,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       );
     } catch (error) {
       console.error("Failed to reset transposition:", error);
-      alert(t("songs.transposeError"));
+      toast.error(t("songs.transposeError"));
     }
   };
 
@@ -286,6 +306,17 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
             prefillType={requestType}
           />
         )}
+
+        <ConfirmModal
+          isOpen={confirm !== null}
+          title={confirm?.title ?? ""}
+          message={confirm?.message ?? ""}
+          confirmLabel={confirm?.confirmLabel}
+          tone="danger"
+          busy={confirmBusy}
+          onConfirm={runConfirm}
+          onClose={() => setConfirm(null)}
+        />
       </Container>
     </PageWrapper>
   );

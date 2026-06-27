@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Container, Spinner, Button } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -12,6 +13,10 @@ import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { downloadShowICS } from "../lib/calendarExport";
 import { SEO } from "./SEO";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString + "T00:00:00");
@@ -50,6 +55,8 @@ const getDaysUntil = (eventDate: string): { text: string; isPast: boolean } => {
 };
 
 const ShowDetailView: FC = () => {
+  const { t } = useTranslation();
+  const toast = useToast();
   const { showId } = useParams<{ showId: string }>();
   const navigate = useNavigate();
 
@@ -60,6 +67,19 @@ const ShowDetailView: FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [linkingSetlist, setLinkingSetlist] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   useEffect(() => {
     const loadShow = async () => {
@@ -100,18 +120,20 @@ const ShowDetailView: FC = () => {
   const handleDelete = async () => {
     if (!show) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${show.name}"? This action cannot be undone.`
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteShow(show.id);
-      navigate("/shows");
-    } catch (err) {
-      console.error("Failed to delete show:", err);
-      alert("Failed to delete show. Please try again.");
-    }
+    setConfirm({
+      title: t("shows.deleteShow"),
+      message: t("shows.confirmDelete", { name: show.name }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteShow(show.id);
+          navigate("/shows");
+        } catch (err) {
+          console.error("Failed to delete show:", err);
+          toast.error(t("shows.deleteError"));
+        }
+      },
+    });
   };
 
   const handleMarkCompleted = async () => {
@@ -121,22 +143,26 @@ const ShowDetailView: FC = () => {
       setShow(updated);
     } catch (err) {
       console.error("Failed to update show:", err);
-      alert("Failed to update show status.");
+      toast.error(t("shows.updateStatusError"));
     }
   };
 
   const handleMarkCancelled = async () => {
     if (!show) return;
-    const confirmed = window.confirm(`Are you sure you want to cancel "${show.name}"?`);
-    if (!confirmed) return;
-
-    try {
-      const updated = await markShowCancelled(show.id);
-      setShow(updated);
-    } catch (err) {
-      console.error("Failed to cancel show:", err);
-      alert("Failed to cancel show.");
-    }
+    setConfirm({
+      title: t("shows.cancelShow"),
+      message: t("shows.cancelConfirm", { name: show.name }),
+      confirmLabel: t("shows.cancelShow"),
+      action: async () => {
+        try {
+          const updated = await markShowCancelled(show.id);
+          setShow(updated);
+        } catch (err) {
+          console.error("Failed to cancel show:", err);
+          toast.error(t("shows.cancelError"));
+        }
+      },
+    });
   };
 
   const handlePerformSetlist = () => {
@@ -158,7 +184,7 @@ const ShowDetailView: FC = () => {
       setSetlist(setlistData);
     } catch (err) {
       console.error("Failed to link setlist:", err);
-      alert("Failed to link setlist. Please try again.");
+      toast.error(t("shows.linkSetlistError"));
     }
     setLinkingSetlist(false);
   };
@@ -467,6 +493,17 @@ const ShowDetailView: FC = () => {
             </QuickInfoCard>
           </Sidebar>
         </ContentGrid>
+
+        <ConfirmModal
+          isOpen={confirm !== null}
+          title={confirm?.title ?? ""}
+          message={confirm?.message ?? ""}
+          confirmLabel={confirm?.confirmLabel}
+          tone="danger"
+          busy={confirmBusy}
+          onConfirm={runConfirm}
+          onClose={() => setConfirm(null)}
+        />
       </Container>
     </PageWrapper>
   );

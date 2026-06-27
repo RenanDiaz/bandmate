@@ -27,6 +27,7 @@ import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../context/useToast";
 import { SyncControls } from "./SyncControls";
 import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
@@ -140,6 +141,7 @@ const SetlistPerformanceView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
@@ -312,7 +314,7 @@ const SetlistPerformanceView: FC = () => {
       setIsReorderMode(false);
     } catch (error) {
       console.error("Failed to save order:", error);
-      alert("Failed to save order. Please try again.");
+      toast.error(t("setlists.detail.saveOrderError"));
     }
     setSaving(false);
   };
@@ -354,7 +356,7 @@ const SetlistPerformanceView: FC = () => {
         setSetlistItems(orderedItems);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        alert("Failed to load setlist. Please try again.");
+        toast.error(t("setlists.detail.loadError"));
         navigate("/setlists");
       }
       setLoading(false);

@@ -7,7 +7,9 @@ import { Spinner } from "reactstrap";
 import styled, { keyframes } from "styled-components";
 import { theme } from "../theme";
 import { useBandContext } from "../context/useBandContext";
+import { useToast } from "../context/useToast";
 import { BandAvatar } from "./BandAvatar";
+import { ConfirmModal } from "./ConfirmModal";
 import type { Band } from "../services/bandsService";
 import {
   getMyInvitations,
@@ -21,6 +23,14 @@ interface Props {
   onClose: () => void;
   onManageBands: () => void;
 }
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
+};
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -36,8 +46,11 @@ const useIsMobile = () => {
 export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
   const { selectedBand, setSelectedBand, bands, refreshBands } = useBandContext();
   const isMobile = useIsMobile();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(false);
   const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(null);
@@ -95,6 +108,17 @@ export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
     }
   }, [isOpen, isMobile]);
 
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
+
   const handleSelectBand = (band: Band) => {
     setSelectedBand(band);
     onClose();
@@ -108,21 +132,28 @@ export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
       refreshBands();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t("bands.acceptInvitationError");
-      alert(msg);
+      toast.error(msg);
     }
     setProcessingInvitationId(null);
   };
 
   const handleDeclineInvitation = async (invitation: BandInvitation) => {
-    if (!window.confirm(t("bands.declineInvitationConfirm"))) return;
-    setProcessingInvitationId(invitation.id);
-    try {
-      await declineInvitation(invitation.id);
-      await loadInvitations();
-    } catch {
-      alert(t("bands.declineInvitationError"));
-    }
-    setProcessingInvitationId(null);
+    setConfirm({
+      title: t("bands.declineInvitation"),
+      message: t("bands.declineInvitationConfirm"),
+      confirmLabel: t("bands.declineInvitation"),
+      tone: "danger",
+      action: async () => {
+        setProcessingInvitationId(invitation.id);
+        try {
+          await declineInvitation(invitation.id);
+          await loadInvitations();
+        } catch {
+          toast.error(t("bands.declineInvitationError"));
+        }
+        setProcessingInvitationId(null);
+      },
+    });
   };
 
   const handleGoToSettings = (bandId: number) => {
@@ -259,11 +290,27 @@ export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
   );
 
   // Desktop: Dropdown
+  const confirmModal = (
+    <ConfirmModal
+      isOpen={confirm !== null}
+      title={confirm?.title ?? ""}
+      message={confirm?.message ?? ""}
+      confirmLabel={confirm?.confirmLabel}
+      tone={confirm?.tone ?? "danger"}
+      busy={confirmBusy}
+      onConfirm={runConfirm}
+      onClose={() => setConfirm(null)}
+    />
+  );
+
   if (!isMobile) {
     return (
-      <DropdownContainer ref={dropdownRef}>
-        {content}
-      </DropdownContainer>
+      <>
+        <DropdownContainer ref={dropdownRef}>
+          {content}
+        </DropdownContainer>
+        {confirmModal}
+      </>
     );
   }
 
@@ -283,6 +330,7 @@ export const BandSwitcher: FC<Props> = ({ isOpen, onClose, onManageBands }) => {
           {content}
         </BottomSheetContent>
       </BottomSheetContainer>
+      {confirmModal}
     </>,
     document.body
   );

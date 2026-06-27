@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { createSetlist, type CreateSetlistInput } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 
 interface Props {
   bandId: number;
@@ -11,6 +12,7 @@ interface Props {
 
 export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -37,7 +39,7 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       onSetlistCreated();
     } catch (error) {
       console.error("Failed to create setlist:", error);
-      alert(t('setlists.createError'));
+      toast.error(t('setlists.createError'));
     } finally {
       setIsSubmitting(false);
     }

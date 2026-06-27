@@ -13,6 +13,10 @@ import {
   DropdownMenu,
   DropdownItem,
 } from "reactstrap";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 interface Props {
   shows: Show[];
@@ -278,7 +282,21 @@ const ShowCardItem: FC<{
 
 export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit = true }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const handleViewShow = (showId: string) => {
     navigate(`/shows/${showId}`);
@@ -290,38 +308,55 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit
       onReload();
     } catch (error) {
       console.error("Failed to mark show as completed:", error);
-      alert(t('shows.updateStatusError'));
+      toast.error(t('shows.updateStatusError'));
     }
   };
 
   const handleMarkCancelled = async (show: Show) => {
-    const confirmed = window.confirm(t('shows.cancelConfirm', { name: show.name }));
-    if (!confirmed) return;
-
-    try {
-      await markShowCancelled(show.id);
-      onReload();
-    } catch (error) {
-      console.error("Failed to cancel show:", error);
-      alert(t('shows.cancelError'));
-    }
+    setConfirm({
+      title: t('shows.cancelShow'),
+      message: t('shows.cancelConfirm', { name: show.name }),
+      confirmLabel: t('shows.cancelShow'),
+      action: async () => {
+        try {
+          await markShowCancelled(show.id);
+          onReload();
+        } catch (error) {
+          console.error("Failed to cancel show:", error);
+          toast.error(t('shows.cancelError'));
+        }
+      },
+    });
   };
 
   return (
-    <ShowsGrid>
-      {shows.map((show) => (
-        <ShowCardItem
-          key={show.id}
-          show={show}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onView={handleViewShow}
-          onMarkCompleted={handleMarkCompleted}
-          onMarkCancelled={handleMarkCancelled}
-          canEdit={canEdit}
-        />
-      ))}
-    </ShowsGrid>
+    <>
+      <ShowsGrid>
+        {shows.map((show) => (
+          <ShowCardItem
+            key={show.id}
+            show={show}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onView={handleViewShow}
+            onMarkCompleted={handleMarkCompleted}
+            onMarkCancelled={handleMarkCancelled}
+            canEdit={canEdit}
+          />
+        ))}
+      </ShowsGrid>
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
+    </>
   );
 };
 

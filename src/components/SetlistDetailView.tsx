@@ -38,6 +38,7 @@ import { EditSetlistModal } from "./EditSetlistModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
+import { useToast } from "../context/useToast";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -347,6 +348,7 @@ const SetlistDetailView: FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { selectedBand } = useBandContext();
+  const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
@@ -466,7 +468,7 @@ const SetlistDetailView: FC = () => {
       setIsReorderMode(false);
     } catch (error) {
       console.error("Failed to save order:", error);
-      alert("Failed to save order. Please try again.");
+      toast.error(t("setlists.detail.saveOrderError"));
     }
     setSaving(false);
   };
@@ -567,7 +569,7 @@ const SetlistDetailView: FC = () => {
         setAvailableShows(availableShowsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        alert("Failed to load setlist. Please try again.");
+        toast.error(t("setlists.detail.loadError"));
         navigate("/setlists");
       }
       setLoading(false);
@@ -636,7 +638,7 @@ const SetlistDetailView: FC = () => {
       await youtubeService.requestAuthorization();
     } catch (error) {
       console.error("Failed to request YouTube authorization:", error);
-      alert(t("youtubeMusic.authError"));
+      toast.error(t("youtubeMusic.authError"));
     }
   };
 
@@ -661,7 +663,7 @@ const SetlistDetailView: FC = () => {
       setSelectedShowId("");
     } catch (error) {
       console.error("Failed to link setlist to show:", error);
-      alert(t("setlists.detail.linkError"));
+      toast.error(t("setlists.detail.linkError"));
     }
     setLinkingShow(false);
   };

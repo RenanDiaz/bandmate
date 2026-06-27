@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -9,12 +10,26 @@ import {
   declineInvitation,
 } from "../services/bandMembersService";
 import type { BandInvitation } from "../services/bandMembersService";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
 
 interface Props {
   onInvitationAccepted?: () => void;
 }
 
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
+};
+
 export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -34,6 +49,17 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
     setLoading(false);
   };
 
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
+
   const handleAccept = async (invitation: BandInvitation) => {
     setProcessingId(invitation.id);
     try {
@@ -42,26 +68,29 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
       onInvitationAccepted?.();
     } catch (error: any) {
       console.error("Failed to accept invitation:", error);
-      alert(error.message || "Failed to accept invitation");
+      toast.error(error.message || t("bands.acceptInvitationError"));
     }
     setProcessingId(null);
   };
 
   const handleDecline = async (invitation: BandInvitation) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to decline this invitation?"
-    );
-    if (!confirmed) return;
-
-    setProcessingId(invitation.id);
-    try {
-      await declineInvitation(invitation.id);
-      await loadInvitations();
-    } catch (error) {
-      console.error("Failed to decline invitation:", error);
-      alert("Failed to decline invitation");
-    }
-    setProcessingId(null);
+    setConfirm({
+      title: t("bands.declineInvitation"),
+      message: t("bands.declineInvitationConfirm"),
+      confirmLabel: t("bands.declineInvitation"),
+      tone: "danger",
+      action: async () => {
+        setProcessingId(invitation.id);
+        try {
+          await declineInvitation(invitation.id);
+          await loadInvitations();
+        } catch (error) {
+          console.error("Failed to decline invitation:", error);
+          toast.error(t("bands.declineInvitationError"));
+        }
+        setProcessingId(null);
+      },
+    });
   };
 
   if (loading) {
@@ -154,6 +183,17 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
           );
         })}
       </InvitationsList>
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone={confirm?.tone ?? "danger"}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </Container>
   );
 };

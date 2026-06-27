@@ -25,9 +25,19 @@ import {
 } from "../services/requestsService";
 import { getUserBandRole, canManageBandSettings } from "../services/bandMembersService";
 import { SEO } from "./SEO";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  action: () => Promise<void>;
+};
 
 const RequestDetailView: FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const { user } = useBandContext();
@@ -39,6 +49,19 @@ const RequestDetailView: FC = () => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadRequest = async () => {
     if (!requestId) return;
@@ -78,22 +101,26 @@ const RequestDetailView: FC = () => {
       await loadRequest();
     } catch (error) {
       console.error("Failed to approve:", error);
-      alert(t("requests.approveError"));
+      toast.error(t("requests.approveError"));
     }
   };
 
   const handleReject = async () => {
     if (!request) return;
-    const confirmed = window.confirm(t("requests.confirmReject", { title: request.title }));
-    if (!confirmed) return;
-
-    try {
-      await rejectRequest(request.id);
-      await loadRequest();
-    } catch (error) {
-      console.error("Failed to reject:", error);
-      alert(t("requests.rejectError"));
-    }
+    setConfirm({
+      title: t("requests.reject"),
+      message: t("requests.confirmReject", { title: request.title }),
+      confirmLabel: t("requests.reject"),
+      action: async () => {
+        try {
+          await rejectRequest(request.id);
+          await loadRequest();
+        } catch (error) {
+          console.error("Failed to reject:", error);
+          toast.error(t("requests.rejectError"));
+        }
+      },
+    });
   };
 
   const handleMarkInProgress = async () => {
@@ -118,29 +145,37 @@ const RequestDetailView: FC = () => {
 
   const handleWithdraw = async () => {
     if (!request) return;
-    const confirmed = window.confirm(t("requests.confirmWithdraw"));
-    if (!confirmed) return;
-
-    try {
-      await withdrawRequest(request.id);
-      await loadRequest();
-    } catch (error) {
-      console.error("Failed to withdraw:", error);
-    }
+    setConfirm({
+      title: t("requests.withdraw"),
+      message: t("requests.confirmWithdraw"),
+      confirmLabel: t("requests.withdraw"),
+      action: async () => {
+        try {
+          await withdrawRequest(request.id);
+          await loadRequest();
+        } catch (error) {
+          console.error("Failed to withdraw:", error);
+        }
+      },
+    });
   };
 
   const handleDelete = async () => {
     if (!request) return;
-    const confirmed = window.confirm(t("requests.confirmDelete", { title: request.title }));
-    if (!confirmed) return;
-
-    try {
-      await deleteRequest(request.id);
-      navigate("/requests");
-    } catch (error) {
-      console.error("Failed to delete:", error);
-      alert(t("requests.deleteError"));
-    }
+    setConfirm({
+      title: t("requests.deleteRequest"),
+      message: t("requests.confirmDelete", { title: request.title }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteRequest(request.id);
+          navigate("/requests");
+        } catch (error) {
+          console.error("Failed to delete:", error);
+          toast.error(t("requests.deleteError"));
+        }
+      },
+    });
   };
 
   const handleVote = async (voteType: "up" | "down") => {
@@ -165,22 +200,26 @@ const RequestDetailView: FC = () => {
       setComments(commentsData);
     } catch (error) {
       console.error("Failed to add comment:", error);
-      alert(t("requests.commentError"));
+      toast.error(t("requests.commentError"));
     }
     setSubmittingComment(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    const confirmed = window.confirm(t("requests.confirmDeleteComment"));
-    if (!confirmed) return;
-
-    try {
-      await deleteComment(commentId);
-      const commentsData = await getRequestComments(request!.id);
-      setComments(commentsData);
-    } catch (error) {
-      console.error("Failed to delete comment:", error);
-    }
+    setConfirm({
+      title: t("requests.deleteComment"),
+      message: t("requests.confirmDeleteComment"),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteComment(commentId);
+          const commentsData = await getRequestComments(request!.id);
+          setComments(commentsData);
+        } catch (error) {
+          console.error("Failed to delete comment:", error);
+        }
+      },
+    });
   };
 
   const formatDate = (dateString: string): string => {
@@ -455,6 +494,17 @@ const RequestDetailView: FC = () => {
           )}
         </CommentsCard>
       </Container>
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </PageWrapper>
   );
 };

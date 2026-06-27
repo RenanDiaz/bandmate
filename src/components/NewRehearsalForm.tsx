@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Form, FormGroup, Label, Input, Button, Collapse, Row, Col } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import { createRehearsal } from "../services/rehearsalsService";
 import { getBandSetlists } from "../services/setlistsService";
 import { getUpcomingShows } from "../services/showsService";
@@ -18,6 +19,7 @@ interface Props {
 
 export const NewRehearsalForm: FC<Props> = ({ bandId, onRehearsalCreated }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -86,7 +88,7 @@ export const NewRehearsalForm: FC<Props> = ({ bandId, onRehearsalCreated }) => {
       onRehearsalCreated();
     } catch (error) {
       console.error("Failed to create rehearsal:", error);
-      alert(t('rehearsals.createError'));
+      toast.error(t('rehearsals.createError'));
     }
     setLoading(false);
   };

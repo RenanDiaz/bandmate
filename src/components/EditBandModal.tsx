@@ -11,6 +11,7 @@ import {
   Input,
   Button,
 } from "reactstrap";
+import { useToast } from "../context/useToast";
 import type { Band, UpdateBandInput } from "../services/bandsService";
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
 
 export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [formData, setFormData] = useState<UpdateBandInput>({
     name: "",
     genre: "",
@@ -53,7 +55,7 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
       toggle();
     } catch (error) {
       console.error("Failed to update band:", error);
-      alert(t('bands.updateError'));
+      toast.error(t('bands.updateError'));
     } finally {
       setIsSaving(false);
     }

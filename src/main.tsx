@@ -8,21 +8,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./styles/design-tokens.css";
 import theme from "./theme";
-import { registerSW } from 'virtual:pwa-register';
 import './i18n';
-
-// Register service worker for PWA functionality
-registerSW({
-  onNeedRefresh() {
-    // Show a prompt to reload the page when a new version is available
-    if (confirm('New content available. Reload?')) {
-      window.location.reload();
-    }
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
-});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

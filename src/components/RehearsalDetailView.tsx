@@ -14,6 +14,15 @@ import type { Show } from "../services/showsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  action: () => Promise<void>;
+};
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString + "T00:00:00");
@@ -53,6 +62,7 @@ const getDaysUntil = (eventDate: string): { text: string; isPast: boolean } => {
 
 const RehearsalDetailView: FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { rehearsalId } = useParams<{ rehearsalId: string }>();
   const navigate = useNavigate();
 
@@ -62,6 +72,19 @@ const RehearsalDetailView: FC = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   useEffect(() => {
     const loadRehearsal = async () => {
@@ -105,18 +128,20 @@ const RehearsalDetailView: FC = () => {
   const handleDelete = async () => {
     if (!rehearsal) return;
 
-    const confirmed = window.confirm(
-      t('rehearsals.confirmDelete', { name: rehearsal.name || t('rehearsals.rehearsal') })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteRehearsal(rehearsal.id);
-      navigate("/rehearsals");
-    } catch (err) {
-      console.error("Failed to delete rehearsal:", err);
-      alert(t('rehearsals.deleteError'));
-    }
+    setConfirm({
+      title: t('rehearsals.deleteRehearsal'),
+      message: t('rehearsals.confirmDelete', { name: rehearsal.name || t('rehearsals.rehearsal') }),
+      confirmLabel: t('common.delete'),
+      action: async () => {
+        try {
+          await deleteRehearsal(rehearsal.id);
+          navigate("/rehearsals");
+        } catch (err) {
+          console.error("Failed to delete rehearsal:", err);
+          toast.error(t('rehearsals.deleteError'));
+        }
+      },
+    });
   };
 
   const handleMarkCompleted = async () => {
@@ -126,24 +151,26 @@ const RehearsalDetailView: FC = () => {
       setRehearsal(updated);
     } catch (err) {
       console.error("Failed to update rehearsal:", err);
-      alert(t('rehearsals.updateStatusError'));
+      toast.error(t('rehearsals.updateStatusError'));
     }
   };
 
   const handleMarkCancelled = async () => {
     if (!rehearsal) return;
-    const confirmed = window.confirm(
-      t('rehearsals.cancelConfirm', { name: rehearsal.name || t('rehearsals.rehearsal') })
-    );
-    if (!confirmed) return;
-
-    try {
-      const updated = await markRehearsalCancelled(rehearsal.id);
-      setRehearsal(updated);
-    } catch (err) {
-      console.error("Failed to cancel rehearsal:", err);
-      alert(t('rehearsals.cancelError'));
-    }
+    setConfirm({
+      title: t('rehearsals.cancelRehearsal'),
+      message: t('rehearsals.cancelConfirm', { name: rehearsal.name || t('rehearsals.rehearsal') }),
+      confirmLabel: t('rehearsals.cancelRehearsal'),
+      action: async () => {
+        try {
+          const updated = await markRehearsalCancelled(rehearsal.id);
+          setRehearsal(updated);
+        } catch (err) {
+          console.error("Failed to cancel rehearsal:", err);
+          toast.error(t('rehearsals.cancelError'));
+        }
+      },
+    });
   };
 
   const handlePerformSetlist = () => {
@@ -407,6 +434,17 @@ const RehearsalDetailView: FC = () => {
           </Sidebar>
         </ContentGrid>
       </Container>
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </PageWrapper>
   );
 };

@@ -28,6 +28,7 @@ import type { Song } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
 import { groqService, GroqApiError } from "../services/groqService";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../context/useToast";
 
 // Helper to generate unique IDs for special items
 const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -182,6 +183,7 @@ const SetlistEditor: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
@@ -271,7 +273,7 @@ const SetlistEditor: FC = () => {
         setAvailableSongs(songsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        alert(t('setlists.editor.loadError'));
+        toast.error(t('setlists.editor.loadError'));
         navigate("/setlists");
       }
       setLoading(false);
@@ -291,7 +293,7 @@ const SetlistEditor: FC = () => {
       navigate("/setlists");
     } catch (error) {
       console.error("Failed to save setlist:", error);
-      alert(t('setlists.editor.saveError'));
+      toast.error(t('setlists.editor.saveError'));
     }
     setSaving(false);
   };

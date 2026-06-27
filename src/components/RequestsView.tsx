@@ -14,7 +14,9 @@ import {
 import { getUserBandRole, canManageBandSettings } from "../services/bandMembersService";
 import { RequestList } from "./RequestList";
 import { NewRequestModal } from "./NewRequestModal";
+import { ConfirmModal } from "./ConfirmModal";
 import { SEO } from "./SEO";
+import { useToast } from "../context/useToast";
 
 interface Props {
   user: User | null;
@@ -23,13 +25,34 @@ interface Props {
 
 type FilterType = "all" | "pending" | "approved" | "completed" | "rejected";
 
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  action: () => Promise<void>;
+};
+
 const RequestsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("pending");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [canManage, setCanManage] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadRequests = async () => {
     if (!selectedBand) {
@@ -63,18 +86,20 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
   }, [user, selectedBand]);
 
   const handleDeleteRequest = async (request: Request) => {
-    const confirmed = window.confirm(
-      t("requests.confirmDelete", { title: request.title })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteRequest(request.id);
-      await loadRequests();
-    } catch (error) {
-      console.error("Failed to delete request:", error);
-      alert(t("requests.deleteError"));
-    }
+    setConfirm({
+      title: t("requests.deleteRequest"),
+      message: t("requests.confirmDelete", { title: request.title }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteRequest(request.id);
+          await loadRequests();
+        } catch (error) {
+          console.error("Failed to delete request:", error);
+          toast.error(t("requests.deleteError"));
+        }
+      },
+    });
   };
 
   const getFilteredRequests = () => {
@@ -245,6 +270,17 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
           onCreated={loadRequests}
         />
       </Container>
+
+      <ConfirmModal
+        isOpen={confirm !== null}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone="danger"
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onClose={() => setConfirm(null)}
+      />
     </PageWrapper>
   );
 };

@@ -451,6 +451,7 @@
     },
     "doors": "Puertas",
     "setlistLinked": "Setlist vinculado",
+    "linkSetlistError": "No se pudo vincular el setlist. Inténtalo de nuevo.",
     "editShowTooltip": "Editar show",
     "markCompleted": "Marcar como completado",
     "cancelShowTooltip": "Cancelar show",
@@ -486,6 +487,8 @@
     "instructionsOutlook": "Agregar calendario > Suscribirse desde web > Pegar la URL",
     "refreshNote": "Las apps de calendario normalmente se actualizan cada 12-24 horas. Los cambios en tus shows se sincronizarán automáticamente en la siguiente actualización.",
     "regenerateToken": "Regenerar URL",
+    "regenerate": "Regenerar",
+    "deleteSubscription": "Eliminar suscripción",
     "regenerateConfirm": "Esto invalidará la URL actual. Las suscripciones de calendario que usen la URL anterior dejarán de funcionar. ¿Continuar?",
     "removeSubscription": "Eliminar Suscripción",
     "deleteConfirm": "Esto eliminará la suscripción de calendario. Las apps de calendario que usen esta URL dejarán de recibir actualizaciones. ¿Continuar?",
@@ -616,6 +619,7 @@
     "role": "Rol",
     "expired": "Expirada",
     "accept": "Aceptar",
+    "declineInvitation": "Rechazar invitación",
     "declineInvitationConfirm": "¿Estás seguro de que quieres rechazar esta invitación?",
     "confirmDeleteBand": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer.",
     "confirmRemoveMember": "¿Estás seguro de que quieres quitar a {{email}} de la banda?",
@@ -731,8 +735,9 @@
     "footerText": "Bandmate está en desarrollo activo. Constantemente estamos agregando nuevas características y mejoras para ayudar a los músicos a colaborar mejor."
   },
   "pwa": {
-    "newContentAvailable": "Nuevo contenido disponible. ¿Recargar?",
-    "offlineReady": "App lista para funcionar sin conexión"
+    "newContentAvailable": "Hay una nueva versión disponible.",
+    "offlineReady": "App lista para funcionar sin conexión",
+    "reload": "Recargar"
   },
   "errors": {
     "generic": "Ocurrió un error. Por favor intenta de nuevo.",
@@ -900,6 +905,7 @@
     "proposeSetlist": "Proponer",
     "submitRequest": "Enviar Solicitud",
     "deleteRequest": "Eliminar Solicitud",
+    "deleteComment": "Eliminar comentario",
     "requestTitle": "Título de la Solicitud",
     "type": "Tipo de Solicitud",
     "description": "Descripción",

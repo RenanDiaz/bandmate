@@ -14,6 +14,7 @@ import {
 } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import { updateSetlist } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
 
@@ -26,6 +27,7 @@ interface Props {
 
 export const EditSetlistModal: FC<Props> = ({ setlist, isOpen, onClose, onUpdated }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -54,7 +56,7 @@ export const EditSetlistModal: FC<Props> = ({ setlist, isOpen, onClose, onUpdate
       onClose();
     } catch (error) {
       console.error("Failed to update setlist:", error);
-      alert(t('setlists.updateError'));
+      toast.error(t('setlists.updateError'));
     }
     setLoading(false);
   };

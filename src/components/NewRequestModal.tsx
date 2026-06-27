@@ -14,6 +14,7 @@ import {
 } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
 import {
   createRequest,
   type RequestType,
@@ -51,6 +52,7 @@ export const NewRequestModal: FC<Props> = ({
   prefillShowId,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [requestType, setRequestType] = useState<RequestType>(prefillType || "new_song");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -81,7 +83,7 @@ export const NewRequestModal: FC<Props> = ({
     e.preventDefault();
 
     if (!title.trim()) {
-      alert(t("requests.titleRequired"));
+      toast.warning(t("requests.titleRequired"));
       return;
     }
 
@@ -119,7 +121,7 @@ export const NewRequestModal: FC<Props> = ({
       onCreated();
     } catch (error) {
       console.error("Failed to create request:", error);
-      alert(t("requests.createError"));
+      toast.error(t("requests.createError"));
     } finally {
       setIsSubmitting(false);
     }

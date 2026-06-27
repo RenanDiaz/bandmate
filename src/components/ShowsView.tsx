@@ -16,6 +16,10 @@ import { ShowCalendar } from "./ShowCalendar";
 import { EditShowModal } from "./EditShowModal";
 import { CalendarSubscriptionModal } from "./CalendarSubscriptionModal";
 import { SEO } from "./SEO";
+import { ConfirmModal } from "./ConfirmModal";
+import { useToast } from "../context/useToast";
+
+type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 interface Props {
   user: User | null;
@@ -38,6 +42,7 @@ const formatTime = (timeString: string): string => {
 
 const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +51,19 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const [filter, setFilter] = useState<FilterType>("upcoming");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirm) return;
+    setConfirmBusy(true);
+    try {
+      await confirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const loadShows = async () => {
     if (!selectedBand) {
@@ -80,18 +98,20 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   };
 
   const handleDeleteShow = async (show: Show) => {
-    const confirmed = window.confirm(
-      t("shows.confirmDelete", { name: show.name })
-    );
-    if (!confirmed) return;
-
-    try {
-      await deleteShow(show.id);
-      await loadShows();
-    } catch (error) {
-      console.error("Failed to delete show:", error);
-      alert(t("shows.deleteError"));
-    }
+    setConfirm({
+      title: t("shows.deleteShow"),
+      message: t("shows.confirmDelete", { name: show.name }),
+      confirmLabel: t("common.delete"),
+      action: async () => {
+        try {
+          await deleteShow(show.id);
+          await loadShows();
+        } catch (error) {
+          console.error("Failed to delete show:", error);
+          toast.error(t("shows.deleteError"));
+        }
+      },
+    });
   };
 
   const todayShows = shows.filter(
@@ -329,6 +349,17 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
           onClose={() => setIsCalendarSubOpen(false)}
           bandId={selectedBand.id}
           bandName={selectedBand.name}
+        />
+
+        <ConfirmModal
+          isOpen={confirm !== null}
+          title={confirm?.title ?? ""}
+          message={confirm?.message ?? ""}
+          confirmLabel={confirm?.confirmLabel}
+          tone="danger"
+          busy={confirmBusy}
+          onConfirm={runConfirm}
+          onClose={() => setConfirm(null)}
         />
       </Container>
     </PageWrapper>
