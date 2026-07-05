@@ -74,6 +74,11 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainLRef = useRef<GainNode | null>(null);
   const gainRRef = useRef<GainNode | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  // Set when the playhead was moved programmatically (stop/seek). Chromium keeps a
+  // small buffer of pre-seek samples inside the MediaElementAudioSourceNode and plays
+  // them for a fraction of a second on the next play; we use this to mute that blip.
+  const didSeekRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -111,21 +116,27 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     const gainL = ctx.createGain();
     const gainR = ctx.createGain();
     const merger = ctx.createChannelMerger(2);
+    // Master gain sits at the end of the graph, untouched by the volume controls,
+    // so it can briefly mute the output to hide the post-seek stale-audio blip.
+    const masterGain = ctx.createGain();
 
     source.connect(splitter);
     splitter.connect(gainL, 0);
     splitter.connect(gainR, 1);
     gainL.connect(merger, 0, 0);
     gainR.connect(merger, 0, 1);
-    merger.connect(ctx.destination);
+    merger.connect(masterGain);
+    masterGain.connect(ctx.destination);
 
     gainL.gain.value = volumeL;
     gainR.gain.value = volumeR;
+    masterGain.gain.value = 1;
 
     audioContextRef.current = ctx;
     sourceRef.current = source;
     gainLRef.current = gainL;
     gainRRef.current = gainR;
+    masterGainRef.current = masterGain;
   }, [volumeL, volumeR]);
 
   // Keep gain nodes in sync with state and persist to localStorage
@@ -156,6 +167,8 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     const handleEnded = () => {
       setIsPlaying(false);
       onPlayingChange?.(false);
+      // Pressing play after the track ends rewinds to 0 — same stale-audio blip.
+      didSeekRef.current = true;
     };
     const handlePlay = () => {
       setIsPlaying(true);
@@ -194,6 +207,19 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     [songId, onLoadTrack]
   );
 
+  // After a seek, briefly hold the output silent so the stale samples still buffered
+  // inside the MediaElementAudioSourceNode flush out before the real audio is heard.
+  const flushStaleAudioOnRestart = useCallback(() => {
+    const ctx = audioContextRef.current;
+    const master = masterGainRef.current;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(0, now);
+    master.gain.setValueAtTime(0, now + 0.2);
+    master.gain.linearRampToValueAtTime(1, now + 0.24);
+  }, []);
+
   const handlePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !trackUrl) return;
@@ -206,8 +232,12 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     ensureAudioGraph();
     // iOS Safari ships AudioContext suspended until a user gesture resumes it
     audioContextRef.current?.resume().catch(() => undefined);
+    if (didSeekRef.current) {
+      flushStaleAudioOnRestart();
+      didSeekRef.current = false;
+    }
     audio.play().catch(() => undefined);
-  }, [isPlaying, trackUrl, ensureAudioGraph]);
+  }, [isPlaying, trackUrl, ensureAudioGraph, flushStaleAudioOnRestart]);
 
   const handleSeek = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
@@ -216,6 +246,7 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     const time = parseFloat(event.target.value);
     audio.currentTime = time;
     setCurrentTime(time);
+    didSeekRef.current = true;
   }, []);
 
   const handleVolumeLChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,6 +265,7 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     audio.currentTime = 0;
     setCurrentTime(0);
     setIsPlaying(false);
+    didSeekRef.current = true;
   }, []);
 
   const handleRemove = useCallback(() => {
