@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
@@ -692,8 +693,11 @@ export default function SheetMusicUpload({
         </ErrorMessage>
       )}
 
-      {/* Upload Modal */}
-      {showModal && (
+      {/* Upload Modal — portaled to body so it escapes any parent modal's
+          transformed container and, crucially, any enclosing <form> (Enter
+          must submit this upload form, not the song edit form). */}
+      {showModal &&
+        createPortal(
         <UploadModal onClick={closeModal}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
@@ -702,6 +706,13 @@ export default function SheetMusicUpload({
                 <i className="bi bi-x" />
               </CloseButton>
             </ModalHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUpload();
+              }}
+            >
             <ModalBody>
               <FormGroup>
                 <Label>{t("sheetMusic.name", "Name")} *</Label>
@@ -773,9 +784,8 @@ export default function SheetMusicUpload({
                 {t("common.cancel")}
               </Button>
               <Button
-                type="button"
+                type="submit"
                 $variant="primary"
-                onClick={handleUpload}
                 disabled={!selectedFile || !name.trim() || uploading}
               >
                 {uploading ? (
@@ -791,22 +801,26 @@ export default function SheetMusicUpload({
                 )}
               </Button>
             </ModalFooter>
+            </form>
           </ModalContent>
-        </UploadModal>
+        </UploadModal>,
+        document.body
       )}
 
-      {/* Page Timing Sync Modal */}
-      {timingSheetMusic && timingPdfUrl && (
-        <PageTimingSyncModal
-          isOpen={showTimingModal}
-          onClose={closeTimingModal}
-          pdfUrl={timingPdfUrl}
-          audioUrl={backingTrackUrl}
-          initialTimings={timingSheetMusic.page_timings}
-          onSave={handleSaveTimings}
-          sheetMusicName={timingSheetMusic.name}
-        />
-      )}
+      {/* Page Timing Sync Modal — portaled for the same reason as above */}
+      {timingSheetMusic && timingPdfUrl &&
+        createPortal(
+          <PageTimingSyncModal
+            isOpen={showTimingModal}
+            onClose={closeTimingModal}
+            pdfUrl={timingPdfUrl}
+            audioUrl={backingTrackUrl}
+            initialTimings={timingSheetMusic.page_timings}
+            onSave={handleSaveTimings}
+            sheetMusicName={timingSheetMusic.name}
+          />,
+          document.body
+        )}
 
       <ConfirmModal
         isOpen={confirm !== null}

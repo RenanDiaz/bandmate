@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -35,7 +36,9 @@ export const ConfirmModal: FC<Props> = ({
 
   if (!isOpen) return null;
 
-  return (
+  // Portal to body so a transformed/scrollable ancestor (e.g. a parent modal)
+  // can't become the containing block for the fixed-position overlay.
+  return createPortal(
     <>
       <Overlay onClick={busy ? undefined : onClose} />
       <ModalContainer role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
@@ -60,7 +63,8 @@ export const ConfirmModal: FC<Props> = ({
           </Actions>
         </Body>
       </ModalContainer>
-    </>
+    </>,
+    document.body
   );
 };
 
