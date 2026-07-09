@@ -189,7 +189,9 @@ const UploadModal = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: ${theme.zIndex.modal};
+  /* Portaled to body: must stack above a parent modal's container, which
+     sits at modal + 10 (see EditSongModal's ModalContainer). */
+  z-index: ${theme.zIndex.modal + 10};
   padding: ${theme.space[4]};
 `;
 
