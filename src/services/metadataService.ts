@@ -23,6 +23,7 @@ export interface CompleteSongMetadata {
   releaseDate?: string;
   spotifyUrl?: string;
   duration?: number;     // seconds
+  popularity?: number;   // 0-100 (Spotify popularity score)
 
   // Artist info (from MusicBrainz)
   country?: string;      // Artist's country
@@ -98,6 +99,7 @@ class MetadataService {
       // Spotify-specific data
       albumArt: spotifyData?.albumArt,
       spotifyUrl: spotifyData?.spotifyUrl,
+      popularity: spotifyData?.popularity,
 
       // Artist info from MusicBrainz
       country: mbData.artistInfo?.country,

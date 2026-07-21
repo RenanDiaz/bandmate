@@ -29,6 +29,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
     tempo: "",
     duration: "",
     releaseDate: "",
+    popularity: "",
     energy: "",
     danceability: "",
     tags: "",
@@ -56,6 +57,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tempo: song.tempo?.toString() || "",
         duration: song.duration?.toString() || "",
         releaseDate: song.release_date || "",
+        popularity: song.popularity?.toString() || "",
         energy: song.energy?.toString() || "",
         danceability: song.danceability?.toString() || "",
         tags: song.tags?.join(", ") || "",
@@ -112,6 +114,9 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
           key: metadata.key || prev.key,
           tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
           duration: metadata.duration ? metadata.duration.toString() : prev.duration,
+          popularity: metadata.popularity != null
+            ? metadata.popularity.toString()
+            : prev.popularity,
           danceability: metadata.danceability
             ? metadata.danceability.toString()
             : prev.danceability,
@@ -172,6 +177,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
         duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
         release_date: formData.releaseDate.trim() || undefined,
+        popularity: formData.popularity ? parseInt(formData.popularity, 10) : undefined,
         energy: formData.energy ? parseFloat(formData.energy) : undefined,
         danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
         tags: formData.tags.trim() ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
@@ -370,6 +376,25 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
           </FormRow>
 
           <FormRow>
+            <FormGroup>
+              <Label htmlFor="editSongPopularity">
+                <i className="bi bi-graph-up-arrow"></i>
+                Popularity
+              </Label>
+              <Input
+                id="editSongPopularity"
+                type="number"
+                step="1"
+                placeholder="0 - 100"
+                value={formData.popularity}
+                onChange={(e) => setFormData({ ...formData, popularity: e.target.value })}
+                disabled={isSaving}
+                min="0"
+                max="100"
+              />
+              <HelperText>Popularity from 0 (least popular) to 100 (most popular)</HelperText>
+            </FormGroup>
+
             <FormGroup>
               <Label htmlFor="editSongEnergy">
                 <i className="bi bi-lightning-charge"></i>
