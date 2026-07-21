@@ -27,6 +27,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
     tempo: "",
     duration: "",
     timeSignature: "",
+    popularity: "",
     energy: "",
     danceability: "",
     tags: "",
@@ -68,6 +69,9 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           timeSignature: metadata.timeSignature
             ? metadata.timeSignature.toString()
             : prev.timeSignature,
+          popularity: metadata.popularity != null
+            ? metadata.popularity.toString()
+            : prev.popularity,
           danceability: metadata.danceability
             ? metadata.danceability.toString()
             : prev.danceability,
@@ -120,6 +124,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         tempo: formData.tempo ? parseInt(formData.tempo, 10) : undefined,
         duration: formData.duration ? parseInt(formData.duration, 10) : undefined,
         time_signature: formData.timeSignature ? parseInt(formData.timeSignature, 10) : undefined,
+        popularity: formData.popularity ? parseInt(formData.popularity, 10) : undefined,
         energy: formData.energy ? parseFloat(formData.energy) : undefined,
         danceability: formData.danceability ? parseFloat(formData.danceability) : undefined,
         tags: formData.tags.trim()
@@ -147,6 +152,7 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         tempo: "",
         duration: "",
         timeSignature: "",
+        popularity: "",
         energy: "",
         danceability: "",
         tags: "",
@@ -389,6 +395,25 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
         </FormRow>
 
         <FormRow>
+          <FormGroup>
+            <Label htmlFor="songPopularity">
+              <i className="bi bi-graph-up-arrow"></i>
+              Popularity
+            </Label>
+            <Input
+              id="songPopularity"
+              type="number"
+              step="1"
+              placeholder="0 - 100"
+              value={formData.popularity}
+              onChange={(e) => setFormData({ ...formData, popularity: e.target.value })}
+              disabled={isSubmitting}
+              min="0"
+              max="100"
+            />
+            <HelperText>Popularity from 0 (least popular) to 100 (most popular)</HelperText>
+          </FormGroup>
+
           <FormGroup>
             <Label htmlFor="songEnergy">
               <i className="bi bi-lightning-charge"></i>

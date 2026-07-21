@@ -50,6 +50,7 @@ export interface Song {
   tempo?: number;
   duration?: number;
   time_signature?: number;
+  popularity?: number;
   energy?: number;
   danceability?: number;
   tags?: string[];
@@ -97,6 +98,7 @@ export interface CreateSongInput {
   tempo?: number;
   duration?: number;
   time_signature?: number;
+  popularity?: number;
   energy?: number;
   danceability?: number;
   tags?: string[];
@@ -118,6 +120,7 @@ export interface UpdateSongInput {
   tempo?: number;
   duration?: number;
   time_signature?: number;
+  popularity?: number;
   energy?: number;
   danceability?: number;
   tags?: string[];

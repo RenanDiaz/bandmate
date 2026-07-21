@@ -27,6 +27,7 @@ interface SpotifyTrack {
     images: { url: string; height: number; width: number }[];
   };
   duration_ms: number;
+  popularity: number;    // 0-100
   external_urls: {
     spotify: string;
   };
@@ -64,6 +65,7 @@ export interface SongMetadata {
   tempo?: number;        // BPM
   timeSignature?: number;
   duration?: number;     // seconds
+  popularity?: number;   // 0-100 (Spotify popularity score)
 
   // Audio characteristics
   energy?: number;
@@ -253,6 +255,7 @@ class SpotifyService {
         releaseDate: track.album.release_date,
         spotifyUrl: track.external_urls.spotify,
         duration: Math.round(track.duration_ms / 1000),
+        popularity: track.popularity,
       };
 
       console.log('Spotify metadata retrieved (without audio features):', metadata);
