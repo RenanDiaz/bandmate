@@ -26,8 +26,8 @@ import type { Setlist, SetlistItem, SetlistBreakItem, SetlistSectionItem, Setlis
 
 // Helper to generate unique IDs for special items
 const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-import { getBandSongs } from "../services/songsService";
-import type { Song } from "../services/songsService";
+import { getBandSongs, updateSong } from "../services/songsService";
+import type { Song, UpdateSongInput } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
 import { groqService, GroqApiError } from "../services/groqService";
 import { getShowsBySetlistId, getUpcomingShowsWithoutSetlist, updateShow } from "../services/showsService";
@@ -35,6 +35,7 @@ import type { Show } from "../services/showsService";
 import { SEO } from "./SEO";
 import { NewRequestModal } from "./NewRequestModal";
 import { EditSetlistModal } from "./EditSetlistModal";
+import { EditSongModal } from "./EditSongModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
@@ -200,6 +201,39 @@ const MetaBadge = styled.span`
   i {
     font-size: ${theme.fontSizes.bodySm};
     color: ${theme.colors.brand.primary};
+  }
+`;
+
+const SongActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 100%;
+    justify-content: flex-end;
+  }
+`;
+
+const EditSongButton = styled.button`
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  padding: 0;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+    background: var(--color-bg-tertiary);
   }
 `;
 
@@ -371,6 +405,10 @@ const SetlistDetailView: FC = () => {
   // Edit setlist modal state
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Edit song modal state
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [isEditSongModalOpen, setIsEditSongModalOpen] = useState(false);
+
   // AI Optimization state
   const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
@@ -424,6 +462,21 @@ const SetlistDetailView: FC = () => {
   const songsForReorder = songItemsOnly
     .map((item) => getSongById(item.song_id))
     .filter((song): song is Song => song !== undefined);
+
+  const canEditSongs = selectedBand?.user_role !== "guest";
+
+  const handleEditSong = (song: Song) => {
+    setEditingSong(song);
+    setIsEditSongModalOpen(true);
+  };
+
+  const handleSaveSong = async (songId: string, updates: UpdateSongInput) => {
+    const updatedSong = await updateSong(songId, updates);
+    // Refresh the song in place so the setlist keeps its order and scroll position
+    setAllSongs((prevSongs) =>
+      prevSongs.map((song) => (song.id === songId ? updatedSong : song))
+    );
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -1072,6 +1125,17 @@ const SetlistDetailView: FC = () => {
                           </MetaBadge>
                         )}
                       </SongMetadata>
+                      {canEditSongs && (
+                        <SongActions>
+                          <EditSongButton
+                            onClick={() => handleEditSong(song)}
+                            title={t("songs.editSongTooltip")}
+                            aria-label={t("songs.editSongTooltip")}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </EditSongButton>
+                        </SongActions>
+                      )}
                     </SongCard>
                   );
                 } else {
@@ -1482,6 +1546,14 @@ const SetlistDetailView: FC = () => {
           setSetlist(updatedSetlist);
           setShowEditModal(false);
         }}
+      />
+
+      {/* Edit Song Modal */}
+      <EditSongModal
+        song={editingSong}
+        isOpen={isEditSongModalOpen}
+        onClose={() => setIsEditSongModalOpen(false)}
+        onSave={handleSaveSong}
       />
 
       {/* AI Optimization Modal */}
