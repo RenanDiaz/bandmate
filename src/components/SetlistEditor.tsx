@@ -23,11 +23,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem, isNoteItem } from "../services/setlistsService";
 import type { Setlist, SetlistItem, SetlistSongItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
-import { getBandSongs } from "../services/songsService";
-import type { Song } from "../services/songsService";
+import { getBandSongs, updateSong } from "../services/songsService";
+import type { Song, UpdateSongInput } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
 import { groqService, GroqApiError } from "../services/groqService";
+import { EditSongModal } from "./EditSongModal";
 import { useTranslation } from "react-i18next";
+import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
 
 // Helper to generate unique IDs for special items
@@ -41,6 +43,7 @@ interface SortableSetlistSongCardProps {
   formatDuration: (seconds: number) => string;
   onUpdateNotes: (position: number, notes: string) => void;
   onRemove: (position: number) => void;
+  onEditSong?: (song: Song) => void;
   totalSongs: number;
 }
 
@@ -51,6 +54,7 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
   formatDuration,
   onUpdateNotes,
   onRemove,
+  onEditSong,
 }) => {
   const { t } = useTranslation();
   const {
@@ -92,6 +96,15 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
         />
       </SongDetails>
       <SongActions>
+        {onEditSong && (
+          <ActionButton
+            onClick={() => onEditSong(song)}
+            title={t('songs.editSongTooltip')}
+            aria-label={t('songs.editSongTooltip')}
+          >
+            <i className="bi bi-pencil"></i>
+          </ActionButton>
+        )}
         <ActionButton
           onClick={() => onRemove(index)}
           title={t('setlists.editor.removeFromSetlist')}
@@ -183,6 +196,7 @@ const SetlistEditor: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { selectedBand } = useBandContext();
   const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
@@ -201,6 +215,10 @@ const SetlistEditor: FC = () => {
   const [specialItemDuration, setSpecialItemDuration] = useState<number | undefined>(undefined);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+
+  // Edit song modal state
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [isEditSongModalOpen, setIsEditSongModalOpen] = useState(false);
 
   // AI Optimization state
   const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
@@ -228,6 +246,21 @@ const SetlistEditor: FC = () => {
     // Generate new ID if not found
     const newId = isSongItem(item) ? item.song_id : generateItemId();
     return newId;
+  };
+
+  const canEditSongs = selectedBand?.user_role !== "guest";
+
+  const handleEditSong = (song: Song) => {
+    setEditingSong(song);
+    setIsEditSongModalOpen(true);
+  };
+
+  const handleSaveSong = async (songId: string, updates: UpdateSongInput) => {
+    const updatedSong = await updateSong(songId, updates);
+    // Refresh the song in place so the setlist keeps its current (unsaved) order
+    setAvailableSongs((prevSongs) =>
+      prevSongs.map((song) => (song.id === songId ? updatedSong : song))
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -840,6 +873,7 @@ const SetlistEditor: FC = () => {
                             formatDuration={formatDuration}
                             onUpdateNotes={handleUpdateNotes}
                             onRemove={handleRemoveItem}
+                            onEditSong={canEditSongs ? handleEditSong : undefined}
                             totalSongs={setlistItems.length}
                           />
                         );
@@ -863,6 +897,14 @@ const SetlistEditor: FC = () => {
           </SetlistPanel>
         </EditorGrid>
       </Container>
+
+      {/* Edit Song Modal */}
+      <EditSongModal
+        song={editingSong}
+        isOpen={isEditSongModalOpen}
+        onClose={() => setIsEditSongModalOpen(false)}
+        onSave={handleSaveSong}
+      />
 
       {/* Special Item Modal */}
       <Modal isOpen={isSpecialItemModalOpen} toggle={() => setIsSpecialItemModalOpen(false)}>
