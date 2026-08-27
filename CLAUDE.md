@@ -6,10 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev      # Start dev server at http://localhost:5173
-npm run build    # TypeScript compile + Vite build (runs tsc -b && vite build)
+npm run build    # tsc -b, then the SSR pass, then the client build (see below)
 npm run lint     # ESLint check
 npm run preview  # Preview production build locally
+npm run og       # Regenerate public/og-image.png (needs sharp)
+npm run icons    # Regenerate the PWA icons (needs sharp)
 ```
+
+`npm run build` runs three steps, not two: `tsc -b`, an SSR build of
+`src/entry-server.tsx` into `dist-ssr/`, and then the client build, which
+injects the prerendered landing into `index.html`. Use `npm run build` rather
+than a bare `vite build` — the latter still succeeds but ships an empty shell.
+See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
 
 ## Project Overview
 
@@ -75,6 +83,8 @@ src/
 | `/bands/:bandId/settings` | Band settings/members panel |
 | `/invite/accept` | Invitation acceptance flow |
 | `/about` | About page |
+| `/privacy` | Privacy policy |
+| `/terms` | Terms of service |
 
 ### Data Flow
 
@@ -90,6 +100,22 @@ src/
 - Viewers automatically follow the host
 - Uses Supabase Realtime subscriptions on `performance_sessions` table
 - One active session per band at a time
+
+### Landing Page & SEO
+
+The marketing landing at `/` is prerendered at build time so crawlers and
+link-preview bots get real markup instead of an empty `<div id="root">`. The
+authenticated app stays a pure SPA.
+
+- `src/components/LandingPage.tsx` — the landing. Must stay SSR-safe: no
+  `window`, `localStorage`, `useBandContext` or Supabase.
+- `src/entry-server.tsx` — renders it with `renderToString` at build time.
+- `bandmateSeo()` in `vite.config.ts` — injects the result into `index.html`
+  and emits `robots.txt` + `sitemap.xml`.
+- `src/lib/siteConfig.ts` — canonical origin, OG image and the list of
+  indexable routes. Change the host here *and* in `vercel.json` together.
+
+Full detail in [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
 
 ### Internationalization (i18n)
 
@@ -218,6 +244,7 @@ Key migrations:
 ## External Documentation
 
 - [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) - Comprehensive design system
+- [docs/LANDING_SEO.md](docs/LANDING_SEO.md) - Landing prerender, meta tags, robots/sitemap
 - [docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) - Spotify API integration
 - [docs/INVITATION_FLOW_COMPLETE.md](docs/INVITATION_FLOW_COMPLETE.md) - Member invitation system
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) - Google OAuth configuration
