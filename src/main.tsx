@@ -19,3 +19,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </React.StrictMode>
 );
+
+// The build prerenders the landing into index.html so crawlers and slow
+// connections get real content (see src/entry-server.tsx). `createRoot` throws
+// that markup away on its first commit, so drop the stylesheet that went with
+// it — its class names came from a different module order than the client's and
+// have no reason to linger. Two frames: one for React to commit, one to paint.
+requestAnimationFrame(() =>
+  requestAnimationFrame(() => document.getElementById("prerender-styles")?.remove())
+);

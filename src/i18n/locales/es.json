@@ -108,15 +108,7 @@
     "createSetlist": "Crear Setlist",
     "scheduleShowAction": "Programar Show",
     "bandSettings": "Configuración de Banda",
-    "welcomeToBandmate": "Bienvenido a Bandmate",
-    "heroSubtitle": "Tu plataforma todo-en-uno para gestionar canciones, setlists, shows y colaborar con los miembros de tu banda",
-    "getStarted": "Comienza creando tu cuenta gratuita",
-    "signInToContinue": "Inicia sesión para continuar",
     "goToYourSongs": "Ir a tus canciones",
-    "everythingYourBandNeeds": "Todo lo que tu banda necesita",
-    "readyToGetOrganized": "¿Listo para organizarte?",
-    "joinMusicians": "Únete a los músicos que ya están usando Bandmate para mantenerse al día con su música",
-    "getStartedFree": "Comienza gratis",
     "today": "Hoy",
     "tomorrow": "Mañana",
     "inDays": "En {{count}} días",
@@ -126,6 +118,102 @@
     "inWeeksAndDays_one": "En {{weeks}} semanas y {{days}} día",
     "inWeeksAndDays_other": "En {{weeks}} semanas y {{days}} días",
     "at": "a las"
+  },
+  "landing": {
+    "badge": "Gratis durante la beta",
+    "headline": "El setlist ya no vive en el chat del grupo.",
+    "subhead": "Bandmate mantiene tu repertorio, setlists, ensayos y shows en un solo lugar — en el mismo celular que ya llevas a la tarima.",
+    "ctaPrimary": "Crea tu banda — gratis",
+    "ctaNote": "Entra con Google o GitHub. Sin tarjeta y sin instalar nada.",
+    "preview": {
+      "setlistName": "Set del viernes",
+      "setlistDate": "Viernes · 9:30 PM",
+      "setlistDuration": "48 min",
+      "perform": "Presentar",
+      "song1": "Ruido Blanco",
+      "song2": "Último Tren",
+      "song3": "Ciudad de Cristal",
+      "song4": "No Vuelvas",
+      "song5": "Cierre",
+      "caption": "La vista de setlist, con datos de ejemplo."
+    },
+    "proof": {
+      "eyebrow": "Probado en ensayo, no en un demo",
+      "title": "{{band}} lo usa.",
+      "body": "Banda de Chiriquí, Panamá, activa desde 2009. Bandmate salió de sus ensayos, sus setlists y sus shows: cada función existe porque un setlist real la necesitó.",
+      "link": "Escucha a {{band}}"
+    },
+    "problems": {
+      "title": "Ya tienes un sistema. Es el chat del grupo.",
+      "subtitle": "Tres cosas que se rompen cada semana cuando la memoria de la banda vive en un hilo de WhatsApp.",
+      "label": "¿Te suena?",
+      "solutionLabel": "Con Bandmate",
+      "chat": {
+        "problem": "El setlist se decide por WhatsApp y nadie sabe cuál es la versión final.",
+        "solution": "Un setlist, un link. Lo reordenas arrastrando y todos abren la misma lista — la vigente, siempre."
+      },
+      "key": {
+        "problem": "«¿En qué tono tocamos esa?», preguntado el día del show.",
+        "solution": "El tono, el tempo, la letra y los acordes viven en la canción. Lo consultas en la prueba de sonido, no scrolleando tres meses de chat."
+      },
+      "rehearsal": {
+        "problem": "El baterista no sabe si el ensayo del jueves sigue en pie.",
+        "solution": "Ensayos y shows en un calendario compartido con el setlist adjunto — y un link de suscripción para que caigan en el calendario del celular de cada quien."
+      }
+    },
+    "features": {
+      "title": "Todo lo que la banda necesita, y nada más",
+      "subtitle": "Seis cosas, pensadas para cómo funciona de verdad una banda que se autogestiona."
+    },
+    "steps": {
+      "title": "Listo en una sentada",
+      "subtitle": "Sin llamada de onboarding ni proyecto de migración. Tres pasos y estás adentro.",
+      "band": {
+        "title": "Crea la banda",
+        "body": "Entras con Google o GitHub y le pones nombre a la banda. Ese es todo el setup."
+      },
+      "members": {
+        "title": "Invita a los miembros",
+        "body": "Mandas un link de invitación. Cada quien tiene su rol — y los suplentes entran como invitados con acceso temporal."
+      },
+      "repertoire": {
+        "title": "Carga el repertorio",
+        "body": "Agregas canciones una por una o importas un CSV. Título, artista, tono y tempo se completan solos cuando los encontramos."
+      }
+    },
+    "pricing": {
+      "eyebrow": "Precio",
+      "price": "Gratis durante la beta",
+      "body": "Bandmate está en desarrollo activo y es gratis mientras lo esté. Sin tarjeta, sin cobro por miembro y sin límite de canciones ni setlists.",
+      "item1": "Canciones, setlists y shows ilimitados",
+      "item2": "Toda la banda incluida",
+      "item3": "Funciona en celular, tablet y computadora",
+      "note": "Si algún día hay plan pago, lo lees aquí primero."
+    },
+    "faq": {
+      "title": "Preguntas que sí hacen las bandas",
+      "signup": {
+        "q": "¿Necesito que toda la banda se registre?",
+        "a": "No. Puedes cargar el repertorio y armar setlists tú solo, e invitar a los demás cuando quieras. Quien entra tiene su propio rol — y los suplentes pueden entrar como invitados en vez de miembros."
+      },
+      "stage": {
+        "q": "¿Funciona en el celular arriba de la tarima?",
+        "a": "Para eso está el modo presentación: letra y acordes a pantalla completa, letra grande, un toque por canción. Bandmate se instala como app y guarda en caché lo que ya abriste, así una señal mala en el local no te deja viendo un spinner."
+      },
+      "data": {
+        "q": "¿Qué pasa con mis datos si dejo de usarlo?",
+        "a": "Siguen siendo tuyos. Puedes imprimir o guardar en PDF tu cancionero y cualquier setlist cuando quieras, y borrar la banda elimina sus datos. No los vendemos ni te dejamos encerrado."
+      },
+      "solo": {
+        "q": "¿Sirve para músicos solistas?",
+        "a": "Sí. Una banda puede tener un solo miembro. Tienes el mismo repertorio, los mismos setlists y el mismo modo presentación — solo que no hay a quién invitar."
+      }
+    },
+    "finalCta": {
+      "title": "Saca el setlist del chat.",
+      "subtitle": "Crea tu banda, carga un puñado de canciones y mira si el próximo ensayo sale mejor."
+    },
+    "signature": "Hecho en Panamá por un músico que lo necesitaba."
   },
   "features": {
     "songLibrary": "Biblioteca de Canciones",

@@ -108,15 +108,7 @@
     "createSetlist": "Create Setlist",
     "scheduleShowAction": "Schedule Show",
     "bandSettings": "Band Settings",
-    "welcomeToBandmate": "Welcome to Bandmate",
-    "heroSubtitle": "Your all-in-one platform to manage songs, setlists, shows, and collaborate with your band members",
-    "getStarted": "Get started by creating your free account",
-    "signInToContinue": "Sign in to continue",
     "goToYourSongs": "Go to your songs",
-    "everythingYourBandNeeds": "Everything your band needs",
-    "readyToGetOrganized": "Ready to get organized?",
-    "joinMusicians": "Join musicians who are already using Bandmate to stay on top of their music",
-    "getStartedFree": "Get started for free",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "inDays": "In {{count}} days",
@@ -126,6 +118,102 @@
     "inWeeksAndDays_one": "In {{weeks}} weeks and {{days}} day",
     "inWeeksAndDays_other": "In {{weeks}} weeks and {{days}} days",
     "at": "at"
+  },
+  "landing": {
+    "badge": "Free while in beta",
+    "headline": "The setlist stops living in the group chat.",
+    "subhead": "Bandmate keeps your repertoire, setlists, rehearsals and shows in one place — on the same phone you already have on stage.",
+    "ctaPrimary": "Create your band — free",
+    "ctaNote": "Sign in with Google or GitHub. No credit card, nothing to install.",
+    "preview": {
+      "setlistName": "Friday set",
+      "setlistDate": "Friday · 9:30 PM",
+      "setlistDuration": "48 min",
+      "perform": "Perform",
+      "song1": "White Noise",
+      "song2": "Last Train",
+      "song3": "Glass City",
+      "song4": "Don't Come Back",
+      "song5": "Closer",
+      "caption": "The setlist view, with sample data."
+    },
+    "proof": {
+      "eyebrow": "Tested at rehearsal, not in a demo",
+      "title": "{{band}} runs on it.",
+      "body": "A band from Chiriquí, Panama, playing since 2009. Bandmate grew out of their rehearsals, their setlists and their shows — every feature here exists because a real setlist needed it.",
+      "link": "Listen to {{band}}"
+    },
+    "problems": {
+      "title": "You already have a system. It's the group chat.",
+      "subtitle": "Three things that break every week when the band's memory lives in a chat thread.",
+      "label": "Sound familiar?",
+      "solutionLabel": "With Bandmate",
+      "chat": {
+        "problem": "The setlist gets decided over WhatsApp and nobody knows which version is the final one.",
+        "solution": "One setlist, one link. Drag to reorder and everyone opens the same list — the current one, always."
+      },
+      "key": {
+        "problem": "“What key do we play that one in?” — asked on the day of the show.",
+        "solution": "Key, tempo, lyrics and chords live on the song itself. You check it at soundcheck instead of scrolling three months of chat."
+      },
+      "rehearsal": {
+        "problem": "The drummer isn't sure whether Thursday's rehearsal is still on.",
+        "solution": "Rehearsals and shows on one shared calendar with the setlist attached — plus a subscription link so they land in everyone's phone calendar."
+      }
+    },
+    "features": {
+      "title": "Everything the band needs, nothing it doesn't",
+      "subtitle": "Six things, built for the way a self-managed band actually works."
+    },
+    "steps": {
+      "title": "Up and running in one sitting",
+      "subtitle": "No onboarding call, no migration project. Three steps and you're in.",
+      "band": {
+        "title": "Create the band",
+        "body": "Sign in with Google or GitHub and give the band a name. That's the whole setup."
+      },
+      "members": {
+        "title": "Invite the members",
+        "body": "Send an invite link. Everyone gets their own role — and subs come in as guests with time-limited access."
+      },
+      "repertoire": {
+        "title": "Load the repertoire",
+        "body": "Add songs one at a time or import a CSV. Title, artist, key and tempo fill themselves in when we can find them."
+      }
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "price": "Free while in beta",
+      "body": "Bandmate is in active development and free to use while it is. No card, no per-member charge, no cap on songs or setlists.",
+      "item1": "Unlimited songs, setlists and shows",
+      "item2": "Every member of the band included",
+      "item3": "Works on phone, tablet and desktop",
+      "note": "If a paid plan ever arrives, you'll read it here first."
+    },
+    "faq": {
+      "title": "Questions bands actually ask",
+      "signup": {
+        "q": "Does the whole band need to sign up?",
+        "a": "No. You can load the repertoire and build setlists on your own, and invite the rest whenever you're ready. Whoever signs in gets their own role — and substitutes can come in as guests instead of full members."
+      },
+      "stage": {
+        "q": "Does it work on a phone, on stage?",
+        "a": "That's what performance mode is for: full-screen lyrics and chords, large type, one tap per song. Bandmate installs like an app and caches what you've already opened, so a weak signal at the venue doesn't leave you staring at a spinner."
+      },
+      "data": {
+        "q": "What happens to my data if I stop using it?",
+        "a": "It stays yours. You can print or save a PDF of your songbook and of any setlist at any time, and deleting the band removes its data. We don't sell it and we don't lock it in."
+      },
+      "solo": {
+        "q": "Is it useful for solo musicians?",
+        "a": "Yes. A band can have exactly one member. You get the same repertoire, setlists and performance mode — there's just nobody to invite."
+      }
+    },
+    "finalCta": {
+      "title": "Get the setlist out of the chat.",
+      "subtitle": "Create your band, load a handful of songs, and see whether the next rehearsal goes better."
+    },
+    "signature": "Built in Panama by a musician who needed it."
   },
   "features": {
     "songLibrary": "Song Library",
