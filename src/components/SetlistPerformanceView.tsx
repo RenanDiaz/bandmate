@@ -62,6 +62,7 @@ import {
 interface PDFErrorBoundaryProps {
   children: ReactNode;
   fallbackMessage: string;
+  retryLabel: string;
 }
 
 interface PDFErrorBoundaryState {
@@ -89,7 +90,7 @@ class PDFErrorBoundary extends Component<PDFErrorBoundaryProps, PDFErrorBoundary
             onClick={() => this.setState({ hasError: false })}
             style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-primary)", padding: "0.5rem 1rem", borderRadius: "0.5rem", cursor: "pointer" }}
           >
-            Retry
+            {this.props.retryLabel}
           </button>
         </div>
       );
@@ -159,6 +160,7 @@ interface SortableSpecialListItemProps {
 }
 
 const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemId }) => {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -197,7 +199,7 @@ const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemI
       <SongListInfo>
         <SongListTitle>{item.label}</SongListTitle>
         {isBreakItem(item) && item.duration && (
-          <SongListArtist>{item.duration} min</SongListArtist>
+          <SongListArtist>{t("performance.durationMinutes", { count: item.duration })}</SongListArtist>
         )}
       </SongListInfo>
     </SpecialListItem>
@@ -825,7 +827,7 @@ const SetlistPerformanceView: FC = () => {
     return (
       <LoadingContainer>
         <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
-        <LoadingText>Loading performance view...</LoadingText>
+        <LoadingText>{t("performance.loadingView")}</LoadingText>
       </LoadingContainer>
     );
   }
@@ -836,13 +838,13 @@ const SetlistPerformanceView: FC = () => {
         <ErrorIcon>
           <i className="bi bi-exclamation-triangle"></i>
         </ErrorIcon>
-        <ErrorTitle>Unable to Load Setlist</ErrorTitle>
+        <ErrorTitle>{t("performance.unableToLoad")}</ErrorTitle>
         <ErrorText>
-          {!setlist ? "Setlist not found" : "No songs in this setlist"}
+          {!setlist ? t("performance.setlistNotFound") : t("performance.noSongs")}
         </ErrorText>
         <BackButton onClick={() => navigate("/setlists")}>
           <i className="bi bi-arrow-left"></i>
-          Back to Setlists
+          {t("performance.backToSetlists")}
         </BackButton>
       </ErrorContainer>
     );
@@ -914,7 +916,7 @@ const SetlistPerformanceView: FC = () => {
       <TopBar>
         <TopBarRow>
           <TopBarLeft>
-            <ExitButton onClick={() => navigate("/setlists")} title="Exit (ESC)">
+            <ExitButton onClick={() => navigate("/setlists")} title={t("performance.exit")}>
               <i className="bi bi-x-lg"></i>
             </ExitButton>
             <SetlistInfo>
@@ -932,18 +934,18 @@ const SetlistPerformanceView: FC = () => {
             <ReorderActions>
               <ReorderActionButton onClick={handleCancelReorder} $variant="cancel" disabled={saving}>
                 <i className="bi bi-x-lg"></i>
-                Cancel
+                {t("common.cancel")}
               </ReorderActionButton>
               <ReorderActionButton onClick={handleSaveOrder} $variant="save" disabled={saving}>
                 {saving ? (
                   <>
                     <Spinner size="sm" style={{ marginRight: "4px" }} />
-                    Saving...
+                    {t("common.saving")}
                   </>
                 ) : (
                   <>
                     <i className="bi bi-check-lg"></i>
-                    Save
+                    {t("common.save")}
                   </>
                 )}
               </ReorderActionButton>
@@ -1042,7 +1044,7 @@ const SetlistPerformanceView: FC = () => {
               )}
               <IconButton
                 onClick={toggleReorderMode}
-                title="Reorder Songs (R)"
+                title={t("performance.reorderSongsShortcut")}
                 $active={false}
                 disabled={setlistItems.length < 2 || syncRole === "viewer"}
               >
@@ -1050,12 +1052,12 @@ const SetlistPerformanceView: FC = () => {
               </IconButton>
               <IconButton
                 onClick={() => setShowSongList(!showSongList)}
-                title="Song List (L)"
+                title={t("performance.songListShortcut")}
                 $active={showSongList}
               >
                 <i className="bi bi-list-ul"></i>
               </IconButton>
-              <IconButton onClick={toggleFullscreen} title="Fullscreen (F)">
+              <IconButton onClick={toggleFullscreen} title={t("performance.fullscreenShortcut")}>
                 <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
               </IconButton>
             </>
@@ -1071,9 +1073,9 @@ const SetlistPerformanceView: FC = () => {
           <SongListBackdrop onClick={() => setShowSongList(false)} />
           <SongListSidebar>
             <SidebarHeader>
-              {isReorderMode ? "Reorder Songs" : "Setlist"}
+              {isReorderMode ? t("performance.reorderSongs") : t("performance.setlist")}
               {isReorderMode && (
-                <SidebarHint>Drag to reorder</SidebarHint>
+                <SidebarHint>{t("performance.dragToReorder")}</SidebarHint>
               )}
             </SidebarHeader>
             <SongListItems ref={songListRef}>
@@ -1153,7 +1155,7 @@ const SetlistPerformanceView: FC = () => {
                         <SongListInfo>
                           <SongListTitle>{item.label}</SongListTitle>
                           {isBreakItem(item) && item.duration && (
-                            <SongListArtist>{item.duration} min</SongListArtist>
+                            <SongListArtist>{t("performance.durationMinutes", { count: item.duration })}</SongListArtist>
                           )}
                         </SongListInfo>
                         {index === currentIndex && (
@@ -1281,7 +1283,7 @@ const SetlistPerformanceView: FC = () => {
                         <p>{t("sheetMusic.loading", "Loading sheet music...")}</p>
                       </EmptyContent>
                     ) : sheetMusicUrl ? (
-                      <PDFErrorBoundary fallbackMessage={t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")}>
+                      <PDFErrorBoundary retryLabel={t("performance.retry")} fallbackMessage={t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")}>
                         <SheetMusicViewer
                           ref={sheetMusicViewerRef}
                           pdfUrl={sheetMusicUrl}
@@ -1371,7 +1373,7 @@ const SetlistPerformanceView: FC = () => {
                     {displayContent.type === "none" && (
                       <EmptyContent>
                         <i className="bi bi-music-note-beamed"></i>
-                        <p>No chords or lyrics available for this song</p>
+                        <p>{t("performance.noContent")}</p>
                       </EmptyContent>
                     )}
                   </>
@@ -1421,7 +1423,7 @@ const SetlistPerformanceView: FC = () => {
           disabled={syncRole === "viewer" || (currentIndex === 0 && pdfCurrentPage <= 1)}
         >
           <i className="bi bi-chevron-left"></i>
-          <span>Previous</span>
+          <span>{t("performance.previous")}</span>
         </NavButton>
 
         <NavCenter>
@@ -1430,8 +1432,8 @@ const SetlistPerformanceView: FC = () => {
           </ProgressBar>
           <KeyboardHint>
             {syncRole === "viewer"
-              ? "Following host • ESC to exit • F for fullscreen • L for list"
-              : "Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list • T to toggle view"}
+              ? t("performance.hintViewer")
+              : t("performance.hintHost")}
           </KeyboardHint>
         </NavCenter>
 
@@ -1439,7 +1441,7 @@ const SetlistPerformanceView: FC = () => {
           onClick={handleNextNav}
           disabled={syncRole === "viewer" || (currentIndex === setlistItems.length - 1 && pdfCurrentPage >= (pdfNumPages || 1))}
         >
-          <span>Next</span>
+          <span>{t("performance.next")}</span>
           <i className="bi bi-chevron-right"></i>
         </NavButton>
       </BottomNav>
@@ -1468,7 +1470,7 @@ const SetlistPerformanceView: FC = () => {
               <AddPdfModalCloseButton
                 type="button"
                 onClick={() => setShowAddPdfModal(false)}
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 <i className="bi bi-x-lg"></i>
               </AddPdfModalCloseButton>
