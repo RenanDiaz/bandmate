@@ -201,7 +201,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity |
 | `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
 | `user_sheet_music_preferences` | Which PDF each user opens first per song, PK `(user_id, song_id)`; RLS restricts rows to `auth.uid()` |
-| `setlists` | Setlists with JSONB `songs` array `[{song_id, position, notes?}]`, draft flag |
+| `setlists` | Setlists with JSONB `songs` array of items: songs `{type:'song', song_id, position, notes?}` and special items `{type:'break'|'section'|'note', id, label, position, duration?}`; `id` is a client-generated stable key assigned on read (`normalizeSetlistItem`) and used for React keys / drag-and-drop. Draft flag |
 | `shows` | Shows/gigs with venue, date, soundcheck, setlist reference |
 | `rehearsals` | Rehearsals with date/location |
 | `requests`, `request_comments`, `request_votes` | Band proposals (new song, setlist proposal, etc.) |

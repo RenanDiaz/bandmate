@@ -21,11 +21,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist, updateSetlistYouTubePlaylist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
+import {
+  getSetlist,
+  updateSetlist,
+  updateSetlistYouTubePlaylist,
+  isSongItem,
+  isBreakItem,
+  isSectionItem,
+  getSetlistItemKey,
+} from "../services/setlistsService";
 import type { Setlist, SetlistItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
-
-// Helper to generate unique IDs for special items
-const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { getBandSongs, updateSong } from "../services/songsService";
 import type { Song, UpdateSongInput } from "../services/songsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
@@ -386,7 +391,6 @@ const SetlistDetailView: FC = () => {
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
-  const [itemIds, setItemIds] = useState<Map<SetlistItem, string>>(new Map());
   const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -448,15 +452,6 @@ const SetlistDetailView: FC = () => {
     })
   );
 
-  // Get the stable ID for an item
-  const getStableItemId = (item: SetlistItem): string => {
-    const existingId = itemIds.get(item);
-    if (existingId) return existingId;
-
-    // Generate new ID if not found
-    return isSongItem(item) ? item.song_id : generateItemId();
-  };
-
   // Get only song items for reordering
   const songItemsOnly = setlistItems.filter(isSongItem);
   const songsForReorder = songItemsOnly
@@ -483,8 +478,8 @@ const SetlistDetailView: FC = () => {
 
     if (over && active.id !== over.id) {
       setSetlistItems((items) => {
-        const oldIndex = items.findIndex((item) => getStableItemId(item) === active.id);
-        const newIndex = items.findIndex((item) => getStableItemId(item) === over.id);
+        const oldIndex = items.findIndex((item) => getSetlistItemKey(item) === active.id);
+        const newIndex = items.findIndex((item) => getSetlistItemKey(item) === over.id);
 
         if (oldIndex === -1 || newIndex === -1) return items;
 
@@ -603,14 +598,8 @@ const SetlistDetailView: FC = () => {
         const songsData = await getBandSongs(setlistData.band_id);
         setAllSongs(songsData);
 
-        // Load all items in order and generate stable IDs
+        // Load all items in order (they already carry stable ids, see normalizeSetlistItem)
         const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
-        const newItemIds = new Map<SetlistItem, string>();
-        orderedItems.forEach((item) => {
-          const id = isSongItem(item) ? item.song_id : generateItemId();
-          newItemIds.set(item, id);
-        });
-        setItemIds(newItemIds);
         setSetlistItems(orderedItems);
 
         // Load shows that use this setlist
@@ -1038,7 +1027,7 @@ const SetlistDetailView: FC = () => {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={setlistItems.map((item) => getStableItemId(item))}
+                items={setlistItems.map(getSetlistItemKey)}
                 strategy={verticalListSortingStrategy}
               >
                 {(() => {
@@ -1059,7 +1048,7 @@ const SetlistDetailView: FC = () => {
                       );
                     } else {
                       // Special item (break, section, note)
-                      const itemId = getStableItemId(item);
+                      const itemId = getSetlistItemKey(item);
                       return (
                         <SortableSpecialItemCard
                           key={itemId}
