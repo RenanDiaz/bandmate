@@ -2,6 +2,23 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import { uploadSheetMusic, deleteSheetMusicFile, getSheetMusicUrl } from "../services/sheetMusicStorageService";
 import {
@@ -10,6 +27,7 @@ import {
   updateSheetMusic,
   updateSheetMusicPageTimings,
   deleteSheetMusic,
+  reorderSheetMusic,
   getInstrumentIcon,
   INSTRUMENT_OPTIONS,
   type SheetMusic,
@@ -89,19 +107,64 @@ const SheetMusicList = styled.div`
   gap: ${theme.space[2]};
 `;
 
-const SheetMusicItem = styled.div`
+const SheetMusicItem = styled.div<{ $isDragging?: boolean }>`
   display: flex;
   align-items: center;
   gap: ${theme.space[3]};
   padding: ${theme.space[3]};
-  background: ${theme.colors.dark.bg.tertiary};
-  border: 1px solid ${theme.colors.dark.border.default};
+  background: ${({ $isDragging }) =>
+    $isDragging ? theme.colors.dark.bg.elevated : theme.colors.dark.bg.tertiary};
+  border: 1px solid
+    ${({ $isDragging }) =>
+      $isDragging ? theme.colors.brand.primary : theme.colors.dark.border.default};
   border-radius: ${theme.radius.base};
-  transition: all ${theme.transitions.fast} ease;
+  box-shadow: ${({ $isDragging }) => ($isDragging ? theme.shadows.lg : "none")};
+  opacity: ${({ $isDragging }) => ($isDragging ? 0.9 : 1)};
+  position: relative;
+  z-index: ${({ $isDragging }) => ($isDragging ? 1 : "auto")};
+  transition: border-color ${theme.transitions.fast} ease,
+    background ${theme.transitions.fast} ease;
 
   &:hover {
     border-color: ${theme.colors.dark.border.strong};
   }
+`;
+
+const DragHandle = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.dark.text.tertiary};
+  padding: ${theme.space[1]};
+  margin-left: -${theme.space[2]};
+  border-radius: ${theme.radius.sm};
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  font-size: ${theme.fontSizes.h5};
+  touch-action: none;
+
+  &:hover {
+    color: ${theme.colors.dark.text.primary};
+    background: ${theme.colors.dark.bg.elevated};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${theme.colors.brand.primary};
+    outline-offset: 1px;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+`;
+
+const ReorderHint = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  margin-top: ${theme.space[2]};
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
 `;
 
 const ItemIcon = styled.div<{ $color?: string }>`
@@ -406,6 +469,81 @@ const ErrorMessage = styled.div`
   gap: ${theme.space[2]};
 `;
 
+interface SortableSheetMusicRowProps {
+  item: SheetMusic;
+  canReorder: boolean;
+  deleting: boolean;
+  color: string;
+  onSyncTimings: () => void;
+  onDelete: () => void;
+}
+
+function SortableSheetMusicRow({
+  item,
+  canReorder,
+  deleting,
+  color,
+  onSyncTimings,
+  onDelete,
+}: SortableSheetMusicRowProps) {
+  const { t } = useTranslation();
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.id, disabled: !canReorder });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <SheetMusicItem ref={setNodeRef} style={style} $isDragging={isDragging}>
+      {canReorder && (
+        <DragHandle
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          title={t("sheetMusic.dragToReorder")}
+          aria-label={t("sheetMusic.dragToReorder")}
+        >
+          <i className="bi bi-grip-vertical" />
+        </DragHandle>
+      )}
+      <ItemIcon $color={color}>
+        <i className={getInstrumentIcon(item.instrument)} />
+      </ItemIcon>
+      <ItemInfo>
+        <ItemName>{item.name}</ItemName>
+        <ItemMeta>
+          {item.instrument &&
+            INSTRUMENT_OPTIONS.find((o) => o.value === item.instrument)?.label}
+          {item.page_timings.length > 0 && (
+            <> • {item.page_timings.length} {t("sheetMusic.pageTimings").toLowerCase()}</>
+          )}
+        </ItemMeta>
+      </ItemInfo>
+      <ItemActions>
+        <IconButton
+          type="button"
+          onClick={onSyncTimings}
+          title={t("sheetMusic.syncTimings", "Sync page timings")}
+        >
+          <i className="bi bi-clock-history" />
+        </IconButton>
+        <IconButton
+          type="button"
+          onClick={onDelete}
+          $variant="danger"
+          disabled={deleting}
+          title={t("sheetMusic.remove")}
+        >
+          {deleting ? <Spinner /> : <i className="bi bi-trash" />}
+        </IconButton>
+      </ItemActions>
+    </SheetMusicItem>
+  );
+}
+
 export default function SheetMusicUpload({
   songId,
   bandId,
@@ -428,6 +566,44 @@ export default function SheetMusicUpload({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [reordering, setReordering] = useState(false);
+
+  // Drag-and-drop reorder (band-wide default order, saved to `position`)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sheetMusicList.findIndex((sm) => sm.id === active.id);
+    const newIndex = sheetMusicList.findIndex((sm) => sm.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const previous = sheetMusicList;
+    const reordered = arrayMove(previous, oldIndex, newIndex).map((sm, position) => ({
+      ...sm,
+      position,
+    }));
+
+    // Optimistic update, roll back on failure
+    setSheetMusicList(reordered);
+    setReordering(true);
+    setError(null);
+    try {
+      await reorderSheetMusic(songId, reordered.map((sm) => sm.id));
+      onUpdate?.();
+    } catch (err) {
+      console.error("Reorder failed:", err);
+      setSheetMusicList(previous);
+      setError(t("sheetMusic.reorderError"));
+    } finally {
+      setReordering(false);
+    }
+  };
 
   // Timing sync modal state
   const [showTimingModal, setShowTimingModal] = useState(false);
@@ -649,43 +825,33 @@ export default function SheetMusicUpload({
           <div>{t("sheetMusic.uploadHint")}</div>
         </EmptyState>
       ) : (
-        <SheetMusicList>
-          {sheetMusicList.map((item) => (
-            <SheetMusicItem key={item.id}>
-              <ItemIcon $color={getInstrumentColor(item.instrument)}>
-                <i className={getInstrumentIcon(item.instrument)} />
-              </ItemIcon>
-              <ItemInfo>
-                <ItemName>{item.name}</ItemName>
-                <ItemMeta>
-                  {item.instrument &&
-                    INSTRUMENT_OPTIONS.find((o) => o.value === item.instrument)?.label}
-                  {item.page_timings.length > 0 && (
-                    <> • {item.page_timings.length} {t("sheetMusic.pageTimings").toLowerCase()}</>
-                  )}
-                </ItemMeta>
-              </ItemInfo>
-              <ItemActions>
-                <IconButton
-                  type="button"
-                  onClick={() => openTimingModal(item)}
-                  title={t("sheetMusic.syncTimings", "Sync page timings")}
-                >
-                  <i className="bi bi-clock-history" />
-                </IconButton>
-                <IconButton
-                  type="button"
-                  onClick={() => handleDelete(item)}
-                  $variant="danger"
-                  disabled={deleting === item.id}
-                  title={t("sheetMusic.remove")}
-                >
-                  {deleting === item.id ? <Spinner /> : <i className="bi bi-trash" />}
-                </IconButton>
-              </ItemActions>
-            </SheetMusicItem>
-          ))}
-        </SheetMusicList>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={sheetMusicList.map((sm) => sm.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <SheetMusicList>
+              {sheetMusicList.map((item) => (
+                <SortableSheetMusicRow
+                  key={item.id}
+                  item={item}
+                  canReorder={sheetMusicList.length > 1 && !reordering}
+                  deleting={deleting === item.id}
+                  color={getInstrumentColor(item.instrument)}
+                  onSyncTimings={() => openTimingModal(item)}
+                  onDelete={() => handleDelete(item)}
+                />
+              ))}
+            </SheetMusicList>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {!loading && sheetMusicList.length > 1 && (
+        <ReorderHint>
+          <i className="bi bi-info-circle" />
+          {t("sheetMusic.reorderHint")}
+        </ReorderHint>
       )}
 
       {error && (

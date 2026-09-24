@@ -922,7 +922,13 @@
     "playPause": "Play/Pause",
     "markTiming": "Mark timing",
     "changePage": "Change page",
-    "invertColors": "Invert Colors (D)"
+    "invertColors": "Invert Colors (D)",
+    "reorderHint": "Drag to set the default order for the band. In performance mode, the PDF you pick is remembered as your own default for that song.",
+    "dragToReorder": "Drag to reorder",
+    "reorderError": "Failed to save the new order. Please try again.",
+    "myDefault": "Your default for this song",
+    "selectRemembers": "Open this PDF and remember it as your default for this song",
+    "preferenceError": "Failed to remember your preferred sheet music"
   },
   "performance": {
     "chords": "Chords",

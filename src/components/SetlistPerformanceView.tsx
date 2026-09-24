@@ -43,6 +43,13 @@ import {
   type SheetMusic,
   getInstrumentIcon,
 } from "../services/songSheetMusicService";
+import {
+  getMySheetMusicPreferences,
+  setMySheetMusicPreference,
+  resolveInitialSheetMusic,
+  getPreferredInstrument,
+  setPreferredInstrument,
+} from "../services/sheetMusicPreferencesService";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -153,6 +160,13 @@ const SetlistPerformanceView: FC = () => {
   const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">("chords");
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
   const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
+  // This user's preferred PDF per song (song_id -> sheet_music_id), server-side.
+  const [preferredSheetMusicIds, setPreferredSheetMusicIds] = useState<Record<string, string>>({});
+  // Refs mirror the preferences so the list loader can read them without
+  // re-running (and remounting the PDF viewer) every time a preference changes.
+  const preferredSheetMusicIdsRef = useRef<Record<string, string>>({});
+  // Instrument of the last PDF this user picked in this band (device-local shortcut).
+  const preferredInstrumentRef = useRef<string | null>(null);
   const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
   const [sheetMusicLoading, setSheetMusicLoading] = useState(false);
   const [showAddPdfModal, setShowAddPdfModal] = useState(false);
@@ -351,6 +365,20 @@ const SetlistPerformanceView: FC = () => {
         const songsData = await getBandSongs(setlistData.band_id);
         setAllSongs(songsData);
 
+        // This user's preferred PDF per song; a failure here must not block
+        // performance mode, we just fall back to the band order.
+        preferredInstrumentRef.current = getPreferredInstrument(setlistData.band_id);
+        try {
+          const songIds = (setlistData.songs || [])
+            .filter(isSongItem)
+            .map((item) => item.song_id);
+          const preferences = await getMySheetMusicPreferences(songIds);
+          preferredSheetMusicIdsRef.current = preferences;
+          setPreferredSheetMusicIds(preferences);
+        } catch (error) {
+          console.error("Failed to load sheet music preferences:", error);
+        }
+
         // Store all items in order (songs and special items)
         const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
         setSetlistItems(orderedItems);
@@ -520,18 +548,43 @@ const SetlistPerformanceView: FC = () => {
     try {
       const list = await getSheetMusicForSong(songForItem.id);
       setSheetMusicList(list);
-      // Always select first sheet music when song changes
-      if (list.length > 0) {
-        setSelectedSheetMusicId(list[0].id);
-      } else {
-        setSelectedSheetMusicId(null);
-      }
+      // Open this user's preferred PDF, else the one matching their instrument,
+      // else the band's first one.
+      const initial = resolveInitialSheetMusic(
+        list,
+        preferredSheetMusicIdsRef.current[songForItem.id],
+        preferredInstrumentRef.current
+      );
+      setSelectedSheetMusicId(initial?.id ?? null);
     } catch (err) {
       console.error("Failed to load sheet music list:", err);
       setSheetMusicList([]);
       setSelectedSheetMusicId(null);
     }
   }, [currentIndex, setlistItems, allSongs]);
+
+  // Selecting a PDF also remembers it as this user's default for the song.
+  const handleSelectSheetMusic = useCallback(
+    (sheetMusic: SheetMusic) => {
+      setSelectedSheetMusicId(sheetMusic.id);
+      if (!setlist) return;
+
+      if (sheetMusic.instrument) {
+        setPreferredInstrument(setlist.band_id, sheetMusic.instrument);
+        preferredInstrumentRef.current = sheetMusic.instrument;
+      }
+
+      if (preferredSheetMusicIdsRef.current[sheetMusic.song_id] === sheetMusic.id) return;
+      const next = { ...preferredSheetMusicIdsRef.current, [sheetMusic.song_id]: sheetMusic.id };
+      preferredSheetMusicIdsRef.current = next;
+      setPreferredSheetMusicIds(next);
+      setMySheetMusicPreference(sheetMusic.song_id, sheetMusic.id).catch((err) => {
+        console.error("Failed to save sheet music preference:", err);
+        toast.error(t("sheetMusic.preferenceError"));
+      });
+    },
+    [setlist, toast, t]
+  );
 
   useEffect(() => {
     loadSheetMusicList();
@@ -1139,16 +1192,30 @@ const SetlistPerformanceView: FC = () => {
                     {/* Sheet Music Selector - only show if multiple exist */}
                     {sheetMusicList.length > 1 && (
                       <SheetMusicSelector>
-                        {sheetMusicList.map((sm) => (
-                          <SheetMusicSelectorItem
-                            key={sm.id}
-                            $active={sm.id === selectedSheetMusicId}
-                            onClick={() => setSelectedSheetMusicId(sm.id)}
-                          >
-                            <i className={getInstrumentIcon(sm.instrument)} />
-                            <span>{sm.name}</span>
-                          </SheetMusicSelectorItem>
-                        ))}
+                        {sheetMusicList.map((sm) => {
+                          const isPreferred = preferredSheetMusicIds[sm.song_id] === sm.id;
+                          return (
+                            <SheetMusicSelectorItem
+                              key={sm.id}
+                              $active={sm.id === selectedSheetMusicId}
+                              onClick={() => handleSelectSheetMusic(sm)}
+                              title={
+                                isPreferred
+                                  ? t("sheetMusic.myDefault")
+                                  : t("sheetMusic.selectRemembers")
+                              }
+                            >
+                              <i className={getInstrumentIcon(sm.instrument)} />
+                              <span>{sm.name}</span>
+                              {isPreferred && (
+                                <PreferredMark
+                                  className="bi bi-star-fill"
+                                  aria-label={t("sheetMusic.myDefault")}
+                                />
+                              )}
+                            </SheetMusicSelectorItem>
+                          );
+                        })}
                       </SheetMusicSelector>
                     )}
                     {sheetMusicLoading ? (
@@ -2115,6 +2182,13 @@ const SheetMusicSelectorItem = styled.button<{ $active: boolean }>`
     background: ${(props) =>
       props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
     border-color: ${theme.colors.brand.primary};
+  }
+`;
+
+const PreferredMark = styled.i`
+  && {
+    font-size: ${theme.fontSizes.bodyXs};
+    color: ${theme.colors.semantic.warning};
   }
 `;
 

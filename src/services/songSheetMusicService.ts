@@ -161,29 +161,27 @@ export async function deleteSheetMusic(id: string): Promise<void> {
 }
 
 /**
- * Reorder sheet music entries for a song
+ * Reorder sheet music entries for a song (band-wide default order).
+ * `orderedIds` is the full list of the song's sheet music ids in the new order.
  */
 export async function reorderSheetMusic(
   songId: string,
   orderedIds: string[]
 ): Promise<void> {
-  // Update positions based on array order
-  const updates = orderedIds.map((id, index) => ({
-    id,
-    position: index,
-  }));
+  const results = await Promise.all(
+    orderedIds.map((id, position) =>
+      supabase
+        .from("song_sheet_music")
+        .update({ position })
+        .eq("id", id)
+        .eq("song_id", songId)
+    )
+  );
 
-  for (const update of updates) {
-    const { error } = await supabase
-      .from("song_sheet_music")
-      .update({ position: update.position })
-      .eq("id", update.id)
-      .eq("song_id", songId);
-
-    if (error) {
-      console.error("Error reordering sheet music:", error);
-      throw error;
-    }
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    console.error("Error reordering sheet music:", failed.error);
+    throw failed.error;
   }
 }
 

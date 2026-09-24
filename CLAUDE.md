@@ -71,7 +71,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
 | `songsService.ts` | Songs scoped to bands |
-| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage) |
+| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position` |
+| `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
 | `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
 | `showsService.ts` | Show/gig scheduling |
 | `rehearsalsService.ts` | Rehearsal scheduling |
@@ -198,7 +199,8 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `band_members` | Join table with `role` enum (owner/admin/member/guest) - **RLS disabled**, enforced at app level |
 | `band_invitations` | Token-based invites with expiration |
 | `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity |
-| `song_sheet_music` | PDF sheet music attached to songs (files in Storage) |
+| `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
+| `user_sheet_music_preferences` | Which PDF each user opens first per song, PK `(user_id, song_id)`; RLS restricts rows to `auth.uid()` |
 | `setlists` | Setlists with JSONB `songs` array `[{song_id, position, notes?}]`, draft flag |
 | `shows` | Shows/gigs with venue, date, soundcheck, setlist reference |
 | `rehearsals` | Rehearsals with date/location |

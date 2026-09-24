@@ -922,7 +922,13 @@
     "playPause": "Reproducir/Pausar",
     "markTiming": "Marcar tiempo",
     "changePage": "Cambiar página",
-    "invertColors": "Invertir Colores (D)"
+    "invertColors": "Invertir Colores (D)",
+    "reorderHint": "Arrastra para definir el orden por defecto de la banda. En modo Performance, el PDF que elijas se recuerda como tu propio predeterminado para esa canción.",
+    "dragToReorder": "Arrastra para reordenar",
+    "reorderError": "No se pudo guardar el nuevo orden. Inténtalo de nuevo.",
+    "myDefault": "Tu predeterminado para esta canción",
+    "selectRemembers": "Abrir este PDF y recordarlo como tu predeterminado para esta canción",
+    "preferenceError": "No se pudo recordar tu partitura preferida"
   },
   "performance": {
     "chords": "Acordes",
