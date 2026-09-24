@@ -21,7 +21,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 **Songs**
 - Song library with key, tempo, lyrics, chords and popularity
 - Metadata enrichment from Spotify / MusicBrainz, lyrics lookup
-- Transposition, sheet music PDFs, and lyric/page timing sync
+- Transposition, sheet music PDFs (drag-and-drop order, per-musician default in performance mode), and lyric/page timing sync
 - CSV import and a printable songbook
 
 **Setlists**
