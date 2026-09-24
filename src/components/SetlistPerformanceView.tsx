@@ -21,8 +21,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem } from "../services/setlistsService";
-import type { Setlist, SetlistItem } from "../services/setlistsService";
+import {
+  getSetlist,
+  updateSetlist,
+  isSongItem,
+  isBreakItem,
+  isSectionItem,
+  getSetlistItemKey,
+} from "../services/setlistsService";
+import type { Setlist, SetlistItem, SetlistSpecialItem } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
@@ -141,6 +148,59 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
         </SongListIndicator>
       )}
     </SongListItem>
+  );
+};
+
+// Sortable row for breaks / sections / notes in reorder mode, so they keep
+// their place relative to the songs instead of being pushed to the end.
+interface SortableSpecialListItemProps {
+  item: SetlistSpecialItem;
+  itemId: string;
+}
+
+const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemId }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: itemId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const icon = isBreakItem(item)
+    ? "bi-pause-circle"
+    : isSectionItem(item)
+    ? "bi-bookmark"
+    : "bi-sticky";
+
+  return (
+    <SpecialListItem
+      ref={setNodeRef}
+      style={style}
+      type="button"
+      $active={false}
+      $isDragging={isDragging}
+      $type={item.type}
+    >
+      <SongListDragHandle {...attributes} {...listeners} onClick={(e) => e.stopPropagation()}>
+        <i className="bi bi-grip-vertical"></i>
+      </SongListDragHandle>
+      <SpecialListIcon $type={item.type}>
+        <i className={icon}></i>
+      </SpecialListIcon>
+      <SongListInfo>
+        <SongListTitle>{item.label}</SongListTitle>
+        {isBreakItem(item) && item.duration && (
+          <SongListArtist>{item.duration} min</SongListArtist>
+        )}
+      </SongListInfo>
+    </SpecialListItem>
   );
 };
 
@@ -280,29 +340,19 @@ const SetlistPerformanceView: FC = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      // Only reorder song items
-      const songItems = setlistItems.filter(isSongItem);
-      const oldIndex = songItems.findIndex((item) => getSongById(item.song_id)?.id === active.id);
-      const newIndex = songItems.findIndex((item) => getSongById(item.song_id)?.id === over.id);
+      // Reorder the full list (songs and special items alike) so breaks,
+      // sections and notes keep their place relative to the songs.
+      setSetlistItems((items) => {
+        const oldIndex = items.findIndex((item) => getSetlistItemKey(item) === active.id);
+        const newIndex = items.findIndex((item) => getSetlistItemKey(item) === over.id);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newSongItems = arrayMove(songItems, oldIndex, newIndex);
+        if (oldIndex === -1 || newIndex === -1) return items;
 
-        // Rebuild setlistItems maintaining special items in their positions
-        // For simplicity, just update song order - positions will be recalculated on save
-        const nonSongItems = setlistItems.filter((item) => !isSongItem(item));
-        const newItems: SetlistItem[] = newSongItems.map((item, index) => ({
+        return arrayMove(items, oldIndex, newIndex).map((item, index) => ({
           ...item,
           position: index,
         }));
-
-        // Append non-song items at the end (simplified for reorder mode)
-        nonSongItems.forEach((item, index) => {
-          newItems.push({ ...item, position: newSongItems.length + index });
-        });
-
-        setSetlistItems(newItems);
-      }
+      });
     }
   };
 
@@ -805,11 +855,8 @@ const SetlistPerformanceView: FC = () => {
   const currentNotes = currentSong ? getSetlistSongNotes(currentSong.id) : null;
   const nextItemInfo = getNextItemInfo();
 
-  // Get only song items for sidebar display
+  // Song count for the page description
   const songItemsOnly = setlistItems.filter(isSongItem);
-  const songsForSidebar = songItemsOnly
-    .map((item) => getSongById(item.song_id))
-    .filter((song): song is Song => song !== undefined);
 
   // Determine what content to display with smart fallback
   const getDisplayContent = (): { type: "chords" | "lyrics" | "none"; content: string } => {
@@ -997,7 +1044,7 @@ const SetlistPerformanceView: FC = () => {
                 onClick={toggleReorderMode}
                 title="Reorder Songs (R)"
                 $active={false}
-                disabled={songsForSidebar.length < 2 || syncRole === "viewer"}
+                disabled={setlistItems.length < 2 || syncRole === "viewer"}
               >
                 <i className="bi bi-arrow-down-up"></i>
               </IconButton>
@@ -1037,18 +1084,28 @@ const SetlistPerformanceView: FC = () => {
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={songsForSidebar.map((s) => s.id)}
+                    items={setlistItems.map(getSetlistItemKey)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {songsForSidebar.map((song, index) => (
-                      <SortableSongListItem
-                        key={song.id}
-                        song={song}
-                        index={index}
-                        isActive={false}
-                        onClick={() => {}}
-                      />
-                    ))}
+                    {setlistItems.map((item, index) => {
+                      if (isSongItem(item)) {
+                        const song = getSongById(item.song_id);
+                        if (!song) return null;
+                        return (
+                          <SortableSongListItem
+                            key={item.song_id}
+                            song={song}
+                            index={index}
+                            isActive={false}
+                            onClick={() => {}}
+                          />
+                        );
+                      }
+                      const itemId = getSetlistItemKey(item);
+                      return (
+                        <SortableSpecialListItem key={itemId} item={item} itemId={itemId} />
+                      );
+                    })}
                   </SortableContext>
                 </DndContext>
               ) : (
@@ -2565,12 +2622,16 @@ const MobileToggleLabel = styled.span`
 `;
 
 // Special item styled components for sidebar
-const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
+const SpecialListItem = styled.button<{ $active: boolean; $type: string; $isDragging?: boolean }>`
   width: 100%;
   background: ${(props) =>
-    props.$active ? theme.colors.brand.primary : "transparent"};
+    props.$isDragging
+      ? 'var(--color-bg-elevated)'
+      : props.$active
+      ? theme.colors.brand.primary
+      : "transparent"};
   border: 1px solid ${(props) =>
-    props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
+    props.$isDragging || props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   border-left: 3px solid ${(props) => {
     switch (props.$type) {
       case "break":
@@ -2594,6 +2655,9 @@ const SpecialListItem = styled.button<{ $active: boolean; $type: string }>`
   transition: all ${theme.transitions.fast} ease;
   margin-bottom: ${theme.space[2]};
   text-align: left;
+  opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
+  box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
+  z-index: ${(props) => (props.$isDragging ? 10 : "auto")};
 
   &:hover {
     background: ${(props) =>

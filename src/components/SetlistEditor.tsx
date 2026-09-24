@@ -21,7 +21,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
-import { getSetlist, updateSetlist, isSongItem, isBreakItem, isSectionItem, isNoteItem } from "../services/setlistsService";
+import {
+  getSetlist,
+  updateSetlist,
+  isSongItem,
+  isBreakItem,
+  isSectionItem,
+  isNoteItem,
+  getSetlistItemKey,
+  generateSetlistItemId,
+} from "../services/setlistsService";
 import type { Setlist, SetlistItem, SetlistSongItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
 import { getBandSongs, updateSong } from "../services/songsService";
 import type { Song, UpdateSongInput } from "../services/songsService";
@@ -31,9 +40,6 @@ import { EditSongModal } from "./EditSongModal";
 import { useTranslation } from "react-i18next";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
-
-// Helper to generate unique IDs for special items
-const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 // Sortable song card component
 interface SortableSetlistSongCardProps {
@@ -202,7 +208,6 @@ const SetlistEditor: FC = () => {
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
-  const [itemIds, setItemIds] = useState<Map<SetlistItem, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -238,16 +243,6 @@ const SetlistEditor: FC = () => {
     })
   );
 
-  // Get the stable ID for an item
-  const getStableItemId = (item: SetlistItem): string => {
-    const existingId = itemIds.get(item);
-    if (existingId) return existingId;
-
-    // Generate new ID if not found
-    const newId = isSongItem(item) ? item.song_id : generateItemId();
-    return newId;
-  };
-
   const canEditSongs = selectedBand?.user_role !== "guest";
 
   const handleEditSong = (song: Song) => {
@@ -268,8 +263,8 @@ const SetlistEditor: FC = () => {
 
     if (over && active.id !== over.id) {
       setSetlistItems((items) => {
-        const oldIndex = items.findIndex((item) => getStableItemId(item) === active.id);
-        const newIndex = items.findIndex((item) => getStableItemId(item) === over.id);
+        const oldIndex = items.findIndex((item) => getSetlistItemKey(item) === active.id);
+        const newIndex = items.findIndex((item) => getSetlistItemKey(item) === over.id);
 
         if (oldIndex === -1 || newIndex === -1) return items;
 
@@ -292,15 +287,8 @@ const SetlistEditor: FC = () => {
         const setlistData = await getSetlist(setlistId);
         setSetlist(setlistData);
 
-        // Load all items and generate stable IDs
-        const items = setlistData.songs || [];
-        const newItemIds = new Map<SetlistItem, string>();
-        items.forEach((item) => {
-          const id = isSongItem(item) ? item.song_id : generateItemId();
-          newItemIds.set(item, id);
-        });
-        setItemIds(newItemIds);
-        setSetlistItems(items);
+        // Items already carry stable ids (see normalizeSetlistItem)
+        setSetlistItems(setlistData.songs || []);
 
         const songsData = await getBandSongs(setlistData.band_id);
         setAvailableSongs(songsData);
@@ -342,13 +330,6 @@ const SetlistEditor: FC = () => {
       position: setlistItems.length,
       notes: "",
     };
-
-    // Add to itemIds map
-    setItemIds((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(newSong, song.id);
-      return newMap;
-    });
 
     setSetlistItems([...setlistItems, newSong]);
 
@@ -407,7 +388,8 @@ const SetlistEditor: FC = () => {
       // Edit existing item
       const updated = setlistItems.map((item, i) => {
         if (i === editingItemIndex) {
-          const baseItem = { position: item.position, label: specialItemLabel.trim() };
+          // Keep the item's stable id so the card doesn't remount / lose its dnd identity
+          const baseItem = { id: item.id, position: item.position, label: specialItemLabel.trim() };
           if (specialItemType === "break") {
             return { ...baseItem, type: "break" as const, duration: specialItemDuration };
           } else if (specialItemType === "section") {
@@ -423,9 +405,11 @@ const SetlistEditor: FC = () => {
       // Add new item
       let newItem: SetlistItem;
       const position = setlistItems.length;
+      const id = generateSetlistItemId();
 
       if (specialItemType === "break") {
         newItem = {
+          id,
           type: "break",
           label: specialItemLabel.trim(),
           duration: specialItemDuration,
@@ -433,25 +417,19 @@ const SetlistEditor: FC = () => {
         };
       } else if (specialItemType === "section") {
         newItem = {
+          id,
           type: "section",
           label: specialItemLabel.trim(),
           position,
         };
       } else {
         newItem = {
+          id,
           type: "note",
           label: specialItemLabel.trim(),
           position,
         };
       }
-
-      // Add to itemIds map
-      const newId = generateItemId();
-      setItemIds((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(newItem, newId);
-        return newMap;
-      });
 
       setSetlistItems([...setlistItems, newItem]);
     }
@@ -856,7 +834,7 @@ const SetlistEditor: FC = () => {
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={setlistItems.map((item) => getStableItemId(item))}
+                    items={setlistItems.map(getSetlistItemKey)}
                     strategy={verticalListSortingStrategy}
                   >
                     {setlistItems.map((item, index) => {
@@ -879,11 +857,12 @@ const SetlistEditor: FC = () => {
                         );
                       } else {
                         // Special item (break, section, note)
+                        const itemId = getSetlistItemKey(item);
                         return (
                           <SortableSpecialItemCard
-                            key={getStableItemId(item)}
+                            key={itemId}
                             item={item}
-                            itemId={getStableItemId(item)}
+                            itemId={itemId}
                             onEdit={() => openEditSpecialItemModal(index)}
                             onRemove={() => handleRemoveItem(index)}
                           />

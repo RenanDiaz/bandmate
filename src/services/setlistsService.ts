@@ -8,6 +8,13 @@ import { canUserEditContent } from "./bandMembersService";
 /** Base properties shared by all setlist items */
 interface SetlistItemBase {
   position: number;
+  /**
+   * Stable identity for special items (break/section/note). Songs are
+   * identified by `song_id`; special items have no natural key, so one is
+   * generated when the setlist is read (see `normalizeSetlistItem`) and
+   * persisted with it. Used for React keys and drag-and-drop ids.
+   */
+  id?: string;
 }
 
 /** A song item in the setlist */
@@ -113,7 +120,12 @@ export function normalizeSetlistItem(
   item: SetlistItem | LegacySetlistSong
 ): SetlistItem {
   if (item.type) {
-    return item as SetlistItem;
+    const typed = item as SetlistItem;
+    // Special items need a stable id that survives reorders/spreads
+    if (!isSongItem(typed) && !typed.id) {
+      return { ...typed, id: generateSetlistItemId() };
+    }
+    return typed;
   }
   // Legacy song item without type
   return {
@@ -132,6 +144,22 @@ export function normalizeSetlistItems(
   items: (SetlistItem | LegacySetlistSong)[]
 ): SetlistItem[] {
   return items.map(normalizeSetlistItem);
+}
+
+/** Generate a stable id for a special (non-song) setlist item */
+export function generateSetlistItemId(): string {
+  return `item-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Stable identity of an item for React keys and drag-and-drop ids.
+ * Songs use `song_id` (unique within a setlist); special items use their `id`.
+ * The positional fallback only applies to items that never went through
+ * `normalizeSetlistItem`, and is deterministic within a render.
+ */
+export function getSetlistItemKey(item: SetlistItem): string {
+  if (isSongItem(item)) return item.song_id;
+  return item.id ?? `${item.type}-${item.position}`;
 }
 
 /**
