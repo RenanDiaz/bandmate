@@ -22,15 +22,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import {
-  getSetlist,
-  updateSetlist,
   isSongItem,
   isBreakItem,
   isSectionItem,
   getSetlistItemKey,
 } from "../services/setlistsService";
-import type { Setlist, SetlistItem, SetlistSpecialItem } from "../services/setlistsService";
-import { getBandSongs } from "../services/songsService";
+import type { SetlistItem, SetlistSpecialItem } from "../services/setlistsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
@@ -44,19 +41,12 @@ import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 import SheetMusicViewer from "./SheetMusicViewer";
 import type { SheetMusicViewerHandle } from "./SheetMusicViewer";
 import SheetMusicUpload from "./SheetMusicUpload";
-import { getSheetMusicUrl } from "../services/sheetMusicStorageService";
 import {
-  getSheetMusicForSong,
   type SheetMusic,
   getInstrumentIcon,
 } from "../services/songSheetMusicService";
-import {
-  getMySheetMusicPreferences,
-  setMySheetMusicPreference,
-  resolveInitialSheetMusic,
-  getPreferredInstrument,
-  setPreferredInstrument,
-} from "../services/sheetMusicPreferencesService";
+import { resolveInitialSheetMusic } from "../services/sheetMusicPreferencesService";
+import { useSetlistPerformanceData } from "../hooks/useSetlistPerformanceData";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -212,18 +202,17 @@ const SetlistPerformanceView: FC = () => {
   const { t } = useTranslation();
   const toast = useToast();
 
-  const [setlist, setSetlist] = useState<Setlist | null>(null);
+  const perf = useSetlistPerformanceData(setlistId);
+  const setlist = perf.setlist;
+  const preferredSheetMusicIds = perf.preferredSheetMusicIds;
+  // Local copy of the items: drag-and-drop reorders it before it is saved.
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
-  const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
   const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">("chords");
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
   const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
-  // This user's preferred PDF per song (song_id -> sheet_music_id), server-side.
-  const [preferredSheetMusicIds, setPreferredSheetMusicIds] = useState<Record<string, string>>({});
   // Refs mirror the preferences so the list loader can read them without
   // re-running (and remounting the PDF viewer) every time a preference changes.
   const preferredSheetMusicIdsRef = useRef<Record<string, string>>({});
@@ -256,7 +245,7 @@ const SetlistPerformanceView: FC = () => {
 
   // Helper to get song by ID
   const getSongById = (songId: string): Song | undefined => {
-    return allSongs.find((s) => s.id === songId);
+    return perf.songsById[songId];
   };
 
   // Get info about the next item for "Up Next" display
@@ -369,12 +358,7 @@ const SetlistPerformanceView: FC = () => {
         position: index,
       }));
 
-      await updateSetlist(setlist.id, { songs: updatedItems });
-
-      setSetlist({
-        ...setlist,
-        songs: updatedItems,
-      });
+      await perf.saveOrder(updatedItems);
 
       setSetlistItems(updatedItems);
       setIsReorderMode(false);
@@ -404,46 +388,19 @@ const SetlistPerformanceView: FC = () => {
     }
   };
 
+  // Take the loaded items, and any later replacement, except while the user
+  // is reordering: leaving reorder mode picks up the latest items.
   useEffect(() => {
-    if (!setlistId) return;
+    if (isReorderMode) return;
+    setSetlistItems(perf.items);
+  }, [perf.items, isReorderMode]);
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const setlistData = await getSetlist(setlistId);
-        setSetlist(setlistData);
-
-        // Load all songs for the band
-        const songsData = await getBandSongs(setlistData.band_id);
-        setAllSongs(songsData);
-
-        // This user's preferred PDF per song; a failure here must not block
-        // performance mode, we just fall back to the band order.
-        preferredInstrumentRef.current = getPreferredInstrument(setlistData.band_id);
-        try {
-          const songIds = (setlistData.songs || [])
-            .filter(isSongItem)
-            .map((item) => item.song_id);
-          const preferences = await getMySheetMusicPreferences(songIds);
-          preferredSheetMusicIdsRef.current = preferences;
-          setPreferredSheetMusicIds(preferences);
-        } catch (error) {
-          console.error("Failed to load sheet music preferences:", error);
-        }
-
-        // Store all items in order (songs and special items)
-        const orderedItems = [...(setlistData.songs || [])].sort((a, b) => a.position - b.position);
-        setSetlistItems(orderedItems);
-      } catch (error) {
-        console.error("Failed to load setlist:", error);
-        toast.error(t("setlists.detail.loadError"));
-        navigate("/setlists");
-      }
-      setLoading(false);
-    };
-
-    loadData();
-  }, [setlistId, navigate]);
+  // A failed load bounces back to the list, as before.
+  useEffect(() => {
+    if (perf.status !== "error") return;
+    toast.error(t("setlists.detail.loadError"));
+    navigate("/setlists");
+  }, [perf.status, navigate]);
 
   useEffect(() => {
     // Keyboard navigation
@@ -584,11 +541,20 @@ const SetlistPerformanceView: FC = () => {
     }
   }, [showSongList]);
 
-  // Load sheet music list when song changes
-  const loadSheetMusicList = useCallback(async () => {
+  // Mirror the preferences into the refs. This effect must stay declared
+  // before the lookup effect below: effects run in declaration order, so on
+  // the render where the data arrives the refs are filled before the lookup
+  // resolves the initial PDF.
+  useEffect(() => {
+    preferredSheetMusicIdsRef.current = perf.preferredSheetMusicIds;
+    preferredInstrumentRef.current = perf.preferredInstrument;
+  }, [perf.preferredSheetMusicIds, perf.preferredInstrument]);
+
+  // Pick the current song's sheet music from the prefetched lists.
+  const loadSheetMusicList = useCallback(() => {
     const currentItem = setlistItems[currentIndex];
     const isItemSong = currentItem && isSongItem(currentItem);
-    const songForItem = isItemSong ? allSongs.find((s) => s.id === currentItem.song_id) : null;
+    const songForItem = isItemSong ? perf.songsById[currentItem.song_id] : null;
 
     if (!songForItem) {
       setSheetMusicList([]);
@@ -597,75 +563,74 @@ const SetlistPerformanceView: FC = () => {
       return;
     }
 
-    try {
-      const list = await getSheetMusicForSong(songForItem.id);
-      setSheetMusicList(list);
-      // Open this user's preferred PDF, else the one matching their instrument,
-      // else the band's first one.
-      const initial = resolveInitialSheetMusic(
-        list,
-        preferredSheetMusicIdsRef.current[songForItem.id],
-        preferredInstrumentRef.current
-      );
-      setSelectedSheetMusicId(initial?.id ?? null);
-    } catch (err) {
-      console.error("Failed to load sheet music list:", err);
-      setSheetMusicList([]);
-      setSelectedSheetMusicId(null);
-    }
-  }, [currentIndex, setlistItems, allSongs]);
+    const list = perf.sheetMusicBySongId[songForItem.id] ?? [];
+    setSheetMusicList(list);
+    // Open this user's preferred PDF, else the one matching their instrument,
+    // else the band's first one.
+    const initial = resolveInitialSheetMusic(
+      list,
+      preferredSheetMusicIdsRef.current[songForItem.id],
+      preferredInstrumentRef.current
+    );
+    setSelectedSheetMusicId(initial?.id ?? null);
+  }, [currentIndex, setlistItems, perf.songsById, perf.sheetMusicBySongId]);
 
   // Selecting a PDF also remembers it as this user's default for the song.
+  const { selectSheetMusic, retryStaleSheetMusic } = perf;
   const handleSelectSheetMusic = useCallback(
     (sheetMusic: SheetMusic) => {
       setSelectedSheetMusicId(sheetMusic.id);
-      if (!setlist) return;
-
-      if (sheetMusic.instrument) {
-        setPreferredInstrument(setlist.band_id, sheetMusic.instrument);
-        preferredInstrumentRef.current = sheetMusic.instrument;
-      }
-
-      if (preferredSheetMusicIdsRef.current[sheetMusic.song_id] === sheetMusic.id) return;
-      const next = { ...preferredSheetMusicIdsRef.current, [sheetMusic.song_id]: sheetMusic.id };
-      preferredSheetMusicIdsRef.current = next;
-      setPreferredSheetMusicIds(next);
-      setMySheetMusicPreference(sheetMusic.song_id, sheetMusic.id).catch((err) => {
-        console.error("Failed to save sheet music preference:", err);
-        toast.error(t("sheetMusic.preferenceError"));
-      });
+      selectSheetMusic(sheetMusic);
     },
-    [setlist, toast, t]
+    [selectSheetMusic]
   );
 
   useEffect(() => {
     loadSheetMusicList();
   }, [loadSheetMusicList]);
 
-  // Load sheet music URL when selected sheet music changes
+  // If the sheet music prefetch failed, try again on song change and when
+  // entering the sheet music view (no-op once it has loaded).
   useEffect(() => {
+    retryStaleSheetMusic();
+  }, [currentIndex, contentView, retryStaleSheetMusic]);
+
+  // Load sheet music URL when selected sheet music changes
+  const { resolvePdfUrl } = perf;
+  useEffect(() => {
+    // Set by the cleanup when the selection changes again, so a slow stale
+    // resolution never replaces the current PDF.
+    let cancelled = false;
+
     const loadSheetMusicUrl = async () => {
       const selectedSheetMusic = sheetMusicList.find((sm) => sm.id === selectedSheetMusicId);
 
       if (!selectedSheetMusic?.file_url) {
         setSheetMusicUrl(null);
+        // A cancelled resolution no longer clears the flag itself.
+        setSheetMusicLoading(false);
         return;
       }
 
       setSheetMusicLoading(true);
       try {
-        const url = await getSheetMusicUrl(selectedSheetMusic.file_url);
+        const url = await resolvePdfUrl(selectedSheetMusic);
+        if (cancelled) return;
         setSheetMusicUrl(url);
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load sheet music URL:", err);
         setSheetMusicUrl(null);
       } finally {
-        setSheetMusicLoading(false);
+        if (!cancelled) setSheetMusicLoading(false);
       }
     };
 
     loadSheetMusicUrl();
-  }, [selectedSheetMusicId, sheetMusicList]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSheetMusicId, sheetMusicList, resolvePdfUrl]);
 
   // Handle audio time update (host syncs to viewers)
   const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
@@ -823,7 +788,8 @@ const SetlistPerformanceView: FC = () => {
     return setlistSong?.notes;
   };
 
-  if (loading) {
+  // "error" keeps the spinner for the one render before the bounce above.
+  if (perf.status !== "ready") {
     return (
       <LoadingContainer>
         <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
@@ -1479,7 +1445,7 @@ const SetlistPerformanceView: FC = () => {
               <SheetMusicUpload
                 songId={currentSong.id}
                 bandId={setlist.band_id}
-                onUpdate={loadSheetMusicList}
+                onUpdate={perf.onSheetMusicUploaded}
               />
             </AddPdfModalBody>
           </AddPdfModalContainer>

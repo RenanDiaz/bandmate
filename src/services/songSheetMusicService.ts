@@ -61,6 +61,40 @@ export async function getSheetMusicForSong(songId: string): Promise<SheetMusic[]
 }
 
 /**
+ * Get all sheet music for several songs in one query, grouped by song_id and
+ * sorted by position. Every requested id is present (an empty array when the
+ * song has no PDFs).
+ */
+export async function getSheetMusicForSongs(
+  songIds: string[]
+): Promise<Record<string, SheetMusic[]>> {
+  const uniqueIds = [...new Set(songIds)];
+  const grouped: Record<string, SheetMusic[]> = {};
+  for (const id of uniqueIds) grouped[id] = [];
+  if (uniqueIds.length === 0) return grouped;
+
+  const { data, error } = await supabase
+    .from("song_sheet_music")
+    .select("*")
+    .in("song_id", uniqueIds)
+    .order("position", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching sheet music:", error);
+    throw error;
+  }
+
+  for (const row of (data || []) as SheetMusic[]) {
+    (grouped[row.song_id] ??= []).push(row);
+  }
+  // The query is already ordered; sort again so the contract doesn't depend on it.
+  for (const list of Object.values(grouped)) {
+    list.sort((a, b) => a.position - b.position);
+  }
+  return grouped;
+}
+
+/**
  * Get a single sheet music entry by ID
  */
 export async function getSheetMusicById(id: string): Promise<SheetMusic | null> {

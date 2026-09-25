@@ -46,7 +46,7 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications)
-├── hooks/             # Custom hooks (usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -76,8 +76,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `bandsService.ts` | Bands; membership via the `band_members` join table |
 | `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
-| `songsService.ts` | Songs scoped to bands |
-| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position` |
+| `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode) |
+| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song |
 | `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
 | `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
 | `showsService.ts` | Show/gig scheduling |
@@ -151,6 +151,20 @@ Reload; the prompt is hidden on `/setlists/:setlistId/perform` until the user
 leaves. Never add `skipWaiting`, `clientsClaim` or an automatic reload. The
 brand font (Space Grotesk 700) is self-hosted via `@fontsource/space-grotesk`
 and precached with the other `woff2` files.
+
+### Performance data
+
+`SetlistPerformanceView` loads nothing itself: all its reads and writes go
+through `useSetlistPerformanceData(setlistId)` (`src/hooks/`), which returns
+the setlist, the referenced songs (`songsById`), every referenced song's sheet
+music prefetched at load (`sheetMusicBySongId`), preferences, and the write
+actions (`selectSheetMusic`, `saveOrder`, `onSheetMusicUploaded`). Behind it,
+a `PerformanceDataSource` (`performanceDataSource.ts`) opens a session per
+setlist; `networkPerformanceDataSource` is the only one today. A session emits
+full-row replacements after load (refreshes, successful writes) and keeps
+reference identity for the parts that did not change. Don't add service calls
+to the view; add them to the source. See §8 of
+[docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md).
 
 ### Real-time Features
 

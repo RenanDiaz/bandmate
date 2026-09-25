@@ -12,6 +12,24 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.1 reconciliation.** §8.1 now matches what shipped:
+  - `selectSheetMusic`: the network source still toasts
+    `sheetMusic.preferenceError` when the server write fails (kept in 2.1,
+    no behaviour change). The "never toasts" rule applies to the snapshot
+    source (PR 2.4).
+  - `capabilities` are computed in 2.1 but not enforced. The view had no guest
+    gating before (Reorder and Add PDF were visible to guests); PR 2.4 gates on
+    them together with the offline gating.
+  - Sources open a **session** that emits full-row replacements (the A3
+    background refresh and write-through share one channel), with two rules:
+    unchanged parts keep reference identity, and the view never reseeds its
+    local items while in reorder mode.
+  - `resolvePdfUrl` is cancellable; the source returns `ResolvedPdf.release`
+    (blob URL revoke in 2.4).
+  - A failed sheet-music prefetch marks the session stale;
+    `retryStaleSheetMusic` retries on song change and on entering the sheet
+    music view.
+
 - **2026-09-25 — PR 2.0 additions + A6.**
   - **Precache guard** (PR 2.0). The main bundle is ≈2.0 MB, ~81 KB under
     Workbox's 2 MiB `maximumFileSizeToCacheInBytes` default; a file above it
@@ -1080,9 +1098,17 @@ export interface PerformanceData {
   sheetMusicBySongId: Record<string, SheetMusic[]>;  // all songs, prefetched
   preferredSheetMusicIds: Record<string, string>;    // server prefs merged with local overrides
   preferredInstrument: string | null;
-  /** Resolves a PDF to something SheetMusicViewer can open; blob URL offline, signed URL online. */
+  /**
+   * Resolves a PDF to something SheetMusicViewer can open; blob URL offline, signed URL online.
+   * A new call cancels the previous one (it rejects with AbortError), so a stale resolution
+   * after a fast song change never replaces the current PDF.
+   */
   resolvePdfUrl: (sm: SheetMusic) => Promise<string>;
-  /** Persists the choice wherever the mode allows (server online, snapshot offline). Never toasts. */
+  /**
+   * Persists the choice wherever the mode allows (server online, snapshot offline).
+   * Network source: a failed server write toasts `sheetMusic.preferenceError`, as before
+   * PR 2.1. Snapshot source (PR 2.4): never toasts.
+   */
   selectSheetMusic: (sm: SheetMusic) => void;
   /**
    * Reorder save. Online: updateSetlist, then (PR 2.4) patchSnapshotSetlist with the
@@ -1091,6 +1117,8 @@ export interface PerformanceData {
   saveOrder: (items: SetlistItem[]) => Promise<void>;
   /** Called by the view after SheetMusicUpload succeeds; (PR 2.4) triggers refreshSnapshotRows. */
   onSheetMusicUploaded: () => void;
+  /** Retries a failed sheet-music prefetch (one in flight, no toast); no-op once loaded. */
+  retryStaleSheetMusic: () => void;
   source: "network" | "snapshot";
   /** PR 2.4. Sheet music ids referenced by the rows but not in the store; the selector shows them as "Not downloaded". */
   unavailableSheetMusicIds: ReadonlySet<string>;
@@ -1098,9 +1126,42 @@ export interface PerformanceData {
 }
 ```
 
-Behind it, a `PerformanceDataSource` interface with one implementation,
-`networkPerformanceDataSource`, that reproduces today's calls with two
-improvements that are needed anyway:
+Behind it, a `PerformanceDataSource` (`src/hooks/performanceDataSource.ts`)
+whose `open(setlistId)` returns a session:
+
+```ts
+interface PerformanceSession {
+  load(signal: AbortSignal): Promise<PerformanceRows>;       // rejects PerformanceDataError(code)
+  subscribe(listener: (rows: PerformanceRows) => void): () => void;
+  refresh(): Promise<void>;                                   // network: sheet music rows; snapshot: refreshSnapshotRows
+  isSheetMusicStale(): boolean;
+  resolvePdfUrl(sm: SheetMusic, signal: AbortSignal): Promise<{ url: string; release?: () => void }>;
+  savePreference(sm: SheetMusic): Promise<void>;              // optimistic emit, then persist
+  saveOrder(items: SetlistItem[]): Promise<void>;             // persist, then emit
+  close(): void;
+}
+```
+
+The session holds the current rows and delivers every change after load as
+a full `PerformanceRows` replacement through `subscribe`: a background row
+refresh (A3, PR 2.4), `refresh()` after an upload, and write-through after a
+successful write. Two rules every source follows, so a refresh landing
+mid-performance cannot clobber local state:
+
+1. **Reference identity.** An emit reuses the objects of the parts that did
+   not change (a sheet-music refresh keeps the same `setlist`, so the hook's
+   sorted `items` stay `===` and nothing downstream reseeds).
+2. **Reorder protection.** The view keeps its own copy of the items for
+   drag-and-drop and does not reseed it from `items` while in reorder mode;
+   leaving reorder mode takes the latest emitted items.
+
+A failed sheet-music fetch never blocks performance mode: the session is
+marked stale and the hook's `retryStaleSheetMusic` (called by the view on song
+change and on entering the sheet music view) retries with at most one
+request in flight, without a toast, until it succeeds.
+
+The one implementation in PR 2.1, `networkPerformanceDataSource`, reproduces
+today's calls with two improvements that are needed anyway:
 
 - `getSongsByIds(ids)` (new in `songsService`) instead of `getBandSongs`;
   performance mode only ever looks up referenced songs (`getSongById`).
@@ -1114,7 +1175,10 @@ calls `saveOrder` instead of `updateSetlist` directly (same behaviour in this
 PR), so PR 2.4 can add the snapshot patch in one place; upload and sync code
 paths are otherwise untouched. `capabilities` are all `true`
 except `canReorder`/`canUpload`/`canEditNotes`, which follow the existing
-guest rule (`selectedBand.user_role !== "guest"`).
+guest rule (`selectedBand.user_role !== "guest"`). In PR 2.1 they are computed
+but **not consumed**: the view had no guest gating before (Reorder and Add PDF
+were visible to guests), so enforcing them would be a behaviour change. PR 2.4
+gates on them together with the offline gating (§8.3).
 
 Definition of done for this step: the view renders identically online; the
 network tab shows one `song_sheet_music` request per setlist open instead of
