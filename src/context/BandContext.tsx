@@ -30,9 +30,27 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
 
   // Auth state
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+    let mounted = true;
+    // Resolve the user from the locally stored session first: it needs no
+    // network, so an offline device with a valid session isn't treated as
+    // logged out. getUser() then revalidates against the auth server, but only
+    // online, and only ever to confirm a user — a failure never clears one.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      const sessionUser = session?.user ?? null;
+      setUser((prev) => (prev?.id === sessionUser?.id ? prev : sessionUser));
       setHasCheckedAuth(true);
+
+      if (!sessionUser || !navigator.onLine) return;
+      supabase.auth
+        .getUser()
+        .then(({ data: { user: verified } }) => {
+          if (!mounted || !verified) return;
+          setUser((prev) => (prev?.id === verified.id ? prev : verified));
+        })
+        .catch(() => {
+          // Network hiccup: keep the session user.
+        });
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextUser = session?.user ?? null;
@@ -44,7 +62,10 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
       setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
       setHasCheckedAuth(true);
     });
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   // Load bands

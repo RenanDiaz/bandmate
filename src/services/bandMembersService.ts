@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getSessionUser } from "../lib/authSession";
 
 export type BandRole = "owner" | "admin" | "member" | "guest";
 export type InvitationStatus = "pending" | "accepted" | "declined" | "expired";
@@ -109,7 +110,7 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
  * Get current user's role in a band
  */
 export async function getUserBandRole(bandId: number): Promise<BandRole | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSessionUser();
   if (!user) return null;
 
   const { data, error } = await supabase

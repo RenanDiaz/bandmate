@@ -156,6 +156,10 @@ export default defineConfig(({ isSsrBuild }) => ({
               navigateFallback: '/index.html',
               navigateFallbackDenylist: [/^\/api/, /^\/robots\.txt$/, /^\/sitemap\.xml$/],
 
+              // The default adds only js/wasm/css/html; `mjs` picks up the
+              // bundled pdf.js worker so the PDF viewer can start offline.
+              globPatterns: ['**/*.{js,mjs,wasm,css,html}'],
+
               // Runtime caching strategies
               runtimeCaching: [
                 {
@@ -164,6 +168,8 @@ export default defineConfig(({ isSsrBuild }) => ({
                   handler: 'NetworkFirst',
                   options: {
                     cacheName: 'supabase-api',
+                    // Fall back to the cache instead of hanging on weak signal.
+                    networkTimeoutSeconds: 4,
                     expiration: {
                       maxEntries: 100,
                       maxAgeSeconds: 60 * 60, // 1 hour

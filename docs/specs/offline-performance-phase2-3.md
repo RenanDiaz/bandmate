@@ -77,8 +77,14 @@ This spec assumes, and PR 2.0 verifies before anything else lands:
    2.2), band resolution offline (C3: error path in PR 2.0, local bands in PR
    2.2), SW update mode (C4, PR 2.0), storage-rule narrowing (C8, PR 2.0).
 
-As of 2026-09-25 `BandContext` still calls `getUser()` (`BandContext.tsx:33`),
-so Phase 1 item 3 is not merged yet; PR 2.0 must not start until it is.
+Phase 1 landed on 2026-09-25 (branch `feat/offline-phase1-foundations`).
+PR 2.0 still checks items 1–3 above before building on them. Measured then,
+as input for PR 2.2: with a token inside the 90 s refresh margin or already
+expired, `getSession()` offline retries the refresh 8 times with exponential
+backoff and resolves after **≈25 s** with `{ session: null }` and an
+`AuthRetryableFetchError`; the stored session is kept. `isCheckingAuth` stays
+`true` for that whole time. With a valid token it resolves in ≈0 ms and makes
+no request.
 
 ---
 

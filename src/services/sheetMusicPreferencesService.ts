@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getSessionUser } from "../lib/authSession";
 import type { SheetMusic } from "./songSheetMusicService";
 
 /**
@@ -50,9 +51,7 @@ export async function setMySheetMusicPreference(
   songId: string,
   sheetMusicId: string
 ): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
   if (!user) throw new Error("Not authenticated");
 
   const { error } = await supabase

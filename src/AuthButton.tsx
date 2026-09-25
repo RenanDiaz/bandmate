@@ -19,8 +19,9 @@ export const AuthButton: FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (mounted) setUser(user);
+    // Local session, not getUser(): offline the navbar must not show "Log in".
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) setUser(session?.user ?? null);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       // Avoid re-rendering on token refreshes that don't change the user (e.g.

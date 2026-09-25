@@ -42,7 +42,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications)
 ├── hooks/             # Custom hooks (usePerformanceSync, useLocalBackingTracks)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── utils/             # Pure helpers (songFilters)
@@ -116,6 +116,18 @@ Unknown paths redirect to `/`. The source of truth is the `<Routes>` block in `s
 2. `BandContext` loads user's bands via `band_members` table (not `bands.owner_id`)
 3. Selected band ID persists to localStorage via `BandStorage` utility
 4. Components fetch band-scoped data (songs, setlists, shows) using the selected band ID
+
+### Offline-safe auth
+
+`supabase.auth.getUser()` asks the auth server, so offline it returns no user.
+`BandContext` and the paths performance mode depends on (`getSetlist`,
+`getMyBands`, `getUserBandRole`, `setMySheetMusicPreference`,
+`usePerformanceSync`, `AuthButton`) use the locally stored session instead:
+`getSessionUser()` in `src/lib/authSession.ts`.
+New read paths that must work offline should do the same. The Supabase runtime
+cache uses `NetworkFirst` with `networkTimeoutSeconds: 4`, so on weak signal it
+falls back to the cache instead of hanging. See
+[docs/intents/offline-performance.md](docs/intents/offline-performance.md).
 
 ### Real-time Features
 
@@ -294,6 +306,7 @@ needed") so reviewers know it was checked, not skipped.
 | `@dnd-kit/*` | Drag-and-drop for setlist editor |
 | `react-i18next` | Internationalization |
 | `react-pdf` | Sheet music PDF viewer |
+| `pdfjs-dist` | Pinned to the **exact** version `react-pdf` depends on; its worker is bundled from the app origin (`src/lib/pdfWorker.ts`) and precached so the viewer starts offline. Bump both together |
 | `papaparse` | CSV import for songs |
 | `styled-components` | CSS-in-JS styling |
 | `reactstrap` | Bootstrap React components |
@@ -330,5 +343,5 @@ needed") so reviewers know it was checked, not skipped.
 - [docs/INVITATION_FLOW_COMPLETE.md](docs/INVITATION_FLOW_COMPLETE.md) - Member invitation system
 - [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) - Invitation emails (Edge Function + Resend)
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) - Google OAuth configuration
-- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (proposed): offline performance mode
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [migrations/README.md](migrations/README.md) - Database migration guide
