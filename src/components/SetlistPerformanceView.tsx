@@ -47,6 +47,7 @@ import {
 } from "../services/songSheetMusicService";
 import { resolveInitialSheetMusic } from "../services/sheetMusicPreferencesService";
 import { useSetlistPerformanceData } from "../hooks/useSetlistPerformanceData";
+import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -935,6 +936,8 @@ const SetlistPerformanceView: FC = () => {
                 onForceEndSession={forceEndSession}
                 onTakeOverSession={takeOverSession}
               />
+              {/* Self-contained (reads the offline service itself); no Remove here. */}
+              <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="toolbar" />
               <ViewToggleGroup>
                 <ViewToggleButton
                   onClick={() => setContentView("chords")}

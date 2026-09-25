@@ -45,6 +45,7 @@ import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
+import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -959,6 +960,7 @@ const SetlistDetailView: FC = () => {
                     <i className="bi bi-chat-square-text"></i>
                     <span>{t("requests.proposeSetlist")}</span>
                   </ActionButton>
+                  <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="setlist" />
                   <ActionButton
                     onClick={() => navigate(`/setlists/${setlistId}/perform`)}
                     $variant="perform"
@@ -974,6 +976,8 @@ const SetlistDetailView: FC = () => {
           </HeaderTop>
 
           <SetlistTitle>{setlist.name}</SetlistTitle>
+
+          <OfflineStatusRow setlistId={setlist.id} setlistName={setlist.name} />
 
           {setlist.description && (
             <SetlistDescription>{setlist.description}</SetlistDescription>

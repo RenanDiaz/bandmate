@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
@@ -17,6 +17,8 @@ interface Props {
   tone?: "danger" | "primary";
   /** Disables buttons and shows a spinner on the confirm button. */
   busy?: boolean;
+  /** Extra content under the message (lists, warnings). */
+  children?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -29,6 +31,7 @@ export const ConfirmModal: FC<Props> = ({
   cancelLabel,
   tone = "danger",
   busy = false,
+  children,
   onConfirm,
   onClose,
 }) => {
@@ -51,6 +54,7 @@ export const ConfirmModal: FC<Props> = ({
 
         <Body>
           <Message>{message}</Message>
+          {children}
 
           <Actions>
             <CancelButton type="button" onClick={onClose} disabled={busy}>

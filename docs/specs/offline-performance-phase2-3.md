@@ -12,6 +12,52 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.3: "Make available offline" action (UI decisions).**
+  - **One owner for the running download.** The service keeps no "current
+    download" and returns results only to `downloadSetlist`'s caller, so a UI
+    controller (`src/context/offlineDownloadController.ts`, plain TS, read via
+    `useSyncExternalStore`) holds the promise, the latest progress (from
+    `download-progress` events, so resumed jobs show too) and each setlist's
+    last result. The progress modal derives everything from it and re-attaches
+    after navigation (A4). No React state in the service (§5.5) still holds.
+    A pre-condition rejection (and a `planDownload` rejection) is stored as a
+    `failed` result and shown by the same result view.
+  - **Confirmation** reuses `ConfirmModal` (new optional `children` slot) with
+    `tone="primary"`: song count, PDFs to download, "about {size}", files
+    already on the device, "+ N files of unknown size", the §4.5 quota warning
+    (warn, still allowed), and the §9.1 iOS copy. Cancel drops the plan; nothing
+    is stored (A1). Sizes use decimal units, like the device's storage settings.
+  - **Retry re-plans and re-confirms** (only missing files remain in the plan),
+    so the quota warning is evaluated again after a quota failure.
+  - **Remove only in the setlist detail**, never in performance mode's toolbar:
+    from 2.4 perform mode renders from the snapshot, so a mis-tap on stage must
+    not delete it. The toolbar shows the status plus Download / Retry.
+  - **Availability.** Every role, guests included (A7). Disabled with "Needs a
+    connection" unless online **and** `authMode: "session"` (A8; a cached user
+    cannot plan).
+  - **Resume + GC at start move from 2.5 to 2.3** (§12): `useOfflineStartup()`
+    runs `resumeInterruptedDownloads()` then `collectGarbage()` once the user is
+    known (`session`, or `offline-cached` where only fully-stored journals
+    commit) and again when the connection returns with a session. The setlist
+    detail shows an interrupted-download notice with Resume / Discard
+    (Discard = `cancelDownload` with no job running).
+  - **iOS suspends JS** when the screen locks or the PWA is backgrounded, which
+    interrupts a long download. While a download runs the controller holds a
+    Screen Wake Lock (`navigator.wakeLock`, feature-detected, re-acquired on
+    `visibilitychange` since browsers release it when hidden) and the progress
+    modal says "Keep the app open until the download finishes". When the page
+    becomes visible again the interrupted notice re-reads at once, so Resume is
+    offered without a relaunch. §11.
+  - **Tests.** No DOM in the test setup: the dialogs' presentational parts have
+    no portal and no service calls and are rendered with
+    `renderToStaticMarkup` in `.test.tsx` files; the controller, wake lock,
+    platform detection and pure helpers are unit-tested.
+  - **Band avatars offline (note for 2.5).** Avatars come from the public
+    `band-avatars` bucket under `/storage/v1/`, which PR 2.0 excluded from the
+    Workbox cache, and the snapshot stores only `bands.avatar_url`, not the
+    image. Offline the image does not load. Offline views render a fallback
+    (the band initial) when the avatar fails to load. §7.3, §12 (2.5).
+
 - **2026-09-25 — PR 2.2b: download engine (decisions the spec did not cover).**
   - **Scope moved to 2.4:** `refreshSnapshotRows`, `patchSnapshotSetlist`,
     `patchSnapshotPreference` and the post-commit row refresh of §4.3 ship
@@ -1217,6 +1263,11 @@ acceptable, and the checklist covers it (§11).
   snapshot data source (§8). Deep links work because the SW's
   `navigateFallback` serves `index.html` for any in-scope path; the installed
   PWA's `start_url` is `/`, so the usual path is Home → Perform.
+- **Band avatars offline.** The avatar image is not in the snapshot (only
+  its URL) and `/storage/v1/` is never cached by the service worker (§8.4),
+  so every offline view that shows a band (`OfflineHome`, the band switcher,
+  `OfflineSetlistDetail`) renders the band initial when the image fails to
+  load (`onError` fallback), never a broken image.
 - **`/shows/:showId`** offline: out of scope; falls into the generic offline
   fallback ("This page needs a connection") rather than an error toast.
 
@@ -1684,6 +1735,7 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] Kill the app mid-download; relaunch online: resumes, does not re-download stored files.
 - [ ] Fill the device storage (large video files) until a PDF does not fit: partial result, message names the PDF; free space, Retry: completes.
 - [ ] `navigator.storage.persist()` answer shown in management; note the value per OS.
+- [ ] Lock the screen mid-download (and, separately, switch apps for > 30 s): the wake lock kept the screen on and the download continued, or on return the setlist detail offers Resume right away (no relaunch) and Resume completes without re-downloading stored files.
 - [ ] Install a build with `OFFLINE_SCHEMA_VERSION` bumped (test build only) over a device with snapshots: the "download these again" notice lists them once; Download works per setlist (A9).
 
 **Perform offline**
@@ -1734,9 +1786,9 @@ verified by unit tests (fake-indexeddb) in `npm test`.
 | 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
 | 2.2a | Offline store, reads, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + store open + schema guard + wipe **with schema-wipe notice record** (A4 lost list exposed by the service; UI in 2.5); `offlineSetlistService`: `openOfflineStore`, `setOfflineCurrentUser`, `getLastUserId`, `confirmSignedInUser`, `listSnapshots`, `getSnapshotMeta`, `getSnapshot`, `getFile`, `listOfflineBands`, `countHiddenSnapshots`, `getSchemaWipeNotice` / `dismissSchemaWipeNotice`, `wipeAll`, `subscribe`/events; reads return empty/null on an empty store and on `storage-unavailable`. `wipeAll` wired to `AuthButton.logout` (awaited before `signOut`) and confirmed user change **only**; also clears `bandmate_perform_position_*` (`performPosition.ts`: prefix + `clearAllPerformPositions`). **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2); `isResolvingBand` always resolves; `authMode` exposed.** vitest + fake-indexeddb, `npm test`. No UI beyond what `BandContext` needs, no migration. | 2.0 |
 | 2.2b | Download engine | `planDownload`, `downloadSetlist` state machine, journal + `resumeInterruptedDownloads`, `cancelDownload`, quota handling (§4.5), `collectGarbage` (all users' refs), `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`, `getStorageUsage`; `snapshot-changed` / `download-progress` events; store epoch, cross-tab lock and the other race rules (changelog 2026-09-25, PR 2.2b); dev-only `window.__bandmateOffline`. Unit tests against fake-indexeddb. No UI. | 2.2a |
-| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2a keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2b |
+| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar (no Remove there); partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. **Download controller (UI owner of the running download); resume + GC at app start (moved from 2.5); interrupted-download notice with Resume/Discard; Screen Wake Lock while downloading.** Offline check: after airplane mode + relaunch, 2.2a keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2b |
 | 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **`refreshSnapshotRows` + `patchSnapshotSetlist` / `patchSnapshotPreference` (moved from 2.2b), the row refresh after every download commit (§4.3); background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
-| 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |
+| 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; band-initial fallback when the avatar fails offline (§7.3); generic "needs a connection" fallback for other routes. | 2.4 |
 | 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
 
 ### Phase 3

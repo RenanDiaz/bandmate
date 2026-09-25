@@ -46,10 +46,10 @@ app would not start offline). If it fires, look at `globPatterns`,
 ```
 src/
 ├── components/        # React components (views, modals, forms)
-├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
+├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -88,7 +88,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
-| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). Row refresh / `patchSnapshot*` arrive in PR 2.4. See "Offline store" and "Offline downloads" below |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). Row refresh / `patchSnapshot*` arrive in PR 2.4. See "Offline store", "Offline downloads" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -255,6 +255,33 @@ aborted-transaction form, `isQuotaExceeded`) is recorded as `quota` and only
 smaller files are tried after it; a commit that doesn't fit is retried once
 after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 `__setWriteFaultForTests` (fake-indexeddb has none).
+
+### Offline download UI
+
+"Make available offline" (PR 2.3) lives in `src/components/offline/`:
+`OfflineDownloadAction` (variants `setlist` in `SetlistDetailView`, `show` in
+`ShowDetailView` for the linked setlist, `toolbar` in performance mode's top
+bar), `OfflineStatusRow` (setlist detail: badge, Remove, interrupted notice
+with Resume/Discard), `OfflineBadge` (also in `SetlistList`),
+`OfflineDownloadModal` and the presentational `OfflineDownloadBodies`.
+
+- **One owner for the running download:** `offlineDownloadController`
+  (`src/context/`, plain TS, read with `useOfflineDownloadState()`) holds the
+  promise, latest progress and each setlist's last result, so the modal
+  re-attaches after navigation (A4). Start downloads through it
+  (`start(plan, name)`), never by calling `downloadSetlist` from a component.
+  It also holds a Screen Wake Lock (`src/lib/wakeLock.ts`) while a download
+  runs and bumps `revision` when the page becomes visible again.
+- **Every role** sees and can use the action (A7); it is disabled with "Needs
+  a connection" unless online with `authMode: "session"` (A8).
+- **Remove only in the setlist detail** — never in the toolbar variant
+  (performance mode renders from the snapshot from 2.4 on).
+- The confirmation reuses `ConfirmModal` (`children` slot); on iOS it says
+  "Saved on this device, in this app" and, in a browser tab
+  (`src/lib/platform.ts`), shows the install hint (§9.1).
+- **App start:** `useOfflineStartup()` (called in `AppContent`) runs
+  `resume()` then `collectGarbage()` once the user is known (`session` or
+  `offline-cached`) and again when the connection returns.
 
 **Dev hook:** in `npm run dev`, `window.__bandmateOffline` exposes
 `planDownload`, `downloadSetlist`, `download(id)`, `listSnapshots`,
@@ -443,8 +470,11 @@ environment with `fake-indexeddb` and an in-memory `localStorage` from
 `src/test/setup.ts`). Tests live in `__tests__/` next to the code and are
 type-checked by `npm run build`. Mock Supabase rather than calling it
 (`setup.ts` mocks `src/lib/supabaseClient` for every test; mock the service
-functions a test needs). There
-are no component tests yet. Before considering a change done:
+functions a test needs). Component tests are `.test.tsx` render tests with
+`renderToStaticMarkup` and a test i18next instance (no DOM, no
+testing-library): keep presentational parts free of portals and service
+calls so they can be rendered this way. The lock race test needs
+`navigator.locks` (Node ≥ 24). Before considering a change done:
 
 1. `npm run lint` passes with no new errors.
 2. `npm run build` passes (this also type-checks and runs the SSR pass).

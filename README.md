@@ -26,6 +26,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 **Setlists**
 - Drag-and-drop editor, drafts, printable setlists
+- Make available offline: save a setlist's songs and sheet music PDFs on the device (from the setlist, its show or performance mode), with progress, partial-download retry and resume after interruptions
 - AI-assisted setlist generation and optimization (Groq, optional)
 
 **Shows & rehearsals**
@@ -128,8 +129,9 @@ prerender and the precache check (which fails the build if a shell file would
 be missing offline). See [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
 Unit tests run with Vitest (`npm test`); they cover the offline store, the
-offline download engine and the offline auth logic. There are no component or
-end-to-end tests yet.
+offline download engine, the offline auth logic and the download UI controller.
+The offline download dialogs have render tests (`renderToStaticMarkup`, no DOM);
+there are no interactive component or end-to-end tests yet.
 
 ## 🗂️ Project Layout
 
