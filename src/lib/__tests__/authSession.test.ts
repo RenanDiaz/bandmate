@@ -154,3 +154,38 @@ describe("user sign-out always ends signed out locally", () => {
     expect(auth._removeSession).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("auth-js internals that signOutEverywhereOrLocally relies on", () => {
+  // `_removeSession` and `storageKey` are auth-js internals (2.70). A
+  // supabase-js upgrade that renames or drops them must fail CI, not leave
+  // offline sign-out silently falling back to a page reload.
+  it("the installed client exposes _removeSession(), which clears the stored session and emits SIGNED_OUT", async () => {
+    const { createClient } = await vi.importActual<typeof import("@supabase/supabase-js")>("@supabase/supabase-js");
+    const memory = new Map<string, string>();
+    const client = createClient("https://example.supabase.co", "anon-key", {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: true,
+        storage: {
+          getItem: (k) => memory.get(k) ?? null,
+          setItem: (k, v) => void memory.set(k, v),
+          removeItem: (k) => void memory.delete(k),
+        },
+      },
+    });
+    const auth = client.auth as unknown as SignOutAuth & { storageKey: string };
+    expect(typeof auth._removeSession).toBe("function");
+    expect(typeof auth.storageKey).toBe("string");
+
+    memory.set(auth.storageKey, JSON.stringify(session(USER_A)));
+    const events: AuthChangeEvent[] = [];
+    const { data } = client.auth.onAuthStateChange((event) => {
+      events.push(event);
+    });
+    await auth._removeSession!();
+    data.subscription.unsubscribe();
+    expect(memory.has(auth.storageKey)).toBe(false);
+    expect(events).toContain("SIGNED_OUT");
+  });
+});

@@ -83,6 +83,33 @@ export async function getSheetMusicUrl(filePath: string): Promise<string> {
 }
 
 /**
+ * A short-lived signed URL for downloading a file into the offline store
+ * (offlineSetlistService). Rejects with the storage error as is (its `status`
+ * tells not-found from forbidden).
+ */
+export async function createSheetMusicDownloadUrl(filePath: string, expiresInSeconds = 600): Promise<string> {
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(filePath, expiresInSeconds);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+/**
+ * Sizes of the files in one storage folder ("{bandId}/{songId}"), keyed by
+ * full path; null when the listing gave no size. Used to size an offline
+ * download before it starts (spec C7): song_sheet_music has no size column.
+ */
+export async function listSheetMusicFolderSizes(folder: string): Promise<Record<string, number | null>> {
+  const { data, error } = await supabase.storage.from(BUCKET_NAME).list(folder, { limit: 1000 });
+  if (error) throw error;
+  const sizes: Record<string, number | null> = {};
+  for (const file of data ?? []) {
+    const size = (file.metadata as { size?: unknown } | null)?.size;
+    sizes[`${folder}/${file.name}`] = typeof size === "number" ? size : null;
+  }
+  return sizes;
+}
+
+/**
  * Deletes a sheet music file from storage
  */
 export async function deleteSheetMusicFile(filePath: string): Promise<void> {

@@ -42,6 +42,14 @@ export interface OfflineStoreMeta {
   persisted: boolean | null;
   /** ISO timestamp of the last successful garbage collection (§4.6). */
   lastGcAt: string | null;
+  /**
+   * Changes on every clear (wipeAll, schema wipe). Guarded writes compare it
+   * inside their own transaction, so a download that started before a wipe
+   * can't recreate records after it, in this tab or another (PR 2.2b). Absent
+   * on metas written before 2.2b; read as null. Optional and additive, so no
+   * schema bump.
+   */
+  epoch?: string;
 }
 
 export interface OfflineSchemaWipeLostEntry {
@@ -69,10 +77,17 @@ export type OfflineStoreOpenResult =
   | { status: "unavailable"; error: unknown };
 
 let storeHandle: UseStore | null = null;
+/** Clears started in this tab; lets the service notice a local wipe without a read. */
+let wipeCount = 0;
 let openPromise: Promise<OfflineStoreOpenResult> | null = null;
 
+function newEpoch(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function newMeta(): OfflineStoreMeta {
-  return { schemaVersion: OFFLINE_SCHEMA_VERSION, persisted: null, lastGcAt: null };
+  return { schemaVersion: OFFLINE_SCHEMA_VERSION, persisted: null, lastGcAt: null, epoch: newEpoch() };
 }
 
 /**
@@ -137,6 +152,7 @@ async function wipeForSchema(
         }
       : null;
 
+  wipeCount++;
   await store("readwrite", (s) => {
     s.clear();
     s.put(meta, offlineKeys.meta);
@@ -230,8 +246,9 @@ export function removeKeys(keyList: string[]): Promise<void> {
   return delMany(keyList, requireStore());
 }
 
-/** Deletes every key and re-initializes meta, in one transaction. */
+/** Deletes every key and re-initializes meta (with a new epoch), in one transaction. */
 export async function clearStore(): Promise<void> {
+  wipeCount++;
   await requireStore()("readwrite", (s) => {
     s.clear();
     s.put(newMeta(), offlineKeys.meta);
@@ -239,8 +256,178 @@ export async function clearStore(): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Transactions (PR 2.2b): several reads and writes in one IDB transaction, and
+// writes guarded by the store epoch.
+// ---------------------------------------------------------------------------
+
+/** Number of clears started in this tab since load. */
+export function localWipeCount(): number {
+  return wipeCount;
+}
+
+/** The current store epoch (see OfflineStoreMeta.epoch); null on a pre-2.2b meta. */
+export async function readEpoch(): Promise<string | null> {
+  const meta = await readKey<OfflineStoreMeta>(offlineKeys.meta);
+  return typeof meta?.epoch === "string" ? meta.epoch : null;
+}
+
+/** A guarded transaction found another epoch: the store was wiped since the caller read it. Nothing was written. */
+export class StoreEpochChangedError extends Error {
+  constructor() {
+    super("The offline store was wiped");
+    this.name = "StoreEpochChangedError";
+  }
+}
+
+/**
+ * A write transaction that aborted. `requestError` is the failing put's error,
+ * `transactionError` the transaction's: Safari reports a full disk as an
+ * AbortError on the request with the QuotaExceededError only on the
+ * transaction, so callers check both (isQuotaExceeded).
+ */
+export class StoreWriteError extends Error {
+  readonly requestError: unknown;
+  readonly transactionError: unknown;
+  constructor(requestError: unknown, transactionError: unknown) {
+    super(
+      errorName(transactionError) ?? errorName(requestError) ?? "Offline store write failed"
+    );
+    this.name = "StoreWriteError";
+    this.requestError = requestError;
+    this.transactionError = transactionError;
+  }
+}
+
+function errorName(error: unknown): string | undefined {
+  const name = (error as { name?: unknown } | null)?.name;
+  return typeof name === "string" ? name : undefined;
+}
+
+function isQuotaLike(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { name, code } = error as { name?: unknown; code?: unknown };
+  // 22: legacy QUOTA_EXCEEDED_ERR; Firefox's own name for the same condition.
+  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED" || code === 22;
+}
+
+/** §4.5: a DOMException QuotaExceededError, or Safari's aborted transaction carrying one. */
+export function isQuotaExceeded(error: unknown): boolean {
+  if (error instanceof StoreWriteError) {
+    return isQuotaLike(error.requestError) || isQuotaLike(error.transactionError);
+  }
+  return isQuotaLike(error);
+}
+
+/** The operations available inside transact(). Reads resolve while the transaction is alive; await nothing else inside it. */
+export interface StoreTx {
+  get<T>(key: string): Promise<T | undefined>;
+  keys(): Promise<string[]>;
+  has(key: string): Promise<boolean>;
+  put(key: string, value: unknown): void;
+  delete(key: string): void;
+}
+
+type WriteFault = (key: string) => unknown;
+let writeFault: WriteFault | null = null;
+
+/**
+ * Test-only: `fault(key)` runs for every put inside transact(); a non-undefined
+ * return aborts the transaction and the call rejects as if IndexedDB had
+ * failed with it (a StoreWriteError is used as is, anything else becomes its
+ * requestError). fake-indexeddb has no quota, so this is how quota is tested.
+ */
+export function __setWriteFaultForTests(fault: WriteFault | null): void {
+  writeFault = fault;
+}
+
+function requestPromise<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Runs `fn` in one IndexedDB transaction and resolves with its result once the
+ * transaction has committed. With `epoch` set (a value from readEpoch()), the
+ * transaction first reads `meta` and rejects with StoreEpochChangedError,
+ * writing nothing, when the epoch differs: IDB serializes readwrite
+ * transactions on the store across tabs, so a wipe either committed before
+ * (epoch differs, nothing written) or runs after (and clears what was written).
+ */
+export function transact<T>(
+  mode: IDBTransactionMode,
+  fn: (tx: StoreTx) => Promise<T>,
+  opts: { epoch?: string | null } = {}
+): Promise<T> {
+  return requireStore()(mode, (s) => {
+    const transaction = s.transaction;
+    let putError: unknown = undefined;
+    let injected: unknown = undefined;
+    let epochChanged = false;
+
+    const tx: StoreTx = {
+      get: <V>(key: string) => requestPromise(s.get(key)) as Promise<V | undefined>,
+      keys: async () => (await requestPromise(s.getAllKeys())).filter((k): k is string => typeof k === "string"),
+      has: async (key) => (await requestPromise(s.count(key))) > 0,
+      put: (key, value) => {
+        if (injected !== undefined) return;
+        const fault = writeFault?.(key);
+        if (fault !== undefined) {
+          injected = fault;
+          transaction.abort();
+          return;
+        }
+        const request = s.put(value, key);
+        request.onerror = () => {
+          putError ??= request.error;
+        };
+      },
+      delete: (key) => {
+        if (injected === undefined) s.delete(key);
+      },
+    };
+
+    const done = new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = transaction.onerror = () => {
+        if (epochChanged) reject(new StoreEpochChangedError());
+        else if (injected instanceof StoreWriteError) reject(injected);
+        else if (injected !== undefined) reject(new StoreWriteError(injected, null));
+        else reject(new StoreWriteError(putError ?? null, transaction.error));
+      };
+    });
+
+    const body = (async () => {
+      if (opts.epoch !== undefined) {
+        const meta = await tx.get<OfflineStoreMeta>(offlineKeys.meta);
+        const current = typeof meta?.epoch === "string" ? meta.epoch : null;
+        if (current !== opts.epoch) {
+          epochChanged = true;
+          transaction.abort();
+          return undefined as T;
+        }
+      }
+      return fn(tx);
+    })();
+
+    body.catch(() => {
+      // fn threw: abort so nothing it queued is committed.
+      try {
+        transaction.abort();
+      } catch {
+        // already finished
+      }
+    });
+
+    return Promise.all([body, done]).then(([result]) => result);
+  });
+}
+
 /** Test-only: forget the memoized handle so the next open hits the current `indexedDB`. */
 export function __resetOfflineStoreForTests(): void {
   storeHandle = null;
   openPromise = null;
+  writeFault = null;
 }
