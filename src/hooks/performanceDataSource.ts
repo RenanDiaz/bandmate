@@ -23,6 +23,12 @@ export interface PerformanceRows {
   preferredSheetMusicIds: Record<string, string>;
   /** Device-local instrument shortcut for this band. */
   preferredInstrument: string | null;
+  /**
+   * Snapshot source only: sheet music ids the rows reference but the device
+   * does not have (any `missingFiles` reason, incl. "not-downloaded", plus
+   * blobs found absent or unreadable in this session). Absent for the network source.
+   */
+  unavailableSheetMusicIds?: ReadonlySet<string>;
 }
 
 export type PerformanceLoadError = "not-found" | "not-authenticated" | "network";
@@ -94,6 +100,27 @@ export interface PerformanceSession {
   /** Saves a new item order; on success patches the rows and emits. Rejects on failure. */
   saveOrder(items: SetlistItem[]): Promise<void>;
   close(): void;
+}
+
+/**
+ * The snapshot source found no snapshot of this setlist for the current user.
+ * The hook then falls back to the network source when online (§8.2).
+ */
+export class NoSnapshotError extends Error {
+  constructor() {
+    super("No offline copy of this setlist");
+    this.name = "NoSnapshotError";
+  }
+}
+
+/** resolvePdfUrl on the snapshot source: the file is not on the device, or its blob is empty/unreadable (§9.3). */
+export class PdfUnavailableError extends Error {
+  readonly sheetMusicId: string;
+  constructor(sheetMusicId: string) {
+    super("This PDF is not on this device");
+    this.name = "PdfUnavailableError";
+    this.sheetMusicId = sheetMusicId;
+  }
 }
 
 function toLoadError(error: unknown): PerformanceDataError {

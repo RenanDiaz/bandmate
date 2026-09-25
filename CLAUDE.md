@@ -52,13 +52,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceDataSource, snapshotPerformanceDataSource; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters)
+├── utils/             # Pure helpers (songFilters, deepEqual, performItems)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component with routing
@@ -93,7 +93,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
-| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). Row refresh / `patchSnapshot*` arrive in PR 2.4. See "Offline store", "Offline downloads" and "Offline download UI" below |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -267,7 +267,8 @@ after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 `isOfflineDownloadsEnabled()` (`src/lib/featureFlags.ts`) is true:
 `VITE_OFFLINE_DOWNLOADS=true` at build time (Vercel Preview), or per device
 `localStorage.bandmate_flag_offline = "1"` (testing against production). Off
-by default: nothing performs from snapshots until 2.4/2.5, and the flag is
+by default until the entry point (PR 2.5) ships; it also gates performance
+mode's snapshot source (PR 2.4), and the flag is
 removed in PR 2.5 once the §11 device checklist passes. The check runs before
 any hook (`OfflineDownloadAction` / `OfflineStatusRow` are thin wrappers), and
 list badges and toasts are gated too; startup resume + GC still run (harmless
@@ -327,14 +328,48 @@ and precached with the other `woff2` files.
 `SetlistPerformanceView` loads nothing itself: all its reads and writes go
 through `useSetlistPerformanceData(setlistId)` (`src/hooks/`), which returns
 the setlist, the referenced songs (`songsById`), every referenced song's sheet
-music prefetched at load (`sheetMusicBySongId`), preferences, and the write
-actions (`selectSheetMusic`, `saveOrder`, `onSheetMusicUploaded`). Behind it,
-a `PerformanceDataSource` (`performanceDataSource.ts`) opens a session per
-setlist; `networkPerformanceDataSource` is the only one today. A session emits
-full-row replacements after load (refreshes, successful writes) and keeps
-reference identity for the parts that did not change. Don't add service calls
-to the view; add them to the source. See §8 of
+music prefetched at load (`sheetMusicBySongId`), preferences, the write
+actions (`selectSheetMusic`, `saveOrder`, `onSheetMusicUploaded`), `source`,
+`unavailableSheetMusicIds` and `capabilities`. Behind it, a
+`PerformanceDataSource` (`performanceDataSource.ts`) opens a session per
+setlist. A session emits full-row replacements after load (refreshes,
+successful writes) and keeps reference identity for the parts that did not
+change; the view never reseeds its items in reorder mode, and a replacement
+keeps the current item by identity (`indexAfterItemsChange`,
+`src/utils/performItems.ts`). Don't add service calls to the view; add them to
+the source. See §8 of
 [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md).
+
+- **Source selection** (§8.2) lives in `PerformanceDataController`
+  (`performanceDataController.ts`, plain TS, unit-tested); the hook wraps it.
+  With `isOfflineDownloadsEnabled()`: a snapshot for this user → the snapshot
+  source, **even online**; none and online → network; none and offline →
+  `unavailableOffline` ("Not available offline" + Back, no toast, no bounce).
+  Flag off: network only.
+- **`snapshotPerformanceDataSource`** renders from `getSnapshot`. Online it
+  runs `flushLocalPreferences` then `refreshSnapshotRows` in the background
+  (again when the connection returns): rows only, never a PDF; new PDFs show as
+  "Not downloaded". Writes go to the server first, then patch the snapshot
+  (`patchSnapshotSetlist` / `patchSnapshotPreference`); offline, or when the
+  server write fails, a PDF choice is `recordLocalPreference`d (no session or
+  network needed, never toasts). PDFs: `getFile` → blob URL, only the current
+  one (the hook releases the previous before resolving the next), never
+  prefetched.
+- **Missing files** (§9.3): only a blob that is absent or reads empty counts;
+  online it is recorded in `missingFiles` and its `file:` key deleted so Retry
+  refetches it, offline it is only unavailable for the session. A pdf.js
+  error on a readable blob is a view error with "Try again" (fresh blob URL,
+  viewer remounted) and never touches the store.
+- **Capabilities** (`performanceCapabilities`, §8.3): offline → no reorder,
+  upload, notes or sync; guests → no reorder/upload/notes, online too (not
+  behind the flag). `usePerformanceSync({ enabled: canSync })` makes no
+  queries and opens no Realtime channel when disabled; `SyncControls` shows
+  "Sync sessions need a connection". The **R** shortcut toggles reorder only
+  when allowed.
+- **Position** (A2): `readPerformPosition` / `writePerformPosition`
+  (`src/lib/performPosition.ts`) persist `{ currentIndex, contentView,
+  selectedSheetMusicId }` per user and setlist in `localStorage`, 12 h expiry,
+  restored on mount for every source; `wipeAll()` clears them.
 
 ### Real-time Features
 

@@ -21,6 +21,9 @@ interface SyncControlsProps {
   onLeaveSession: () => Promise<void>;
   onForceEndSession: () => Promise<void>;
   onTakeOverSession: () => Promise<void>;
+  /** Offline (§8.3): the trigger is inert and shows `disabledReason` instead of opening. */
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export const SyncControls: FC<SyncControlsProps> = ({
@@ -39,6 +42,8 @@ export const SyncControls: FC<SyncControlsProps> = ({
   onLeaveSession,
   onForceEndSession,
   onTakeOverSession,
+  disabled = false,
+  disabledReason,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -110,6 +115,18 @@ export const SyncControls: FC<SyncControlsProps> = ({
           </span>
         </LeaveButton>
       </ActiveSessionContainer>
+    );
+  }
+
+  // Offline: an inert trigger that says why (B4). Nothing opens, nothing connects.
+  if (disabled) {
+    return (
+      <SyncContainer>
+        <SyncButton type="button" disabled $isOpen={false} $hasSession={false} title={disabledReason} aria-label={disabledReason}>
+          <i className="bi bi-wifi-off" />
+          <span>{disabledReason}</span>
+        </SyncButton>
+      </SyncContainer>
     );
   }
 
@@ -299,7 +316,12 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
     padding: ${theme.space[2]} ${theme.space[4]};
   }
 
-  &:hover {
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
     background: ${(props) =>
       props.$isOpen
         ? theme.colors.brand.primaryHover

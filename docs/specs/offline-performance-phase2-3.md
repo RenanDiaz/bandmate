@@ -12,6 +12,52 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.4: perform from the snapshot (decisions the spec did not cover).**
+  - **Missing files (§9.3), narrowed.** Only a blob that is **absent or reads
+    empty** (checked in `resolvePdfUrl`, first bytes only) counts as missing.
+    Online it is recorded in `missingFiles` (reason `unknown`, `partial`) and
+    its `file:` key is deleted, so Retry/Update fetches it again instead of
+    counting it present. Offline nothing is written: the PDF is unavailable for
+    that session only, so a transient read failure never persists mid-show. A
+    **pdf.js load error on a readable blob** (memory pressure, a killed worker)
+    is a view error with "Try again" (release, fresh blob URL, viewer
+    remounted) and never touches the store or `completeness`.
+  - **`RowRefreshResult.status` gains `"skipped"`** (additive): no snapshot of
+    the current user, a download of the setlist running or journaled (§4.3), or
+    a perform-mode patch committed while the rows were being fetched
+    (`rowsUpdatedAt` moved; the patch wins, the next open refreshes). Without a
+    valid session it rejects `not-authenticated`; offline it is `failed`
+    without a request.
+  - **Special-item ids across refreshes.** Items the server never saved with an
+    id get a random one on every read (`normalizeSetlistItem`); the refresh
+    gives them back the snapshot's id (same type + label), so an unchanged
+    setlist compares equal and the current item is kept.
+  - **Post-commit refresh (§4.3)** runs inside `downloadSetlist` and
+    `resumeInterruptedDownloads` (online, with a session) and the returned
+    `meta` is re-read after it, so a fresh download reports `freshness: "fresh"`.
+  - **Source selection** lives in a plain-TS `PerformanceDataController`
+    (unit-tested; no DOM in the test setup); the snapshot source is chosen
+    before anything touches the network, and "no snapshot" falls through to
+    the network source only when online. `PerformanceData` gains
+    `unavailableOffline` for §8.2 rule 3. The whole selection is behind
+    `isOfflineDownloadsEnabled()` until PR 2.5; capability gating is not.
+  - **Online server-write failure of a PDF choice** on the snapshot source
+    falls back to `recordLocalPreference` (flushed next time), so it never
+    toasts and never loses the choice. `recordLocalPreference` needs only the
+    current uid (works in `offline-cached`, no network).
+  - **Background refresh also runs when the connection returns** mid-show, not
+    only on open.
+  - **Current item across row changes:** kept by `getSetlistItemKey`; if it was
+    removed, the first following item that remains, else the closest
+    preceding one — never back to the start.
+  - **Reorder shortcut.** The button title already advertised **R**, which was
+    never wired; it now toggles reorder, and is a no-op when reordering is not
+    allowed (B5). The view has **no note-editing UI**, so `canEditNotes` has
+    nothing to gate yet.
+  - **Position (A2)** is restored once the data is ready (index clamped, the
+    PDF only for the restored song and only if it still exists) and written on
+    every change of index, view or PDF, for both sources.
+
 - **2026-09-25 — PR 2.3: "Make available offline" action (UI decisions).**
   - **One owner for the running download.** The service keeps no "current
     download" and returns results only to `downloadSetlist`'s caller, so a UI
@@ -1523,9 +1569,13 @@ assumed.
    capped by an opaque quota; `estimate()` values on Safari are rounded and
    approximate, so the UI says "about".
 3. **Zero-length blobs after partial eviction.** Seen in the wild: the key
-   exists, the blob reads as empty. → `verifySnapshot` slices the blob; the
-   viewer treats a load error on a snapshot file as "missing" and marks it in
-   `missingFiles` rather than crashing the view.
+   exists, the blob reads as empty. → `verifySnapshot` slices the blob;
+   performance mode checks the first bytes before creating a blob URL. An
+   absent or empty blob is shown as "Not downloaded" and, **online only**,
+   recorded in `missingFiles` with its `file:` key deleted so Retry refetches
+   it; offline it is unavailable for the session and nothing is written. A
+   pdf.js failure on a readable blob is never treated as missing: the viewer
+   shows "Try again" (fresh blob URL) and the store is untouched (PR 2.4).
 4. **Service worker activation during a show.** With `prompt` mode a new
    worker waits; iOS may still terminate and restart the running worker at any
    time, which is harmless because the precache is on disk. A backgrounded PWA

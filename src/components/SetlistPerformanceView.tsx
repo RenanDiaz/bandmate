@@ -48,6 +48,9 @@ import {
 import { resolveInitialSheetMusic } from "../services/sheetMusicPreferencesService";
 import { useSetlistPerformanceData } from "../hooks/useSetlistPerformanceData";
 import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
+import { useBandContext } from "../context/useBandContext";
+import { readPerformPosition, writePerformPosition } from "../lib/performPosition";
+import { indexAfterItemsChange } from "../utils/performItems";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -203,8 +206,13 @@ const SetlistPerformanceView: FC = () => {
   const { t } = useTranslation();
   const toast = useToast();
 
+  const { user, isOnline } = useBandContext();
+  const userId = user?.id ?? null;
+
   const perf = useSetlistPerformanceData(setlistId);
   const setlist = perf.setlist;
+  const { capabilities } = perf;
+  const onSnapshot = perf.source === "snapshot";
   const preferredSheetMusicIds = perf.preferredSheetMusicIds;
   // Local copy of the items: drag-and-drop reorders it before it is saved.
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
@@ -219,9 +227,20 @@ const SetlistPerformanceView: FC = () => {
   const preferredSheetMusicIdsRef = useRef<Record<string, string>>({});
   // Instrument of the last PDF this user picked in this band (device-local shortcut).
   const preferredInstrumentRef = useRef<string | null>(null);
+  const unavailableSheetMusicIdsRef = useRef<ReadonlySet<string>>(new Set());
+  const selectedSheetMusicIdRef = useRef<string | null>(null);
   const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
   const [sheetMusicLoading, setSheetMusicLoading] = useState(false);
   const [showAddPdfModal, setShowAddPdfModal] = useState(false);
+  // pdf.js failed on a resolved PDF: a retryable view error, never a missing file.
+  const [pdfViewerError, setPdfViewerError] = useState(false);
+  const [pdfReloadKey, setPdfReloadKey] = useState(0);
+  // A2: the saved position is applied once, when the data is ready; its PDF
+  // only for the restored song.
+  const positionRestoredRef = useRef(false);
+  const pendingRestoredPdfRef = useRef<{ index: number; sheetMusicId: string } | null>(null);
+  // The song the current PDF selection belongs to (a row refresh keeps it).
+  const selectionSongIdRef = useRef<string | null>(null);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
@@ -305,6 +324,7 @@ const SetlistPerformanceView: FC = () => {
     bandId: setlist?.band_id || 0,
     onSongIndexChange: handleSyncIndexChange,
     onPlaybackChange: handleSyncPlaybackChange,
+    enabled: capabilities.canSync,
   });
 
   // Local backing tracks hook
@@ -380,28 +400,63 @@ const SetlistPerformanceView: FC = () => {
     setIsReorderMode(false);
   };
 
+  const canStartReorder = capabilities.canReorder && setlistItems.length >= 2 && syncRole !== "viewer";
+
   const toggleReorderMode = () => {
     if (isReorderMode) {
       handleCancelReorder();
-    } else {
+    } else if (canStartReorder) {
       setShowSongList(true);
       setIsReorderMode(true);
     }
   };
 
   // Take the loaded items, and any later replacement, except while the user
-  // is reordering: leaving reorder mode picks up the latest items.
+  // is reordering: leaving reorder mode picks up the latest items. A
+  // replacement mid-show (row refresh, write) keeps the current item by
+  // identity, not by index; a removed one leaves us on the nearest remaining
+  // item (§8.2).
+  const setlistItemsRef = useRef<SetlistItem[]>([]);
   useEffect(() => {
     if (isReorderMode) return;
+    const previous = setlistItemsRef.current;
+    if (previous === perf.items) return;
+    setlistItemsRef.current = perf.items;
     setSetlistItems(perf.items);
+    if (previous.length > 0) setCurrentIndex((index) => indexAfterItemsChange(previous, index, perf.items));
   }, [perf.items, isReorderMode]);
-
-  // A failed load bounces back to the list, as before.
   useEffect(() => {
-    if (perf.status !== "error") return;
+    setlistItemsRef.current = setlistItems;
+  }, [setlistItems]);
+
+  // A2: restore the saved position once the data is ready (clamped: the
+  // setlist may have changed); a position older than 12 h is gone on read.
+  useEffect(() => {
+    if (perf.status !== "ready" || positionRestoredRef.current || !setlistId) return;
+    positionRestoredRef.current = true;
+    if (!userId) return;
+    const saved = readPerformPosition(userId, setlistId);
+    if (!saved || perf.items.length === 0) return;
+    const index = Math.min(saved.currentIndex, perf.items.length - 1);
+    setCurrentIndex(index);
+    setContentView(saved.contentView);
+    pendingRestoredPdfRef.current = saved.selectedSheetMusicId ? { index, sheetMusicId: saved.selectedSheetMusicId } : null;
+  }, [perf.status, perf.items, setlistId, userId]);
+
+  // A2: save it on every change, for every source (after the restore ran).
+  useEffect(() => {
+    if (perf.status !== "ready" || !positionRestoredRef.current || !userId || !setlistId) return;
+    writePerformPosition(userId, setlistId, { currentIndex, contentView, selectedSheetMusicId });
+  }, [perf.status, userId, setlistId, currentIndex, contentView, selectedSheetMusicId]);
+
+  // A failed load bounces back to the list, as before, except with no
+  // offline copy and no connection: that renders "Not available offline"
+  // below, with no toast and no bounce (B8).
+  useEffect(() => {
+    if (perf.status !== "error" || perf.unavailableOffline) return;
     toast.error(t("setlists.detail.loadError"));
     navigate("/setlists");
-  }, [perf.status, navigate]);
+  }, [perf.status, perf.unavailableOffline, navigate]);
 
   useEffect(() => {
     // Keyboard navigation
@@ -440,12 +495,17 @@ const SetlistPerformanceView: FC = () => {
       } else if (e.key === "0") {
         e.preventDefault();
         resetFontSize();
+      } else if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // A no-op when reordering isn't allowed (offline, guest, viewer, B5).
+        if (!isReorderMode && !canStartReorder) return;
+        e.preventDefault();
+        toggleReorderMode();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, setlistItems.length, isFullscreen, navigate]);
+  }, [currentIndex, setlistItems.length, isFullscreen, navigate, isReorderMode, canStartReorder]);
 
   // Close font size dropdown on click outside
   useEffect(() => {
@@ -549,7 +609,11 @@ const SetlistPerformanceView: FC = () => {
   useEffect(() => {
     preferredSheetMusicIdsRef.current = perf.preferredSheetMusicIds;
     preferredInstrumentRef.current = perf.preferredInstrument;
-  }, [perf.preferredSheetMusicIds, perf.preferredInstrument]);
+    unavailableSheetMusicIdsRef.current = perf.unavailableSheetMusicIds;
+  }, [perf.preferredSheetMusicIds, perf.preferredInstrument, perf.unavailableSheetMusicIds]);
+  useEffect(() => {
+    selectedSheetMusicIdRef.current = selectedSheetMusicId;
+  }, [selectedSheetMusicId]);
 
   // Pick the current song's sheet music from the prefetched lists.
   const loadSheetMusicList = useCallback(() => {
@@ -566,10 +630,28 @@ const SetlistPerformanceView: FC = () => {
 
     const list = perf.sheetMusicBySongId[songForItem.id] ?? [];
     setSheetMusicList(list);
+    const sameSong = selectionSongIdRef.current === songForItem.id;
+    selectionSongIdRef.current = songForItem.id;
+
+    // A2: the restored PDF, only for the restored song, if it still exists.
+    const restored = pendingRestoredPdfRef.current;
+    if (restored && restored.index === currentIndex) {
+      pendingRestoredPdfRef.current = null;
+      if (list.some((sm) => sm.id === restored.sheetMusicId)) {
+        setSelectedSheetMusicId(restored.sheetMusicId);
+        return;
+      }
+    }
+
+    // A row refresh on the same song keeps the selected PDF if it still exists (§8.2).
+    const current = selectedSheetMusicIdRef.current;
+    if (sameSong && current && list.some((sm) => sm.id === current)) return;
+
     // Open this user's preferred PDF, else the one matching their instrument,
-    // else the band's first one.
+    // else the band's first one; on the device first (snapshot source).
+    const available = list.filter((sm) => !unavailableSheetMusicIdsRef.current.has(sm.id));
     const initial = resolveInitialSheetMusic(
-      list,
+      available.length > 0 ? available : list,
       preferredSheetMusicIdsRef.current[songForItem.id],
       preferredInstrumentRef.current
     );
@@ -580,10 +662,11 @@ const SetlistPerformanceView: FC = () => {
   const { selectSheetMusic, retryStaleSheetMusic } = perf;
   const handleSelectSheetMusic = useCallback(
     (sheetMusic: SheetMusic) => {
+      if (perf.unavailableSheetMusicIds.has(sheetMusic.id)) return; // "Not downloaded"
       setSelectedSheetMusicId(sheetMusic.id);
       selectSheetMusic(sheetMusic);
     },
-    [selectSheetMusic]
+    [selectSheetMusic, perf.unavailableSheetMusicIds]
   );
 
   useEffect(() => {
@@ -603,10 +686,12 @@ const SetlistPerformanceView: FC = () => {
     // resolution never replaces the current PDF.
     let cancelled = false;
 
+    setPdfViewerError(false);
     const loadSheetMusicUrl = async () => {
       const selectedSheetMusic = sheetMusicList.find((sm) => sm.id === selectedSheetMusicId);
 
-      if (!selectedSheetMusic?.file_url) {
+      // Not on the device: rendered as "Not downloaded", nothing to resolve.
+      if (!selectedSheetMusic?.file_url || unavailableSheetMusicIdsRef.current.has(selectedSheetMusic.id)) {
         setSheetMusicUrl(null);
         // A cancelled resolution no longer clears the flag itself.
         setSheetMusicLoading(false);
@@ -631,7 +716,9 @@ const SetlistPerformanceView: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedSheetMusicId, sheetMusicList, resolvePdfUrl]);
+    // pdfReloadKey: "Try again" after a viewer error re-resolves (fresh blob URL).
+    // The unavailable set: a PDF found unreadable stops resolving.
+  }, [selectedSheetMusicId, sheetMusicList, resolvePdfUrl, pdfReloadKey, perf.unavailableSheetMusicIds]);
 
   // Handle audio time update (host syncs to viewers)
   const handleAudioTimeUpdate = useCallback((timeInSeconds: number) => {
@@ -789,6 +876,23 @@ const SetlistPerformanceView: FC = () => {
     return setlistSong?.notes;
   };
 
+  // No offline copy and no connection (§8.2 rule 3, B8).
+  if (perf.status === "error" && perf.unavailableOffline) {
+    return (
+      <ErrorContainer>
+        <ErrorIcon>
+          <i className="bi bi-wifi-off"></i>
+        </ErrorIcon>
+        <ErrorTitle>{t("performance.notAvailableOffline")}</ErrorTitle>
+        <ErrorText>{t("performance.notAvailableOfflineHint")}</ErrorText>
+        <BackButton onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/setlists"))}>
+          <i className="bi bi-arrow-left"></i>
+          {t("performance.back")}
+        </BackButton>
+      </ErrorContainer>
+    );
+  }
+
   // "error" keeps the spinner for the one render before the bounce above.
   if (perf.status !== "ready") {
     return (
@@ -889,6 +993,12 @@ const SetlistPerformanceView: FC = () => {
             <SetlistInfo>
               <SetlistName>{setlist.name}</SetlistName>
             </SetlistInfo>
+            {onSnapshot && (
+              <SourceBadge $offline={!isOnline} title={isOnline ? t("performance.offlineCopyBadgeHint") : undefined}>
+                <i className={`bi ${isOnline ? "bi-cloud-check" : "bi-wifi-off"}`}></i>
+                <span>{isOnline ? t("performance.offlineCopyBadge") : t("performance.offlineBadge")}</span>
+              </SourceBadge>
+            )}
           </TopBarLeft>
 
           <SongCounter>
@@ -935,6 +1045,8 @@ const SetlistPerformanceView: FC = () => {
                 onLeaveSession={leaveSession}
                 onForceEndSession={forceEndSession}
                 onTakeOverSession={takeOverSession}
+                disabled={!capabilities.canSync && !isSyncConnected}
+                disabledReason={t("performanceSync.needsConnection")}
               />
               {/* Self-contained (reads the offline service itself); no Remove here. */}
               <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="toolbar" />
@@ -1011,14 +1123,16 @@ const SetlistPerformanceView: FC = () => {
                   )}
                 </FontSizeButtonWrapper>
               )}
-              <IconButton
-                onClick={toggleReorderMode}
-                title={t("performance.reorderSongsShortcut")}
-                $active={false}
-                disabled={setlistItems.length < 2 || syncRole === "viewer"}
-              >
-                <i className="bi bi-arrow-down-up"></i>
-              </IconButton>
+              {capabilities.canReorder && (
+                <IconButton
+                  onClick={toggleReorderMode}
+                  title={t("performance.reorderSongsShortcut")}
+                  $active={false}
+                  disabled={!canStartReorder}
+                >
+                  <i className="bi bi-arrow-down-up"></i>
+                </IconButton>
+              )}
               <IconButton
                 onClick={() => setShowSongList(!showSongList)}
                 title={t("performance.songListShortcut")}
@@ -1222,19 +1336,25 @@ const SetlistPerformanceView: FC = () => {
                       <SheetMusicSelector>
                         {sheetMusicList.map((sm) => {
                           const isPreferred = preferredSheetMusicIds[sm.song_id] === sm.id;
+                          const notDownloaded = perf.unavailableSheetMusicIds.has(sm.id);
                           return (
                             <SheetMusicSelectorItem
                               key={sm.id}
+                              type="button"
                               $active={sm.id === selectedSheetMusicId}
                               onClick={() => handleSelectSheetMusic(sm)}
+                              disabled={notDownloaded}
                               title={
-                                isPreferred
-                                  ? t("sheetMusic.myDefault")
-                                  : t("sheetMusic.selectRemembers")
+                                notDownloaded
+                                  ? t("sheetMusic.notDownloaded")
+                                  : isPreferred
+                                    ? t("sheetMusic.myDefault")
+                                    : t("sheetMusic.selectRemembers")
                               }
                             >
                               <i className={getInstrumentIcon(sm.instrument)} />
                               <span>{sm.name}</span>
+                              {notDownloaded && <NotDownloadedTag>{t("sheetMusic.notDownloaded")}</NotDownloadedTag>}
                               {isPreferred && (
                                 <PreferredMark
                                   className="bi bi-star-fill"
@@ -1246,15 +1366,46 @@ const SetlistPerformanceView: FC = () => {
                         })}
                       </SheetMusicSelector>
                     )}
-                    {sheetMusicLoading ? (
+                    {selectedSheetMusicId && perf.unavailableSheetMusicIds.has(selectedSheetMusicId) ? (
+                      <EmptyContent>
+                        <i className="bi bi-cloud-slash"></i>
+                        <p>{t("sheetMusic.notOnDevice")}</p>
+                      </EmptyContent>
+                    ) : sheetMusicLoading ? (
                       <EmptyContent>
                         <i className="bi bi-hourglass-split"></i>
                         <p>{t("sheetMusic.loading", "Loading sheet music...")}</p>
                       </EmptyContent>
+                    ) : pdfViewerError ? (
+                      <EmptyContent>
+                        <i className="bi bi-exclamation-triangle"></i>
+                        <p>{t("sheetMusic.openError")}</p>
+                        <AddPdfButton
+                          type="button"
+                          onClick={() => {
+                            // Release + re-resolve (a fresh blob URL) and remount the viewer.
+                            setPdfViewerError(false);
+                            setSheetMusicUrl(null);
+                            setPdfReloadKey((key) => key + 1);
+                          }}
+                        >
+                          <i className="bi bi-arrow-repeat"></i>
+                          {t("sheetMusic.tryAgain")}
+                        </AddPdfButton>
+                      </EmptyContent>
                     ) : sheetMusicUrl ? (
-                      <PDFErrorBoundary retryLabel={t("performance.retry")} fallbackMessage={t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")}>
+                      <PDFErrorBoundary
+                        retryLabel={t("performance.retry")}
+                        fallbackMessage={
+                          onSnapshot && !isOnline
+                            ? t("sheetMusic.offlineViewerError")
+                            : t("sheetMusic.loadError", "Failed to load sheet music. Your browser may not support this feature.")
+                        }
+                      >
                         <SheetMusicViewer
+                          key={`${selectedSheetMusicId}-${pdfReloadKey}`}
                           ref={sheetMusicViewerRef}
+                          onLoadError={() => setPdfViewerError(true)}
                           pdfUrl={sheetMusicUrl}
                           pageTimings={sheetMusicList.find((sm) => sm.id === selectedSheetMusicId)?.page_timings}
                           currentTime={displayAudioTime}
@@ -1302,10 +1453,12 @@ const SetlistPerformanceView: FC = () => {
                   <EmptyContent>
                     <i className="bi bi-file-earmark-music"></i>
                     <p>{t("performance.noSheetMusicForSong", "No PDF uploaded for this song")}</p>
-                    <AddPdfButton type="button" onClick={() => setShowAddPdfModal(true)}>
-                      <i className="bi bi-cloud-arrow-up"></i>
-                      {t("performance.addSheetMusic", "Add PDF")}
-                    </AddPdfButton>
+                    {capabilities.canUpload && (
+                      <AddPdfButton type="button" onClick={() => setShowAddPdfModal(true)}>
+                        <i className="bi bi-cloud-arrow-up"></i>
+                        {t("performance.addSheetMusic", "Add PDF")}
+                      </AddPdfButton>
+                    )}
                   </EmptyContent>
                 ) : displayContent.type !== "none" && (displaySections.length > 0 || currentSong.timing_data?.lineTimings?.length) ? (
                   <SyncedLyricsDisplay
@@ -1428,7 +1581,7 @@ const SetlistPerformanceView: FC = () => {
       </MobileToggleButton>
 
       {/* Add PDF Modal */}
-      {showAddPdfModal && currentSong && setlist && (
+      {showAddPdfModal && capabilities.canUpload && currentSong && setlist && (
         <AddPdfModalOverlay onClick={() => setShowAddPdfModal(false)}>
           <AddPdfModalContainer onClick={(e) => e.stopPropagation()}>
             <AddPdfModalHeader>
@@ -1500,6 +1653,22 @@ const TopBarRow = styled.div`
     flex: 1;
     justify-content: flex-start;
   }
+`;
+
+/** §8.3: "Offline" (no connection, on the snapshot) or a subtle "Offline copy" (online, on the snapshot). */
+const SourceBadge = styled.span<{ $offline: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  flex-shrink: 0;
+  padding: 2px ${theme.space[2]};
+  border-radius: ${theme.radius.full};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
+  color: ${(props) => (props.$offline ? theme.colors.semantic.warning : theme.colors.dark.text.tertiary)};
+  border: 1px solid ${(props) => (props.$offline ? theme.colors.semantic.warning : theme.colors.dark.border.default)};
+  background: ${(props) => (props.$offline ? theme.colors.semantic.warning + "1a" : "transparent")};
 `;
 
 const TopBarLeft = styled.div`
@@ -2206,11 +2375,22 @@ const SheetMusicSelectorItem = styled.button<{ $active: boolean }>`
     font-size: ${theme.fontSizes.body};
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${(props) =>
       props.$active ? theme.colors.brand.primaryHover : theme.colors.dark.bg.elevated};
     border-color: ${theme.colors.brand.primary};
   }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
+const NotDownloadedTag = styled.span`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: ${theme.colors.dark.text.tertiary};
+  font-weight: ${theme.fontWeights.regular};
 `;
 
 const PreferredMark = styled.i`

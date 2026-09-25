@@ -17,6 +17,12 @@ interface SheetMusicViewerProps {
   onNumPagesLoaded?: (numPages: number) => void;
   initialPage?: number;
   invertColors?: boolean;
+  /**
+   * pdf.js could not open the PDF. When set, the parent renders the error
+   * (performance mode offers "Try again"); the file itself is never treated
+   * as missing for this (§9.3).
+   */
+  onLoadError?: (error: Error) => void;
 }
 
 export interface SheetMusicViewerHandle {
@@ -245,6 +251,7 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
   onNumPagesLoaded,
   initialPage = 1,
   invertColors = false,
+  onLoadError,
 }: SheetMusicViewerProps, ref) {
   const { t } = useTranslation();
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -383,6 +390,7 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
     console.error("PDF load error:", err);
     setError(err.message);
     setLoading(false);
+    onLoadError?.(err);
   };
 
   const handlePageLoadSuccess = (page: { originalWidth: number; originalHeight: number }) => {
