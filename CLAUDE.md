@@ -330,4 +330,5 @@ needed") so reviewers know it was checked, not skipped.
 - [docs/INVITATION_FLOW_COMPLETE.md](docs/INVITATION_FLOW_COMPLETE.md) - Member invitation system
 - [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) - Invitation emails (Edge Function + Resend)
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) - Google OAuth configuration
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (proposed): offline performance mode
 - [migrations/README.md](migrations/README.md) - Database migration guide
