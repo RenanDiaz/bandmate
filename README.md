@@ -26,6 +26,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 **Setlists**
 - Drag-and-drop editor, drafts, printable setlists
+- Make available offline (behind a feature flag until offline performance ships): save a setlist's songs and sheet music PDFs on the device (from the setlist, its show or performance mode), with progress, partial-download retry and resume after interruptions
 - AI-assisted setlist generation and optimization (Groq, optional)
 
 **Shows & rehearsals**
@@ -62,6 +63,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    ```bash
    git clone https://github.com/RenanDiaz/bandmate.git
    cd bandmate
+   nvm use        # Node 22 (.nvmrc)
    npm install
    ```
 
@@ -75,6 +77,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
    | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
    | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
+   | `VITE_OFFLINE_DOWNLOADS` | — | `true` shows "Make available offline" (off by default until offline performance ships; per device: `localStorage.bandmate_flag_offline = "1"`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
    > Don't put production secrets in them.
@@ -128,8 +131,9 @@ prerender and the precache check (which fails the build if a shell file would
 be missing offline). See [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
 Unit tests run with Vitest (`npm test`); they cover the offline store, the
-offline download engine and the offline auth logic. There are no component or
-end-to-end tests yet.
+offline download engine, the offline auth logic and the download UI controller.
+The offline download dialogs have render tests (`renderToStaticMarkup`, no DOM);
+there are no interactive component or end-to-end tests yet.
 
 ## 🗂️ Project Layout
 

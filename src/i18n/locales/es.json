@@ -1326,5 +1326,104 @@
     "sectionsDetected": "{{count}} sección(es) detectada(s)",
     "sectionsPreserved": "La estructura de secciones e ítems especiales se preservará",
     "optimizingPerSection": "Optimizando cada sección independientemente mientras se preserva la estructura..."
+  },
+  "offline": {
+    "action": {
+      "makeAvailable": "Guardar para usar sin conexión",
+      "showReady": "Preparar este show sin conexión",
+      "retry": "Reintentar PDFs faltantes",
+      "preparing": "Preparando…",
+      "downloading": "Descargando… {{done}}/{{total}}",
+      "needsConnection": "Necesita conexión"
+    },
+    "badge": {
+      "available": "Disponible sin conexión · {{date}}",
+      "partial": "Parcial · {{date}}",
+      "availableShort": "Sin conexión",
+      "partialShort": "Parcial"
+    },
+    "confirm": {
+      "title": "¿Guardar para usar sin conexión?",
+      "titleShow": "¿Preparar este show sin conexión?",
+      "message": "«{{setlist}}» se guardará en este dispositivo para que puedas tocarlo sin conexión.",
+      "confirm": "Descargar",
+      "songs_one": "{{count}} canción",
+      "songs_other": "{{count}} canciones",
+      "pdfs_one": "{{count}} PDF por descargar",
+      "pdfs_other": "{{count}} PDFs por descargar",
+      "size": "unos {{size}}",
+      "nothingToDownload": "No hay nada nuevo que descargar",
+      "unknownSize_one": "+ {{count}} archivo de tamaño desconocido",
+      "unknownSize_other": "+ {{count}} archivos de tamaño desconocido",
+      "alreadyPresent_one": "{{count}} archivo ya está en este dispositivo ({{size}})",
+      "alreadyPresent_other": "{{count}} archivos ya están en este dispositivo ({{size}})",
+      "quotaWarning": "Puede que este dispositivo no tenga suficiente espacio libre (unos {{free}} libres). Puedes descargar igual: se listarán los PDFs que no quepan.",
+      "quotaWarningNoEstimate": "Puede que este dispositivo no tenga suficiente espacio libre. Puedes descargar igual: se listarán los PDFs que no quepan.",
+      "iosSaved": "Se guarda en este dispositivo, en esta app.",
+      "iosInstallHint": "Estás en una pestaña del navegador. En iPhone y iPad, lo que guardes aquí no estará en la app instalada. Instala Bandmate (Compartir → Agregar a inicio) y descárgalo allí."
+    },
+    "progress": {
+      "title": "Descargando para usar sin conexión",
+      "files": "{{done}} de {{total}} archivos",
+      "bytes": "{{done}} de {{total}}",
+      "current": "{{song}} — {{pdf}}",
+      "preparing": "Preparando…",
+      "committing": "Guardando en este dispositivo…",
+      "keepOpen": "Mantén la app abierta hasta que termine la descarga.",
+      "hide": "Ocultar",
+      "cancel": "Cancelar descarga"
+    },
+    "result": {
+      "doneTitle": "Disponible sin conexión",
+      "partialTitle": "Guardado, con PDFs faltantes",
+      "partialIntro": "No se pudieron guardar estos PDFs. Todo lo demás está disponible sin conexión.",
+      "failedTitle": "No se pudo guardar para usar sin conexión",
+      "retry": "Reintentar",
+      "close": "Cerrar",
+      "viewRunning": "Ver la descarga en curso",
+      "unknownSong": "Canción",
+      "unknownPdf": "PDF"
+    },
+    "reason": {
+      "quota": "no hay espacio suficiente",
+      "network": "se perdió la conexión",
+      "not-found": "ya no está en el servidor",
+      "forbidden": "acceso denegado",
+      "unknown": "error desconocido",
+      "not-downloaded": "no descargado"
+    },
+    "failure": {
+      "offline": "Estás sin conexión. Conéctate e inténtalo de nuevo.",
+      "not-authenticated": "Tu sesión expiró. Vuelve a iniciar sesión para descargar.",
+      "setlist-not-found": "Este setlist ya no existe o ya no eres miembro de su banda.",
+      "download-in-progress": "«{{setlist}}» se está descargando. Espera a que termine o cancélala.",
+      "downloadInProgressElsewhere": "Ya hay una descarga en curso en otra pestaña o ventana de Bandmate.",
+      "plan-stale": "Los datos de la descarga están desactualizados. Inténtalo de nuevo.",
+      "storage-unavailable": "Este navegador no puede guardar copias sin conexión (por ejemplo, en navegación privada).",
+      "quota-rows": "No hay espacio para guardar este setlist. Elimina otro setlist sin conexión e inténtalo de nuevo.",
+      "cancelled": "Se canceló la descarga.",
+      "unknown": "Algo salió mal. Inténtalo de nuevo."
+    },
+    "remove": {
+      "button": "Eliminar copia sin conexión",
+      "title": "¿Eliminar la copia sin conexión?",
+      "message": "«{{setlist}}» ya no estará disponible sin conexión en este dispositivo. Se conservan los PDFs que usan tus otros setlists sin conexión.",
+      "confirm": "Eliminar",
+      "success": "Copia sin conexión eliminada",
+      "error": "No se pudo eliminar la copia sin conexión"
+    },
+    "interrupted": {
+      "title": "Descarga interrumpida.",
+      "message": "Iniciada el {{date}}. Reanúdala para terminar de guardar este setlist en el dispositivo.",
+      "resume": "Reanudar",
+      "discard": "Descartar",
+      "needsConnection": "Se reanuda cuando tengas conexión"
+    },
+    "startup": {
+      "resumed": "«{{setlist}}» está disponible sin conexión",
+      "resumedPartial": "«{{setlist}}» se guardó con PDFs faltantes",
+      "stale_one": "Una descarga interrumpida era demasiado antigua y se descartó. Descárgala de nuevo.",
+      "stale_other": "{{count}} descargas interrumpidas eran demasiado antiguas y se descartaron. Descárgalas de nuevo."
+    }
   }
 }

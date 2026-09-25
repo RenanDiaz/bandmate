@@ -1326,5 +1326,104 @@
     "sectionsDetected": "{{count}} section(s) detected",
     "sectionsPreserved": "Section structure and special items will be preserved",
     "optimizingPerSection": "Optimizing each section independently while preserving structure..."
+  },
+  "offline": {
+    "action": {
+      "makeAvailable": "Make available offline",
+      "showReady": "Get this show ready offline",
+      "retry": "Retry missing PDFs",
+      "preparing": "Preparing…",
+      "downloading": "Downloading… {{done}}/{{total}}",
+      "needsConnection": "Needs a connection"
+    },
+    "badge": {
+      "available": "Available offline · {{date}}",
+      "partial": "Partial · {{date}}",
+      "availableShort": "Offline",
+      "partialShort": "Partial"
+    },
+    "confirm": {
+      "title": "Make available offline?",
+      "titleShow": "Get this show ready offline?",
+      "message": "“{{setlist}}” will be saved on this device so you can perform it without a connection.",
+      "confirm": "Download",
+      "songs_one": "{{count}} song",
+      "songs_other": "{{count}} songs",
+      "pdfs_one": "{{count}} PDF to download",
+      "pdfs_other": "{{count}} PDFs to download",
+      "size": "about {{size}}",
+      "nothingToDownload": "Nothing new to download",
+      "unknownSize_one": "+ {{count}} file of unknown size",
+      "unknownSize_other": "+ {{count}} files of unknown size",
+      "alreadyPresent_one": "{{count}} file already on this device ({{size}})",
+      "alreadyPresent_other": "{{count}} files already on this device ({{size}})",
+      "quotaWarning": "This device may not have enough free space (about {{free}} free). You can still download: PDFs that don't fit will be listed.",
+      "quotaWarningNoEstimate": "This device may not have enough free space. You can still download: PDFs that don't fit will be listed.",
+      "iosSaved": "Saved on this device, in this app.",
+      "iosInstallHint": "You're in a browser tab. On iPhone and iPad, copies saved here aren't available in the installed app. Install Bandmate (Share → Add to Home Screen) and download it there."
+    },
+    "progress": {
+      "title": "Downloading for offline",
+      "files": "{{done}} of {{total}} files",
+      "bytes": "{{done}} of {{total}}",
+      "current": "{{song}} — {{pdf}}",
+      "preparing": "Preparing…",
+      "committing": "Saving on this device…",
+      "keepOpen": "Keep the app open until the download finishes.",
+      "hide": "Hide",
+      "cancel": "Cancel download"
+    },
+    "result": {
+      "doneTitle": "Available offline",
+      "partialTitle": "Saved, with missing PDFs",
+      "partialIntro": "These PDFs couldn't be saved. Everything else is available offline.",
+      "failedTitle": "Couldn't make it available offline",
+      "retry": "Retry",
+      "close": "Close",
+      "viewRunning": "View the running download",
+      "unknownSong": "Song",
+      "unknownPdf": "PDF"
+    },
+    "reason": {
+      "quota": "not enough space",
+      "network": "connection lost",
+      "not-found": "no longer on the server",
+      "forbidden": "access denied",
+      "unknown": "unknown error",
+      "not-downloaded": "not downloaded"
+    },
+    "failure": {
+      "offline": "You're offline. Connect and try again.",
+      "not-authenticated": "Your session has expired. Sign in again to download.",
+      "setlist-not-found": "This setlist no longer exists, or you're no longer a member of its band.",
+      "download-in-progress": "“{{setlist}}” is downloading. Wait for it to finish or cancel it.",
+      "downloadInProgressElsewhere": "A download is already running in another Bandmate tab or window.",
+      "plan-stale": "The download details are out of date. Try again.",
+      "storage-unavailable": "This browser can't store offline copies (for example, in private browsing).",
+      "quota-rows": "Not enough space to save this setlist. Remove another offline setlist and try again.",
+      "cancelled": "The download was cancelled.",
+      "unknown": "Something went wrong. Try again."
+    },
+    "remove": {
+      "button": "Remove offline copy",
+      "title": "Remove offline copy?",
+      "message": "“{{setlist}}” will no longer be available offline on this device. PDFs used by your other offline setlists are kept.",
+      "confirm": "Remove",
+      "success": "Offline copy removed",
+      "error": "Couldn't remove the offline copy"
+    },
+    "interrupted": {
+      "title": "Download interrupted.",
+      "message": "Started {{date}}. Resume to finish saving this setlist on the device.",
+      "resume": "Resume",
+      "discard": "Discard",
+      "needsConnection": "Resumes when you're online"
+    },
+    "startup": {
+      "resumed": "“{{setlist}}” is available offline",
+      "resumedPartial": "“{{setlist}}” was saved with missing PDFs",
+      "stale_one": "An interrupted download was too old and was discarded. Download it again.",
+      "stale_other": "{{count}} interrupted downloads were too old and were discarded. Download them again."
+    }
   }
 }

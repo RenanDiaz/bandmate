@@ -2,6 +2,10 @@ import { useState, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { Setlist } from "../services/setlistsService";
+import type { OfflineSnapshotMeta } from "../services/offlineSetlistService";
+import { useOfflineSnapshotMetas } from "../hooks/useOfflineDownload";
+import { OfflineBadge } from "./offline/OfflineDownloadAction";
+import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isSongItem } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -26,7 +30,8 @@ const SetlistCardItem: FC<{
   onPerform: (setlistId: string) => void;
   onEditSongs: (setlistId: string) => void;
   canEdit: boolean;
-}> = ({ setlist, onDelete, onView, onPerform, onEditSongs, canEdit }) => {
+  offlineMeta?: OfflineSnapshotMeta;
+}> = ({ setlist, onDelete, onView, onPerform, onEditSongs, canEdit, offlineMeta }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
   const { t } = useTranslation();
@@ -47,6 +52,7 @@ const SetlistCardItem: FC<{
               <i className="bi bi-music-note-beamed"></i>
               {t('setlists.songCount', { count: songCount })}
             </MetadataBadge>
+            {offlineMeta && <OfflineBadge meta={offlineMeta} />}
           </MetadataRow>
         </SetlistInfo>
 
@@ -136,6 +142,7 @@ const SetlistCardItem: FC<{
 
 export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit = true }) => {
   const navigate = useNavigate();
+  const offlineMetas = useOfflineSnapshotMetas(isOfflineDownloadsEnabled());
 
   const handleViewSetlist = (setlistId: string) => {
     navigate(`/setlists/${setlistId}`);
@@ -160,6 +167,7 @@ export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit = true }) =
           onPerform={handlePerformSetlist}
           onEditSongs={handleEditSongs}
           canEdit={canEdit}
+          offlineMeta={offlineMetas[setlist.id]}
         />
       ))}
     </SetlistsGrid>

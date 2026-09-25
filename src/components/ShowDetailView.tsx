@@ -14,6 +14,7 @@ import type { Song } from "../services/songsService";
 import { downloadShowICS } from "../lib/calendarExport";
 import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
+import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 import { useToast } from "../context/useToast";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
@@ -371,12 +372,16 @@ const ShowDetailView: FC = () => {
                     <i className="bi bi-music-note-list"></i>
                     Linked Setlist: {setlist.name}
                   </SetlistTitle>
-                  {setlistSongs.length > 0 && (
-                    <PerformButton onClick={handlePerformSetlist}>
-                      <i className="bi bi-play-circle"></i>
-                      Start Performance
-                    </PerformButton>
-                  )}
+                  <SetlistHeaderActions>
+                    {/* Same snapshot as the setlist's own detail (A3). */}
+                    <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="show" />
+                    {setlistSongs.length > 0 && (
+                      <PerformButton onClick={handlePerformSetlist}>
+                        <i className="bi bi-play-circle"></i>
+                        Start Performance
+                      </PerformButton>
+                    )}
+                  </SetlistHeaderActions>
                 </SetlistHeader>
                 <SetlistBody>
                   {setlistSongs.length === 0 ? (
@@ -810,6 +815,13 @@ const SetlistHeader = styled.div`
   border-bottom: 1px solid var(--color-border);
   gap: ${theme.space[3]};
   flex-wrap: wrap;
+`;
+
+const SetlistHeaderActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${theme.space[2]};
 `;
 
 const SetlistTitle = styled.h3`

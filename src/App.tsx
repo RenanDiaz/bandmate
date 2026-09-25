@@ -34,6 +34,7 @@ import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
 import { ToastProvider } from "./context/ToastContext";
 import { PwaReloadPrompt } from "./components/PwaReloadPrompt";
+import { useOfflineDownloadNotifier, useOfflineStartup } from "./hooks/useOfflineStartup";
 import { theme } from "./theme";
 
 const AppContent: FC = () => {
@@ -45,6 +46,9 @@ const AppContent: FC = () => {
   const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector, isResolvingBand, isCheckingAuth } =
     useBandContext();
   const navigate = useNavigate();
+  // Resume interrupted offline downloads, then GC (§4.4, §4.6).
+  useOfflineStartup();
+  useOfflineDownloadNotifier();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", mode);
