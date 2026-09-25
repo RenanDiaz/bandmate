@@ -51,7 +51,7 @@ export interface OfflineSchemaWipeLostEntry {
   bandId: number | null;
 }
 
-/** Written by a schema-mismatch wipe (§3.5 #2); read once per user, then dismissed. */
+/** Written by a schema-mismatch wipe (§3.5 #2); entries are removed as they are dismissed. */
 export interface OfflineSchemaWipeNotice {
   wipedAt: string;
   /** null when meta was missing/unreadable. */
@@ -59,8 +59,9 @@ export interface OfflineSchemaWipeNotice {
   toVersion: typeof OFFLINE_SCHEMA_VERSION;
   /** Only this user's entries are ever shown to them (§3.5 #1). */
   lost: OfflineSchemaWipeLostEntry[];
-  /** userIds that have dismissed it; the key is deleted once every userId in `lost` has. */
-  dismissedBy: string[];
+  // No per-user dismissal list: by A1 the store holds one user's data at a
+  // time, so dismissing removes that user's entries and the key goes when
+  // `lost` is empty.
 }
 
 export type OfflineStoreOpenResult =
@@ -133,7 +134,6 @@ async function wipeForSchema(
           fromVersion,
           toVersion: OFFLINE_SCHEMA_VERSION,
           lost: mergedLost,
-          dismissedBy: isValidNotice(previousNotice) ? previousNotice.dismissedBy ?? [] : [],
         }
       : null;
 

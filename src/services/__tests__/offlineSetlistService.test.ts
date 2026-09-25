@@ -69,8 +69,8 @@ describe("schema guard (§3.5 #2, A4)", () => {
     expect(stored[offlineKeys.schemaWipeNotice]).toMatchObject({
       fromVersion: OFFLINE_SCHEMA_VERSION + 1,
       toVersion: OFFLINE_SCHEMA_VERSION,
-      dismissedBy: [],
     });
+    expect(stored[offlineKeys.schemaWipeNotice]).not.toHaveProperty("dismissedBy");
     expect(events).toContainEqual({ type: "store-wiped", reason: "schema" });
 
     // Each user sees only their own entries.
@@ -101,7 +101,27 @@ describe("schema guard (§3.5 #2, A4)", () => {
     expect(await rawKeys()).toEqual([offlineKeys.meta, offlineKeys.schemaWipeNotice]);
   });
 
-  it("dismissal is per user; the notice goes once everyone dismissed", async () => {
+  it("dismissing all of the current user's entries deletes the notice", async () => {
+    await seedRaw({
+      ...storeMeta(0),
+      ...snapshotRecords({ userId: USER_A, setlistId: "s1" }),
+      ...snapshotRecords({ userId: USER_A, setlistId: "s3" }),
+    });
+    setOfflineCurrentUser(USER_A);
+    expect((await getSchemaWipeNotice())?.map((e) => e.setlistId).sort()).toEqual(["s1", "s3"]);
+    await dismissSchemaWipeNotice();
+    expect(await getSchemaWipeNotice()).toBeNull();
+    expect(await rawKeys()).not.toContain(offlineKeys.schemaWipeNotice);
+  });
+
+  it("dropping the last entry by id deletes the notice", async () => {
+    await seedRaw({ ...storeMeta(0), ...snapshotRecords({ userId: USER_A, setlistId: "s1" }) });
+    setOfflineCurrentUser(USER_A);
+    await dismissSchemaWipeNotice("s1");
+    expect(await rawKeys()).not.toContain(offlineKeys.schemaWipeNotice);
+  });
+
+  it("another user's entries (failed-wipe leftovers) are never returned or dismissed", async () => {
     await seedRaw({
       ...storeMeta(0),
       ...snapshotRecords({ userId: USER_A, setlistId: "s1" }),
@@ -116,6 +136,7 @@ describe("schema guard (§3.5 #2, A4)", () => {
     expect(await rawKeys()).toContain(offlineKeys.schemaWipeNotice);
 
     setOfflineCurrentUser(USER_B);
+    expect((await getSchemaWipeNotice())?.map((e) => e.setlistId)).toEqual(["s2"]);
     await dismissSchemaWipeNotice();
     expect(await rawKeys()).not.toContain(offlineKeys.schemaWipeNotice);
   });

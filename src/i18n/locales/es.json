@@ -81,7 +81,11 @@
     "pleaseSignIn": "Por favor inicia sesión para continuar",
     "manageYourBand": "Administra tu banda como un profesional",
     "emailPlaceholder": "tu@ejemplo.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "user": "Cuenta",
+    "offlineAccount": "Sin conexión",
+    "offlineAccountHint": "Sin conexión — usando la cuenta guardada en este dispositivo",
+    "signOutError": "No se pudo cerrar sesión. Inténtalo de nuevo."
   },
   "settings": {
     "title": "Configuración",

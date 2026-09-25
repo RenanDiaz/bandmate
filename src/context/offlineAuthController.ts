@@ -8,7 +8,7 @@ import { isAuthRetryableFetchError } from "@supabase/supabase-js";
  *
  * - "session": valid session; that uid's offline copies are visible.
  * - "offline-cached": no usable token and the refresh failed on the network
- *   (or, offline, getSession() hasn't answered within 1.5 s); `last-user`'s
+ *   (or getSession() hasn't answered within 1.5 s, online or not); `last-user`'s
  *   copies are visible. `user` is a minimal `OfflineUser`.
  * - "session-lost": no stored session, but `last-user` exists and never signed
  *   out; copies are HIDDEN, nothing is deleted.
@@ -22,13 +22,19 @@ export interface OfflineUser {
   offlineCached: true;
 }
 
-export type AppUser = User | OfflineUser;
+/**
+ * The context's user. Only `id` is guaranteed: in "offline-cached" it is an
+ * `OfflineUser` with nothing else, so every other field (email,
+ * user_metadata, created_at…) is optional and the compiler makes consumers
+ * handle it being missing.
+ */
+export type AppUser = { id: string; offlineCached?: true } & Partial<Omit<User, "id">>;
 
 export function isOfflineUser(user: AppUser | null): user is OfflineUser {
   return !!user && (user as OfflineUser).offlineCached === true;
 }
 
-/** How long BandContext waits for getSession() while offline before trusting `last-user` (A6). */
+/** How long BandContext waits for getSession() before trusting `last-user` provisionally (A6), online or offline. */
 export const GET_SESSION_OFFLINE_TIMEOUT_MS = 1500;
 
 export interface AuthState {
@@ -180,23 +186,24 @@ export class OfflineAuthController {
     const lastUserPromise = this.deps.offline.getLastUserId();
     const sessionPromise = safeGetSession(this.deps);
 
-    if (!this.deps.isOnline()) {
-      // Offline, getSession() with an expired token takes ≈25 s to give up
-      // (§1). Race it: after the timeout, trust `last-user` provisionally.
-      const timeoutMs = this.deps.timeoutMs ?? GET_SESSION_OFFLINE_TIMEOUT_MS;
-      const timedOut = new Promise<"timeout">((resolve) => {
-        this.timer = setTimeout(() => resolve("timeout"), timeoutMs);
-      });
-      const first = await Promise.race([sessionPromise, timedOut]);
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = null;
-      if (first === "timeout" && this.isCurrent(gen) && this.state.isCheckingAuth) {
-        const lastUserId = await lastUserPromise;
-        if (lastUserId && this.isCurrent(gen) && this.state.isCheckingAuth) {
-          this.applyOfflineCached(lastUserId, true);
-        }
-        // No `last-user`: nothing on the device to show; wait for the real answer.
+    // With a token near expiry or expired, getSession() takes ≈25 s to give up
+    // when the auth server can't be reached (§1). That happens on weak signal
+    // too, where navigator.onLine is true, so the race runs online and
+    // offline alike (A6): after the timeout, trust `last-user` provisionally.
+    // A valid token answers in ≈0 ms and never reaches the timeout.
+    const timeoutMs = this.deps.timeoutMs ?? GET_SESSION_OFFLINE_TIMEOUT_MS;
+    const timedOut = new Promise<"timeout">((resolve) => {
+      this.timer = setTimeout(() => resolve("timeout"), timeoutMs);
+    });
+    const first = await Promise.race([sessionPromise, timedOut]);
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    if (first === "timeout" && this.isCurrent(gen) && this.state.isCheckingAuth) {
+      const lastUserId = await lastUserPromise;
+      if (lastUserId && this.isCurrent(gen) && this.state.isCheckingAuth) {
+        this.applyOfflineCached(lastUserId, true);
       }
+      // No `last-user`: nothing on the device to show; wait for the real answer.
     }
 
     const result = await sessionPromise;

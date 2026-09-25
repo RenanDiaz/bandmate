@@ -355,6 +355,61 @@ describe("A6: offline, getSession() raced against 1.5 s", () => {
   });
 });
 
+describe("A6: weak signal (navigator.onLine true), getSession() raced against 1.5 s", () => {
+  it("resolves offline-cached from last-user within 1.5 s while online, then reconciles to session", async () => {
+    await seedUserA();
+    const before = await rawKeys();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answerAfter(25_000, { data: { session: session(USER_A) }, error: null });
+    await flush();
+
+    vi.advanceTimersByTime(GET_SESSION_OFFLINE_TIMEOUT_MS);
+    await flush();
+    expect(t.state()).toMatchObject({ authMode: "offline-cached", isCheckingAuth: false, provisional: true });
+    expect(t.state().user?.id).toBe(USER_A);
+    expect(t.confirmSpy).not.toHaveBeenCalled();
+    expect(t.deps.onConfirmedSignedOut).not.toHaveBeenCalled();
+    expect(await rawKeys()).toEqual(before);
+
+    vi.advanceTimersByTime(25_000);
+    await flush();
+    expect(t.state()).toMatchObject({ authMode: "session", provisional: false });
+    expect(t.confirmSpy).toHaveBeenCalledWith(USER_A);
+    expect(await rawKeys()).toEqual(before);
+  });
+
+  it("online, a getSession() that answers before 1.5 s publishes no provisional state", async () => {
+    await seedUserA();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const t = setup({ online: true });
+    const published: Array<{ authMode: string; provisional: boolean }> = [];
+    t.controller.subscribe((s) => published.push({ authMode: s.authMode, provisional: s.provisional }));
+    t.controller.start();
+    t.fake.answerAfter(200, { data: { session: session(USER_A) }, error: null });
+    vi.advanceTimersByTime(200);
+    await flush();
+    vi.advanceTimersByTime(GET_SESSION_OFFLINE_TIMEOUT_MS * 2);
+    await flush();
+    expect(published).toEqual([{ authMode: "session", provisional: false }]);
+  });
+
+  it("online without last-user keeps waiting for the real answer", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answerAfter(25_000, { data: { session: null }, error: null });
+    await flush();
+    vi.advanceTimersByTime(GET_SESSION_OFFLINE_TIMEOUT_MS * 2);
+    await flush();
+    expect(t.state().isCheckingAuth).toBe(true);
+    vi.advanceTimersByTime(25_000);
+    await flush();
+    expect(t.state()).toMatchObject({ authMode: "signed-out", isCheckingAuth: false });
+  });
+});
+
 describe("user-initiated sign-out", () => {
   it("wipes before signOut: store empty, position keys removed, signed-out", async () => {
     await seedUserA();
@@ -381,5 +436,30 @@ describe("user-initiated sign-out", () => {
     expect(t.deps.onConfirmedSignedOut).toHaveBeenCalled();
     offline.setOfflineCurrentUser(USER_A);
     expect(await offline.listSnapshots()).toEqual([]);
+  });
+
+  it("removes the schema-wipe notice (it names setlists)", async () => {
+    await seedRaw({
+      ...storeMeta(0),
+      ...snapshotRecords({ userId: USER_A, setlistId: "a1", setlistName: "Friday" }),
+      [offlineKeys.lastUser]: USER_A,
+    });
+    // Opening the store runs the schema wipe, which writes the notice.
+    offline.setOfflineCurrentUser(USER_A);
+    expect(await offline.getSchemaWipeNotice()).toEqual([{ setlistId: "a1", setlistName: "Friday", bandId: 1 }]);
+    expect(await rawKeys()).toContain(offlineKeys.schemaWipeNotice);
+    localStorage.setItem(performPositionKey(USER_A, "a1"), "{}");
+
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answer({ data: { session: session(USER_A) }, error: null });
+    await flush();
+    await performUserSignOut(offline.wipeAll, () => t.fake.auth.signOut());
+    await flush();
+
+    expect(await rawKeys()).toEqual([offlineKeys.meta]);
+    expect(localStorage.getItem(performPositionKey(USER_A, "a1"))).toBeNull();
+    offline.setOfflineCurrentUser(USER_A);
+    expect(await offline.getSchemaWipeNotice()).toBeNull();
   });
 });

@@ -1,41 +1,27 @@
-import type { User } from "@supabase/supabase-js";
 import type { FC } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Spinner } from "reactstrap";
-import { supabase } from "./lib/supabaseClient";
 import styled from "styled-components";
 import { theme } from "./theme";
 import { useTranslation } from "react-i18next";
 import { wipeAll } from "./services/offlineSetlistService";
 import { performUserSignOut } from "./context/offlineAuthController";
+import { useBandContext } from "./context/useBandContext";
+import { useToast } from "./context/useToast";
+import { signOutEverywhereOrLocally } from "./lib/authSession";
 
 export const AuthButton: FC = () => {
   const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
+  // The context's user, not a second getSession(): offline that call can take
+  // ≈25 s, and the navbar must agree with the rest of the app (spec §7.1).
+  const { user, authMode, isCheckingAuth } = useBandContext();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
-
-  useEffect(() => {
-    let mounted = true;
-    // Local session, not getUser(): offline the navbar must not show "Log in".
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) setUser(session?.user ?? null);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Avoid re-rendering on token refreshes that don't change the user (e.g.
-      // when the tab regains focus after switching apps).
-      const nextUser = session?.user ?? null;
-      setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
-    });
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
 
   const redirectToLogin = useCallback(() => {
     window.location.href = "/login";
@@ -48,13 +34,19 @@ export const AuthButton: FC = () => {
       // The only sign-out that deletes offline copies (spec §3.5 #6a): the
       // wipe is awaited before signOut(), and the SIGNED_OUT it causes is
       // recognized as user-initiated rather than a lost session.
-      await performUserSignOut(wipeAll, () => supabase.auth.signOut());
+      // signOutEverywhereOrLocally ends signed out on this device even when the
+      // auth server can't be reached.
+      await performUserSignOut(wipeAll, () => signOutEverywhereOrLocally());
     } catch (error) {
       console.error("Error signing out:", error);
+      toast.error(t("auth.signOutError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast, t]);
+
+  // Nothing while auth resolves (≤ 1.5 s with a last-user, A6): no "Sign in" flash.
+  if (isCheckingAuth) return null;
 
   if (!user) {
     return (
@@ -67,8 +59,10 @@ export const AuthButton: FC = () => {
     );
   }
 
-  const userEmail = user.email || "User";
-  const userInitial = userEmail.charAt(0).toUpperCase();
+  // "offline-cached": only the id is known (no email), so show a generic
+  // "Offline" account instead of an address.
+  const isOfflineAccount = authMode === "offline-cached" || !user.email;
+  const userLabel = user.email ?? (authMode === "offline-cached" ? t("auth.offlineAccount") : t("auth.user"));
 
   return (
     <UserMenuContainer>
@@ -77,18 +71,31 @@ export const AuthButton: FC = () => {
         disabled={loading}
         aria-label={t('auth.userMenu')}
       >
-        <UserAvatar>{userInitial}</UserAvatar>
-        <UserEmail>{userEmail}</UserEmail>
+        <UserAvatar>
+          {isOfflineAccount ? <i className="bi bi-person" aria-hidden="true"></i> : userLabel.charAt(0).toUpperCase()}
+        </UserAvatar>
+        <UserEmail>{userLabel}</UserEmail>
         <i className={`bi bi-chevron-${showUserMenu ? 'up' : 'down'}`}></i>
       </UserButton>
 
       {showUserMenu && (
         <UserDropdown>
-          <UserInfo>
-            <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
-            <UserInfoEmail>{userEmail}</UserInfoEmail>
-          </UserInfo>
-          <DropdownDivider />
+          {user.email ? (
+            <>
+              <UserInfo>
+                <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
+                <UserInfoEmail>{user.email}</UserInfoEmail>
+              </UserInfo>
+              <DropdownDivider />
+            </>
+          ) : authMode === "offline-cached" ? (
+            <>
+              <UserInfo>
+                <UserInfoLabel>{t('auth.offlineAccountHint')}</UserInfoLabel>
+              </UserInfo>
+              <DropdownDivider />
+            </>
+          ) : null}
           <LanguageSection>
             <LanguageLabel>
               <i className="bi bi-globe"></i>
