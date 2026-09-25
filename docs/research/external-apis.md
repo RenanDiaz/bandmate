@@ -1,5 +1,10 @@
 # API Research for Bandmate
 
+> **Research note (Nov 2025), not a description of the app.** Of what it
+> recommends, Spotify and MusicBrainz shipped — see
+> [../guides/song-metadata.md](../guides/song-metadata.md). Setlist.fm,
+> Songstats and the other APIs below are **not** integrated.
+
 This document evaluates external APIs that could enhance Bandmate's functionality.
 
 ## Table of Contents
