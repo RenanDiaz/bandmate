@@ -866,7 +866,8 @@
     "sessionManagement": "Session Management",
     "orphanedSessionHint": "If the host left without ending the session, you can take control or close it.",
     "takeOver": "Take Over",
-    "forceEnd": "Close Session"
+    "forceEnd": "Close Session",
+    "needsConnection": "Sync sessions need a connection"
   },
   "backingTrack": {
     "title": "Backing Track",
@@ -932,7 +933,12 @@
     "reorderError": "Failed to save the new order. Please try again.",
     "myDefault": "Your default for this song",
     "selectRemembers": "Open this PDF and remember it as your default for this song",
-    "preferenceError": "Failed to remember your preferred sheet music"
+    "preferenceError": "Failed to remember your preferred sheet music",
+    "notDownloaded": "Not downloaded",
+    "notOnDevice": "This PDF isn't on this device.",
+    "openError": "Couldn't open this PDF.",
+    "tryAgain": "Try again",
+    "offlineViewerError": "Couldn't show this PDF from the device. Try again or pick another PDF."
   },
   "performance": {
     "chords": "Chords",
@@ -966,7 +972,13 @@
     "next": "Next",
     "hintViewer": "Following host • ESC to exit • F for fullscreen • L for list",
     "hintHost": "Use arrow keys or click to navigate • ESC to exit • F for fullscreen • L for list • T to toggle view",
-    "retry": "Retry"
+    "retry": "Retry",
+    "offlineBadge": "Offline",
+    "offlineCopyBadge": "Offline copy",
+    "offlineCopyBadgeHint": "Showing the copy saved on this device; it updates in the background",
+    "notAvailableOffline": "Not available offline",
+    "notAvailableOfflineHint": "This setlist isn't saved on this device. Connect to open it, or make it available offline first.",
+    "back": "Back"
   },
   "sectionEditor": {
     "title": "Song Sections",

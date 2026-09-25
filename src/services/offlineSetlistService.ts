@@ -24,10 +24,11 @@ import {
 import { FileFetchError, classifyHttpStatus, fetchFileWithStallTimeout, mapWithConcurrency } from "../lib/offlineFetch";
 import { isNetworkError } from "../lib/networkErrors";
 import { clearAllPerformPositions } from "../lib/performPosition";
-import { getSetlist, isSongItem } from "./setlistsService";
+import { deepEqual } from "../utils/deepEqual";
+import { getSetlist, isSongItem, normalizeSetlistItems } from "./setlistsService";
 import { getSongsByIds } from "./songsService";
 import { getSheetMusicForSongs } from "./songSheetMusicService";
-import { getMySheetMusicPreferences, getPreferredInstrument } from "./sheetMusicPreferencesService";
+import { getMySheetMusicPreferences, getPreferredInstrument, setMySheetMusicPreference } from "./sheetMusicPreferencesService";
 import { getMyBands } from "./bandsService";
 import { createSheetMusicDownloadUrl, listSheetMusicFolderSizes } from "./sheetMusicStorageService";
 
@@ -35,8 +36,8 @@ import { createSheetMusicDownloadUrl, listSheetMusicFolderSizes } from "./sheetM
  * Offline copies of setlists (spec docs/specs/offline-performance-phase2-3.md,
  * §3 and §5). PR 2.2a: the store, reads, owner filter, auth hooks and wipe.
  * PR 2.2b: the download engine (plan, download, journal/resume, quota, GC,
- * persistence). Row refresh and the perform-mode patches arrive with the
- * snapshot source (PR 2.4).
+ * persistence). PR 2.4: row refresh, the perform-mode patches and the
+ * offline preference overrides, for the snapshot performance source.
  *
  * Every read filters by the current user set through setOfflineCurrentUser();
  * with no current user (signed out or session-lost) they return empty/null
@@ -625,6 +626,20 @@ function referencedSongIds(setlist: Setlist): string[] {
   return [...new Set((setlist.songs || []).filter(isSongItem).map((item) => item.song_id))];
 }
 
+/** The files a snapshot of these rows references, one per storage path, in setlist order. */
+function fileRefsOf(setlist: Setlist, sheetMusicBySongId: Record<string, SheetMusic[]>): OfflineFileRef[] {
+  const files: OfflineFileRef[] = [];
+  const seen = new Set<string>();
+  for (const songId of referencedSongIds(setlist)) {
+    for (const sm of sheetMusicBySongId[songId] ?? []) {
+      if (!sm.file_url || seen.has(sm.file_url)) continue;
+      seen.add(sm.file_url);
+      files.push({ storagePath: sm.file_url, sheetMusicId: sm.id, songId, rowUpdatedAt: sm.updated_at ?? "" });
+    }
+  }
+  return files;
+}
+
 function folderOf(storagePath: string): string {
   const slash = storagePath.lastIndexOf("/");
   return slash > 0 ? storagePath.slice(0, slash) : "";
@@ -699,15 +714,7 @@ export async function planDownload(setlistId: string, opts: { incremental?: bool
   const songsById: Record<string, Song> = {};
   for (const song of songs) songsById[song.id] = song;
 
-  const files: OfflineFileRef[] = [];
-  const seen = new Set<string>();
-  for (const songId of referencedSongIds(setlist)) {
-    for (const sm of sheetMusicBySongId[songId] ?? []) {
-      if (!sm.file_url || seen.has(sm.file_url)) continue;
-      seen.add(sm.file_url);
-      files.push({ storagePath: sm.file_url, sheetMusicId: sm.id, songId, rowUpdatedAt: sm.updated_at ?? "" });
-    }
-  }
+  const files = fileRefsOf(setlist, sheetMusicBySongId);
 
   const folders = [...new Set(files.map((f) => folderOf(f.storagePath)))];
   const listings = await mapWithConcurrency(folders, PLAN_LIST_CONCURRENCY, (folder) =>
@@ -798,6 +805,7 @@ export async function downloadSetlist(plan: DownloadPlan, opts: DownloadOptions 
   // Claimed synchronously, before any await, so two calls in this tab can't both start.
   const job = newJob(plan.setlistId, ctx.userId, ctx.pendingSnapshot.files, opts.signal);
   activeJob = job;
+  let result: DownloadResult;
   try {
     await requireStoreForDownload();
     const existing = await readKey<OfflineDownloadJournal>(offlineKeys.download(plan.setlistId));
@@ -818,11 +826,12 @@ export async function downloadSetlist(plan: DownloadPlan, opts: DownloadOptions 
       return runJob(job, journal, { fresh: true, onProgress: opts.onProgress });
     });
     if (outcome === LOCK_BUSY) throw new OfflineError("download-in-progress", "Another tab is downloading");
-    return outcome;
+    result = outcome;
   } finally {
     if (activeJob === job) activeJob = null;
     job.dispose();
   }
+  return refreshAfterCommit(plan.setlistId, result);
 }
 
 function newJob(
@@ -1224,14 +1233,17 @@ async function fingerprintOf(snapshot: OfflineDownloadJournal["pendingSnapshot"]
     .map((sm): [string, string, string, string] => [sm.id, sm.song_id, sm.updated_at ?? "", sm.file_url])
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const base = { setlistUpdatedAt: snapshot.setlist.updated_at ?? "", songs, sheetMusic };
-  let hash = "";
+  return { ...base, hash: await hashOf(base) };
+}
+
+async function hashOf(base: Omit<OfflineFingerprint, "hash">): Promise<string> {
   try {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(base)));
-    hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
   } catch {
     // No crypto.subtle (insecure context): the fields still compare.
+    return "";
   }
-  return { ...base, hash };
 }
 
 /**
@@ -1266,6 +1278,7 @@ export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
 
       const job = newJob(journal.setlistId, userId, journal.pendingSnapshot.files);
       activeJob = job;
+      let finished: DownloadResult | null = null;
       try {
         const outcome = await withDownloadLock(async () => {
           // Another tab may have finished or cancelled it while we waited.
@@ -1273,11 +1286,12 @@ export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
           if (!current || current.startedAt !== journal.startedAt) return null;
           return runJob(job, current, { fresh: false });
         });
-        if (outcome && outcome !== LOCK_BUSY) results.push(outcome);
+        if (outcome && outcome !== LOCK_BUSY) finished = outcome;
       } finally {
         if (activeJob === job) activeJob = null;
         job.dispose();
       }
+      if (finished) results.push(await refreshAfterCommit(journal.setlistId, finished));
     }
   } catch (error) {
     console.error("Could not resume offline downloads:", error);
@@ -1470,6 +1484,413 @@ export async function getStorageUsage(): Promise<{
       bySetlist: metas.map((m) => ({ setlistId: m.setlistId, bytes: m.bytes })),
       distinctFileBytes,
     };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Row refresh and perform-mode write-through (A3, §5.2, §5.6; PR 2.4)
+// ---------------------------------------------------------------------------
+
+export interface RowRefreshResult {
+  /**
+   * "skipped": nothing was fetched or written because there is no snapshot of
+   * the current user, a download of this setlist is running or interrupted
+   * (its commit would overwrite newer rows, §4.3), or a perform-mode write
+   * landed while the rows were being fetched (it wins; the next open refreshes).
+   */
+  status: "unchanged" | "updated" | "deleted" | "failed" | "skipped";
+  /** Refs the new rows reference that are not in the store (reason "not-downloaded"). */
+  filesNotDownloaded: OfflineFileRef[];
+  /** Refs the old rows had and the new ones do not; GC runs after commit. */
+  filesReleased: OfflineFileRef[];
+}
+
+const refreshResult = (status: RowRefreshResult["status"]): RowRefreshResult => ({
+  status,
+  filesNotDownloaded: [],
+  filesReleased: [],
+});
+
+function isSetlistGone(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === "PGRST116";
+}
+
+/**
+ * Special items that were never saved with an id get a new random id on every
+ * read (`normalizeSetlistItem`). Give them back the id the snapshot already
+ * has for the same item (type + label, first unused match), so a refresh of
+ * an unchanged setlist compares equal and the view keeps its current item.
+ */
+function adoptItemIds(previous: Setlist, next: Setlist): Setlist {
+  const known = new Set((next.songs || []).map((item) => item.id).filter(Boolean));
+  const unused = (previous.songs || []).filter((item) => !isSongItem(item) && item.id && !known.has(item.id));
+  if (unused.length === 0) return next;
+  let adopted = false;
+  const songs = (next.songs || []).map((item) => {
+    if (isSongItem(item) || (item.id && (previous.songs || []).some((p) => p.id === item.id))) return item;
+    const index = unused.findIndex((p) => p.type === item.type && !isSongItem(p) && p.label === item.label);
+    if (index < 0) return item;
+    const [match] = unused.splice(index, 1);
+    adopted = true;
+    return { ...item, id: match.id };
+  });
+  return adopted ? { ...next, songs } : next;
+}
+
+/** The snapshot rows as the server has them now. Rejects on any fetch failure but the (optional) preferences. */
+async function fetchSnapshotRows(setlistId: string, userId: string) {
+  const setlist = await getSetlist(setlistId);
+  const songIds = referencedSongIds(setlist);
+  const [songs, sheetMusicBySongId, preferredSheetMusicIds, band] = await Promise.all([
+    getSongsByIds(songIds),
+    getSheetMusicForSongs(songIds),
+    // A failed preference read keeps the snapshot's (null), never erases them.
+    getMySheetMusicPreferences(songIds).catch((error: unknown) => {
+      console.error("Offline refresh: could not load sheet music preferences:", error);
+      return null;
+    }),
+    getMyBands(userId).then((bands) => bands.find((b) => b.id === setlist.band_id) ?? null),
+  ]);
+  const songsById: Record<string, Song> = {};
+  for (const song of songs) songsById[song.id] = song;
+  return { setlist, songsById, sheetMusicBySongId, preferredSheetMusicIds, band };
+}
+
+/**
+ * A3 (§5.2, §8.2): fetches the setlist, its referenced songs, their
+ * `song_sheet_music` rows, the user's preferences and the band row, and when
+ * any differ from the snapshot commits them in one transaction (snapshot +
+ * snapshot-meta + band). Never fetches a PDF: files the new rows reference
+ * but the store lacks become `missingFiles` with reason "not-downloaded" and
+ * set freshness to "outdated"; files the old rows referenced and the new ones
+ * don't are released to GC. `localPreferenceOverrides` are kept (they win).
+ *
+ * "deleted": the setlist row is gone (or RLS hides it) → freshness "deleted",
+ * rows kept (D5). "failed": network or server error, nothing written.
+ * Rejects only with OfflineError("not-authenticated") without a valid session.
+ */
+export async function refreshSnapshotRows(setlistId: string): Promise<RowRefreshResult> {
+  const userId = authenticatedUserId();
+  if (!userId) throw new OfflineError("not-authenticated");
+  if (isBrowserOffline() || !(await storeReady())) return refreshResult("failed");
+  if (activeJob?.setlistId === setlistId) return refreshResult("skipped");
+
+  let before: { meta: OfflineSnapshotMeta; snapshot: OfflineSnapshot } | null;
+  let epoch: string | null;
+  try {
+    before = await readOwnedPair(setlistId, userId);
+    if (!before || (await readKey(offlineKeys.download(setlistId)))) return refreshResult("skipped");
+    epoch = await readEpoch();
+  } catch (error) {
+    console.error("Offline refresh: could not read the snapshot:", error);
+    return refreshResult("failed");
+  }
+
+  let fetched: Awaited<ReturnType<typeof fetchSnapshotRows>>;
+  try {
+    fetched = await fetchSnapshotRows(setlistId, userId);
+  } catch (error) {
+    if (isSetlistGone(error)) return markSnapshotDeleted(setlistId, userId, before.meta.rowsUpdatedAt, epoch);
+    console.warn("Offline refresh failed; the snapshot stays as it is:", error);
+    return refreshResult("failed");
+  }
+
+  const old = before.snapshot;
+  const setlist = adoptItemIds(old.setlist, fetched.setlist);
+  const files = fileRefsOf(setlist, fetched.sheetMusicBySongId);
+  const rows = {
+    band: fetched.band ?? old.band,
+    setlist,
+    songsById: fetched.songsById,
+    sheetMusicBySongId: fetched.sheetMusicBySongId,
+    preferredSheetMusicIds: fetched.preferredSheetMusicIds ?? old.preferredSheetMusicIds,
+    files,
+  };
+  const rowsChanged =
+    !deepEqual(rows.band, old.band) ||
+    !deepEqual(rows.setlist, old.setlist) ||
+    !deepEqual(rows.songsById, old.songsById) ||
+    !deepEqual(rows.sheetMusicBySongId, old.sheetMusicBySongId) ||
+    !deepEqual(rows.preferredSheetMusicIds, old.preferredSheetMusicIds) ||
+    !deepEqual(rows.files, old.files);
+  const newPaths = new Set(files.map((f) => f.storagePath));
+  const filesReleased = old.files.filter((f) => !newPaths.has(f.storagePath));
+  const fingerprint = rowsChanged ? await fingerprintOf({ ...old, ...rows }) : before.meta.fingerprint;
+
+  let committed: { status: "updated" | "unchanged" | "skipped"; filesNotDownloaded: OfflineFileRef[] };
+  try {
+    committed = await transact(
+      "readwrite",
+      async (tx) => {
+        const skipped = { status: "skipped" as const, filesNotDownloaded: [] };
+        if (currentUserId !== userId) return skipped;
+        if (await tx.has(offlineKeys.download(setlistId))) return skipped;
+        const meta = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+        const snapshot = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
+        if (!meta || !snapshot || meta.userId !== userId || snapshot.userId !== userId) return skipped;
+        // A perform-mode patch (or a download) committed since we read: its rows win.
+        if (meta.rowsUpdatedAt !== before.meta.rowsUpdatedAt) return skipped;
+
+        const previousReasons = new Map(meta.missingFiles.map((m) => [m.storagePath, m] as const));
+        const missingFiles: OfflineMissingFile[] = [];
+        const filesNotDownloaded: OfflineFileRef[] = [];
+        let bytes = 0;
+        let fileCount = 0;
+        for (const ref of files) {
+          const record = await tx.get<OfflineFileRecord>(offlineKeys.file(ref.storagePath));
+          if (record) {
+            bytes += record.bytes;
+            fileCount++;
+            continue;
+          }
+          const previous = previousReasons.get(ref.storagePath);
+          if (previous && previous.reason !== "not-downloaded") {
+            missingFiles.push({ ...missingFrom(ref, previous.reason, previous.bytes) });
+          } else {
+            missingFiles.push(missingFrom(ref, "not-downloaded", null));
+            filesNotDownloaded.push(ref);
+          }
+        }
+        const now = new Date().toISOString();
+        const nextMeta: OfflineSnapshotMeta = {
+          ...meta,
+          setlistName: rows.setlist.name,
+          bandId: rows.band.id,
+          completeness: missingFiles.some((m) => m.reason !== "not-downloaded") ? "partial" : "complete",
+          bytes,
+          fileCount,
+          missingFiles,
+          fingerprint,
+          freshness: filesNotDownloaded.length > 0 ? "outdated" : "fresh",
+          lastCheckedAt: now,
+          rowsUpdatedAt: rowsChanged ? now : meta.rowsUpdatedAt,
+        };
+        tx.put(offlineKeys.snapshotMeta(setlistId), nextMeta);
+        if (rowsChanged) {
+          // Overrides chosen offline (and not flushed) still win over server preferences (§5.6).
+          tx.put(offlineKeys.snapshot(setlistId), {
+            ...snapshot,
+            ...rows,
+            localPreferenceOverrides: snapshot.localPreferenceOverrides ?? {},
+          });
+          tx.put(offlineKeys.band(rows.band.id), rows.band);
+        }
+        return { status: rowsChanged ? ("updated" as const) : ("unchanged" as const), filesNotDownloaded };
+      },
+      { epoch }
+    );
+  } catch (error) {
+    if (!(error instanceof StoreEpochChangedError)) console.error("Offline refresh: could not save the rows:", error);
+    return refreshResult(error instanceof StoreEpochChangedError ? "skipped" : "failed");
+  }
+
+  if (committed.status === "skipped") return refreshResult("skipped");
+  emit({ type: "snapshot-changed", setlistId });
+  const released = committed.status === "updated" ? filesReleased : [];
+  if (released.length > 0) await collectGarbage();
+  return { status: committed.status, filesNotDownloaded: committed.filesNotDownloaded, filesReleased: released };
+}
+
+async function markSnapshotDeleted(
+  setlistId: string,
+  userId: string,
+  rowsUpdatedAt: string,
+  epoch: string | null
+): Promise<RowRefreshResult> {
+  try {
+    const marked = await transact(
+      "readwrite",
+      async (tx) => {
+        const meta = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+        if (currentUserId !== userId || !meta || meta.userId !== userId || meta.rowsUpdatedAt !== rowsUpdatedAt) return false;
+        tx.put(offlineKeys.snapshotMeta(setlistId), { ...meta, freshness: "deleted", lastCheckedAt: new Date().toISOString() });
+        return true;
+      },
+      { epoch }
+    );
+    if (!marked) return refreshResult("skipped");
+  } catch (error) {
+    if (!(error instanceof StoreEpochChangedError)) console.error("Offline refresh: could not mark the snapshot deleted:", error);
+    return refreshResult("skipped");
+  }
+  emit({ type: "snapshot-changed", setlistId });
+  return refreshResult("deleted");
+}
+
+/**
+ * §4.3: every download commit is followed by one row refresh (a resumed
+ * journal can carry rows up to 7 days old). Returns the result with the meta
+ * as it is after the refresh (freshness, lastCheckedAt). Offline or without a
+ * session it is skipped; the next perform-mode open refreshes.
+ */
+async function refreshAfterCommit(setlistId: string, result: DownloadResult): Promise<DownloadResult> {
+  if (!result.meta || isBrowserOffline() || !authenticatedUserId()) return result;
+  try {
+    const refreshed = await refreshSnapshotRows(setlistId);
+    if (refreshed.status === "failed" || refreshed.status === "skipped") return result;
+    const meta = await getSnapshotMeta(setlistId);
+    return meta ? { ...result, meta, missingFiles: meta.missingFiles } : result;
+  } catch (error) {
+    console.warn("Offline refresh after download failed:", error);
+    return result;
+  }
+}
+
+/**
+ * Applies `change` to the current user's snapshot of `setlistId` in one
+ * transaction. No snapshot (or another user's) → no-op. Never rejects: a
+ * failure is logged and the next open's row refresh catches up (§5.2).
+ */
+async function patchSnapshot(
+  setlistId: string,
+  what: string,
+  change: (
+    snapshot: OfflineSnapshot,
+    meta: OfflineSnapshotMeta
+  ) => { snapshot: OfflineSnapshot; meta?: OfflineSnapshotMeta; deleteKeys?: string[] } | null
+): Promise<boolean> {
+  const userId = currentUserId;
+  if (!userId) return false;
+  try {
+    if (!(await storeReady())) return false;
+    const epoch = await readEpoch();
+    const patched = await transact(
+      "readwrite",
+      async (tx) => {
+        const meta = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+        const snapshot = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
+        if (currentUserId !== userId || !meta || !snapshot || meta.userId !== userId || snapshot.userId !== userId) return false;
+        if (meta.schemaVersion !== OFFLINE_SCHEMA_VERSION || snapshot.schemaVersion !== OFFLINE_SCHEMA_VERSION) return false;
+        const next = change(snapshot, meta);
+        if (!next) return false;
+        tx.put(offlineKeys.snapshot(setlistId), next.snapshot);
+        if (next.meta) tx.put(offlineKeys.snapshotMeta(setlistId), next.meta);
+        for (const key of next.deleteKeys ?? []) tx.delete(key);
+        return true;
+      },
+      { epoch }
+    );
+    if (patched) emit({ type: "snapshot-changed", setlistId });
+    return patched;
+  } catch (error) {
+    if (!(error instanceof StoreEpochChangedError)) console.error(`Could not ${what} in the offline copy:`, error);
+    return false;
+  }
+}
+
+/**
+ * After a successful server write from performance mode (reorder): replace
+ * the snapshot's setlist row, normalized, and move `fingerprint.setlistUpdatedAt`
+ * with it so the user's own write is not seen as a change (§8.2). Never rejects.
+ */
+export async function patchSnapshotSetlist(setlistId: string, setlist: Setlist): Promise<void> {
+  const normalized: Setlist = { ...setlist, songs: normalizeSetlistItems(setlist.songs || []) };
+  const current = await getSnapshotMeta(setlistId);
+  if (!current) return;
+  const base = { ...current.fingerprint, setlistUpdatedAt: normalized.updated_at ?? current.fingerprint.setlistUpdatedAt };
+  const fingerprint = { ...base, hash: await hashOf({ setlistUpdatedAt: base.setlistUpdatedAt, songs: base.songs, sheetMusic: base.sheetMusic }) };
+  await patchSnapshot(setlistId, "save the new order", (snapshot, meta) => ({
+    snapshot: { ...snapshot, setlist: normalized },
+    meta: { ...meta, setlistName: normalized.name, fingerprint, rowsUpdatedAt: new Date().toISOString() },
+  }));
+}
+
+/**
+ * After a successful setMySheetMusicPreference online: record it in
+ * `preferredSheetMusicIds` (and drop an override for that song, which the
+ * server write supersedes), so the choice survives going offline. Never rejects.
+ */
+export async function patchSnapshotPreference(setlistId: string, songId: string, sheetMusicId: string): Promise<void> {
+  await patchSnapshot(setlistId, "save the PDF choice", (snapshot, meta) => {
+    const overrides = { ...(snapshot.localPreferenceOverrides ?? {}) };
+    delete overrides[songId];
+    return {
+      snapshot: {
+        ...snapshot,
+        preferredSheetMusicIds: { ...snapshot.preferredSheetMusicIds, [songId]: sheetMusicId },
+        localPreferenceOverrides: overrides,
+      },
+      meta: { ...meta, rowsUpdatedAt: new Date().toISOString() },
+    };
+  });
+}
+
+/**
+ * §9.3: a stored PDF whose blob is absent or unreadable (zero-length after
+ * partial eviction) is recorded in `missingFiles` (reason "unknown",
+ * completeness "partial"). Only the snapshot source calls it, from
+ * resolvePdfUrl, and only online: then `deleteFile` removes the `file:`
+ * record so the next download or Retry fetches it again instead of counting
+ * it as present. Offline nothing is written (the session just treats the PDF
+ * as unavailable), so a transient read failure never persists mid-show. A
+ * pdf.js failure on a readable blob is never reported here. Never rejects.
+ */
+export async function markSnapshotFileMissing(
+  setlistId: string,
+  storagePath: string,
+  opts: { deleteFile?: boolean } = {}
+): Promise<void> {
+  await patchSnapshot(setlistId, "record a missing file", (snapshot, meta) => {
+    const ref = snapshot.files.find((f) => f.storagePath === storagePath);
+    if (!ref || meta.missingFiles.some((m) => m.storagePath === storagePath)) return null;
+    return {
+      snapshot,
+      meta: {
+        ...meta,
+        completeness: "partial",
+        missingFiles: [...meta.missingFiles, missingFrom(ref, "unknown", null)],
+        fileCount: Math.max(0, meta.fileCount - 1),
+      },
+      deleteKeys: opts.deleteFile ? [offlineKeys.file(storagePath)] : [],
+    };
+  });
+}
+
+/**
+ * §5.6, offline: remember a PDF choice in the snapshot only
+ * (`localPreferenceOverrides`), for the next flush. Works without a valid
+ * session (the owner is the current user). Never rejects.
+ */
+export async function recordLocalPreference(setlistId: string, songId: string, sheetMusicId: string): Promise<void> {
+  await patchSnapshot(setlistId, "remember the PDF choice", (snapshot) =>
+    snapshot.localPreferenceOverrides?.[songId] === sheetMusicId
+      ? null
+      : { snapshot: { ...snapshot, localPreferenceOverrides: { ...snapshot.localPreferenceOverrides, [songId]: sheetMusicId } } }
+  );
+}
+
+/**
+ * §5.6, online: pushes `localPreferenceOverrides` with setMySheetMusicPreference,
+ * best effort, one song at a time. Each one that succeeds moves from the
+ * overrides into `preferredSheetMusicIds` (unless it changed meanwhile); a
+ * failure keeps it for the next attempt. Needs a valid session and the browser
+ * online, else does nothing. Never rejects, never toasts.
+ */
+export async function flushLocalPreferences(setlistId: string): Promise<void> {
+  if (!authenticatedUserId() || isBrowserOffline()) return;
+  const snapshot = await getSnapshot(setlistId);
+  const overrides = Object.entries(snapshot?.localPreferenceOverrides ?? {});
+  if (overrides.length === 0) return;
+  const flushed: Array<[songId: string, sheetMusicId: string]> = [];
+  for (const [songId, sheetMusicId] of overrides) {
+    try {
+      await setMySheetMusicPreference(songId, sheetMusicId);
+      flushed.push([songId, sheetMusicId]);
+    } catch (error) {
+      console.warn("Could not save an offline PDF choice; it stays for the next attempt:", error);
+      if (isNetworkError(error)) break;
+    }
+  }
+  if (flushed.length === 0) return;
+  await patchSnapshot(setlistId, "record the flushed PDF choices", (current) => {
+    const remaining = { ...(current.localPreferenceOverrides ?? {}) };
+    const preferred = { ...current.preferredSheetMusicIds };
+    for (const [songId, sheetMusicId] of flushed) {
+      if (remaining[songId] !== sheetMusicId) continue;
+      delete remaining[songId];
+      preferred[songId] = sheetMusicId;
+    }
+    return { snapshot: { ...current, preferredSheetMusicIds: preferred, localPreferenceOverrides: remaining } };
   });
 }
 

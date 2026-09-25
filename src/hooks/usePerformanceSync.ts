@@ -23,6 +23,11 @@ export interface UsePerformanceSyncOptions {
   bandId: number;
   onSongIndexChange?: (index: number) => void;
   onPlaybackChange?: (timeMs: number, isPlaying: boolean) => void;
+  /**
+   * false (offline, spec §8.3/C9): no mount queries, no Realtime subscription,
+   * and starting, joining or taking over a session does nothing. Default true.
+   */
+  enabled?: boolean;
 }
 
 export interface UsePerformanceSyncReturn {
@@ -61,7 +66,14 @@ export function usePerformanceSync({
   bandId,
   onSongIndexChange,
   onPlaybackChange,
+  enabled = true,
 }: UsePerformanceSyncOptions): UsePerformanceSyncReturn {
+  // Read by the callbacks at call time, so they stay stable.
+  const enabledRef = useRef(enabled);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
   const [session, setSession] = useState<PerformanceSession | null>(null);
   const [role, setRole] = useState<SyncRole>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -96,6 +108,7 @@ export function usePerformanceSync({
 
   // Subscribe to session updates
   const subscribeToUpdates = useCallback((sessionData: PerformanceSession) => {
+    if (!enabledRef.current) return;
     // Cleanup existing subscription
     if (channelRef.current) {
       unsubscribeFromSession(channelRef.current);
@@ -139,6 +152,7 @@ export function usePerformanceSync({
 
   // Start hosting a new session
   const startHosting = useCallback(async () => {
+    if (!enabledRef.current) return;
     setIsLoading(true);
     setError(null);
 
@@ -162,6 +176,7 @@ export function usePerformanceSync({
 
   // Join existing session for the band (auto-join)
   const joinExistingSession = useCallback(async (): Promise<boolean> => {
+    if (!enabledRef.current) return false;
     setIsLoading(true);
     setError(null);
 
@@ -279,6 +294,7 @@ export function usePerformanceSync({
 
   // Take over orphaned session (become the new host)
   const takeOverSession = useCallback(async () => {
+    if (!enabledRef.current) return;
     if (!existingSession) return;
 
     setIsLoading(true);
@@ -306,8 +322,10 @@ export function usePerformanceSync({
     }
   }, [existingSession, subscribeToUpdates]);
 
-  // Check for existing active session and user role on mount
+  // Check for existing active session and user role on mount (not while
+  // disabled, nor before the setlist's band is known)
   useEffect(() => {
+    if (!enabled || !bandId) return;
     const initialize = async () => {
       try {
         // Check user's role in the band
@@ -325,7 +343,7 @@ export function usePerformanceSync({
     };
 
     initialize();
-  }, [bandId]);
+  }, [bandId, enabled]);
 
   // Cleanup on beforeunload (attempt to end session if host)
   useEffect(() => {

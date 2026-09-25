@@ -1,9 +1,9 @@
 /**
  * Feature flags. Each one names the PR that removes it.
  *
- * Offline downloads (PR 2.3) stay hidden until performing from a snapshot
- * ships (2.4/2.5): the flag is removed in PR 2.5 once the §11 device checklist
- * passes. On with `VITE_OFFLINE_DOWNLOADS=true` at build time (e.g. Vercel
+ * Offline downloads (PR 2.3) and performance mode's snapshot source (PR 2.4)
+ * stay hidden until the offline entry point ships: the flag is removed in PR
+ * 2.5 once the §11 device checklist passes. On with `VITE_OFFLINE_DOWNLOADS=true` at build time (e.g. Vercel
  * Preview) or, per device, `localStorage.bandmate_flag_offline = "1"` (testing
  * against production). Read on every call, so the override needs only a reload.
  */

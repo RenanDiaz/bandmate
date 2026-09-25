@@ -866,7 +866,8 @@
     "sessionManagement": "Gestión de Sesión",
     "orphanedSessionHint": "Si el host salió sin cerrar la sesión, puedes tomar control o cerrarla.",
     "takeOver": "Tomar Control",
-    "forceEnd": "Cerrar Sesión"
+    "forceEnd": "Cerrar Sesión",
+    "needsConnection": "Las sesiones de sincronización necesitan conexión"
   },
   "backingTrack": {
     "title": "Pista de Acompañamiento",
@@ -932,7 +933,12 @@
     "reorderError": "No se pudo guardar el nuevo orden. Inténtalo de nuevo.",
     "myDefault": "Tu predeterminado para esta canción",
     "selectRemembers": "Abrir este PDF y recordarlo como tu predeterminado para esta canción",
-    "preferenceError": "No se pudo recordar tu partitura preferida"
+    "preferenceError": "No se pudo recordar tu partitura preferida",
+    "notDownloaded": "No descargado",
+    "notOnDevice": "Este PDF no está en este dispositivo.",
+    "openError": "No se pudo abrir este PDF.",
+    "tryAgain": "Intentar de nuevo",
+    "offlineViewerError": "No se pudo mostrar este PDF desde el dispositivo. Intenta de nuevo o elige otro PDF."
   },
   "performance": {
     "chords": "Acordes",
@@ -966,7 +972,13 @@
     "next": "Siguiente",
     "hintViewer": "Siguiendo al anfitrión • ESC para salir • F para pantalla completa • L para la lista",
     "hintHost": "Usa las flechas o haz clic para navegar • ESC para salir • F para pantalla completa • L para la lista • T para cambiar la vista",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "offlineBadge": "Sin conexión",
+    "offlineCopyBadge": "Copia sin conexión",
+    "offlineCopyBadgeHint": "Mostrando la copia guardada en este dispositivo; se actualiza en segundo plano",
+    "notAvailableOffline": "No disponible sin conexión",
+    "notAvailableOfflineHint": "Este setlist no está guardado en este dispositivo. Conéctate para abrirlo, o guárdalo antes para usar sin conexión.",
+    "back": "Volver"
   },
   "sectionEditor": {
     "title": "Secciones de la Canción",

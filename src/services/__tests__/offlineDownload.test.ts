@@ -335,8 +335,10 @@ describe("downloadSetlist (§4.1)", () => {
       bytes: 460,
       fileCount: 4,
       missingFiles: [],
-      freshness: "unknown",
+      // The row refresh after every commit (§4.3, PR 2.4) found the rows current.
+      freshness: "fresh",
     });
+    expect(result.meta?.lastCheckedAt).not.toBeNull();
     expect(result.meta?.fingerprint.setlistUpdatedAt).toBe("2026-03-01T00:00:00.123456+00:00");
     expect(result.meta?.fingerprint.hash).toMatch(/^[0-9a-f]{64}$/);
 
@@ -609,8 +611,10 @@ describe("resume (§4.4)", () => {
     const results = await resumeInterruptedDownloads();
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ state: "done", meta: { completeness: "complete", bytes: 460 } });
-    // The rows came from the journal: no planning queries on resume.
-    expect(vi.mocked(getSetlist)).toHaveBeenCalledTimes(1);
+    // The rows came from the journal: no planning queries on resume, only
+    // the one row refresh that follows every commit (§4.3).
+    expect(vi.mocked(getSetlist)).toHaveBeenCalledTimes(2);
+    expect(results[0].meta?.freshness).toBe("fresh");
     expect(server.fetched).toEqual([A1, A2, B1, B2]);
     expect(await journalOf("s1")).toBeUndefined();
   });
