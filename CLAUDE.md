@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev      # Start dev server at http://localhost:5173
 npm run build    # tsc -b, SSR pass, client build, precache check (see below)
 npm run lint     # ESLint check
+npm test         # Vitest unit tests (node + fake-indexeddb)
 npm run preview  # Preview production build locally
 npm run og       # Regenerate public/og-image.png (needs sharp)
 npm run icons    # Regenerate the PWA icons (needs sharp)
@@ -45,12 +46,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 ```
 src/
 ├── components/        # React components (views, modals, forms)
-├── context/           # React Context: BandContext (global state), ToastContext (notifications)
+├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, offlineStore, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
+├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
 ├── utils/             # Pure helpers (songFilters)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
@@ -86,6 +88,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events. Downloads arrive in PR 2.2b. See "Offline store" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -136,6 +139,66 @@ falls back to the cache instead of hanging. That rule matches only
 `/rest/v1/` and `/auth/v1/`; Storage (`/storage/v1/`, PDFs) is never cached by
 the service worker. See
 [docs/intents/offline-performance.md](docs/intents/offline-performance.md).
+
+**Auth modes** (`src/context/offlineAuthController.ts`, spec §7.1). `BandContext`
+owns one `OfflineAuthController` and exposes `authMode` next to `user`:
+
+| `authMode` | When | `user` | Offline copies |
+|------------|------|--------|----------------|
+| `session` | valid session | Supabase `User` | that uid's, visible |
+| `offline-cached` | `getSession()` failed with `AuthRetryableFetchError` (or, offline, didn't answer within 1.5 s) and `last-user` exists | `OfflineUser` (`{ id, offlineCached: true }`) | `last-user`'s, visible |
+| `session-lost` | no stored session / involuntary `SIGNED_OUT`, `last-user` exists | `null` | hidden, **not** deleted |
+| `signed-out` | no session, no `last-user` | `null` | none |
+
+- `user` is typed `AppUser = User | OfflineUser`: only `id` is guaranteed. Use
+  `isOfflineUser()` or `authMode` before reading anything else.
+- **Offline, `getSession()` is not awaited** (A6): with an expired token it takes
+  ≈25 s to fail. It is raced against `GET_SESSION_OFFLINE_TIMEOUT_MS` (1.5 s);
+  on timeout `last-user` resolves `offline-cached` **provisionally**, and the
+  late answer reconciles (same uid → `session`; other uid → wipe, then
+  `session`; retryable error → stay; other `null` → `session-lost`).
+- A provisional or cached state never runs confirmed-state side effects: no
+  `confirmSignedInUser`, no wipe, no `last-user` write, no
+  `BandStorage.clearSelectedBandId()`.
+- `last-user` (IndexedDB) is written only by `confirmSignedInUser()` on a
+  **confirmed** session (`getSession()` / an auth event carrying a session).
+- Back online in `offline-cached`, `BandContext` calls `recheck()`.
+- Bands: `getMyBands()` with a session; `listOfflineBands()` in
+  `offline-cached` or when `getMyBands()` fails. `isResolvingBand` always ends.
+
+**Offline wipe rules — exactly two triggers** (spec §3.5 #6). `wipeAll()` clears
+the IndexedDB store (`last-user` included) and every
+`bandmate_perform_position_*` localStorage key. It runs **only**:
+1. on user-initiated sign-out: `AuthButton.logout` calls
+   `performUserSignOut(wipeAll, signOut)`, which awaits the wipe **before**
+   `supabase.auth.signOut()` and marks the resulting `SIGNED_OUT` as voluntary;
+2. inside `confirmSignedInUser(uid)` when `uid` differs from `last-user`,
+   before that uid becomes current.
+
+Never wipe on a `null` session, on an involuntary `SIGNED_OUT` (failed refresh,
+another tab, `youtubeService.requestAuthorization()`) or on a provisional
+state — those **hide** (`setOfflineCurrentUser(null)`). Don't add a third
+caller.
+
+### Offline store
+
+`src/lib/offlineStore.ts` is private to `offlineSetlistService` (components and
+hooks never import it or `idb-keyval`). One database `bandmate-offline`, one
+store `kv`, prefixed keys: `meta`, `last-user`, `schema-wipe-notice`,
+`band:{id}`, `snapshot-meta:{setlistId}`, `snapshot:{setlistId}`,
+`file:{storagePath}`, `download:{setlistId}` (layout: spec §3.3).
+
+- Every read filters by the id set with `setOfflineCurrentUser()`; `null`
+  returns empty/null. Reads never throw: an empty store and
+  `storage-unavailable` (no IndexedDB, open fails) both return empty/null;
+  only `openOfflineStore()` rejects, with `OfflineError("storage-unavailable")`.
+- `meta.schemaVersion !== OFFLINE_SCHEMA_VERSION` (or a record of another
+  version) wipes the store, keeps `last-user`, and records the lost setlists
+  in `schema-wipe-notice` (`getSchemaWipeNotice()` / `dismissSchemaWipeNotice()`).
+  **Bumping `OFFLINE_SCHEMA_VERSION` deletes every offline copy on every
+  device: justify it in the PR description.** Old `snapshot-meta` records must
+  keep `setlistId`, `setlistName`, `userId`, `bandId` (the one cross-version
+  contract).
 
 **Online status** (`useOnlineStatus` hook): `navigator.onLine` plus the
 `online`/`offline` events, and `reportNetworkFailure()`, which forces offline
@@ -310,15 +373,21 @@ following the style of the existing files.
 
 ## Testing & Definition of Done
 
-No test framework is configured. Before considering a change done:
+Unit tests use Vitest (`npm test`, config in `vitest.config.ts`, node
+environment with `fake-indexeddb` and an in-memory `localStorage` from
+`src/test/setup.ts`). Tests live in `__tests__/` next to the code and are
+type-checked by `npm run build`. Mock Supabase rather than calling it. There
+are no component tests yet. Before considering a change done:
 
 1. `npm run lint` passes with no new errors.
 2. `npm run build` passes (this also type-checks and runs the SSR pass).
-3. Any new user-facing string exists in **both** `en.json` and `es.json`.
-4. The flow was exercised manually in the dev server (`http://localhost:5173`)
+3. `npm test` passes; changes to the offline store, `offlineSetlistService` or
+   the auth controller come with tests.
+4. Any new user-facing string exists in **both** `en.json` and `es.json`.
+5. The flow was exercised manually in the dev server (`http://localhost:5173`)
    with no new console errors — or, if that wasn't possible, say so explicitly.
-5. If the change touches RLS or a migration, note which policies were checked.
-6. Documentation is up to date (see below).
+6. If the change touches RLS or a migration, note which policies were checked.
+7. Documentation is up to date (see below).
 
 ## Before Opening a Pull Request
 
@@ -343,6 +412,8 @@ needed") so reviewers know it was checked, not skipped.
 | `@dnd-kit/*` | Drag-and-drop for setlist editor |
 | `react-i18next` | Internationalization |
 | `react-pdf` | Sheet music PDF viewer |
+| `idb-keyval` | IndexedDB key-value store behind `src/lib/offlineStore.ts` (offline copies) |
+| `vitest`, `fake-indexeddb` | Unit tests (dev only) |
 | `workbox-window` | Service worker registration and update prompt (`PwaReloadPrompt`) |
 | `@fontsource/space-grotesk` | Self-hosted brand font, precached for offline |
 | `pdfjs-dist` | Pinned to the **exact** version `react-pdf` depends on; its worker is bundled from the app origin (`src/lib/pdfWorker.ts`) and precached so the viewer starts offline. Bump both together |
@@ -383,4 +454,5 @@ needed") so reviewers know it was checked, not skipped.
 - [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) - Invitation emails (Edge Function + Resend)
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) - Google OAuth configuration
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
 - [migrations/README.md](migrations/README.md) - Database migration guide

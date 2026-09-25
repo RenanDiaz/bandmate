@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Container, Spinner, ButtonGroup, Button } from "reactstrap";
 import styled from "styled-components";
-import type { User } from "@supabase/supabase-js";
+import type { AppUser } from "../context/offlineAuthController";
 import { theme } from "../theme";
 import { getBandRehearsals, getUpcomingRehearsals, getPastRehearsals, deleteRehearsal, markRehearsalCompleted, markRehearsalCancelled } from "../services/rehearsalsService";
 import type { Rehearsal } from "../services/rehearsalsService";
@@ -16,7 +16,7 @@ import { SEO } from "./SEO";
 import { useToast } from "../context/useToast";
 
 interface Props {
-  user: User | null;
+  user: AppUser | null;
   selectedBand: Band | null;
 }
 

@@ -118,6 +118,7 @@ npm run dev      # Dev server with HMR
 npm run build    # Type-check, prerender the landing (SSR), build the client, check the precache
 npm run preview  # Preview the production build
 npm run lint     # ESLint
+npm test         # Unit tests (Vitest)
 npm run og       # Regenerate public/og-image.png
 npm run icons    # Regenerate PWA icons
 ```
@@ -126,7 +127,8 @@ Always build with `npm run build` — a bare `vite build` skips the landing
 prerender and the precache check (which fails the build if a shell file would
 be missing offline). See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
 
-There is no automated test suite yet.
+Unit tests run with Vitest (`npm test`); they cover the offline store and
+the offline auth logic. There are no component or end-to-end tests yet.
 
 ## 🗂️ Project Layout
 
@@ -159,6 +161,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) — Spotify integration
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec: offline performance, Phases 2–3
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
