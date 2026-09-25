@@ -157,6 +157,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) — invitation emails
 - [docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) — Spotify integration
 - [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) — Google OAuth
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (proposed)
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
