@@ -27,7 +27,7 @@ import {
   isSectionItem,
   getSetlistItemKey,
 } from "../services/setlistsService";
-import type { SetlistItem, SetlistSpecialItem } from "../services/setlistsService";
+import type { SetlistSpecialItem } from "../services/setlistsService";
 import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { useTranslation } from "react-i18next";
@@ -50,7 +50,7 @@ import { useSetlistPerformanceData } from "../hooks/useSetlistPerformanceData";
 import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 import { useBandContext } from "../context/useBandContext";
 import { readPerformPosition, writePerformPosition } from "../lib/performPosition";
-import { indexAfterItemsChange } from "../utils/performItems";
+import { usePerformItems } from "../hooks/usePerformItems";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -214,9 +214,10 @@ const SetlistPerformanceView: FC = () => {
   const { capabilities } = perf;
   const onSnapshot = perf.source === "snapshot";
   const preferredSheetMusicIds = perf.preferredSheetMusicIds;
-  // Local copy of the items: drag-and-drop reorders it before it is saved.
-  const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  // Local copy of the items (drag-and-drop reorders it before it is saved) and
+  // the current index; never reseeded while reordering (§8.1).
+  const { setlistItems, setSetlistItems, currentIndex, setCurrentIndex } = usePerformItems(perf.items, isReorderMode);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
   const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">("chords");
@@ -241,7 +242,6 @@ const SetlistPerformanceView: FC = () => {
   const pendingRestoredPdfRef = useRef<{ index: number; sheetMusicId: string } | null>(null);
   // The song the current PDF selection belongs to (a row refresh keeps it).
   const selectionSongIdRef = useRef<string | null>(null);
-  const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -290,7 +290,7 @@ const SetlistPerformanceView: FC = () => {
   // Handle sync index updates from viewers
   const handleSyncIndexChange = useCallback((index: number) => {
     setCurrentIndex(index);
-  }, []);
+  }, [setCurrentIndex]);
 
   // Handle sync playback updates from host (for viewers)
   const handleSyncPlaybackChange = useCallback((timeMs: number, isPlaying: boolean) => {
@@ -411,23 +411,6 @@ const SetlistPerformanceView: FC = () => {
     }
   };
 
-  // Take the loaded items, and any later replacement, except while the user
-  // is reordering: leaving reorder mode picks up the latest items. A
-  // replacement mid-show (row refresh, write) keeps the current item by
-  // identity, not by index; a removed one leaves us on the nearest remaining
-  // item (§8.2).
-  const setlistItemsRef = useRef<SetlistItem[]>([]);
-  useEffect(() => {
-    if (isReorderMode) return;
-    const previous = setlistItemsRef.current;
-    if (previous === perf.items) return;
-    setlistItemsRef.current = perf.items;
-    setSetlistItems(perf.items);
-    if (previous.length > 0) setCurrentIndex((index) => indexAfterItemsChange(previous, index, perf.items));
-  }, [perf.items, isReorderMode]);
-  useEffect(() => {
-    setlistItemsRef.current = setlistItems;
-  }, [setlistItems]);
 
   // A2: restore the saved position once the data is ready (clamped: the
   // setlist may have changed); a position older than 12 h is gone on read.
@@ -441,7 +424,7 @@ const SetlistPerformanceView: FC = () => {
     setCurrentIndex(index);
     setContentView(saved.contentView);
     pendingRestoredPdfRef.current = saved.selectedSheetMusicId ? { index, sheetMusicId: saved.selectedSheetMusicId } : null;
-  }, [perf.status, perf.items, setlistId, userId]);
+  }, [perf.status, perf.items, setlistId, userId, setCurrentIndex]);
 
   // A2: save it on every change, for every source (after the restore ran).
   useEffect(() => {

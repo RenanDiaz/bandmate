@@ -1,8 +1,16 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { OfflineDownloadState } from "../context/offlineDownloadController";
 import { getOfflineDownloadController } from "../context/offlineDownloadController";
-import type { OfflineEvent, OfflineSnapshotMeta } from "../services/offlineSetlistService";
-import { getSnapshotMeta, listInterruptedDownloads, listSnapshots, subscribe } from "../services/offlineSetlistService";
+import type { OfflineEvent, OfflineSnapshot, OfflineSnapshotMeta } from "../services/offlineSetlistService";
+import {
+  dismissSchemaWipeNotice,
+  getSchemaWipeNotice,
+  getSnapshot,
+  getSnapshotMeta,
+  listInterruptedDownloads,
+  listSnapshots,
+  subscribe,
+} from "../services/offlineSetlistService";
 
 /**
  * React access to offline downloads (PR 2.3): the controller's state
@@ -98,4 +106,84 @@ export function useInterruptedDownload(setlistId: string | undefined): { started
     };
   }, [setlistId, revision, activeId]);
   return entry;
+}
+
+/**
+ * Re-read `read()` now, on every offline event `affects`, and whenever `deps`
+ * change. `undefined` until the first read resolves. Shared by the offline
+ * screens' hooks below (PR 2.5).
+ */
+function useOfflineRead<T>(read: (() => Promise<T>) | null, relevant: (event: OfflineEvent) => boolean): {
+  value: T | undefined;
+  reload: () => void;
+} {
+  const [value, setValue] = useState<T | undefined>(undefined);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    setValue(undefined);
+    if (!read) return;
+    let cancelled = false;
+    const run = () =>
+      void read().then((v) => {
+        if (!cancelled) setValue(v);
+      });
+    run();
+    const unsubscribe = subscribe((event) => {
+      if (relevant(event)) run();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+    // `read`/`relevant` are memoized by the callers; `tick` forces a re-read.
+  }, [read, relevant, tick]);
+  const reload = useCallback(() => setTick((n) => n + 1), []);
+  return { value, reload };
+}
+
+const anyChange = (event: OfflineEvent) => affects(event);
+
+/** Every snapshot meta of the current user, newest first; `undefined` while loading. */
+export function useOfflineSnapshotList(enabled = true): OfflineSnapshotMeta[] | undefined {
+  const read = useCallback(() => listSnapshots(), []);
+  return useOfflineRead(enabled ? read : null, anyChange).value;
+}
+
+/** The current user's snapshot of a setlist; `undefined` while loading, `null` when there is none. */
+export function useOfflineSnapshot(setlistId: string | undefined): OfflineSnapshot | null | undefined {
+  const read = useCallback(() => (setlistId ? getSnapshot(setlistId) : Promise.resolve(null)), [setlistId]);
+  const relevant = useCallback((event: OfflineEvent) => affects(event, setlistId), [setlistId]);
+  return useOfflineRead(read, relevant).value;
+}
+
+/** Every interrupted download (journal) of the current user except the running one. */
+export function useInterruptedDownloads(): Array<{ setlistId: string; setlistName: string; startedAt: string }> {
+  const { revision, active } = useOfflineDownloadState();
+  const activeId = active?.setlistId;
+  // Re-created when the controller's state moves, so a finished or resumed job re-reads.
+  const read = useCallback(
+    () => listInterruptedDownloads(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revision, activeId]
+  );
+  return useOfflineRead(read, anyChange).value ?? [];
+}
+
+export type SchemaWipeEntry = { setlistId: string; setlistName: string; bandId: number | null };
+
+/** The A4 schema-wipe notice entries of the current user (empty when none) and its dismiss actions. */
+export function useSchemaWipeNotice(): {
+  entries: SchemaWipeEntry[];
+  dismiss: (setlistId?: string) => Promise<void>;
+} {
+  const read = useCallback(() => getSchemaWipeNotice(), []);
+  const { value, reload } = useOfflineRead(read, anyChange);
+  const dismiss = useCallback(
+    async (setlistId?: string) => {
+      await dismissSchemaWipeNotice(setlistId);
+      reload();
+    },
+    [reload]
+  );
+  return { entries: value ?? [], dismiss };
 }

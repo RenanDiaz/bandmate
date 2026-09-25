@@ -52,7 +52,7 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceDataSource, snapshotPerformanceDataSource; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceDataSource, snapshotPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -61,7 +61,8 @@ src/
 ├── utils/             # Pure helpers (songFilters, deepEqual, performItems)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
-├── App.tsx            # Root component with routing
+├── App.tsx            # Root component: providers + navbar
+├── AppMain.tsx        # Auth/band gates and <Routes> (offline screens, §7.3)
 └── main.tsx           # Entry point
 supabase/
 ├── functions/         # Edge Functions (Deno)
@@ -122,7 +123,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `/privacy` | Privacy policy |
 | `/terms` | Terms of service |
 
-Unknown paths redirect to `/`. The source of truth is the `<Routes>` block in `src/App.tsx`.
+Unknown paths redirect to `/`. The source of truth is the `<Routes>` block in `src/AppMain.tsx`. Offline, most
+routes render a fallback instead (see "Offline screens").
 
 ### Data Flow
 
@@ -267,9 +269,9 @@ after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 `isOfflineDownloadsEnabled()` (`src/lib/featureFlags.ts`) is true:
 `VITE_OFFLINE_DOWNLOADS=true` at build time (Vercel Preview), or per device
 `localStorage.bandmate_flag_offline = "1"` (testing against production). Off
-by default until the entry point (PR 2.5) ships; it also gates performance
-mode's snapshot source (PR 2.4), and the flag is
-removed in PR 2.5 once the §11 device checklist passes. The check runs before
+by default; it also gates performance mode's snapshot source (PR 2.4) and the
+offline screens (PR 2.5, below), and the flag is removed in PR 2.6 once the
+§11 device checklist passes. The check runs before
 any hook (`OfflineDownloadAction` / `OfflineStatusRow` are thin wrappers), and
 list badges and toasts are gated too; startup resume + GC still run (harmless
 on an empty store). New offline UI goes behind the same flag.
@@ -279,7 +281,9 @@ on an empty store). New offline UI goes behind the same flag.
 `ShowDetailView` for the linked setlist, `toolbar` in performance mode's top
 bar), `OfflineStatusRow` (setlist detail: badge, Remove, interrupted notice
 with Resume/Discard), `OfflineBadge` (also in `SetlistList`),
-`OfflineDownloadModal` and the presentational `OfflineDownloadBodies`.
+`OfflineDownloadModal` and the presentational `OfflineDownloadBodies`. The
+plan → confirm → progress flow is `useOfflineDownloadFlow` (its own file,
+also used by the schema-wipe notice's Download buttons).
 
 - **One owner for the running download:** `offlineDownloadController`
   (`src/context/`, plain TS, read with `useOfflineDownloadState()`) holds the
@@ -298,6 +302,42 @@ with Resume/Discard), `OfflineBadge` (also in `SetlistList`),
 - **App start:** `useOfflineStartup()` (called in `AppContent`) runs
   `resume()` then `collectGarbage()` once the user is known (`session` or
   `offline-cached`) and again when the connection returns.
+
+### Offline screens (PR 2.5)
+
+Routing lives in `src/AppMain.tsx` (extracted from `App.tsx`, which keeps the
+navbar). **"Offline" is `useOfflineUi()`**: flag on, a user known (`session`
+or `offline-cached`) and the context's `isOnline` false, which includes
+`reportNetworkFailure()`'s 30 s window. `<OfflineAware offline={…}>` renders
+the offline screen *instead of* the online view (the online view is not
+mounted: no fetches, no toasts); when `isOnline` returns, the same URL renders
+its online view again. Nothing navigates. Spec §7.3.
+
+| Route offline | Renders |
+|---------------|---------|
+| `/` | `OfflineHome`: schema-wipe notice, the selected band's snapshots (`OfflineSetlistList`), interrupted downloads. No dashboard fetch |
+| `/setlists` | `OfflineSetlistsPage` (notice + the same list) |
+| `/setlists/:id` | `OfflineSetlistDetail` from `getSnapshot` (items, PDF counts, badge, Perform), or "Not available offline" |
+| `/setlists/:id/perform` | unchanged: the snapshot source (§8.2) |
+| `/login`, `/about`, `/privacy`, `/terms` | unchanged |
+| every other route | `NeedsConnection` ("This page needs a connection" + link home) |
+
+- **Band gate offline:** `BandSelector` is never shown. No local bands →
+  `OfflineEmptyState`; several and none selected → `OfflineBandPicker`.
+- **`session-lost`:** `BandContext.hiddenOfflineCount` (via `getLastUserId` +
+  `countHiddenSnapshots`, only in that mode) makes `Home` render
+  `OfflineLockedHome` ("Sign in again…", a count, no names), online or offline.
+- **Schema-wipe notice** (`SchemaWipeNotice`, A4): online dashboard, offline
+  home and offline list. A row's successful download (or `setlist-not-found`)
+  dismisses that entry; Dismiss clears them all.
+- **Weak signal:** `Home`, `SetlistsView` and `SetlistDetailView` call
+  `reportNetworkFailure()` when their load fails with `isNetworkError`; the
+  gate then shows the offline screen. HTTP errors keep the old behaviour.
+  Detail skips its toast + bounce only in that case, with the flag on.
+- `BandAvatar` shows the band initial when the image fails to load (not
+  flag-gated: offline `/storage/v1/` is never cached).
+- Offline screen data hooks: `useOfflineSnapshotList`, `useOfflineSnapshot`,
+  `useInterruptedDownloads`, `useSchemaWipeNotice` (`src/hooks/useOfflineDownload.ts`).
 
 **Dev hook:** in `npm run dev`, `window.__bandmateOffline` exposes
 `planDownload`, `downloadSetlist`, `download(id)`, `listSnapshots`,
@@ -321,7 +361,9 @@ registers the worker with `workbox-window` and reloads only when the user taps
 Reload; the prompt is hidden on `/setlists/:setlistId/perform` until the user
 leaves. Never add `skipWaiting`, `clientsClaim` or an automatic reload. The
 brand font (Space Grotesk 700) is self-hosted via `@fontsource/space-grotesk`
-and precached with the other `woff2` files.
+and precached with the other `woff2` files. `bootstrap-icons.css` requests its
+font with a `?<32-hex>` cache-busting key, which `ignoreURLParametersMatching`
+strips so the precache matches offline (without it every icon is blank).
 
 ### Performance data
 
@@ -518,13 +560,19 @@ following the style of the existing files.
 
 Unit tests use Vitest (`npm test`, config in `vitest.config.ts`, node
 environment with `fake-indexeddb` and an in-memory `localStorage` from
-`src/test/setup.ts`). Tests live in `__tests__/` next to the code and are
+`src/test/setup.ts`). DOM tests opt in per file with
+`// @vitest-environment jsdom` and use Testing Library (`render`,
+`renderHook`, `user-event`); `src/test/renderApp.tsx` renders under the app's
+providers with a hand-made `BandContext` value (`bandContext()`), and
+`setContext()` re-renders with another value (e.g. `isOnline` flips) keeping
+the router's location. Tests live in `__tests__/` next to the code and are
 type-checked by `npm run build`. Mock Supabase rather than calling it
 (`setup.ts` mocks `src/lib/supabaseClient` for every test; mock the service
-functions a test needs). Component tests are `.test.tsx` render tests with
-`renderToStaticMarkup` and a test i18next instance (no DOM, no
-testing-library): keep presentational parts free of portals and service
-calls so they can be rendered this way. `setup.ts` also installs a Web Locks
+functions a test needs; DOM tests mock at the service-module boundary and stub
+`react-pdf` when they import the routes). Presentational parts also have
+`.test.tsx` render tests with `renderToStaticMarkup` and a test i18next
+instance (`src/test/i18n.ts`); keep them free of portals and service calls so
+they can be rendered this way. `setup.ts` also installs a Web Locks
 fake on `navigator.locks` (Node 22 has none), so the cross-tab lock tests run
 the same on every Node version. Before considering a change done:
 
@@ -563,6 +611,7 @@ needed") so reviewers know it was checked, not skipped.
 | `react-pdf` | Sheet music PDF viewer |
 | `idb-keyval` | IndexedDB key-value store behind `src/lib/offlineStore.ts` (offline copies) |
 | `vitest`, `fake-indexeddb` | Unit tests (dev only) |
+| `jsdom`, `@testing-library/react` (+ `dom`, `user-event`) | DOM tests, per-file jsdom environment (dev only) |
 | `workbox-window` | Service worker registration and update prompt (`PwaReloadPrompt`) |
 | `@fontsource/space-grotesk` | Self-hosted brand font, precached for offline |
 | `pdfjs-dist` | Pinned to the **exact** version `react-pdf` depends on; its worker is bundled from the app origin (`src/lib/pdfWorker.ts`) and precached so the viewer starts offline. Bump both together |
@@ -583,7 +632,8 @@ needed") so reviewers know it was checked, not skipped.
 4. Export async functions for CRUD operations
 
 ### Adding a new route
-1. Add route in `src/App.tsx` within the `<Routes>` block
+1. Add route in `src/AppMain.tsx` within the `<Routes>` block (wrap it in
+   `OfflineAware` with `NeedsConnection` unless it works offline)
 2. Create component in `src/components/`
 3. Add navigation link if needed in navbar
 4. If the route should be indexable, add it to `src/lib/siteConfig.ts`

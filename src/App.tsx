@@ -1,33 +1,13 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthButton } from "./AuthButton";
-import Home from "./components/Home";
-import { Login } from "./components/Login";
-import SongsView from "./components/SongsView";
-import SetlistsView from "./components/SetlistsView";
-import SetlistEditor from "./components/SetlistEditor";
-import SetlistDetailView from "./components/SetlistDetailView";
-import SetlistPerformanceView from "./components/SetlistPerformanceView";
-import PrintableSetlist from "./components/PrintableSetlist";
-import PrintableSongbook from "./components/PrintableSongbook";
-import ShowsView from "./components/ShowsView";
-import ShowDetailView from "./components/ShowDetailView";
-import RehearsalsView from "./components/RehearsalsView";
-import RehearsalDetailView from "./components/RehearsalDetailView";
-import RequestsView from "./components/RequestsView";
-import RequestDetailView from "./components/RequestDetailView";
-import { BandSettings } from "./components/BandSettings";
-import { AcceptInvitation } from "./components/AcceptInvitation";
-import About from "./components/About";
-import PrivacyPolicy from "./components/PrivacyPolicy";
-import TermsOfService from "./components/TermsOfService";
 import Footer from "./components/Footer";
-import { BandSelector } from "./components/BandSelector";
+import { AppMain } from "./AppMain";
 import { BandSwitcher } from "./components/BandSwitcher";
 import { Logo } from "./components/Logo";
-import { Navbar, Nav, NavItem, Button, Spinner } from "reactstrap";
+import { Navbar, Nav, NavItem, Button } from "reactstrap";
 import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./components/CustomOffcanvas";
 import styled from "styled-components";
 import { BandProvider } from "./context/BandContext";
@@ -43,8 +23,7 @@ const AppContent: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const location = useLocation();
-  const { selectedBand, setSelectedBand, user, setShowBandSelector, showBandSelector, isResolvingBand, isCheckingAuth } =
-    useBandContext();
+  const { selectedBand, user, setShowBandSelector, isCheckingAuth } = useBandContext();
   const navigate = useNavigate();
   // Resume interrupted offline downloads, then GC (§4.4, §4.6).
   useOfflineStartup();
@@ -325,43 +304,7 @@ const AppContent: FC = () => {
       </CustomOffcanvas>
 
       <MainContent>
-        {isCheckingAuth || (user && isResolvingBand) ? (
-          <LoadingContainer>
-            <Spinner color="light" />
-          </LoadingContainer>
-        ) : user && (!selectedBand || showBandSelector) && location.pathname !== "/invite/accept" ? (
-          <BandSelector
-            onSelect={(band) => {
-              setSelectedBand(band);
-              setShowBandSelector(false);
-            }}
-            selectedBand={selectedBand || undefined}
-          />
-        ) : (
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/songs" element={<SongsView user={user} selectedBand={selectedBand} />} />
-            <Route path="/songs/print" element={<PrintableSongbook />} />
-            <Route path="/setlists" element={<SetlistsView user={user} selectedBand={selectedBand} />} />
-            <Route path="/setlists/:setlistId" element={<SetlistDetailView />} />
-            <Route path="/setlists/:setlistId/edit" element={<SetlistEditor />} />
-            <Route path="/setlists/:setlistId/perform" element={<SetlistPerformanceView />} />
-            <Route path="/setlists/:setlistId/print" element={<PrintableSetlist />} />
-            <Route path="/shows" element={<ShowsView user={user} selectedBand={selectedBand} />} />
-            <Route path="/shows/:showId" element={<ShowDetailView />} />
-            <Route path="/rehearsals" element={<RehearsalsView user={user} selectedBand={selectedBand} />} />
-            <Route path="/rehearsals/:rehearsalId" element={<RehearsalDetailView />} />
-            <Route path="/requests" element={<RequestsView user={user} selectedBand={selectedBand} />} />
-            <Route path="/requests/:requestId" element={<RequestDetailView />} />
-            <Route path="/bands/:bandId/settings" element={<BandSettings user={user} />} />
-            <Route path="/invite/accept" element={<AcceptInvitation />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        )}
+        <AppMain />
       </MainContent>
       {/* Show footer only on About page, Privacy, Terms, or Home when not logged in */}
       {(location.pathname === "/about" ||
@@ -733,13 +676,6 @@ const MainContent = styled.main`
   flex: 1;
   display: flex;
   flex-direction: column;
-`;
-
-const LoadingContainer = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `;
 
 export default App;

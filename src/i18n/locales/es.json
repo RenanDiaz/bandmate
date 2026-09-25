@@ -1436,6 +1436,59 @@
       "resumedPartial": "«{{setlist}}» se guardó con PDFs faltantes",
       "stale_one": "Una descarga interrumpida era demasiado antigua y se descartó. Descárgala de nuevo.",
       "stale_other": "{{count}} descargas interrumpidas eran demasiado antiguas y se descartaron. Descárgalas de nuevo."
+    },
+    "screen": {
+      "banner": "Estás sin conexión. Solo están disponibles los setlists guardados en este dispositivo.",
+      "goHome": "Ir a los setlists sin conexión"
+    },
+    "needsConnection": {
+      "title": "Esta página necesita conexión",
+      "text": "Estás sin conexión. Los setlists guardados en este dispositivo siguen disponibles."
+    },
+    "empty": {
+      "title": "Estás sin conexión y no hay nada guardado en este dispositivo",
+      "text": "Cuando tengas conexión, abre un setlist y elige “Guardar para usar sin conexión” para tocarlo sin conexión."
+    },
+    "home": {
+      "title": "Setlists sin conexión",
+      "subtitle": "Guardados en este dispositivo",
+      "noneForBand": "No hay nada de {{band}} guardado en este dispositivo.",
+      "otherBands": "Otras bandas tienen setlists guardados aquí. Cambia de banda para verlos.",
+      "interruptedTitle": "Descargas interrumpidas",
+      "interruptedItem": "Iniciada el {{date}}",
+      "untitled": "Setlist sin nombre"
+    },
+    "list": {
+      "perform": "Tocar"
+    },
+    "detail": {
+      "back": "Volver",
+      "pdfs_one": "{{count}} PDF",
+      "pdfs_other": "{{count}} PDF",
+      "noPdfs": "Sin PDF",
+      "notDownloaded_one": "{{count}} sin descargar",
+      "notDownloaded_other": "{{count}} sin descargar",
+      "minutes": "{{count}} min",
+      "unknownSong": "Canción desconocida",
+      "notAvailableTitle": "No disponible sin conexión",
+      "notAvailableText": "Este setlist no está guardado en este dispositivo. Conéctate para abrirlo."
+    },
+    "bandPicker": {
+      "title": "Elige una banda",
+      "text": "Estas bandas tienen setlists guardados en este dispositivo."
+    },
+    "locked": {
+      "title": "Inicia sesión de nuevo para usar tus setlists sin conexión",
+      "text_one": "Hay {{count}} setlist guardado en este dispositivo. Se conserva hasta que vuelvas a iniciar sesión.",
+      "text_other": "Hay {{count}} setlists guardados en este dispositivo. Se conservan hasta que vuelvas a iniciar sesión.",
+      "signIn": "Iniciar sesión"
+    },
+    "schemaWipe": {
+      "title": "La app se actualizó. Descarga de nuevo estos setlists para usarlos sin conexión",
+      "download": "Descargar",
+      "needsConnection": "Necesita conexión",
+      "dismiss": "Descartar",
+      "unknownBand": "Otra banda"
     }
   }
 }

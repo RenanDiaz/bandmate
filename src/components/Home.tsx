@@ -16,6 +16,10 @@ import type { Rehearsal } from "../services/rehearsalsService";
 import { SEO } from "./SEO";
 import { LandingPage } from "./LandingPage";
 import { useTranslation } from "react-i18next";
+import { isNetworkError } from "../lib/networkErrors";
+import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
+import { OfflineLockedHome } from "./offline/OfflineMessage";
+import { SchemaWipeNotice } from "./offline/SchemaWipeNotice";
 
 // Unified event type for shows and rehearsals
 type UpcomingEvent =
@@ -24,7 +28,7 @@ type UpcomingEvent =
 
 const Home = () => {
   const { t, i18n } = useTranslation();
-  const { user, selectedBand, refreshBands } = useBandContext();
+  const { user, authMode, hiddenOfflineCount, selectedBand, refreshBands, reportNetworkFailure } = useBandContext();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -62,10 +66,15 @@ const Home = () => {
 
           setUpcomingEvents(events);
         })
-        .catch(console.error)
+        .catch((error) => {
+          console.error(error);
+          // Weak signal: the route renders the offline home once isOnline
+          // drops (§7.3). An HTTP error keeps the dashboard.
+          if (isNetworkError(error)) reportNetworkFailure();
+        })
         .finally(() => setLoading(false));
     }
-  }, [user, selectedBand]);
+  }, [user, selectedBand, reportNetworkFailure]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString + "T00:00:00");
@@ -122,6 +131,7 @@ const Home = () => {
         />
         <Container style={{ marginTop: theme.space[6] }}>
           <PendingInvitations onInvitationAccepted={refreshBands} />
+          <SchemaWipeNotice />
         </Container>
 
         <DashboardSection>
@@ -327,6 +337,16 @@ const Home = () => {
             )}
           </Container>
         </DashboardSection>
+      </HomeWrapper>
+    );
+  }
+
+  // Session lost with offline copies on the device: they are hidden, not
+  // deleted, until the same user signs in again (§7.1).
+  if (!user && authMode === "session-lost" && hiddenOfflineCount > 0 && isOfflineDownloadsEnabled()) {
+    return (
+      <HomeWrapper>
+        <OfflineLockedHome count={hiddenOfflineCount} />
       </HomeWrapper>
     );
   }

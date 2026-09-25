@@ -4,9 +4,11 @@ import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import {
   confirmSignedInUser,
+  countHiddenSnapshots,
   getLastUserId,
   listOfflineBands,
   setOfflineCurrentUser,
+  subscribe as subscribeOffline,
 } from "../services/offlineSetlistService";
 import { BandStorage } from "../lib/BandStorage";
 import { supabase } from "../lib/supabaseClient";
@@ -31,6 +33,12 @@ interface BandContextType {
   /** Shared `useOnlineStatus()` value; see src/hooks/useOnlineStatus.ts. */
   isOnline: boolean;
   reportNetworkFailure: () => void;
+  /**
+   * In "session-lost": how many offline copies `last-user` has on this device
+   * (hidden, not deleted; §7.1). 0 in every other mode. A count only — the
+   * locked home never names the setlists.
+   */
+  hiddenOfflineCount: number;
 }
 
 const BandContext = createContext<BandContextType | undefined>(undefined);
@@ -45,6 +53,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const [showBandSelector, setShowBandSelector] = useState(false);
   const [bands, setBands] = useState<Band[]>([]);
+  const [hiddenOfflineCount, setHiddenOfflineCount] = useState(0);
   const [isResolvingBand, setIsResolvingBand] = useState(!!BandStorage.getSelectedBandId());
   const { isOnline, reportNetworkFailure } = useOnlineStatus();
   const { user, authMode, isCheckingAuth } = auth;
@@ -84,6 +93,28 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isOnline && authMode === "offline-cached") void controllerRef.current?.recheck();
   }, [isOnline, authMode]);
+
+  // "session-lost": count last-user's hidden copies for the locked home (§7.1).
+  useEffect(() => {
+    if (authMode !== "session-lost") {
+      setHiddenOfflineCount(0);
+      return;
+    }
+    let cancelled = false;
+    const read = async () => {
+      const lastUserId = await getLastUserId();
+      const count = lastUserId ? await countHiddenSnapshots(lastUserId) : 0;
+      if (!cancelled) setHiddenOfflineCount(count);
+    };
+    void read();
+    const unsubscribe = subscribeOffline((event) => {
+      if (event.type === "store-wiped" || event.type === "visibility-changed") void read();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authMode]);
 
   // Bands: from the server with a session; from offline copies in
   // "offline-cached" or when the server can't be reached (§7.2). An HTTP
@@ -158,6 +189,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         isCheckingAuth,
         isOnline,
         reportNetworkFailure,
+        hiddenOfflineCount,
       }}
     >
       {children}

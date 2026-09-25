@@ -176,6 +176,12 @@ export default defineConfig(({ isSsrBuild }) => ({
               // build if any shell file is missing from the manifest.
               maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 
+              // bootstrap-icons.css asks for its fonts as `…woff2?<32-hex
+              // hash>`; the precache only strips utm_/fbclid by default, so
+              // offline the lookup missed and every icon was blank (found in
+              // PR 2.5). Strip that cache-busting key too.
+              ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^[0-9a-f]{32}$/],
+
               // Runtime caching strategies
               runtimeCaching: [
                 {

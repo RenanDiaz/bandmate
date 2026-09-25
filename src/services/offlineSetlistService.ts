@@ -504,7 +504,7 @@ export function countHiddenSnapshots(userId: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
-// Schema-wipe notice (A4). The UI arrives in PR 2.5; the service exposes it now.
+// Schema-wipe notice (A4). Shown by SchemaWipeNotice (PR 2.5).
 // ---------------------------------------------------------------------------
 
 /** The schema-wipe notice entries for the current user, or null (A4). */
