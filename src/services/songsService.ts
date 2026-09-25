@@ -84,6 +84,23 @@ export async function getBandSongs(bandId: number): Promise<Song[]> {
   return data;
 }
 
+/**
+ * Get only the given songs (e.g. the ones a setlist references), in no
+ * particular order. Missing or RLS-hidden ids are simply absent.
+ */
+export async function getSongsByIds(ids: string[]): Promise<Song[]> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("songs")
+    .select("*")
+    .in("id", uniqueIds);
+
+  if (error) throw error;
+  return data;
+}
+
 export interface CreateSongInput {
   title: string;
   band_id: number;
