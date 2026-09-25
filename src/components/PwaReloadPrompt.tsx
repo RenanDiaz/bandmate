@@ -1,31 +1,80 @@
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { registerSW } from "virtual:pwa-register";
+import { matchPath, useLocation } from "react-router-dom";
+import { Workbox } from "workbox-window";
 import styled from "styled-components";
 import { theme } from "../theme";
 
+// vite-plugin-pwa serves the worker from these URLs (`injectRegister: false`
+// in vite.config.ts, so nothing else registers it). The dev worker is an ES
+// module; the build emits a classic one.
+const SW_URL = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
+const SW_TYPE = import.meta.env.DEV ? "module" : "classic";
+
+/** Routes where the page must never reload on its own: a show is running. */
+const NO_RELOAD_ROUTES = ["/setlists/:setlistId/perform"];
+
 /**
- * Registers the PWA service worker and shows an in-app, styled prompt when a
- * new version is available, replacing the native `confirm()` reload dialog.
+ * Registers the PWA service worker and shows an in-app prompt when a new
+ * version is waiting (`registerType: 'prompt'`).
+ *
+ * The page reloads only when the user taps Reload. Nothing here calls
+ * `skipWaiting` on its own, and the prompt stays hidden on the perform route
+ * until the user leaves it. Registration uses workbox-window directly rather
+ * than `virtual:pwa-register`, because the latter reloads every tab when
+ * *another* tab accepts the update — including one in the middle of a show.
+ * Here that case only raises the prompt.
  */
 export const PwaReloadPrompt: FC = () => {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const [needRefresh, setNeedRefresh] = useState(false);
-  const updateSW = useRef<((reload?: boolean) => Promise<void>) | null>(null);
+  const wbRef = useRef<Workbox | null>(null);
+  const hasWaitingRef = useRef(false);
+  const reloadRequestedRef = useRef(false);
 
   useEffect(() => {
-    updateSW.current = registerSW({
-      onNeedRefresh() {
+    if (!("serviceWorker" in navigator)) return;
+    const wb = new Workbox(SW_URL, { scope: "/", type: SW_TYPE });
+    wbRef.current = wb;
+
+    wb.addEventListener("waiting", () => {
+      hasWaitingRef.current = true;
+      setNeedRefresh(true);
+    });
+    wb.addEventListener("controlling", (event) => {
+      if (!event.isUpdate) return;
+      hasWaitingRef.current = false;
+      if (reloadRequestedRef.current) {
+        window.location.reload();
+      } else {
+        // Another tab activated the new worker. This tab keeps running the old
+        // bundle until the user chooses to reload.
         setNeedRefresh(true);
-      },
-      onOfflineReady() {
-        console.log("App ready to work offline");
-      },
+      }
+    });
+    wb.addEventListener("installed", (event) => {
+      if (!event.isUpdate) console.log("App ready to work offline");
+    });
+
+    wb.register().catch((error) => {
+      console.error("Service worker registration failed", error);
     });
   }, []);
 
-  if (!needRefresh) return null;
+  const handleReload = () => {
+    reloadRequestedRef.current = true;
+    if (hasWaitingRef.current && wbRef.current) {
+      // Reloads from the `controlling` listener once the new worker takes over.
+      wbRef.current.messageSkipWaiting();
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const onNoReloadRoute = NO_RELOAD_ROUTES.some((pattern) => matchPath(pattern, pathname));
+  if (!needRefresh || onNoReloadRoute) return null;
 
   return (
     <Banner role="alert">
@@ -37,7 +86,7 @@ export const PwaReloadPrompt: FC = () => {
         <DismissButton type="button" onClick={() => setNeedRefresh(false)}>
           {t("common.close")}
         </DismissButton>
-        <ReloadButton type="button" onClick={() => updateSW.current?.(true)}>
+        <ReloadButton type="button" onClick={handleReload}>
           {t("pwa.reload")}
         </ReloadButton>
       </Actions>

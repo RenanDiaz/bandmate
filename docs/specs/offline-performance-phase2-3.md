@@ -12,6 +12,30 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.0 additions + A6.**
+  - **Precache guard** (PR 2.0). The main bundle is ≈2.0 MB, ~81 KB under
+    Workbox's 2 MiB `maximumFileSizeToCacheInBytes` default; a file above it
+    is left out of the precache and the app cannot start offline. The limit
+    goes to 5 MiB, and `scripts/check-precache.mjs`, run by `npm run build`,
+    fails the build if any `.js`/`.mjs`/`.css`/`.html` in `dist/` is missing
+    from the manifest (the `globPatterns`/`globIgnores` case is otherwise
+    silent). Code-splitting is a follow-up. §8.4, §12.
+  - **Self-hosted font** (PR 2.0). Space Grotesk (700, the only weight used)
+    comes from `@fontsource/space-grotesk` instead of Google Fonts, and
+    `woff2` joins `globPatterns` so it and Bootstrap Icons are precached: the
+    shell looks the same offline. §8.4, §12.
+  - **Worker registration** (PR 2.0, found while implementing C4). In
+    `prompt` mode `virtual:pwa-register` still reloads a tab on `controlling`
+    once its prompt has fired, so accepting the update in one tab would reload
+    another tab that is performing. `PwaReloadPrompt` registers the worker
+    with `workbox-window` directly (`injectRegister: false`); a worker
+    activated from elsewhere only raises the prompt. §8.4.
+  - **A6** Offline, `BandContext` does not wait on `getSession()`: Phase 1
+    measured ≈25.4 s for it to resolve `null` with a token inside the refresh
+    margin or expired, which is the normal case on show day. It races a
+    ≈1.5 s timeout and resolves provisionally from `last-user`, then
+    reconciles by the A1 rules. §1, §7.1, §10 (new C7), §12 (PR 2.2).
+
 - **2026-09-25 — Amendments A1–A5 + minor.**
   - **A1** Never auto-wipe on an ambiguous auth state. `wipeAll()` runs only
     on user-initiated sign-out and on a confirmed sign-in with a different
@@ -81,10 +105,10 @@ Phase 1 landed on 2026-09-25 (branch `feat/offline-phase1-foundations`).
 PR 2.0 still checks items 1–3 above before building on them. Measured then,
 as input for PR 2.2: with a token inside the 90 s refresh margin or already
 expired, `getSession()` offline retries the refresh 8 times with exponential
-backoff and resolves after **≈25 s** with `{ session: null }` and an
+backoff and resolves after **≈25 s** (25.4 s measured) with `{ session: null }` and an
 `AuthRetryableFetchError`; the stored session is kept. `isCheckingAuth` stays
 `true` for that whole time. With a valid token it resolves in ≈0 ms and makes
-no request.
+no request. This is why §7.1 does not wait on `getSession()` offline (A6).
 
 ---
 
@@ -913,6 +937,34 @@ export type AuthMode =
    deleted; `last-user` is kept.
 4. Otherwise `null`, `authMode: "signed-out"` → landing page.
 
+**Offline, don't wait on `getSession()` (A6).** With a token inside the 90 s
+refresh margin or already expired — the normal case on show day, since
+tokens last 1 h — `getSession()` offline takes ≈25 s to reach step 2 (§1).
+So when `isOnline` from `useOnlineStatus` (§7.3) is `false` at resolution
+time, `BandContext` races `getSession()` against
+`GET_SESSION_OFFLINE_TIMEOUT_MS = 1500`:
+
+- `getSession()` settles first → steps 1–4 as above.
+- The timeout fires first and `last-user` exists → resolve provisionally as
+  step 2: `{ id: lastUserId }`, `authMode: "offline-cached"`,
+  `setOfflineCurrentUser(lastUserId)`, `isCheckingAuth: false`.
+- The timeout fires first and there is no `last-user` → keep waiting; there
+  is nothing on the device to show, so the landing can wait for the real
+  answer.
+
+When the raced `getSession()` settles later, reconcile by the A1 rules and
+the steps above, never by a wipe the provisional state caused: a session for
+the same uid → step 1 (`authMode: "session"`, keep the `user` reference
+stable if the id is unchanged); a session for a different uid → step 1,
+whose `confirmSignedInUser` wipes before any list renders (§3.5 #1); `null`
+with `AuthRetryableFetchError` → stay `offline-cached`; any other `null` →
+step 3 (`session-lost`, hidden, nothing deleted). A provisional state never
+runs confirmed-state side effects: no `confirmSignedInUser`, no wipe, no
+`BandStorage.clearSelectedBandId()`. Online, `getSession()` is awaited as
+before; a cold start behind a captive portal (`navigator.onLine` true, no
+earlier `reportNetworkFailure()` in memory) can still wait the full ≈25 s —
+accepted residual risk, recorded in §11.
+
 Every consumer that needs more than the id (`AuthButton` display name,
 invitation flows) already handles `user` loosely; the context exposes
 `authMode` so they can hide themselves.
@@ -1146,6 +1198,17 @@ offline these actions are disabled (above).
   flow; it starts working. Add: the banner is **not** shown while the route
   matches `/setlists/:id/perform` (deferred until the user leaves), so a
   waiting worker never reloads a show.
+- Register with `workbox-window` in `PwaReloadPrompt` (`injectRegister:
+  false`), not `virtual:pwa-register`: the latter reloads on `controlling`
+  after its prompt fired, so another tab accepting the update would reload a
+  performing tab. The page reloads only from the Reload button; a worker
+  activated from another tab just shows the prompt.
+- `maximumFileSizeToCacheInBytes: 5 MiB` and a post-build guard,
+  `scripts/check-precache.mjs` (part of `npm run build`): the build fails if
+  any `.js`/`.mjs`/`.css`/`.html` in `dist/` is not in the precache manifest.
+- Space Grotesk self-hosted via `@fontsource/space-grotesk` (weight 700 only),
+  Google Fonts links removed from `index.html`, `woff2` added to
+  `globPatterns` (also precaches Bootstrap Icons).
 - `supabase-api` rule: `urlPattern` narrowed to `url.hostname.endsWith("supabase.co") && (url.pathname.startsWith("/rest/v1/") || url.pathname.startsWith("/auth/v1/"))`. Storage requests are then handled by the browser only (C8).
 - Keep `navigateFallback` as is: every offline route is the SPA shell, so no dedicated offline page is precached.
 
@@ -1320,6 +1383,8 @@ songs, 2 of them with 2 PDFs each, one break and one section item.
   `/storage/` request).
 - **C6** Given user A's snapshots are hidden (C5), when user B signs in, then
   A's data is wiped before B sees any list (same guarantee as C2).
+- **C7** Given the token expired > 1 h ago, when I relaunch offline, then the
+  offline home renders within 2 s (A6).
 
 ### Phase 3 — update check
 
@@ -1388,7 +1453,7 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] iOS: download `S1` in the installed app; open the site in a Safari tab: `S1` is *not* listed there (isolation confirmed) and the hint to use the installed app shows.
 - [ ] Turn on airplane mode, wait > 1 h (or set the device clock forward), kill and relaunch: offline home with `S1`.
 - [ ] Wi-Fi on but upstream blocked (phone hotspot with no data, or a router with WAN unplugged), token > 1 h old, relaunch: `S1` listed and performs; nothing deleted (C4).
-- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5).
+- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5). Also record how long the relaunch spinner lasts: `navigator.onLine` is true here, so the A6 timeout does not apply (§7.1).
 - [ ] Connect YouTube (re-auth flow) with `S1` downloaded: `S1` still there afterwards, no re-download.
 
 **Download**
@@ -1433,15 +1498,17 @@ same PR (CLAUDE.md service/hook tables, README Features, `en.json` +
 
 Acceptance criteria by PR: A1–A8 → 2.3; A9 → 2.5 (recording in 2.2);
 B2–B13 → 2.4 (reached by deep link); B1 → 2.5 (needs `OfflineHome`);
-C1–C2, C4–C6 → 2.2 (C5's locked Home copy → 2.5); C3 → 2.0.
+C1–C2, C4–C6 → 2.2 (C5's locked Home copy → 2.5); C7 → 2.2 (`BandContext`
+resolves `offline-cached` within 2 s; the offline home itself is checked
+again in 2.5); C3 → 2.0.
 
 ### Phase 2
 
 | PR | Title | Contents | Depends on |
 |----|-------|----------|------------|
-| 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**. Verify Phase 1 items (§1). No IndexedDB. | Phase 1 |
+| 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route, worker registered via `workbox-window` so no path reloads on its own; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**; **precache guard: `maximumFileSizeToCacheInBytes` 5 MiB + `scripts/check-precache.mjs` in `npm run build`**; **Space Grotesk self-hosted (`@fontsource`), fonts precached**. Verify Phase 1 items (§1). No IndexedDB, no code-splitting (follow-up). | Phase 1 |
 | 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
-| 2.2 | Offline store, service core, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + schema guard + wipe **with schema-wipe notice record**; `offlineSetlistService`: reads, plan, download state machine, journal/resume, quota handling, GC (all users' refs), events, `refreshSnapshotRows`, `patchSnapshot*`; `wipeAll` wired to `AuthButton.logout` and confirmed user change **only**. **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); `listOfflineBands` offline branch (§7.2).** No UI beyond what `BandContext` needs, no migration. | 2.0 |
+| 2.2 | Offline store, service core, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + schema guard + wipe **with schema-wipe notice record**; `offlineSetlistService`: reads, plan, download state machine, journal/resume, quota handling, GC (all users' refs), events, `refreshSnapshotRows`, `patchSnapshot*`; `wipeAll` wired to `AuthButton.logout` and confirmed user change **only**. **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2).** No UI beyond what `BandContext` needs, no migration. | 2.0 |
 | 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2 keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2 |
 | 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
 | 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |

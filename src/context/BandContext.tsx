@@ -4,6 +4,7 @@ import type { Band } from "../services/bandsService";
 import { getMyBands } from "../services/bandsService";
 import { BandStorage } from "../lib/BandStorage";
 import { supabase } from "../lib/supabaseClient";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { User } from "@supabase/supabase-js";
 
 interface BandContextType {
@@ -16,6 +17,9 @@ interface BandContextType {
   refreshBands: () => void;
   isResolvingBand: boolean;
   isCheckingAuth: boolean;
+  /** Shared `useOnlineStatus()` value; see src/hooks/useOnlineStatus.ts. */
+  isOnline: boolean;
+  reportNetworkFailure: () => void;
 }
 
 const BandContext = createContext<BandContextType | undefined>(undefined);
@@ -27,6 +31,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [bands, setBands] = useState<Band[]>([]);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isResolvingBand, setIsResolvingBand] = useState(!!BandStorage.getSelectedBandId());
+  const { isOnline, reportNetworkFailure } = useOnlineStatus();
 
   // Auth state
   useEffect(() => {
@@ -71,11 +76,16 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   // Load bands
   const refreshBands = useCallback(() => {
     if (user) {
-      getMyBands().then(setBands);
+      getMyBands()
+        .then(setBands)
+        .catch(() => {
+          setBands([]);
+          reportNetworkFailure();
+        });
     } else {
       setBands([]);
     }
-  }, [user]);
+  }, [user, reportNetworkFailure]);
 
   useEffect(refreshBands, [refreshBands]);
 
@@ -83,21 +93,28 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user) {
       const savedBandId = BandStorage.getSelectedBandId();
-      getMyBands().then((bands) => {
-        if (savedBandId) {
-          const found = bands.find((b) => String(b.id) === savedBandId);
-          if (found) setSelectedBand(found);
-        } else if (bands.length === 1) {
-          // Auto-select when user has only one band and nothing saved
-          setSelectedBand(bands[0]);
-        }
-        setIsResolvingBand(false);
-      });
+      getMyBands()
+        .then((bands) => {
+          if (savedBandId) {
+            const found = bands.find((b) => String(b.id) === savedBandId);
+            if (found) setSelectedBand(found);
+          } else if (bands.length === 1) {
+            // Auto-select when user has only one band and nothing saved
+            setSelectedBand(bands[0]);
+          }
+        })
+        .catch(() => {
+          // Offline (or the request failed): leave no band selected so the app
+          // renders the normal no-band UI instead of spinning forever. The
+          // saved band id stays in storage for the next successful load.
+          reportNetworkFailure();
+        })
+        .finally(() => setIsResolvingBand(false));
     } else {
       setSelectedBand(null);
       setIsResolvingBand(false);
     }
-  }, [user]);
+  }, [user, reportNetworkFailure]);
 
   // Save selected band to storage
   useEffect(() => {
@@ -126,6 +143,8 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         refreshBands,
         isResolvingBand,
         isCheckingAuth: !hasCheckedAuth,
+        isOnline,
+        reportNetworkFailure,
       }}
     >
       {children}
