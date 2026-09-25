@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getSessionUser } from "../lib/authSession";
 import { canUserEditContent } from "./bandMembersService";
 
 // ============================================
@@ -261,8 +262,7 @@ export async function getDraftSetlists(bandId: number): Promise<Setlist[]> {
  * Get a single setlist by ID
  */
 export async function getSetlist(setlistId: string): Promise<Setlist> {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  const user = await getSessionUser();
   if (!user) throw new Error("User not authenticated");
 
   const { data, error } = await supabase

@@ -1,6 +1,6 @@
 # Intent: Offline performance mode
 
-> **Status:** proposed · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 done (2026-09-25) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 >
 > An *intent* states a problem, the outcome we want and the boundaries of a
 > change **before** it is designed in detail. It is the thing a PR points back
@@ -151,7 +151,7 @@ Needed regardless of the feature, and cheap:
 ## Phases
 
 1. **Foundations (no new UI):** local pdf.js worker, offline-safe auth,
-   network timeout. Worth shipping on its own.
+   network timeout. Worth shipping on its own. ✅ Done (2026-09-25).
 2. **Snapshot + performance mode offline:** download action, data source,
    offline UX, sign-out wipe. This is the phase that makes it possible to do a
    show with no connection.

@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { Document, Page } from "react-pdf";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
 import type { PageTiming } from "../services/songsService";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+import "../lib/pdfWorker";
 
 interface PageTimingSyncModalProps {
   isOpen: boolean;

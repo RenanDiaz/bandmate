@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getSessionUser } from "../lib/authSession";
 import type { BandRole } from "./bandMembersService";
 
 export interface Band {
@@ -15,12 +16,8 @@ export interface Band {
 }
 
 export async function getMyBands(): Promise<Band[]> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) throw new Error("User not authenticated");
+  const user = await getSessionUser();
+  if (!user) throw new Error("User not authenticated");
 
   // Get bands where user is a member (any role)
   const { data: memberData, error: memberError } = await supabase

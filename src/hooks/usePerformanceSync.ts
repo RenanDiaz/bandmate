@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabaseClient";
+import { getSessionUser } from "../lib/authSession";
 import {
   createSession,
   endSession,
@@ -174,8 +174,7 @@ export function usePerformanceSync({
       }
 
       // Get current user to check if they're the host
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData.user?.id;
+      const currentUserId = (await getSessionUser())?.id;
 
       setSession(activeSession);
       setExistingSession(activeSession);
@@ -286,9 +285,9 @@ export function usePerformanceSync({
     try {
       const updatedSession = await takeOverSessionService(existingSession.id);
       // Get our display name for the updated session
-      const { data: userData } = await supabase.auth.getUser();
-      const hostName = userData.user?.id
-        ? await getHostDisplayName(userData.user.id)
+      const currentUserId = (await getSessionUser())?.id;
+      const hostName = currentUserId
+        ? await getHostDisplayName(currentUserId)
         : null;
 
       const sessionWithHost = {
