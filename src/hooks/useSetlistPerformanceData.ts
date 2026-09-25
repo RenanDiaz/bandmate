@@ -88,15 +88,17 @@ function abortError(): Error {
 export function useSetlistPerformanceData(setlistId: string | undefined): PerformanceData {
   const { t } = useTranslation();
   const toast = useToast();
-  const { selectedBand, isOnline, reportNetworkFailure } = useBandContext();
+  const { selectedBand, isOnline, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
 
   // Read at call time by the snapshot source and the controller.
   const isOnlineRef = useRef(isOnline);
   const reportNetworkFailureRef = useRef(reportNetworkFailure);
+  const reportNetworkSuccessRef = useRef(reportNetworkSuccess);
   useEffect(() => {
     isOnlineRef.current = isOnline;
     reportNetworkFailureRef.current = reportNetworkFailure;
-  }, [isOnline, reportNetworkFailure]);
+    reportNetworkSuccessRef.current = reportNetworkSuccess;
+  }, [isOnline, reportNetworkFailure, reportNetworkSuccess]);
 
   const [state, setState] = useState<PerformanceDataState>(LOADING);
   const controllerRef = useRef<PerformanceDataController | null>(null);
@@ -108,13 +110,14 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
     if (!setlistId) return;
     const controller = new PerformanceDataController({
       setlistId,
-      // The flag gates source selection (removed in PR 2.5). Read per mount.
+      // The flag gates source selection (removed in PR 2.6). Read per mount.
       useSnapshots: isOfflineDownloadsEnabled(),
       isOnline: () => isOnlineRef.current,
       network: networkPerformanceDataSource,
       snapshot: createSnapshotPerformanceDataSource({
         isOnline: () => isOnlineRef.current,
         reportNetworkFailure: () => reportNetworkFailureRef.current(),
+        reportNetworkSuccess: () => reportNetworkSuccessRef.current(),
       }),
     });
     controllerRef.current = controller;

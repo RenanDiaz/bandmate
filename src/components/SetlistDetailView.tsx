@@ -389,7 +389,7 @@ const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { selectedBand, reportNetworkFailure } = useBandContext();
+  const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
@@ -595,6 +595,7 @@ const SetlistDetailView: FC = () => {
       setLoading(true);
       try {
         const setlistData = await getSetlist(setlistId);
+        reportNetworkSuccess();
         setSetlist(setlistData);
 
         // Load all songs for the band
@@ -627,7 +628,7 @@ const SetlistDetailView: FC = () => {
     };
 
     loadData();
-  }, [setlistId, navigate, reportNetworkFailure]);
+  }, [setlistId, navigate, reportNetworkFailure, reportNetworkSuccess]);
 
   // Check YouTube access on mount
   useEffect(() => {

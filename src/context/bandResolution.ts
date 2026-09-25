@@ -10,6 +10,8 @@ export interface ResolveBandsDeps {
   listOfflineBands: () => Promise<Band[]>;
   /** Called when the server couldn't be reached (BandContext: reportNetworkFailure). */
   onNetworkFailure: () => void;
+  /** Called when the server answered (BandContext: reportNetworkSuccess, resets the backoff). */
+  onNetworkSuccess?: () => void;
 }
 
 export interface ResolvedBands {
@@ -33,7 +35,9 @@ export async function resolveBands(deps: ResolveBandsDeps): Promise<ResolvedBand
   if (!user) return { bands: [], source: "server" };
   if (authMode === "offline-cached") return { bands: await safeOfflineBands(deps), source: "offline" };
   try {
-    return { bands: await deps.getMyBands(user.id), source: "server" };
+    const bands = await deps.getMyBands(user.id);
+    deps.onNetworkSuccess?.();
+    return { bands, source: "server" };
   } catch (error) {
     if (!isNetworkError(error)) {
       console.error("Could not load bands:", error);

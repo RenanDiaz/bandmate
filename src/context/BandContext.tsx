@@ -7,6 +7,7 @@ import {
   countHiddenSnapshots,
   getLastUserId,
   listOfflineBands,
+  prefetchOfflineReads,
   setOfflineCurrentUser,
   subscribe as subscribeOffline,
 } from "../services/offlineSetlistService";
@@ -33,6 +34,8 @@ interface BandContextType {
   /** Shared `useOnlineStatus()` value; see src/hooks/useOnlineStatus.ts. */
   isOnline: boolean;
   reportNetworkFailure: () => void;
+  /** Call after a request reached the server: resets the forced-offline backoff (useOnlineStatus). */
+  reportNetworkSuccess: () => void;
   /**
    * In "session-lost": how many offline copies `last-user` has on this device
    * (hidden, not deleted; §7.1). 0 in every other mode. A count only — the
@@ -55,7 +58,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [bands, setBands] = useState<Band[]>([]);
   const [hiddenOfflineCount, setHiddenOfflineCount] = useState(0);
   const [isResolvingBand, setIsResolvingBand] = useState(!!BandStorage.getSelectedBandId());
-  const { isOnline, reportNetworkFailure } = useOnlineStatus();
+  const { isOnline, reportNetworkFailure, reportNetworkSuccess } = useOnlineStatus();
   const { user, authMode, isCheckingAuth } = auth;
 
   // The controller is created once; these refs give it the latest values.
@@ -63,17 +66,20 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   isOnlineRef.current = isOnline;
   const reportNetworkFailureRef = useRef(reportNetworkFailure);
   reportNetworkFailureRef.current = reportNetworkFailure;
+  const reportNetworkSuccessRef = useRef(reportNetworkSuccess);
+  reportNetworkSuccessRef.current = reportNetworkSuccess;
   const controllerRef = useRef<OfflineAuthController | null>(null);
 
-  // Auth state (§7.1): session first; offline, getSession() is raced against
-  // a 1.5 s timeout and `last-user` resolves "offline-cached" provisionally;
+  // Auth state (§7.1): session first; getSession() is raced against
+  // a 750 ms timeout and `last-user` resolves "offline-cached" provisionally;
   // an involuntary SIGNED_OUT hides offline copies instead of deleting them.
   useEffect(() => {
     const controller = new OfflineAuthController({
       auth: supabase.auth,
-      offline: { getLastUserId, confirmSignedInUser, setOfflineCurrentUser },
+      offline: { getLastUserId, confirmSignedInUser, setOfflineCurrentUser, prefetchOfflineReads },
       isOnline: () => isOnlineRef.current,
       reportNetworkFailure: () => reportNetworkFailureRef.current(),
+      reportNetworkSuccess: () => reportNetworkSuccessRef.current(),
       // Only a confirmed "nobody is signed in" forgets the saved band; a
       // provisional, cached or lost session keeps it for when it comes back.
       onConfirmedSignedOut: () => BandStorage.clearSelectedBandId(),
@@ -128,9 +134,10 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
           getMyBands,
           listOfflineBands,
           onNetworkFailure: reportNetworkFailure,
+          onNetworkSuccess: reportNetworkSuccess,
         })
       ).bands,
-    [user, authMode, reportNetworkFailure]
+    [user, authMode, reportNetworkFailure, reportNetworkSuccess]
   );
 
   const refreshBands = useCallback(() => {
@@ -189,6 +196,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         isCheckingAuth,
         isOnline,
         reportNetworkFailure,
+        reportNetworkSuccess,
         hiddenOfflineCount,
       }}
     >

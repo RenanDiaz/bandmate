@@ -28,7 +28,8 @@ type UpcomingEvent =
 
 const Home = () => {
   const { t, i18n } = useTranslation();
-  const { user, authMode, hiddenOfflineCount, selectedBand, refreshBands, reportNetworkFailure } = useBandContext();
+  const { user, authMode, hiddenOfflineCount, selectedBand, refreshBands, reportNetworkFailure, reportNetworkSuccess } =
+    useBandContext();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -47,6 +48,7 @@ const Home = () => {
         getUpcomingRehearsals(selectedBand.id),
       ])
         .then(([songsData, setlistsData, showsData, rehearsalsData]) => {
+          reportNetworkSuccess();
           setSongs(songsData);
           setSetlists(setlistsData);
 
@@ -74,7 +76,7 @@ const Home = () => {
         })
         .finally(() => setLoading(false));
     }
-  }, [user, selectedBand, reportNetworkFailure]);
+  }, [user, selectedBand, reportNetworkFailure, reportNetworkSuccess]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString + "T00:00:00");

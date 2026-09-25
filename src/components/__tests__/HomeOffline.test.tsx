@@ -51,10 +51,11 @@ const httpError = { message: "permission denied for table songs", code: "42501",
 function renderWithRealisticContext(path: string) {
   let setContext: (next: BandContextValue) => void = () => {};
   const reportNetworkFailure = vi.fn(() => setContext(bandContext({ ...base, isOnline: false, reportNetworkFailure })));
-  const base = { selectedBand: BAND, bands: [BAND] };
+  const reportNetworkSuccess = vi.fn();
+  const base = { selectedBand: BAND, bands: [BAND], reportNetworkSuccess };
   const result = renderApp(<AppMain />, { ctx: bandContext({ ...base, reportNetworkFailure }), path });
   setContext = result.setContext;
-  return { reportNetworkFailure };
+  return { reportNetworkFailure, reportNetworkSuccess };
 }
 
 beforeEach(() => {
@@ -64,6 +65,12 @@ beforeEach(() => {
 });
 
 describe("weak signal on Home (§7.3)", () => {
+  it("a successful load reports success (resets the backoff)", async () => {
+    const { reportNetworkFailure, reportNetworkSuccess } = renderWithRealisticContext("/");
+    await waitFor(() => expect(reportNetworkSuccess).toHaveBeenCalledTimes(1));
+    expect(reportNetworkFailure).not.toHaveBeenCalled();
+  });
+
   it("a network error reports the failure and renders the offline home, no error toast", async () => {
     vi.mocked(getBandSongs).mockRejectedValue(networkError);
     const { reportNetworkFailure } = renderWithRealisticContext("/");
@@ -94,6 +101,11 @@ describe("weak signal on SetlistsView", () => {
     expect(await screen.findByText("You're offline and nothing is saved on this device")).toBeTruthy();
     expect(reportNetworkFailure).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("location").textContent).toBe("/setlists");
+  });
+
+  it("a successful load reports success", async () => {
+    const { reportNetworkSuccess } = renderWithRealisticContext("/setlists");
+    await waitFor(() => expect(reportNetworkSuccess).toHaveBeenCalledTimes(1));
   });
 
   it("an HTTP error keeps the online list", async () => {

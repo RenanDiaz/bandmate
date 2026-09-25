@@ -94,7 +94,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
-| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -153,7 +153,7 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
 | `authMode` | When | `user` | Offline copies |
 |------------|------|--------|----------------|
 | `session` | valid session | Supabase `User` | that uid's, visible |
-| `offline-cached` | `getSession()` failed with `AuthRetryableFetchError` (or didn't answer within 1.5 s, online or offline) and `last-user` exists | `OfflineUser` (`{ id, offlineCached: true }`) | `last-user`'s, visible |
+| `offline-cached` | `getSession()` failed with `AuthRetryableFetchError` (or didn't answer within 750 ms, online or offline) and `last-user` exists | `OfflineUser` (`{ id, offlineCached: true }`) | `last-user`'s, visible |
 | `session-lost` | no stored session / involuntary `SIGNED_OUT`, `last-user` exists | `null` | hidden, **not** deleted |
 | `signed-out` | no session, no `last-user` | `null` | none |
 
@@ -164,7 +164,9 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
   second `getSession()`.
 - **`getSession()` is not awaited when `last-user` exists** (A6, online or
   offline: weak signal reports online): with an expired token it takes ≈25 s
-  to fail. It is raced against `GET_SESSION_OFFLINE_TIMEOUT_MS` (1.5 s);
+  to fail. It is raced against `GET_SESSION_OFFLINE_TIMEOUT_MS` (750 ms), and
+  `last-user`'s snapshot list is read in parallel (`prefetchOfflineReads`,
+  used only once that uid is current) so the offline home renders right after;
   on timeout `last-user` resolves `offline-cached` **provisionally**, and the
   late answer reconciles (same uid → `session`; other uid → wipe, then
   `session`; retryable error → stay; other `null` → `session-lost`).
@@ -242,7 +244,7 @@ that keep it correct (spec changelog, PR 2.2b) — keep them when changing it:
    download record with plain `writeKey`/`writeMany`.
 2. **Auth drops.** Before each file **fetch** the owner must still be the
    `authenticated` current user and `navigator.onLine` not `false` (never the
-   context's `isOnline`: its 30 s forced-offline window would skip every
+   context's `isOnline`: its forced-offline window would skip every
    remaining file after one failure; one file's network error only marks that
    file). Otherwise the rest is recorded as `network` and the journal stays
    for `resumeInterruptedDownloads()`. The **commit** is local: it needs only
@@ -308,7 +310,7 @@ also used by the schema-wipe notice's Download buttons).
 Routing lives in `src/AppMain.tsx` (extracted from `App.tsx`, which keeps the
 navbar). **"Offline" is `useOfflineUi()`**: flag on, a user known (`session`
 or `offline-cached`) and the context's `isOnline` false, which includes
-`reportNetworkFailure()`'s 30 s window. `<OfflineAware offline={…}>` renders
+`reportNetworkFailure()`'s forced-offline window. `<OfflineAware offline={…}>` renders
 the offline screen *instead of* the online view (the online view is not
 mounted: no fetches, no toasts); when `isOnline` returns, the same URL renders
 its online view again. Nothing navigates. Spec §7.3.
@@ -349,11 +351,16 @@ that way).
 
 **Online status** (`useOnlineStatus` hook): `navigator.onLine` plus the
 `online`/`offline` events, and `reportNetworkFailure()`, which forces offline
-for 30 s after a failed request (captive portals, signal with no data). Read it
-from `useBandContext()` (`isOnline`, `reportNetworkFailure`) so the whole tree
-shares one value; don't call the hook again elsewhere. `BandContext` calls
-`reportNetworkFailure()` when `getMyBands()` fails on the network (not on an
-HTTP error), and always ends band
+after a failed request (captive portals, signal with no data): 30 s, doubling
+on each consecutive failure up to 5 min (failures inside a running window
+don't escalate). **Pair every `reportNetworkFailure()` site with
+`reportNetworkSuccess()` on success**: it resets the backoff (it does not end a
+running window; a service-worker cache answer looks like a success). A real
+`online` event ends the window and resets too. Read them from
+`useBandContext()` (`isOnline`, `reportNetworkFailure`, `reportNetworkSuccess`)
+so the whole tree shares one value; don't call the hook again elsewhere.
+`BandContext` reports `getMyBands()` network failures (not HTTP errors) and
+successes, and always ends band
 resolution so a failed load renders the no-band UI instead of a spinner.
 
 **Service worker updates** use `registerType: 'prompt'`. `PwaReloadPrompt`

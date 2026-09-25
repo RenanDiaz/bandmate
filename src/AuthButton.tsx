@@ -45,7 +45,7 @@ export const AuthButton: FC = () => {
     }
   }, [toast, t]);
 
-  // Nothing while auth resolves (≤ 1.5 s with a last-user, A6): no "Sign in" flash.
+  // Nothing while auth resolves (≤ 750 ms with a last-user, A6): no "Sign in" flash.
   if (isCheckingAuth) return null;
 
   if (!user) {

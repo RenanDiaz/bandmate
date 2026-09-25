@@ -27,7 +27,7 @@ interface Props {
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
   const toast = useToast();
-  const { reportNetworkFailure } = useBandContext();
+  const { reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -54,6 +54,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
     setLoading(true);
     try {
       const data = await getBandSetlists(selectedBand.id);
+      reportNetworkSuccess();
       setSetlists(data);
     } catch (error) {
       console.error("Failed to load setlists:", error);

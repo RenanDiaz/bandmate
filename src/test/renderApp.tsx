@@ -31,6 +31,7 @@ export function bandContext(overrides: Partial<BandContextValue> = {}): BandCont
     isCheckingAuth: false,
     isOnline: true,
     reportNetworkFailure: vi.fn(),
+    reportNetworkSuccess: vi.fn(),
     hiddenOfflineCount: 0,
     ...overrides,
   };

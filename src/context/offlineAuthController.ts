@@ -8,7 +8,7 @@ import { isAuthRetryableFetchError } from "@supabase/supabase-js";
  *
  * - "session": valid session; that uid's offline copies are visible.
  * - "offline-cached": no usable token and the refresh failed on the network
- *   (or getSession() hasn't answered within 1.5 s, online or not); `last-user`'s
+ *   (or getSession() hasn't answered within 750 ms, online or not); `last-user`'s
  *   copies are visible. `user` is a minimal `OfflineUser`.
  * - "session-lost": no stored session, but `last-user` exists and never signed
  *   out; copies are HIDDEN, nothing is deleted.
@@ -34,8 +34,15 @@ export function isOfflineUser(user: AppUser | null): user is OfflineUser {
   return !!user && (user as OfflineUser).offlineCached === true;
 }
 
-/** How long BandContext waits for getSession() before trusting `last-user` provisionally (A6), online or offline. */
-export const GET_SESSION_OFFLINE_TIMEOUT_MS = 1500;
+/**
+ * How long BandContext waits for getSession() before trusting `last-user`
+ * provisionally (A6), online or offline. A valid token answers in ≈0 ms, so
+ * this only matters when the token must be refreshed and the auth server
+ * can't be reached. 750 ms (was 1.5 s) leaves room for the rest of the
+ * relaunch inside C7's 2 s on a phone: with 1.5 s the offline home took
+ * ≈1.67 s on desktop headless Chromium already.
+ */
+export const GET_SESSION_OFFLINE_TIMEOUT_MS = 750;
 
 export interface AuthState {
   user: AppUser | null;
@@ -64,9 +71,13 @@ export interface AuthControllerDeps {
     confirmSignedInUser: (userId: string) => Promise<{ wiped: boolean }>;
     /** `authenticated`: a valid session ("session"), which downloads require; false in "offline-cached". */
     setOfflineCurrentUser: (userId: string | null, opts?: { authenticated?: boolean }) => void;
+    /** Start reading `last-user`'s snapshot list while getSession() is raced (A6/C7). Read-only. */
+    prefetchOfflineReads?: (userId: string) => void;
   };
   isOnline: () => boolean;
   reportNetworkFailure: () => void;
+  /** getUser() reached the auth server (resets the forced-offline backoff). */
+  reportNetworkSuccess?: () => void;
   /** Runs when a confirmed state says nobody is signed in (BandContext clears the saved band). */
   onConfirmedSignedOut?: () => void;
   timeoutMs?: number;
@@ -186,6 +197,12 @@ export class OfflineAuthController {
     const gen = this.generation;
     const lastUserPromise = this.deps.offline.getLastUserId();
     const sessionPromise = safeGetSession(this.deps);
+    // Read `last-user`'s snapshot list in parallel with the race, so the
+    // offline home doesn't wait for it after the timeout (C7). Read-only: it
+    // is used only if that uid becomes current.
+    void lastUserPromise.then((id) => {
+      if (id && this.isCurrent(gen)) this.deps.offline.prefetchOfflineReads?.(id);
+    });
 
     // With a token near expiry or expired, getSession() takes ≈25 s to give up
     // when the auth server can't be reached (§1). That happens on weak signal
@@ -273,6 +290,7 @@ export class OfflineAuthController {
       const {
         data: { user: verified },
       } = await this.deps.auth.getUser();
+      if (verified) this.deps.reportNetworkSuccess?.();
       if (!verified || verified.id === sessionUserId || !this.isCurrent(gen)) return;
       await this.applyConfirmed(gen, verified);
     } catch {

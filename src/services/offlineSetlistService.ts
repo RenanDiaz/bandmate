@@ -219,6 +219,8 @@ export function subscribe(listener: (e: OfflineEvent) => void): () => void {
 }
 
 function emit(event: OfflineEvent): void {
+  // Anything that changes or clears snapshots makes a prefetched read stale.
+  if (event.type === "snapshot-changed" || event.type === "store-wiped") ownedMetasPrefetch = null;
   for (const listener of [...listeners]) {
     try {
       listener(event);
@@ -430,12 +432,39 @@ async function readOwnedMetas(userId: string): Promise<OfflineSnapshotMeta[]> {
   return owned;
 }
 
+// A6/C7: the relaunch reads `last-user`'s metas while getSession() is still
+// being raced, so the offline home and band list don't wait for a second pass
+// over the store once the user is known. Used only for that uid, within a few
+// seconds, and dropped on any snapshot change or wipe.
+const PREFETCH_TTL_MS = 5_000;
+let ownedMetasPrefetch: { userId: string; at: number; metas: Promise<OfflineSnapshotMeta[]> } | null = null;
+
+/**
+ * Starts reading `userId`'s snapshot metas now (BandContext's auth controller,
+ * with `last-user`, in parallel with the A6 race). Reads nothing into view:
+ * `listSnapshots` / `listOfflineBands` use it only once `userId` is the
+ * current user, exactly as they would have read it themselves.
+ */
+export function prefetchOfflineReads(userId: string): void {
+  ownedMetasPrefetch = {
+    userId,
+    at: Date.now(),
+    metas: safeRead<OfflineSnapshotMeta[]>([], () => readOwnedMetas(userId)),
+  };
+}
+
+function ownedMetas(userId: string): Promise<OfflineSnapshotMeta[]> {
+  const prefetch = ownedMetasPrefetch;
+  if (prefetch && prefetch.userId === userId && Date.now() - prefetch.at < PREFETCH_TTL_MS) return prefetch.metas;
+  return readOwnedMetas(userId);
+}
+
 /** All snapshot metas of the current user, newest savedAt first. Empty if none or store unavailable. */
 export function listSnapshots(): Promise<OfflineSnapshotMeta[]> {
   const userId = currentUserId;
   if (!userId) return Promise.resolve([]);
   return safeRead([], async () => {
-    const metas = await readOwnedMetas(userId);
+    const metas = [...(await ownedMetas(userId))];
     return metas.sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
   });
 }
@@ -488,7 +517,7 @@ export function listOfflineBands(): Promise<Band[]> {
   const userId = currentUserId;
   if (!userId) return Promise.resolve([]);
   return safeRead([], async () => {
-    const metas = await readOwnedMetas(userId);
+    const metas = await ownedMetas(userId);
     const bandIds = [...new Set(metas.map((m) => m.bandId))];
     if (bandIds.length === 0) return [];
     const bands = await readMany<Band>(bandIds.map((id) => offlineKeys.band(id)));
@@ -1899,6 +1928,7 @@ export function __resetOfflineServiceForTests(): void {
   currentUserId = null;
   currentUserAuthenticated = false;
   activeJob = null;
+  ownedMetasPrefetch = null;
   schemaWipeAnnounced = false;
   authQueue = Promise.resolve();
   listeners.clear();
