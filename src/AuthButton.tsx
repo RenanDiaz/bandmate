@@ -6,6 +6,8 @@ import { supabase } from "./lib/supabaseClient";
 import styled from "styled-components";
 import { theme } from "./theme";
 import { useTranslation } from "react-i18next";
+import { wipeAll } from "./services/offlineSetlistService";
+import { performUserSignOut } from "./context/offlineAuthController";
 
 export const AuthButton: FC = () => {
   const { t, i18n } = useTranslation();
@@ -43,7 +45,10 @@ export const AuthButton: FC = () => {
     setLoading(true);
     setShowUserMenu(false);
     try {
-      await supabase.auth.signOut();
+      // The only sign-out that deletes offline copies (spec §3.5 #6a): the
+      // wipe is awaited before signOut(), and the SIGNED_OUT it causes is
+      // recognized as user-initiated rather than a lost session.
+      await performUserSignOut(wipeAll, () => supabase.auth.signOut());
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {

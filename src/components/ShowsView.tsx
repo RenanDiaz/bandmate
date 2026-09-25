@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { AppUser } from "../context/offlineAuthController";
 import type { Band } from "../services/bandsService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +22,7 @@ import { useToast } from "../context/useToast";
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
 interface Props {
-  user: User | null;
+  user: AppUser | null;
   selectedBand: Band | null;
 }
 

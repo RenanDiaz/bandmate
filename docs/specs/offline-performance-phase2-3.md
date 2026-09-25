@@ -12,6 +12,31 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.2 split into 2.2a and 2.2b.** PR 2.2 carried the store,
+  the offline auth rework and the whole download engine; reviewed as one it
+  mixed the riskiest auth change with the largest new code. §12 now has:
+  - **2.2a — Offline store, reads, offline auth** (depends on 2.0):
+    `idb-keyval`; `offlineStore.ts` (key layout, open, schema guard, wipe that
+    records the A4 lost list); the service's reads, owner filter, events,
+    `confirmSignedInUser` / `wipeAll`, `countHiddenSnapshots` and the
+    schema-wipe notice accessors; `BandContext` auth modes (A1/A6), `last-user`
+    and the `listOfflineBands` branch; `performPosition.ts` key prefix +
+    `clearAllPerformPositions` only (read/write stay in 2.4); vitest +
+    fake-indexeddb and `npm test`.
+  - **2.2b — Download engine** (depends on 2.2a): `planDownload`,
+    `downloadSetlist`, journal/resume, quota handling, GC,
+    `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`,
+    `getStorageUsage`, `refreshSnapshotRows` and `patchSnapshot*`.
+  - 2.3 now depends on 2.2b. The acceptance-criteria map assigns C1–C2,
+    C4–C7 and the A9 recording to 2.2a; nothing in §10 is checked by 2.2b
+    alone (its criteria A1–A8 are exercised through 2.3's UI), so 2.2b is
+    verified by unit tests against fake-indexeddb.
+  - Implementation note from 2.2a: the §7.1 resolution lives in
+    `src/context/offlineAuthController.ts` (plain TypeScript, unit-tested);
+    `BandContext` mirrors its state. `user` in `offline-cached` is an
+    `OfflineUser` (`{ id, offlineCached: true }`), and the context's `user` type
+    is `AppUser = User | OfflineUser`.
+
 - **2026-09-25 — PR 2.1 reconciliation.** §8.1 now matches what shipped:
   - `selectSheetMusic`: the network source still toasts
     `sheetMusic.preferenceError` when the server write fails (kept in 2.1,
@@ -52,7 +77,7 @@ given because they are the contract between PRs; no bodies are written here.
     measured ≈25.4 s for it to resolve `null` with a token inside the refresh
     margin or expired, which is the normal case on show day. It races a
     ≈1.5 s timeout and resolves provisionally from `last-user`, then
-    reconciles by the A1 rules. §1, §7.1, §10 (new C7), §12 (PR 2.2).
+    reconciles by the A1 rules. §1, §7.1, §10 (new C7), §12 (PR 2.2, now 2.2a).
 
 - **2026-09-25 — Amendments A1–A5 + minor.**
   - **A1** Never auto-wipe on an ambiguous auth state. `wipeAll()` runs only
@@ -1022,10 +1047,10 @@ acceptable, and the checklist covers it (§11).
 - **PR 2.0 — no infinite spinner (C3).** Both `getMyBands()` calls get a
   `catch`; `isResolvingBand` becomes `false` in every path (success, error,
   no user). On error `bands` stays `[]`, `selectedBand` `null`, and
-  `reportNetworkFailure()` is called. Before PR 2.2 this renders the normal
+  `reportNetworkFailure()` is called. Before PR 2.2a this renders the normal
   no-band UI instead of a spinner; that is the whole fix, and it is enough
   on its own.
-- **PR 2.2 — offline branch.** On the same catch, and whenever
+- **PR 2.2a — offline branch.** On the same catch, and whenever
   `authMode === "offline-cached"`: `listOfflineBands()` → `bands`;
   `selectedBand` = the one in `BandStorage`, else the only one, else `null`.
   In `session-lost` and `signed-out` there are no bands.
@@ -1562,9 +1587,11 @@ same PR (CLAUDE.md service/hook tables, README Features, `en.json` +
 
 Acceptance criteria by PR: A1–A8 → 2.3; A9 → 2.5 (recording in 2.2);
 B2–B13 → 2.4 (reached by deep link); B1 → 2.5 (needs `OfflineHome`);
-C1–C2, C4–C6 → 2.2 (C5's locked Home copy → 2.5); C7 → 2.2 (`BandContext`
+C1–C2, C4–C6 → 2.2a (C5's locked Home copy → 2.5); C7 → 2.2a (`BandContext`
 resolves `offline-cached` within 2 s; the offline home itself is checked
-again in 2.5); C3 → 2.0.
+again in 2.5); A9 recording → 2.2a (the notice UI → 2.5); C3 → 2.0. 2.2b
+owns no criterion on its own: A1–A8 exercise it through 2.3, and it is
+verified by unit tests (fake-indexeddb) in `npm test`.
 
 ### Phase 2
 
@@ -1572,8 +1599,9 @@ again in 2.5); C3 → 2.0.
 |----|-------|----------|------------|
 | 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route, worker registered via `workbox-window` so no path reloads on its own; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**; **precache guard: `maximumFileSizeToCacheInBytes` 5 MiB + `scripts/check-precache.mjs` in `npm run build`**; **Space Grotesk self-hosted (`@fontsource`), fonts precached**. Verify Phase 1 items (§1). No IndexedDB, no code-splitting (follow-up). | Phase 1 |
 | 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
-| 2.2 | Offline store, service core, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + schema guard + wipe **with schema-wipe notice record**; `offlineSetlistService`: reads, plan, download state machine, journal/resume, quota handling, GC (all users' refs), events, `refreshSnapshotRows`, `patchSnapshot*`; `wipeAll` wired to `AuthButton.logout` and confirmed user change **only**. **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2).** No UI beyond what `BandContext` needs, no migration. | 2.0 |
-| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2 keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2 |
+| 2.2a | Offline store, reads, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + store open + schema guard + wipe **with schema-wipe notice record** (A4 lost list exposed by the service; UI in 2.5); `offlineSetlistService`: `openOfflineStore`, `setOfflineCurrentUser`, `getLastUserId`, `confirmSignedInUser`, `listSnapshots`, `getSnapshotMeta`, `getSnapshot`, `getFile`, `listOfflineBands`, `countHiddenSnapshots`, `getSchemaWipeNotice` / `dismissSchemaWipeNotice`, `wipeAll`, `subscribe`/events; reads return empty/null on an empty store and on `storage-unavailable`. `wipeAll` wired to `AuthButton.logout` (awaited before `signOut`) and confirmed user change **only**; also clears `bandmate_perform_position_*` (`performPosition.ts`: prefix + `clearAllPerformPositions`). **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2); `isResolvingBand` always resolves; `authMode` exposed.** vitest + fake-indexeddb, `npm test`. No UI beyond what `BandContext` needs, no migration. | 2.0 |
+| 2.2b | Download engine | `planDownload`, `downloadSetlist` state machine, journal + `resumeInterruptedDownloads`, `cancelDownload`, quota handling (§4.5), `collectGarbage` (all users' refs), `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`, `getStorageUsage`, `refreshSnapshotRows`, `patchSnapshot*`; `snapshot-changed` / `download-progress` events. Unit tests against fake-indexeddb. No UI. | 2.2a |
+| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2a keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2b |
 | 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
 | 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |
 | 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
