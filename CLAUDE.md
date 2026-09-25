@@ -49,7 +49,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, offlineStore, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -146,14 +146,18 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
 | `authMode` | When | `user` | Offline copies |
 |------------|------|--------|----------------|
 | `session` | valid session | Supabase `User` | that uid's, visible |
-| `offline-cached` | `getSession()` failed with `AuthRetryableFetchError` (or, offline, didn't answer within 1.5 s) and `last-user` exists | `OfflineUser` (`{ id, offlineCached: true }`) | `last-user`'s, visible |
+| `offline-cached` | `getSession()` failed with `AuthRetryableFetchError` (or didn't answer within 1.5 s, online or offline) and `last-user` exists | `OfflineUser` (`{ id, offlineCached: true }`) | `last-user`'s, visible |
 | `session-lost` | no stored session / involuntary `SIGNED_OUT`, `last-user` exists | `null` | hidden, **not** deleted |
 | `signed-out` | no session, no `last-user` | `null` | none |
 
-- `user` is typed `AppUser = User | OfflineUser`: only `id` is guaranteed. Use
-  `isOfflineUser()` or `authMode` before reading anything else.
-- **Offline, `getSession()` is not awaited** (A6): with an expired token it takes
-  ≈25 s to fail. It is raced against `GET_SESSION_OFFLINE_TIMEOUT_MS` (1.5 s);
+- `user` is typed `AppUser = { id } & Partial<Omit<User, "id">>`: only `id` is
+  guaranteed and every other field is optional, so the compiler makes you
+  handle `offline-cached`. Hide what isn't there (`AuthButton` shows "Offline"
+  instead of an email). Read the user from `useBandContext()`, not from a
+  second `getSession()`.
+- **`getSession()` is not awaited when `last-user` exists** (A6, online or
+  offline: weak signal reports online): with an expired token it takes ≈25 s
+  to fail. It is raced against `GET_SESSION_OFFLINE_TIMEOUT_MS` (1.5 s);
   on timeout `last-user` resolves `offline-cached` **provisionally**, and the
   late answer reconciles (same uid → `session`; other uid → wipe, then
   `session`; retryable error → stay; other `null` → `session-lost`).
@@ -163,15 +167,22 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
 - `last-user` (IndexedDB) is written only by `confirmSignedInUser()` on a
   **confirmed** session (`getSession()` / an auth event carrying a session).
 - Back online in `offline-cached`, `BandContext` calls `recheck()`.
-- Bands: `getMyBands()` with a session; `listOfflineBands()` in
-  `offline-cached` or when `getMyBands()` fails. `isResolvingBand` always ends.
+- Bands (`src/context/bandResolution.ts`, §7.2): `getMyBands(userId)` with a
+  session; `listOfflineBands()` in `offline-cached` or when `getMyBands()`
+  fails with a **network** error (`isNetworkError`, `src/lib/networkErrors.ts`).
+  An HTTP error keeps the no-band UI, with no fallback. `getMyBands` takes the uid
+  from the context and never reads the session again. `isResolvingBand`
+  always ends.
 
 **Offline wipe rules — exactly two triggers** (spec §3.5 #6). `wipeAll()` clears
 the IndexedDB store (`last-user` included) and every
 `bandmate_perform_position_*` localStorage key. It runs **only**:
 1. on user-initiated sign-out: `AuthButton.logout` calls
-   `performUserSignOut(wipeAll, signOut)`, which awaits the wipe **before**
-   `supabase.auth.signOut()` and marks the resulting `SIGNED_OUT` as voluntary;
+   `performUserSignOut(wipeAll, signOutEverywhereOrLocally)`, which awaits the
+   wipe **before** signing out and marks the resulting `SIGNED_OUT` as
+   voluntary. `signOutEverywhereOrLocally()` (`src/lib/authSession.ts`) removes
+   the local session when the server can't be reached (offline, network error,
+   > 3 s): auth-js `signOut()` keeps it on a network error, for every scope;
 2. inside `confirmSignedInUser(uid)` when `uid` differs from `last-user`,
    before that uid becomes current.
 
@@ -195,6 +206,9 @@ store `kv`, prefixed keys: `meta`, `last-user`, `schema-wipe-notice`,
 - `meta.schemaVersion !== OFFLINE_SCHEMA_VERSION` (or a record of another
   version) wipes the store, keeps `last-user`, and records the lost setlists
   in `schema-wipe-notice` (`getSchemaWipeNotice()` / `dismissSchemaWipeNotice()`).
+  Dismissing removes the current user's entries and the key goes when none are
+  left (no per-user dismissal list: the store holds one user's data, A1).
+  `wipeAll()` deletes it too: it names setlists.
   **Bumping `OFFLINE_SCHEMA_VERSION` deletes every offline copy on every
   device: justify it in the PR description.** Old `snapshot-meta` records must
   keep `setlistId`, `setlistName`, `userId`, `bandId` (the one cross-version
@@ -205,7 +219,8 @@ store `kv`, prefixed keys: `meta`, `last-user`, `schema-wipe-notice`,
 for 30 s after a failed request (captive portals, signal with no data). Read it
 from `useBandContext()` (`isOnline`, `reportNetworkFailure`) so the whole tree
 shares one value; don't call the hook again elsewhere. `BandContext` calls
-`reportNetworkFailure()` when `getMyBands()` fails, and always ends band
+`reportNetworkFailure()` when `getMyBands()` fails on the network (not on an
+HTTP error), and always ends band
 resolution so a failed load renders the no-band UI instead of a spinner.
 
 **Service worker updates** use `registerType: 'prompt'`. `PwaReloadPrompt`

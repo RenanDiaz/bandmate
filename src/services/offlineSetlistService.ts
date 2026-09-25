@@ -487,7 +487,7 @@ export function getSchemaWipeNotice(): Promise<Array<{
   if (!userId) return Promise.resolve(null);
   return safeRead(null, async () => {
     const notice = await readKey<OfflineSchemaWipeNotice>(offlineKeys.schemaWipeNotice);
-    if (!notice || notice.dismissedBy?.includes(userId)) return null;
+    if (!notice || !Array.isArray(notice.lost)) return null;
     const mine = notice.lost
       .filter((e) => e.userId === userId)
       .map(({ setlistId, setlistName, bandId }) => ({ setlistId, setlistName, bandId }));
@@ -495,23 +495,29 @@ export function getSchemaWipeNotice(): Promise<Array<{
   });
 }
 
-/** No id: dismiss all of the current user's entries. With an id: drop that entry (downloaded again, or gone). */
+/**
+ * No id: dismiss all of the current user's entries. With an id: drop that entry
+ * (downloaded again, or gone). The key is deleted once no entries are left.
+ *
+ * By A1 the store holds one user's data at a time (a confirmed sign-in of
+ * another uid wipes it first), so there is no per-user dismissal list. Entries
+ * stay tagged with their userId only for the failed-wipe case, where the old
+ * user's records linger until the wipe is retried: nobody else sees them.
+ */
 export function dismissSchemaWipeNotice(setlistId?: string): Promise<void> {
   const userId = currentUserId;
   if (!userId) return Promise.resolve();
   return safeRead(undefined, async () => {
     const notice = await readKey<OfflineSchemaWipeNotice>(offlineKeys.schemaWipeNotice);
-    if (!notice) return;
-    const lost =
-      setlistId === undefined
-        ? notice.lost
-        : notice.lost.filter((e) => !(e.userId === userId && e.setlistId === setlistId));
-    const dismissedBy = setlistId === undefined ? [...new Set([...(notice.dismissedBy ?? []), userId])] : notice.dismissedBy ?? [];
-    const pending = lost.filter((e) => !dismissedBy.includes(e.userId));
-    if (pending.length === 0) {
+    if (!notice || !Array.isArray(notice.lost)) return;
+    const lost = notice.lost.filter(
+      (e) => e.userId !== userId || (setlistId !== undefined && e.setlistId !== setlistId)
+    );
+    if (lost.length === notice.lost.length) return;
+    if (lost.length === 0) {
       await removeKey(offlineKeys.schemaWipeNotice);
     } else {
-      await writeKey(offlineKeys.schemaWipeNotice, { ...notice, lost, dismissedBy });
+      await writeKey(offlineKeys.schemaWipeNotice, { ...notice, lost });
     }
   });
 }

@@ -24,6 +24,7 @@ import { NewBandForm } from "./NewBandForm";
 import { EditBandModal } from "./EditBandModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { useBandContext } from "../context/useBandContext";
 
 type ConfirmState = {
   title: string;
@@ -41,6 +42,7 @@ interface Props {
 export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const { user } = useBandContext();
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [bands, setBands] = useState<Band[]>([]);
@@ -67,7 +69,8 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMyBands();
+      if (!user) throw new Error(t('common.error'));
+      const data = await getMyBands(user.id);
       setBands(data);
     } catch (e: unknown) {
       if (e instanceof Error) {

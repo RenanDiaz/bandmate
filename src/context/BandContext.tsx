@@ -12,6 +12,7 @@ import { BandStorage } from "../lib/BandStorage";
 import { supabase } from "../lib/supabaseClient";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { AppUser, AuthMode, AuthState } from "./offlineAuthController";
+import { pickBand, resolveBands } from "./bandResolution";
 import { OfflineAuthController } from "./offlineAuthController";
 
 interface BandContextType {
@@ -33,13 +34,6 @@ interface BandContextType {
 }
 
 const BandContext = createContext<BandContextType | undefined>(undefined);
-
-/** Picks the saved band, else the only one, else none (§7.2). */
-function pickBand(bands: Band[]): Band | null {
-  const savedBandId = BandStorage.getSelectedBandId();
-  const saved = savedBandId ? bands.find((b) => String(b.id) === savedBandId) : undefined;
-  return saved ?? (bands.length === 1 ? bands[0] : null);
-}
 
 export const BandProvider = ({ children }: { children: ReactNode }) => {
   const [auth, setAuth] = useState<AuthState>({
@@ -92,17 +86,21 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
   }, [isOnline, authMode]);
 
   // Bands: from the server with a session; from offline copies in
-  // "offline-cached" or when the server can't be reached (§7.2).
-  const loadBands = useCallback(async (): Promise<Band[]> => {
-    if (!user) return [];
-    if (authMode === "offline-cached") return listOfflineBands();
-    try {
-      return await getMyBands();
-    } catch {
-      reportNetworkFailure();
-      return listOfflineBands();
-    }
-  }, [user, authMode, reportNetworkFailure]);
+  // "offline-cached" or when the server can't be reached (§7.2). An HTTP
+  // error keeps the no-band UI.
+  const loadBands = useCallback(
+    async (): Promise<Band[]> =>
+      (
+        await resolveBands({
+          user,
+          authMode,
+          getMyBands,
+          listOfflineBands,
+          onNetworkFailure: reportNetworkFailure,
+        })
+      ).bands,
+    [user, authMode, reportNetworkFailure]
+  );
 
   const refreshBands = useCallback(() => {
     loadBands().then(setBands);
@@ -126,7 +124,7 @@ export const BandProvider = ({ children }: { children: ReactNode }) => {
         setSelectedBand(pickBand(loaded));
       })
       .catch(() => {
-        // listOfflineBands never rejects; this only guards the unexpected.
+        // resolveBands never rejects; this only guards the unexpected.
         if (!cancelled) setBands([]);
       })
       .finally(() => {

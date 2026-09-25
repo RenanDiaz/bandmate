@@ -1,5 +1,4 @@
 import { supabase } from "../lib/supabaseClient";
-import { getSessionUser } from "../lib/authSession";
 import type { BandRole } from "./bandMembersService";
 
 export interface Band {
@@ -15,15 +14,18 @@ export interface Band {
   user_role?: BandRole;
 }
 
-export async function getMyBands(): Promise<Band[]> {
-  const user = await getSessionUser();
-  if (!user) throw new Error("User not authenticated");
+/**
+ * Bands the user is a member of. Takes the id from the caller (BandContext's
+ * resolved user) instead of reading the session again: with a token near
+ * expiry on a weak signal, a second getSession() can wait ≈25 s (spec §7.2).
+ */
+export async function getMyBands(userId: string): Promise<Band[]> {
 
   // Get bands where user is a member (any role)
   const { data: memberData, error: memberError } = await supabase
     .from("band_members")
     .select("band_id, role")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (memberError) throw memberError;
 

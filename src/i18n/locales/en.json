@@ -81,7 +81,11 @@
     "pleaseSignIn": "Please sign in to continue",
     "manageYourBand": "Manage your band like a pro",
     "emailPlaceholder": "you@example.com",
-    "passwordPlaceholder": "••••••••"
+    "passwordPlaceholder": "••••••••",
+    "user": "Account",
+    "offlineAccount": "Offline",
+    "offlineAccountHint": "Offline — using the account saved on this device",
+    "signOutError": "Couldn't sign out. Please try again."
   },
   "settings": {
     "title": "Settings",

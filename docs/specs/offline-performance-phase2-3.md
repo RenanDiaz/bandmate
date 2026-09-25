@@ -12,6 +12,40 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-26 — 2.2a follow-ups (fixes, no new features).**
+  - **A6 amended: the race runs whenever `last-user` exists, online or
+    not.** Weak signal and captive portals report `navigator.onLine` true, and
+    there `getSession()` also takes ≈25 s. After 1.5 s the provisional
+    `offline-cached` state applies exactly as offline (no side effects; the late
+    answer reconciles). With a valid token `getSession()` answers in ≈0 ms, so
+    online sign-ins are unchanged. The captive-portal residual risk in §7.1/§11
+    shrinks to "no `last-user` on the device". §7.1, §11.
+  - **§7.2 weak signal.** With `authMode: "session"`, only a **network**
+    failure of `getMyBands()` (`isNetworkError`, `src/lib/networkErrors.ts`)
+    falls back to `listOfflineBands()` and calls `reportNetworkFailure()`; an
+    HTTP error (401, RLS, 5xx) keeps the no-band UI with no fallback. The logic
+    lives in `src/context/bandResolution.ts`. `getMyBands(userId)` now takes the
+    uid from `BandContext` instead of calling `getSession()` again, which could
+    wait ≈25 s with a token near expiry.
+  - **User sign-out always ends signed out locally.** auth-js 2.70
+    `signOut()` (any scope, `"local"` included, which still POSTs
+    `/logout`) returns `{ error }` on a network failure **without** removing the
+    stored session. `signOutEverywhereOrLocally()` (`src/lib/authSession.ts`)
+    removes it locally (auth-js `_removeSession()`) when offline, on a network
+    error, or after 3 s. An HTTP error is surfaced and the user stays signed in
+    (the wipe already ran). §3.5 #6a.
+  - **`AppUser`** is `{ id } & Partial<Omit<User, "id">>`: every field but `id`
+    is optional, so the compiler enforces the `offline-cached` case.
+    `AuthButton` reads `user`/`authMode` from the context (no second
+    `getSession()`); in `offline-cached` it shows "Offline" with no email.
+  - **Schema-wipe notice: `dismissedBy` removed.** By A1 the store holds one
+    user's data at a time, so dismissing removes the current user's entries and
+    the key is deleted when `lost` is empty. Entries keep their `userId` for the
+    failed-wipe case (old records linger until the wipe is retried). No notice
+    can exist in production yet (the schema version was never bumped), so no
+    migration. `wipeAll()` already deleted the notice (it clears the store); a
+    test now pins it. §3.2, §3.3, §5.1.
+
 - **2026-09-25 — PR 2.2 split into 2.2a and 2.2b.** PR 2.2 carried the store,
   the offline auth rework and the whole download engine; reviewed as one it
   mixed the riskiest auth change with the largest new code. §12 now has:
@@ -312,15 +346,17 @@ export interface OfflineFileRecord {
   downloadedAt: string;
 }
 
-/** Written by a schema-mismatch wipe (§3.5 #2); read once per user, then dismissed. */
+/** Written by a schema-mismatch wipe (§3.5 #2); entries are removed as they are dismissed. */
 export interface OfflineSchemaWipeNotice {
   wipedAt: string;
   fromVersion: number | null;          // null when meta was missing/unreadable
   toVersion: typeof OFFLINE_SCHEMA_VERSION;
-  /** Only this user's entries are ever shown to them (§3.5 #1). */
+  /**
+   * Only this user's entries are ever shown to them (§3.5 #1). No per-user
+   * dismissal list: by A1 the store holds one user's data at a time, so
+   * dismissing removes entries and the key goes when this is empty.
+   */
   lost: Array<{ userId: string; setlistId: string; setlistName: string; bandId: number | null }>;
-  /** userIds that have dismissed it; the key is deleted once every userId in `lost` has. */
-  dismissedBy: string[];
 }
 
 /** Progress of an in-flight or interrupted download (§4). Deleted on commit or cancel. */
@@ -380,7 +416,7 @@ database is not an option; prefixes are.
 | `file:{storagePath}` | `OfflineFileRecord` | Blob values. Never enumerate with `values()`/`entries()`; use `keys()` and load one at a time. |
 | `download:{setlistId}` | `OfflineDownloadJournal` | Present only while a download is in flight or was interrupted. |
 | `last-user` | `string` (auth uid) | Written by `BandContext` whenever a **valid session** is established (`SIGNED_IN` / `TOKEN_REFRESHED` / `INITIAL_SESSION` with a session). Removed **only** by `wipeAll()`; an involuntary `SIGNED_OUT` keeps it (A1, §7.1). Lives here rather than `localStorage` so `wipeAll()` covers it. |
-| `schema-wipe-notice` | `OfflineSchemaWipeNotice` | Written by the schema-mismatch wipe (§3.5 #2) *after* re-initializing `meta`, so it survives that wipe. Removed by `wipeAll()` and once dismissed by every affected user. |
+| `schema-wipe-notice` | `OfflineSchemaWipeNotice` | Written by the schema-mismatch wipe (§3.5 #2) *after* re-initializing `meta`, so it survives that wipe. Removed by `wipeAll()`, and once its last entry is dismissed. |
 
 Outside IndexedDB, `wipeAll()` also removes the `localStorage` keys
 `bandmate_perform_position_*` (A2), because they identify setlists.
@@ -431,7 +467,10 @@ rows). Files dominate: up to 50 MB each (bucket limit). The `bytes` on
    `bandmate_preferred_instrument_*` keys are left alone (they are not offline
    data). It runs **only**:
    - (a) on **user-initiated sign-out**: awaited in `AuthButton.logout`
-     **before** `supabase.auth.signOut()` is called; and
+     **before** `supabase.auth.signOut()` is called (through
+     `signOutEverywhereOrLocally()`, which removes the local session when the
+     server can't be reached, so the sign-out always completes on the
+     device); and
    - (b) on a **confirmed sign-in whose uid differs from `last-user`** (#1).
 
    Nothing else deletes offline data on an auth signal. In particular:
@@ -619,7 +658,7 @@ export function countHiddenSnapshots(userId: string): Promise<number>;
 
 /** The schema-wipe notice entries for the current user, or null (A4). */
 export function getSchemaWipeNotice(): Promise<Array<{ setlistId: string; setlistName: string; bandId: number | null }> | null>;
-/** No id: dismiss all of the current user's entries. With an id: drop that entry (downloaded again, or gone). */
+/** No id: dismiss all of the current user's entries. With an id: drop that entry (downloaded again, or gone). The key goes when no entries remain. */
 export function dismissSchemaWipeNotice(setlistId?: string): Promise<void>;
 
 /** All snapshot metas of the current user, newest savedAt first. Empty if none or store unavailable. */
@@ -980,12 +1019,14 @@ export type AuthMode =
    deleted; `last-user` is kept.
 4. Otherwise `null`, `authMode: "signed-out"` → landing page.
 
-**Offline, don't wait on `getSession()` (A6).** With a token inside the 90 s
+**Don't wait on `getSession()` (A6, amended 2026-09-26).** With a token inside the 90 s
 refresh margin or already expired — the normal case on show day, since
-tokens last 1 h — `getSession()` offline takes ≈25 s to reach step 2 (§1).
-So when `isOnline` from `useOnlineStatus` (§7.3) is `false` at resolution
-time, `BandContext` races `getSession()` against
-`GET_SESSION_OFFLINE_TIMEOUT_MS = 1500`:
+tokens last 1 h — `getSession()` takes ≈25 s to reach step 2 whenever the
+auth server can't be reached (§1): offline, and equally on weak signal or
+behind a captive portal, where `navigator.onLine` is `true`. So
+`BandContext` races `getSession()` against
+`GET_SESSION_OFFLINE_TIMEOUT_MS = 1500` **online or offline**; with a valid
+token `getSession()` answers in ≈0 ms and the timeout never matters:
 
 - `getSession()` settles first → steps 1–4 as above.
 - The timeout fires first and `last-user` exists → resolve provisionally as
@@ -1003,10 +1044,10 @@ whose `confirmSignedInUser` wipes before any list renders (§3.5 #1); `null`
 with `AuthRetryableFetchError` → stay `offline-cached`; any other `null` →
 step 3 (`session-lost`, hidden, nothing deleted). A provisional state never
 runs confirmed-state side effects: no `confirmSignedInUser`, no wipe, no
-`BandStorage.clearSelectedBandId()`. Online, `getSession()` is awaited as
-before; a cold start behind a captive portal (`navigator.onLine` true, no
-earlier `reportNetworkFailure()` in memory) can still wait the full ≈25 s —
-accepted residual risk, recorded in §11.
+`BandStorage.clearSelectedBandId()`. Only a device with **no** `last-user`
+(first sign-in, or after an explicit sign-out) still waits the full ≈25 s
+behind a captive portal: there is nothing on the device to show — accepted
+residual risk, recorded in §11.
 
 Every consumer that needs more than the id (`AuthButton` display name,
 invitation flows) already handles `user` loosely; the context exposes
@@ -1050,8 +1091,10 @@ acceptable, and the checklist covers it (§11).
   `reportNetworkFailure()` is called. Before PR 2.2a this renders the normal
   no-band UI instead of a spinner; that is the whole fix, and it is enough
   on its own.
-- **PR 2.2a — offline branch.** On the same catch, and whenever
-  `authMode === "offline-cached"`: `listOfflineBands()` → `bands`;
+- **PR 2.2a — offline branch.** Whenever `authMode === "offline-cached"`,
+  and in `"session"` when `getMyBands()` fails with a **network** error
+  (`isNetworkError`; an HTTP error keeps the no-band UI, no fallback, no
+  `reportNetworkFailure()`): `listOfflineBands()` → `bands`;
   `selectedBand` = the one in `BandStorage`, else the only one, else `null`.
   In `session-lost` and `signed-out` there are no bands.
 - With `user` set and no local bands: `BandSelector` is **not** shown offline
@@ -1542,7 +1585,7 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] iOS: download `S1` in the installed app; open the site in a Safari tab: `S1` is *not* listed there (isolation confirmed) and the hint to use the installed app shows.
 - [ ] Turn on airplane mode, wait > 1 h (or set the device clock forward), kill and relaunch: offline home with `S1`.
 - [ ] Wi-Fi on but upstream blocked (phone hotspot with no data, or a router with WAN unplugged), token > 1 h old, relaunch: `S1` listed and performs; nothing deleted (C4).
-- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5). Also record how long the relaunch spinner lasts: `navigator.onLine` is true here, so the A6 timeout does not apply (§7.1).
+- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5). Also record how long the relaunch spinner lasts: the A6 race applies here too (amended), so with a `last-user` it should end within 1.5 s (§7.1).
 - [ ] Connect YouTube (re-auth flow) with `S1` downloaded: `S1` still there afterwards, no re-download.
 
 **Download**

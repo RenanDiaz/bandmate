@@ -45,7 +45,8 @@ export const BandSettings: FC<Props> = ({ user }) => {
 
     if (showSpinner) setLoading(true);
     try {
-      const bands = await getMyBands();
+      if (!user) throw new Error("User not authenticated");
+      const bands = await getMyBands(user.id);
       const foundBand = bands.find((b) => b.id === parseInt(bandId));
 
       if (!foundBand) {
