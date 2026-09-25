@@ -6,6 +6,9 @@ import { ThemeProvider } from "styled-components";
 import { BrowserRouter } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+// Brand wordmark font, self-hosted so it is precached and renders offline.
+// Only 700 is used (Logo, Login title).
+import "@fontsource/space-grotesk/700.css";
 import "./styles/design-tokens.css";
 import theme from "./theme";
 import './i18n';

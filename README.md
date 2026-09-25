@@ -115,7 +115,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 ```bash
 npm run dev      # Dev server with HMR
-npm run build    # Type-check, prerender the landing (SSR), then build the client
+npm run build    # Type-check, prerender the landing (SSR), build the client, check the precache
 npm run preview  # Preview the production build
 npm run lint     # ESLint
 npm run og       # Regenerate public/og-image.png
@@ -123,7 +123,8 @@ npm run icons    # Regenerate PWA icons
 ```
 
 Always build with `npm run build` — a bare `vite build` skips the landing
-prerender. See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+prerender and the precache check (which fails the build if a shell file would
+be missing offline). See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
 
 There is no automated test suite yet.
 
@@ -133,7 +134,7 @@ There is no automated test suite yet.
 src/
 ├── components/   # Views, modals, forms
 ├── context/      # BandContext (global state), ToastContext
-├── hooks/        # usePerformanceSync, useLocalBackingTracks
+├── hooks/        # usePerformanceSync, useLocalBackingTracks, useOnlineStatus
 ├── i18n/         # en / es locales
 ├── lib/          # Supabase client, storage, site config, helpers
 ├── services/     # Data access (Supabase + external APIs)

@@ -6,18 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev      # Start dev server at http://localhost:5173
-npm run build    # tsc -b, then the SSR pass, then the client build (see below)
+npm run build    # tsc -b, SSR pass, client build, precache check (see below)
 npm run lint     # ESLint check
 npm run preview  # Preview production build locally
 npm run og       # Regenerate public/og-image.png (needs sharp)
 npm run icons    # Regenerate the PWA icons (needs sharp)
 ```
 
-`npm run build` runs three steps, not two: `tsc -b`, an SSR build of
-`src/entry-server.tsx` into `dist-ssr/`, and then the client build, which
-injects the prerendered landing into `index.html`. Use `npm run build` rather
-than a bare `vite build` — the latter still succeeds but ships an empty shell.
-See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+`npm run build` runs four steps: `tsc -b`, an SSR build of
+`src/entry-server.tsx` into `dist-ssr/`, the client build, which injects the
+prerendered landing into `index.html`, and `scripts/check-precache.mjs`. Use
+`npm run build` rather than a bare `vite build` — the latter still succeeds but
+ships an empty shell. See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+
+`scripts/check-precache.mjs` fails the build when any `.js`/`.mjs`/`.css`/`.html`
+file in `dist/` is missing from the service worker's precache manifest (the
+app would not start offline). If it fires, look at `globPatterns`,
+`globIgnores` and `maximumFileSizeToCacheInBytes` (5 MiB; the main bundle is
+≈2 MB) in `vite.config.ts` — don't delete the check.
 
 ## Project Overview
 
@@ -40,7 +46,7 @@ See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications)
-├── hooks/             # Custom hooks (usePerformanceSync, useLocalBackingTracks)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataSource, usePerformanceSync, useLocalBackingTracks, useOnlineStatus)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -70,8 +76,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `bandsService.ts` | Bands; membership via the `band_members` join table |
 | `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
-| `songsService.ts` | Songs scoped to bands |
-| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position` |
+| `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode) |
+| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song |
 | `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
 | `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
 | `showsService.ts` | Show/gig scheduling |
@@ -126,8 +132,39 @@ Unknown paths redirect to `/`. The source of truth is the `<Routes>` block in `s
 `getSessionUser()` in `src/lib/authSession.ts`.
 New read paths that must work offline should do the same. The Supabase runtime
 cache uses `NetworkFirst` with `networkTimeoutSeconds: 4`, so on weak signal it
-falls back to the cache instead of hanging. See
+falls back to the cache instead of hanging. That rule matches only
+`/rest/v1/` and `/auth/v1/`; Storage (`/storage/v1/`, PDFs) is never cached by
+the service worker. See
 [docs/intents/offline-performance.md](docs/intents/offline-performance.md).
+
+**Online status** (`useOnlineStatus` hook): `navigator.onLine` plus the
+`online`/`offline` events, and `reportNetworkFailure()`, which forces offline
+for 30 s after a failed request (captive portals, signal with no data). Read it
+from `useBandContext()` (`isOnline`, `reportNetworkFailure`) so the whole tree
+shares one value; don't call the hook again elsewhere. `BandContext` calls
+`reportNetworkFailure()` when `getMyBands()` fails, and always ends band
+resolution so a failed load renders the no-band UI instead of a spinner.
+
+**Service worker updates** use `registerType: 'prompt'`. `PwaReloadPrompt`
+registers the worker with `workbox-window` and reloads only when the user taps
+Reload; the prompt is hidden on `/setlists/:setlistId/perform` until the user
+leaves. Never add `skipWaiting`, `clientsClaim` or an automatic reload. The
+brand font (Space Grotesk 700) is self-hosted via `@fontsource/space-grotesk`
+and precached with the other `woff2` files.
+
+### Performance data
+
+`SetlistPerformanceView` loads nothing itself: all its reads and writes go
+through `useSetlistPerformanceData(setlistId)` (`src/hooks/`), which returns
+the setlist, the referenced songs (`songsById`), every referenced song's sheet
+music prefetched at load (`sheetMusicBySongId`), preferences, and the write
+actions (`selectSheetMusic`, `saveOrder`, `onSheetMusicUploaded`). Behind it,
+a `PerformanceDataSource` (`performanceDataSource.ts`) opens a session per
+setlist; `networkPerformanceDataSource` is the only one today. A session emits
+full-row replacements after load (refreshes, successful writes) and keeps
+reference identity for the parts that did not change. Don't add service calls
+to the view; add them to the source. See §8 of
+[docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md).
 
 ### Real-time Features
 
@@ -306,6 +343,8 @@ needed") so reviewers know it was checked, not skipped.
 | `@dnd-kit/*` | Drag-and-drop for setlist editor |
 | `react-i18next` | Internationalization |
 | `react-pdf` | Sheet music PDF viewer |
+| `workbox-window` | Service worker registration and update prompt (`PwaReloadPrompt`) |
+| `@fontsource/space-grotesk` | Self-hosted brand font, precached for offline |
 | `pdfjs-dist` | Pinned to the **exact** version `react-pdf` depends on; its worker is bundled from the app origin (`src/lib/pdfWorker.ts`) and precached so the viewer starts offline. Bump both together |
 | `papaparse` | CSV import for songs |
 | `styled-components` | CSS-in-JS styling |

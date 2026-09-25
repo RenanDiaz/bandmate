@@ -126,7 +126,12 @@ export default defineConfig(({ isSsrBuild }) => ({
       : [
           bandmateSeo(),
           VitePWA({
-            registerType: 'autoUpdate',
+            // A new worker waits until the user taps Reload in
+            // PwaReloadPrompt, which also registers it (hence no injected
+            // registration script). `autoUpdate` would skip waiting and reload
+            // the page mid-show.
+            registerType: 'prompt',
+            injectRegister: false,
             includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'og-image.png'],
             manifest: {
               name: 'Bandmate',
@@ -157,14 +162,29 @@ export default defineConfig(({ isSsrBuild }) => ({
               navigateFallbackDenylist: [/^\/api/, /^\/robots\.txt$/, /^\/sitemap\.xml$/],
 
               // The default adds only js/wasm/css/html; `mjs` picks up the
-              // bundled pdf.js worker so the PDF viewer can start offline.
-              globPatterns: ['**/*.{js,mjs,wasm,css,html}'],
+              // bundled pdf.js worker so the PDF viewer can start offline, and
+              // `woff2` the self-hosted Space Grotesk and Bootstrap Icons fonts
+              // so the shell looks the same offline.
+              globPatterns: ['**/*.{js,mjs,wasm,css,html,woff2}'],
+
+              // Workbox leaves out anything above this (default 2 MiB) and the
+              // app then can't start offline. The main bundle is ~2 MB, so the
+              // next dependency would cross it; 5 MiB gives headroom until the
+              // bundle is code-split. Files that `globPatterns`/`globIgnores`
+              // skip are dropped with no warning at all, so
+              // scripts/check-precache.mjs (run by `npm run build`) fails the
+              // build if any shell file is missing from the manifest.
+              maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 
               // Runtime caching strategies
               runtimeCaching: [
                 {
-                  // Cache Supabase API calls
-                  urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
+                  // Cache Supabase REST and auth calls only. Storage
+                  // (`/storage/v1/`, signed PDF URLs) is left to the browser so
+                  // PDF bytes are never copied into this cache.
+                  urlPattern: ({ url }) =>
+                    url.hostname.endsWith('supabase.co') &&
+                    (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/auth/v1/')),
                   handler: 'NetworkFirst',
                   options: {
                     cacheName: 'supabase-api',
