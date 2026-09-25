@@ -12,6 +12,7 @@ import type { DownloadPlan, OfflineSnapshotMeta } from "../../services/offlineSe
 import { planDownload, removeSnapshot } from "../../services/offlineSetlistService";
 import { formatSavedDate, summarizePlan } from "../../lib/offlineDownloadUi";
 import { isIOS, isStandalone } from "../../lib/platform";
+import { isOfflineDownloadsEnabled } from "../../lib/featureFlags";
 import { ConfirmModal } from "../ConfirmModal";
 import { OfflineDownloadConfirmBody } from "./OfflineDownloadBodies";
 import { OfflineDownloadModal } from "./OfflineDownloadModal";
@@ -128,7 +129,11 @@ interface ActionProps {
   variant: Variant;
 }
 
-export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName, variant }) => {
+/** Hidden until the feature flag is on (removed in PR 2.5). Checked before any hook: no providers needed when off. */
+export const OfflineDownloadAction: FC<ActionProps> = (props) =>
+  isOfflineDownloadsEnabled() ? <OfflineDownloadActionInner {...props} /> : null;
+
+const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, variant }) => {
   const { t } = useTranslation();
   const meta = useOfflineSnapshotMeta(setlistId);
   const { active } = useOfflineDownloadState();
@@ -206,7 +211,10 @@ export const OfflineBadge: FC<{ meta: OfflineSnapshotMeta; compact?: boolean }> 
  * Setlist detail, under the title: saved badge + Remove, and the
  * interrupted-download notice with Resume / Discard.
  */
-export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = ({ setlistId, setlistName }) => {
+export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = (props) =>
+  isOfflineDownloadsEnabled() ? <OfflineStatusRowInner {...props} /> : null;
+
+const OfflineStatusRowInner: FC<{ setlistId: string; setlistName: string }> = ({ setlistId, setlistName }) => {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const { isOnline } = useBandContext();

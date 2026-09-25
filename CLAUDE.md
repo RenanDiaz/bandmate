@@ -14,6 +14,11 @@ npm run og       # Regenerate public/og-image.png (needs sharp)
 npm run icons    # Regenerate the PWA icons (needs sharp)
 ```
 
+Local Node: 22 (`.nvmrc`, for `nvm use`; Vercel ignores it). There is no
+`package.json` `"engines"` on purpose: it would override the Vercel project's
+Node.js setting (Settings → Build and Deployment), which decides the
+production runtime. Pin `engines` only to the version that setting shows.
+
 `npm run build` runs four steps: `tsc -b`, an SSR build of
 `src/entry-server.tsx` into `dist-ssr/`, the client build, which injects the
 prerendered landing into `index.html`, and `scripts/check-precache.mjs`. Use
@@ -258,6 +263,16 @@ after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 
 ### Offline download UI
 
+**Feature flag.** Every offline entry point is hidden unless
+`isOfflineDownloadsEnabled()` (`src/lib/featureFlags.ts`) is true:
+`VITE_OFFLINE_DOWNLOADS=true` at build time (Vercel Preview), or per device
+`localStorage.bandmate_flag_offline = "1"` (testing against production). Off
+by default: nothing performs from snapshots until 2.4/2.5, and the flag is
+removed in PR 2.5 once the §11 device checklist passes. The check runs before
+any hook (`OfflineDownloadAction` / `OfflineStatusRow` are thin wrappers), and
+list badges and toasts are gated too; startup resume + GC still run (harmless
+on an empty store). New offline UI goes behind the same flag.
+
 "Make available offline" (PR 2.3) lives in `src/components/offline/`:
 `OfflineDownloadAction` (variants `setlist` in `SetlistDetailView`, `show` in
 `ShowDetailView` for the linked setlist, `toolbar` in performance mode's top
@@ -442,6 +457,7 @@ Optional:
 VITE_SPOTIFY_CLIENT_ID=<spotify_client_id>          # metadata enrichment
 VITE_SPOTIFY_CLIENT_SECRET=<spotify_client_secret>  # see warning below
 VITE_GROQ_API_KEY=<groq_api_key>                    # AI setlist generation (https://console.groq.com)
+VITE_OFFLINE_DOWNLOADS=true                         # feature flag: offline download UI (not a secret; see "Offline download UI")
 ```
 
 > ⚠️ **Every `VITE_*` variable is inlined into the public client bundle.**
@@ -473,8 +489,9 @@ type-checked by `npm run build`. Mock Supabase rather than calling it
 functions a test needs). Component tests are `.test.tsx` render tests with
 `renderToStaticMarkup` and a test i18next instance (no DOM, no
 testing-library): keep presentational parts free of portals and service
-calls so they can be rendered this way. The lock race test needs
-`navigator.locks` (Node ≥ 24). Before considering a change done:
+calls so they can be rendered this way. `setup.ts` also installs a Web Locks
+fake on `navigator.locks` (Node 22 has none), so the cross-tab lock tests run
+the same on every Node version. Before considering a change done:
 
 1. `npm run lint` passes with no new errors.
 2. `npm run build` passes (this also type-checks and runs the SSR pass).

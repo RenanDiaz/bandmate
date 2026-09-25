@@ -46,10 +46,14 @@ export function useOfflineSnapshotMeta(setlistId: string | undefined): OfflineSn
   return meta;
 }
 
-/** Every snapshot meta of the current user, keyed by setlist id (for list badges). */
-export function useOfflineSnapshotMetas(): Record<string, OfflineSnapshotMeta> {
+/** Every snapshot meta of the current user, keyed by setlist id (for list badges). `enabled: false` reads nothing. */
+export function useOfflineSnapshotMetas(enabled = true): Record<string, OfflineSnapshotMeta> {
   const [metas, setMetas] = useState<Record<string, OfflineSnapshotMeta>>({});
   useEffect(() => {
+    if (!enabled) {
+      setMetas({});
+      return;
+    }
     let cancelled = false;
     const read = () =>
       void listSnapshots().then((list) => {
@@ -63,7 +67,7 @@ export function useOfflineSnapshotMetas(): Record<string, OfflineSnapshotMeta> {
       cancelled = true;
       unsubscribe();
     };
-  }, []);
+  }, [enabled]);
   return metas;
 }
 
