@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
 
@@ -15,12 +16,23 @@ interface Props {
 /**
  * Renders a band's avatar image, falling back to a music-note icon when the
  * band has no avatar set. Shared across the band list, switcher and settings.
+ *
+ * When the image fails to load it shows the band's initial instead of a broken
+ * image: offline, `/storage/v1/` is never cached and snapshots keep only the
+ * URL (spec §7.3). A new URL tries the image again.
  */
 export const BandAvatar: FC<Props> = ({ name, avatarUrl, size = 48, active = false, className }) => {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const failed = !!avatarUrl && failedUrl === avatarUrl;
+  const initial = name.trim().charAt(0).toUpperCase();
   return (
-    <Wrapper $size={size} $active={active} $hasImage={!!avatarUrl} className={className}>
-      {avatarUrl ? (
-        <Image src={avatarUrl} alt={name} loading="lazy" />
+    <Wrapper $size={size} $active={active} $hasImage={!!avatarUrl && !failed} className={className}>
+      {avatarUrl && !failed ? (
+        <Image src={avatarUrl} alt={name} loading="lazy" onError={() => setFailedUrl(avatarUrl)} />
+      ) : failed && initial ? (
+        <Initial role="img" aria-label={name}>
+          {initial}
+        </Initial>
       ) : (
         <i className="bi bi-music-note-beamed" aria-hidden="true"></i>
       )}
@@ -53,4 +65,9 @@ const Image = styled.img`
   height: 100%;
   object-fit: cover;
   display: block;
+`;
+
+const Initial = styled.span`
+  font-weight: ${theme.fontWeights.semibold};
+  line-height: 1;
 `;

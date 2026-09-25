@@ -44,6 +44,8 @@ import { EditSongModal } from "./EditSongModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
+import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
+import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
 import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
 
@@ -387,7 +389,7 @@ const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { selectedBand } = useBandContext();
+  const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
@@ -593,6 +595,7 @@ const SetlistDetailView: FC = () => {
       setLoading(true);
       try {
         const setlistData = await getSetlist(setlistId);
+        reportNetworkSuccess();
         setSetlist(setlistData);
 
         // Load all songs for the band
@@ -612,14 +615,20 @@ const SetlistDetailView: FC = () => {
         setAvailableShows(availableShowsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        toast.error(t("setlists.detail.loadError"));
-        navigate("/setlists");
+        // Weak signal with offline copies on: the route switches to the
+        // offline detail once isOnline drops, so no toast and no bounce (§7.3).
+        if (isOfflineDownloadsEnabled() && isNetworkError(error)) {
+          reportNetworkFailure();
+        } else {
+          toast.error(t("setlists.detail.loadError"));
+          navigate("/setlists");
+        }
       }
       setLoading(false);
     };
 
     loadData();
-  }, [setlistId, navigate]);
+  }, [setlistId, navigate, reportNetworkFailure, reportNetworkSuccess]);
 
   // Check YouTube access on mount
   useEffect(() => {

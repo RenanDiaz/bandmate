@@ -12,6 +12,87 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.5: offline entry point (decisions the spec did not cover).**
+  - **Flag removal moves to PR 2.6.** The screens ship behind
+    `isOfflineDownloadsEnabled()` like the rest; 2.6 removes the flag once the
+    §11 checklist has passed on devices (it is now fully runnable: B1 and C7
+    via relaunch offline → offline home → Perform). §12.
+  - **One gate, a render not a navigation.** "Offline" is the flag, a known
+    user (`session` or `offline-cached`) and the context's `isOnline` false
+    (so `reportNetworkFailure()` counts). A route wrapper renders the offline
+    screen *instead of* the online view, which is therefore never mounted
+    offline (no fetches, no toasts). Coming back online renders the online
+    view of the same URL; nothing reloads or navigates. Routing moved to
+    `src/AppMain.tsx` so it can be tested without the navbar.
+  - **Every other route** (songs, shows, rehearsals, requests, band settings,
+    print, edit, invitations) renders "This page needs a connection" with a
+    link to the offline home. `/login`, `/about`, `/privacy`, `/terms` and
+    performance mode are unchanged. With no user (`signed-out`,
+    `session-lost`) the routes behave as today.
+  - **Band gate offline.** `BandSelector` is never shown offline. No local
+    bands → `OfflineEmptyState`. Several local bands and none stored as
+    selected (the spec left this open) → a small offline band picker over the
+    local bands; the band switcher keeps working.
+  - **Locked state (`session-lost`) online too.** `BandContext` exposes
+    `hiddenOfflineCount` (`getLastUserId` + `countHiddenSnapshots`, only in
+    that mode), and `Home` renders the locked state whenever it is > 0,
+    online or offline: "the landing" would otherwise hide that the copies
+    still exist. A count only, no names.
+  - **Schema-wipe notice.** A row whose re-download finishes (done or with
+    errors), or whose planning fails with `setlist-not-found`, drops that
+    entry with `dismissSchemaWipeNotice(id)`; the row stays marked until the
+    notice re-reads so the result modal stays open. Dismiss clears them all.
+    Download reuses the 2.3 plan/confirm/progress flow, enabled only online
+    with a session ("Needs a connection" otherwise).
+  - **Offline detail** waits for the snapshot *and* its meta before the first
+    paint, so per-song "{n} not downloaded" never changes after render. A PDF
+    counts as on the device when the snapshot references its file and it is
+    not in `missingFiles`.
+  - **Weak signal.** `Home` and `SetlistsView` call `reportNetworkFailure()`
+    when their load fails with `isNetworkError`; the gate then shows the
+    offline screen. HTTP errors keep today's behaviour (console, empty
+    dashboard/list; there is no error UI to keep). `SetlistDetailView` gets
+    the same three-line catch, with the flag on only: otherwise, once the
+    forced-offline window ends on persistent weak signal, the online detail
+    remounts, fails and toasts + bounces to `/setlists`.
+  - **Forced-offline window backs off (§7.3).** A fixed 30 s window made
+    persistent weak signal oscillate: every 30 s the online view remounted,
+    showed a spinner, failed and went back to the offline screen. Now each
+    failure *after* a window has ended (the retry failed too) doubles the
+    next window: 30 s, 60 s, 120 s, 240 s, then 5 min (cap). Failures inside a
+    running window are the same outage and restart it at its current length
+    (several requests failing together don't escalate). The backoff resets on
+    `reportNetworkSuccess()`, called where `reportNetworkFailure()` is (Home,
+    SetlistsView, SetlistDetailView, `getMyBands`, the snapshot source's row
+    refresh and preference write, the auth controller's `getUser()`), and on
+    the browser's `online` event, which also ends the window at once. A
+    success does not end a running window: a service-worker cache answer
+    (NetworkFirst after 4 s) looks like a success too. Worst case on a signal
+    that never recovers: one retry every 5 min.
+  - **A6 race 1.5 s → 750 ms, prefetch in parallel (C7).** With 1.5 s the
+    offline home took a median 1.67 s after navigation on desktop headless
+    Chromium (9 runs), too close to C7's 2 s for a phone. At 750 ms: median
+    0.92 s (max 0.96 s). A valid token still answers in ≈0 ms, so normal
+    sign-ins never reach the timeout. The auth controller also starts reading
+    `last-user`'s snapshot metas (`prefetchOfflineReads`) as soon as
+    `last-user` is known, in parallel with the race; `listSnapshots` /
+    `listOfflineBands` reuse that read once the uid is current (≤ 5 s, dropped
+    on any snapshot change or wipe, never for another uid). On desktop that
+    read takes a few ms, so the measured gain is the race alone; the
+    prefetch is for slower phone storage. §7.1.
+  - **Avatar fallback not flag-gated.** `BandAvatar` renders the band initial
+    when the image fails to load, everywhere. It only triggers on a broken
+    image, so gating it would only keep the broken image online.
+  - **Bootstrap Icons offline (bug from 2.0).** `bootstrap-icons.css` requests
+    its fonts as `…woff2?<32-hex>`, and the precache lookup strips only
+    `utm_*`/`fbclid`, so offline every icon was blank (found while exercising
+    the offline screens in a production build). `ignoreURLParametersMatching`
+    now strips that key too. §8.4.
+  - **DOM tests.** jsdom + Testing Library, opted in per file
+    (`// @vitest-environment jsdom`); the node tests are unchanged. The perform
+    view's reseed rule (never reseed in reorder mode) moved verbatim into
+    `usePerformItems` and is tested with `renderHook`.
+
 - **2026-09-25 — PR 2.4: perform from the snapshot (decisions the spec did not cover).**
   - **Missing files (§9.3), narrowed.** Only a blob that is **absent or reads
     empty** (checked in `resolvePdfUrl`, first bytes only) counts as missing.
@@ -300,7 +381,7 @@ given because they are the contract between PRs; no bodies are written here.
   - **A6** Offline, `BandContext` does not wait on `getSession()`: Phase 1
     measured ≈25.4 s for it to resolve `null` with a token inside the refresh
     margin or expired, which is the normal case on show day. It races a
-    ≈1.5 s timeout and resolves provisionally from `last-user`, then
+    ≈1.5 s timeout (750 ms since PR 2.5) and resolves provisionally from `last-user`, then
     reconciles by the A1 rules. §1, §7.1, §10 (new C7), §12 (PR 2.2, now 2.2a).
 
 - **2026-09-25 — Amendments A1–A5 + minor.**
@@ -1217,8 +1298,12 @@ tokens last 1 h — `getSession()` takes ≈25 s to reach step 2 whenever the
 auth server can't be reached (§1): offline, and equally on weak signal or
 behind a captive portal, where `navigator.onLine` is `true`. So
 `BandContext` races `getSession()` against
-`GET_SESSION_OFFLINE_TIMEOUT_MS = 1500` **online or offline**; with a valid
-token `getSession()` answers in ≈0 ms and the timeout never matters:
+`GET_SESSION_OFFLINE_TIMEOUT_MS = 750` (1500 until PR 2.5) **online or
+offline**; with a valid token `getSession()` answers in ≈0 ms and the timeout
+never matters. While the race runs, the controller already reads
+`last-user`'s snapshot list (`prefetchOfflineReads`, read-only, used only if
+that uid becomes current), so the offline home does not wait for a second
+read after the timeout (C7):
 
 - `getSession()` settles first → steps 1–4 as above.
 - The timeout fires first and `last-user` exists → resolve provisionally as
@@ -1329,9 +1414,12 @@ acceptable, and the checklist covers it (§11).
 
 `useOnlineStatus` (new hook in `src/hooks/`): `navigator.onLine` seeded,
 `online`/`offline` events, plus `reportNetworkFailure()` that flips to
-offline for 30 s after a failed request when `navigator.onLine` still says
-true (captive portals, no-data signal). Exposed through `BandContext` so the
-whole tree shares one value.
+offline after a failed request when `navigator.onLine` still says true
+(captive portals, no-data signal): 30 s, doubling on each consecutive failure
+(60 s, 120 s, …) up to 5 min. `reportNetworkSuccess()` (a request reached the
+server) and a real `online` event reset the backoff; `online` also ends the
+window (PR 2.5). Exposed through `BandContext` so the whole tree shares one
+value.
 
 ---
 
@@ -1786,7 +1874,7 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] iOS: download `S1` in the installed app; open the site in a Safari tab: `S1` is *not* listed there (isolation confirmed) and the hint to use the installed app shows.
 - [ ] Turn on airplane mode, wait > 1 h (or set the device clock forward), kill and relaunch: offline home with `S1`.
 - [ ] Wi-Fi on but upstream blocked (phone hotspot with no data, or a router with WAN unplugged), token > 1 h old, relaunch: `S1` listed and performs; nothing deleted (C4).
-- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5). Also record how long the relaunch spinner lasts: the A6 race applies here too (amended), so with a `last-user` it should end within 1.5 s (§7.1).
+- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5). Also record how long the relaunch spinner lasts: the A6 race applies here too (amended), so with a `last-user` it should end within 750 ms (§7.1).
 - [ ] Connect YouTube (re-auth flow) with `S1` downloaded: `S1` still there afterwards, no re-download.
 
 **Download**
@@ -1844,12 +1932,12 @@ verified by unit tests (fake-indexeddb) in `npm test`.
 |----|-------|----------|------------|
 | 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route, worker registered via `workbox-window` so no path reloads on its own; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**; **precache guard: `maximumFileSizeToCacheInBytes` 5 MiB + `scripts/check-precache.mjs` in `npm run build`**; **Space Grotesk self-hosted (`@fontsource`), fonts precached**. Verify Phase 1 items (§1). No IndexedDB, no code-splitting (follow-up). | Phase 1 |
 | 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
-| 2.2a | Offline store, reads, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + store open + schema guard + wipe **with schema-wipe notice record** (A4 lost list exposed by the service; UI in 2.5); `offlineSetlistService`: `openOfflineStore`, `setOfflineCurrentUser`, `getLastUserId`, `confirmSignedInUser`, `listSnapshots`, `getSnapshotMeta`, `getSnapshot`, `getFile`, `listOfflineBands`, `countHiddenSnapshots`, `getSchemaWipeNotice` / `dismissSchemaWipeNotice`, `wipeAll`, `subscribe`/events; reads return empty/null on an empty store and on `storage-unavailable`. `wipeAll` wired to `AuthButton.logout` (awaited before `signOut`) and confirmed user change **only**; also clears `bandmate_perform_position_*` (`performPosition.ts`: prefix + `clearAllPerformPositions`). **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2); `isResolvingBand` always resolves; `authMode` exposed.** vitest + fake-indexeddb, `npm test`. No UI beyond what `BandContext` needs, no migration. | 2.0 |
+| 2.2a | Offline store, reads, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + store open + schema guard + wipe **with schema-wipe notice record** (A4 lost list exposed by the service; UI in 2.5); `offlineSetlistService`: `openOfflineStore`, `setOfflineCurrentUser`, `getLastUserId`, `confirmSignedInUser`, `listSnapshots`, `getSnapshotMeta`, `getSnapshot`, `getFile`, `listOfflineBands`, `countHiddenSnapshots`, `getSchemaWipeNotice` / `dismissSchemaWipeNotice`, `wipeAll`, `subscribe`/events; reads return empty/null on an empty store and on `storage-unavailable`. `wipeAll` wired to `AuthButton.logout` (awaited before `signOut`) and confirmed user change **only**; also clears `bandmate_perform_position_*` (`performPosition.ts`: prefix + `clearAllPerformPositions`). **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout (750 ms since 2.5) with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2); `isResolvingBand` always resolves; `authMode` exposed.** vitest + fake-indexeddb, `npm test`. No UI beyond what `BandContext` needs, no migration. | 2.0 |
 | 2.2b | Download engine | `planDownload`, `downloadSetlist` state machine, journal + `resumeInterruptedDownloads`, `cancelDownload`, quota handling (§4.5), `collectGarbage` (all users' refs), `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`, `getStorageUsage`; `snapshot-changed` / `download-progress` events; store epoch, cross-tab lock and the other race rules (changelog 2026-09-25, PR 2.2b); dev-only `window.__bandmateOffline`. Unit tests against fake-indexeddb. No UI. | 2.2a |
 | 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar (no Remove there); partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. **Download controller (UI owner of the running download); resume + GC at app start (moved from 2.5); interrupted-download notice with Resume/Discard; Screen Wake Lock while downloading. All of it behind `isOfflineDownloadsEnabled()` (off by default).** Offline check: after airplane mode + relaunch, 2.2a keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2b |
 | 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **`refreshSnapshotRows` + `patchSnapshotSetlist` / `patchSnapshotPreference` (moved from 2.2b), the row refresh after every download commit (§4.3); background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
-| 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; band-initial fallback when the avatar fails offline (§7.3); **remove the `isOfflineDownloadsEnabled()` flag (from 2.3) once the §11 device checklist passes**; generic "needs a connection" fallback for other routes. | 2.4 |
-| 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
+| 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; band-initial fallback when the avatar fails offline (§7.3); generic "needs a connection" fallback for other routes; weak-signal fallback (`isNetworkError` → `reportNetworkFailure()`); DOM tests (jsdom). Still behind the flag. | 2.4 |
+| 2.6 | Flag removal, docs and i18n sweep | **Remove the `isOfflineDownloadsEnabled()` flag (from 2.3) once the §11 device checklist passes (moved from 2.5)**; CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
 
 ### Phase 3
 

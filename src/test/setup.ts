@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
 // Tests never reach Supabase (and CI has no VITE_SUPABASE_URL): the offline
 // service imports the data services, which import the client. A test that needs
@@ -68,3 +68,10 @@ class FakeLockManager {
 }
 
 Object.defineProperty(globalThis.navigator, "locks", { value: new FakeLockManager(), configurable: true });
+
+// DOM tests (`// @vitest-environment jsdom`): unmount between tests. Vitest runs
+// without globals, so testing-library's auto-cleanup is not registered.
+if (typeof document !== "undefined") {
+  const { cleanup } = await import("@testing-library/react");
+  afterEach(cleanup);
+}

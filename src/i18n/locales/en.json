@@ -1436,6 +1436,59 @@
       "resumedPartial": "“{{setlist}}” was saved with missing PDFs",
       "stale_one": "An interrupted download was too old and was discarded. Download it again.",
       "stale_other": "{{count}} interrupted downloads were too old and were discarded. Download them again."
+    },
+    "screen": {
+      "banner": "You're offline. Only setlists saved on this device are available.",
+      "goHome": "Go to offline setlists"
+    },
+    "needsConnection": {
+      "title": "This page needs a connection",
+      "text": "You're offline. Setlists saved on this device are still available."
+    },
+    "empty": {
+      "title": "You're offline and nothing is saved on this device",
+      "text": "When you're online, open a setlist and choose “Make available offline” to perform it without a connection."
+    },
+    "home": {
+      "title": "Offline setlists",
+      "subtitle": "Saved on this device",
+      "noneForBand": "Nothing from {{band}} is saved on this device.",
+      "otherBands": "Other bands have setlists saved here. Switch band to see them.",
+      "interruptedTitle": "Interrupted downloads",
+      "interruptedItem": "Started {{date}}",
+      "untitled": "Untitled setlist"
+    },
+    "list": {
+      "perform": "Perform"
+    },
+    "detail": {
+      "back": "Back",
+      "pdfs_one": "{{count}} PDF",
+      "pdfs_other": "{{count}} PDFs",
+      "noPdfs": "No PDFs",
+      "notDownloaded_one": "{{count}} not downloaded",
+      "notDownloaded_other": "{{count}} not downloaded",
+      "minutes": "{{count}} min",
+      "unknownSong": "Unknown song",
+      "notAvailableTitle": "Not available offline",
+      "notAvailableText": "This setlist isn't saved on this device. Connect to open it."
+    },
+    "bandPicker": {
+      "title": "Choose a band",
+      "text": "These bands have setlists saved on this device."
+    },
+    "locked": {
+      "title": "Sign in again to use your offline setlists",
+      "text_one": "{{count}} setlist is saved on this device. It stays here until you sign in again.",
+      "text_other": "{{count}} setlists are saved on this device. They stay here until you sign in again.",
+      "signIn": "Sign in"
+    },
+    "schemaWipe": {
+      "title": "The app was updated. Download these setlists again to use them offline",
+      "download": "Download",
+      "needsConnection": "Needs a connection",
+      "dismiss": "Dismiss",
+      "unknownBand": "Another band"
     }
   }
 }

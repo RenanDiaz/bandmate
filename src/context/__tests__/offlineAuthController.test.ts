@@ -87,6 +87,7 @@ function setup(opts: { online: boolean }) {
       getLastUserId: offline.getLastUserId,
       confirmSignedInUser: (id) => offline.confirmSignedInUser(id),
       setOfflineCurrentUser: (id) => offline.setOfflineCurrentUser(id),
+      prefetchOfflineReads: vi.fn(),
     },
     isOnline: () => online,
     reportNetworkFailure: vi.fn(),
@@ -235,7 +236,7 @@ describe("A1: involuntary SIGNED_OUT → session-lost (hide, never wipe)", () =>
   });
 });
 
-describe("A6: offline, getSession() raced against 1.5 s", () => {
+describe("A6: offline, getSession() raced against 750 ms", () => {
   async function startOfflineWithHangingSession(lateResult: GetSessionResult) {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const t = setup({ online: false });
@@ -245,7 +246,7 @@ describe("A6: offline, getSession() raced against 1.5 s", () => {
     return t;
   }
 
-  it("resolves offline-cached from last-user within 1.5 s, provisionally, with no side effects", async () => {
+  it("resolves offline-cached from last-user within 750 ms, provisionally, with no side effects", async () => {
     await seedUserA();
     const before = await rawKeys();
     const t = await startOfflineWithHangingSession({ data: { session: null }, error: retryable() });
@@ -355,8 +356,8 @@ describe("A6: offline, getSession() raced against 1.5 s", () => {
   });
 });
 
-describe("A6: weak signal (navigator.onLine true), getSession() raced against 1.5 s", () => {
-  it("resolves offline-cached from last-user within 1.5 s while online, then reconciles to session", async () => {
+describe("A6: weak signal (navigator.onLine true), getSession() raced against 750 ms", () => {
+  it("resolves offline-cached from last-user within 750 ms while online, then reconciles to session", async () => {
     await seedUserA();
     const before = await rawKeys();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -380,7 +381,32 @@ describe("A6: weak signal (navigator.onLine true), getSession() raced against 1.
     expect(await rawKeys()).toEqual(before);
   });
 
-  it("online, a getSession() that answers before 1.5 s publishes no provisional state", async () => {
+  it("the race is 750 ms, and last-user's list is prefetched before it ends (C7)", async () => {
+    expect(GET_SESSION_OFFLINE_TIMEOUT_MS).toBe(750);
+    await seedUserA();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answerAfter(25_000, { data: { session: null }, error: retryable() });
+    await flush();
+    // Nothing advanced yet: the read started in parallel with the race.
+    expect(t.state().isCheckingAuth).toBe(true);
+    expect(t.deps.offline.prefetchOfflineReads).toHaveBeenCalledWith(USER_A);
+    vi.advanceTimersByTime(GET_SESSION_OFFLINE_TIMEOUT_MS);
+    await flush();
+    expect(t.state()).toMatchObject({ authMode: "offline-cached", provisional: true });
+  });
+
+  it("no last-user → nothing prefetched", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answerAfter(25_000, { data: { session: null }, error: null });
+    await flush();
+    expect(t.deps.offline.prefetchOfflineReads).not.toHaveBeenCalled();
+  });
+
+  it("online, a getSession() that answers before 750 ms publishes no provisional state", async () => {
     await seedUserA();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const t = setup({ online: true });

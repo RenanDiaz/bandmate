@@ -14,6 +14,8 @@ import { SEO } from "./SEO";
 import { AISetlistGenerator } from "./AISetlistGenerator";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { useBandContext } from "../context/useBandContext";
+import { isNetworkError } from "../lib/networkErrors";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -25,6 +27,7 @@ interface Props {
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const { reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -51,9 +54,12 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
     setLoading(true);
     try {
       const data = await getBandSetlists(selectedBand.id);
+      reportNetworkSuccess();
       setSetlists(data);
     } catch (error) {
       console.error("Failed to load setlists:", error);
+      // Weak signal: the route renders the offline list once isOnline drops (§7.3).
+      if (isNetworkError(error)) reportNetworkFailure();
       setSetlists([]);
     }
     setLoading(false);

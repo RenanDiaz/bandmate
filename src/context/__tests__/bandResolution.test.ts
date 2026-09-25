@@ -57,6 +57,7 @@ function deps(overrides: Partial<ResolveBandsDeps>): ResolveBandsDeps {
     getMyBands: vi.fn(async () => []),
     listOfflineBands: vi.fn(offline.listOfflineBands),
     onNetworkFailure: vi.fn(),
+    onNetworkSuccess: vi.fn(),
     ...overrides,
   };
 }
@@ -105,6 +106,17 @@ describe("§7.2 weak signal: session + getMyBands network failure", () => {
     const result = await resolveBands(d);
     expect(result.bands.map((b) => b.id)).toEqual([7]);
     expect(d.getMyBands).not.toHaveBeenCalled();
+  });
+
+  it("a server answer reports success (resets the offline backoff); a failure does not", async () => {
+    const ok = deps({ getMyBands: vi.fn(async () => []) });
+    await resolveBands(ok);
+    expect(ok.onNetworkSuccess).toHaveBeenCalledTimes(1);
+    expect(ok.onNetworkFailure).not.toHaveBeenCalled();
+
+    const failed = deps({ getMyBands: vi.fn(async () => Promise.reject(postgrestFetchFailure())) });
+    await resolveBands(failed);
+    expect(failed.onNetworkSuccess).not.toHaveBeenCalled();
   });
 
   it("no user → no bands", async () => {

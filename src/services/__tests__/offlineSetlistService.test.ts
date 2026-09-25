@@ -13,6 +13,8 @@ import {
   listOfflineBands,
   listSnapshots,
   openOfflineStore,
+  prefetchOfflineReads,
+  removeSnapshot,
   setOfflineCurrentUser,
   subscribe,
   wipeAll,
@@ -293,5 +295,58 @@ describe("storage unavailable (§5.4)", () => {
     localStorage.setItem(performPositionKey(USER_A, "s1"), "{}");
     await wipeAll();
     expect(localStorage.getItem(performPositionKey(USER_A, "s1"))).toBeNull();
+  });
+});
+
+describe("prefetchOfflineReads (A6/C7: read last-user's list during the race)", () => {
+  beforeEach(async () => {
+    await seedRaw({
+      ...storeMeta(),
+      ...snapshotRecords({ userId: USER_A, setlistId: "s1", bandId: 7 }),
+      ...snapshotRecords({ userId: USER_A, setlistId: "s2", bandId: 7 }),
+    });
+  });
+
+  it("returns nothing until that uid is current, then the same list a fresh read gives", async () => {
+    prefetchOfflineReads(USER_A);
+    expect(await listSnapshots()).toEqual([]);
+    setOfflineCurrentUser(USER_A);
+    const prefetched = await listSnapshots();
+    expect(prefetched.map((m) => m.setlistId).sort()).toEqual(["s1", "s2"]);
+    expect((await listOfflineBands()).map((b) => b.id)).toEqual([7]);
+  });
+
+  it("is never used for another uid", async () => {
+    prefetchOfflineReads(USER_A);
+    setOfflineCurrentUser(USER_B);
+    expect(await listSnapshots()).toEqual([]);
+  });
+
+  it("a snapshot change drops it: the next read sees the store", async () => {
+    prefetchOfflineReads(USER_A);
+    setOfflineCurrentUser(USER_A);
+    await listSnapshots();
+    await removeSnapshot("s1");
+    expect((await listSnapshots()).map((m) => m.setlistId)).toEqual(["s2"]);
+  });
+
+  it("a wipe drops it", async () => {
+    prefetchOfflineReads(USER_A);
+    setOfflineCurrentUser(USER_A, { authenticated: true });
+    await wipeAll();
+    setOfflineCurrentUser(USER_A);
+    expect(await listSnapshots()).toEqual([]);
+  });
+
+  it("expires after a few seconds (a later read goes to the store)", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    prefetchOfflineReads(USER_A);
+    setOfflineCurrentUser(USER_A);
+    await listSnapshots();
+    // A record written without an event (e.g. another tab) shows up once it expires.
+    await seedRaw({ ...snapshotRecords({ userId: USER_A, setlistId: "s3", bandId: 7 }) });
+    expect((await listSnapshots()).map((m) => m.setlistId)).not.toContain("s3");
+    now.mockReturnValue(1_000_000 + 6_000);
+    expect((await listSnapshots()).map((m) => m.setlistId)).toContain("s3");
   });
 });

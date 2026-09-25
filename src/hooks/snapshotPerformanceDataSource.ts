@@ -37,6 +37,8 @@ export interface SnapshotSourceDeps {
   isOnline: () => boolean;
   /** BandContext `reportNetworkFailure`: a background refresh failed on weak signal. */
   reportNetworkFailure: () => void;
+  /** BandContext `reportNetworkSuccess`: the server answered (resets the backoff). */
+  reportNetworkSuccess?: () => void;
   createObjectURL?: (blob: Blob) => string;
   revokeObjectURL?: (url: string) => void;
 }
@@ -204,6 +206,7 @@ function openSnapshotSession(setlistId: string, deps: SnapshotSourceDeps): Perfo
         deps.reportNetworkFailure();
         throw new Error("Offline copy refresh failed");
       }
+      if (status !== "skipped") deps.reportNetworkSuccess?.();
       await reread();
     },
 
@@ -257,6 +260,7 @@ function openSnapshotSession(setlistId: string, deps: SnapshotSourceDeps): Perfo
       if (deps.isOnline()) {
         try {
           await setMySheetMusicPreference(sm.song_id, sm.id);
+          deps.reportNetworkSuccess?.();
           await patchSnapshotPreference(setlistId, sm.song_id, sm.id);
           return;
         } catch (error) {

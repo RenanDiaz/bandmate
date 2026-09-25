@@ -265,7 +265,8 @@ describe("snapshot source: background refresh (A3)", () => {
     const emitted: PerformanceRows[] = [];
     session.subscribe((rows) => emitted.push(rows));
     const loaded = await session.load(new AbortController().signal);
-    await flush(80);
+    // The background refresh goes through fake-indexeddb: wait for it, not for a fixed number of turns.
+    await vi.waitFor(() => expect(emitted.length).toBeGreaterThan(0));
     const last = emitted[emitted.length - 1]!;
     expect(last.setlist.songs.map((i) => i.position)).toEqual([0, 1, 2]);
     expect(last.setlist).not.toBe(loaded.setlist);
@@ -294,7 +295,7 @@ describe("snapshot source: background refresh (A3)", () => {
     const emitted: PerformanceRows[] = [];
     session.subscribe((rows) => emitted.push(rows));
     await session.load(new AbortController().signal);
-    await flush(80);
+    await vi.waitFor(() => expect(emitted.length).toBeGreaterThan(0));
     const last = emitted[emitted.length - 1]!;
     expect(last.sheetMusicBySongId.b.map((sm) => sm.id)).toEqual(["b1", "b2"]);
     expect(last.unavailableSheetMusicIds?.has("b2")).toBe(true);
@@ -307,8 +308,7 @@ describe("snapshot source: background refresh (A3)", () => {
     vi.mocked(getSongsByIds).mockRejectedValue(new TypeError("Failed to fetch"));
     const session = open();
     await expect(session.load(new AbortController().signal)).resolves.toBeTruthy();
-    await flush(80);
-    expect(reportNetworkFailure).toHaveBeenCalled();
+    await vi.waitFor(() => expect(reportNetworkFailure).toHaveBeenCalled());
   });
 });
 

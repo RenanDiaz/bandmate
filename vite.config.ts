@@ -5,6 +5,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { PUBLIC_ROUTES, SITE_URL, absoluteUrl } from './src/lib/siteConfig'
+import { PRECACHE_IGNORED_URL_PARAMS } from './src/lib/precacheUrlParams'
 
 const rootDir = dirname(fileURLToPath(import.meta.url))
 const SSR_ENTRY = resolve(rootDir, 'dist-ssr/entry-server.js')
@@ -175,6 +176,11 @@ export default defineConfig(({ isSsrBuild }) => ({
               // scripts/check-precache.mjs (run by `npm run build`) fails the
               // build if any shell file is missing from the manifest.
               maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+
+              // Workbox's defaults plus bootstrap-icons' `?<32-hex>` font
+              // cache-buster, which otherwise made every icon blank offline
+              // (see src/lib/precacheUrlParams.ts).
+              ignoreURLParametersMatching: PRECACHE_IGNORED_URL_PARAMS,
 
               // Runtime caching strategies
               runtimeCaching: [
