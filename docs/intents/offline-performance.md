@@ -99,6 +99,9 @@ don't touch IndexedDB directly) with one entry point used by performance mode:
 
 ### 2b. Update check (notify, don't auto-download)
 
+> Amended 2026-09-25: data rows now refresh automatically when online; only
+> PDFs follow the notify rule below (see *Decisions*).
+
 Whenever there is a connection — app start, coming back online, opening a
 downloaded setlist — compare each snapshot's fingerprint against the server
 (setlist `updated_at`, the referenced songs and their `song_sheet_music`
@@ -175,9 +178,11 @@ Needed regardless of the feature, and cheap:
 ## Decisions
 
 - **PDFs:** download all the PDFs of every song in the setlist. (2026-09-24)
-- **Updates:** when online, check for changes and notify the user that the
-  offline copy is outdated; the user decides when to update. No automatic
-  re-download. (2026-09-24)
+- **Updates:** data rows refresh automatically when online; PDFs are never
+  downloaded automatically — the user is notified and decides. (2026-09-24;
+  amended 2026-09-25: originally rows also waited for the user, which made a
+  user's own online edits "disappear" from a downloaded setlist. See the
+  spec's A3.)
 - **Guests** can make setlists available offline — it's read-only. (2026-09-24)
 
 - **Show detail** also offers "Get this show ready offline", which downloads

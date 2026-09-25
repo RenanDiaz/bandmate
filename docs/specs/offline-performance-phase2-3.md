@@ -10,6 +10,35 @@
 This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
+## Changelog
+
+- **2026-09-25 — Amendments A1–A5 + minor.**
+  - **A1** Never auto-wipe on an ambiguous auth state. `wipeAll()` runs only
+    on user-initiated sign-out and on a confirmed sign-in with a different
+    uid. A lost session or an involuntary `SIGNED_OUT` **hides** snapshots
+    instead (new `authMode: "session-lost"`). §3.3, §3.5 #1/#6, §5.1, §5.4,
+    §7.1, §10 (C1–C2 + new C4–C6), §11, §12.
+  - **A2** Performance position persisted in `localStorage` (not
+    `sessionStorage`) so it survives an app kill; 12 h expiry; removed by
+    `wipeAll()`. §3.3, §3.5 #6, §9.4, §10 B7, §11, §12.
+  - **A3** Snapshot stays the primary source online, but **rows refresh
+    automatically whenever online**; only files follow notify-don't-download.
+    "Outdated" now means "files are missing or changed". Perform-mode writes
+    patch the snapshot. §3.2, §4.1, §5.2–5.3, §6.1, §6.3–6.4, §8.1–8.3, §10
+    (B10, D, E, new B11–B13), §11, §12; intent *Decisions*.
+  - **A4** A schema-version wipe records what was lost and shows a one-time
+    "download these again" notice. §3.1, §3.3, §3.5 #2, §5.1, §5.5, §7.3,
+    §10 (new A9), §12 (PR 2.6).
+  - **A5** Offline user/band resolution moves out of PR 2.5: PR 2.0 fixes the
+    infinite spinner on its own; PR 2.2 adds `last-user`, `offline-cached` and
+    the `listOfflineBands` branch. §1, §7, §12.
+  - **Minor** `DownloadPlan.bytesUnknown` → `filesWithUnknownSize`.
+  - **Also changed to stay consistent:** `skipped-present` keys on storage
+    path only and `OfflineFileRecord.rowUpdatedAt` is dropped (§3.2, §4.1),
+    because A3's row refresh would otherwise make every renamed PDF look like
+    a new file. New findings C11 and C12 in §0 record the code facts behind A1
+    and A3.
+
 ---
 
 ## 0. Where the code contradicts the intent
@@ -20,7 +49,7 @@ the intent should be amended where noted.
 | # | Intent says | Code says | Consequence |
 |---|-------------|-----------|-------------|
 | C1 | Fingerprint compares "the referenced songs" (§2b). | `songs` has **no `updated_at`** column exposed (`Song` in `songsService.ts` has only `created_at`; `updateSong` writes no timestamp). The base schema is unversioned, so this must be verified on the live DB, but nothing in the repo adds it. | Song edits (lyrics, chords, key, timing) are undetectable by timestamp. Phase 3 starts with a migration adding `songs.updated_at` + the existing `update_updated_at_column()` trigger (§6.2, PR 3.0). |
-| C2 | Offline, "resolve the user from the locally stored session (`getSession()`)… an expired token offline still allows opening snapshots" (§3). | `getSession()` in auth-js 2.70 refreshes when `expires_at` is within 90 s; a refresh that fails on a network error returns `{ session: null }` (`GoTrueClient.__loadSession`). Supabase access tokens expire after 1 h by default. | After more than an hour in airplane mode `getSession()` alone yields no user. The app must persist a `lastKnownUserId` on every auth event and use it offline (§7.1). If Phase 1 did not ship this, it is a Phase 2 prerequisite. |
+| C2 | Offline, "resolve the user from the locally stored session (`getSession()`)… an expired token offline still allows opening snapshots" (§3). | `getSession()` in auth-js 2.70 refreshes when `expires_at` is within 90 s; a refresh that fails on a network error returns `{ session: null }` (`GoTrueClient.__loadSession`). Supabase access tokens expire after 1 h by default. | After more than an hour in airplane mode `getSession()` alone yields no user. The app must persist a `lastKnownUserId` (`last-user`) whenever a valid session is established and use it when the refresh fails on the network (§7.1). If Phase 1 did not ship this, it is a Phase 2 prerequisite. |
 | C3 | Phase 1 makes auth offline-safe and the shell survives (§3). | `BandContext` calls `getMyBands()` with **no error path**: on rejection `isResolvingBand` never becomes `false`, and `App.tsx:324` renders a spinner while `user && isResolvingBand`. Even with a user, offline the app is a spinner forever. `selectedBand.user_role` also drives `canEditSongs`. | The snapshot must store the **full `Band` row** (including `user_role`), not just name/avatar, and `BandContext` needs an offline branch that resolves `bands`/`selectedBand` locally (§7.2). |
 | C4 | "What already works: the app shell is precached." Risk list does not mention SW updates. | `VitePWA({ registerType: 'autoUpdate' })` generates a worker with `skipWaiting` + `clientsClaim`, and `registerSW` in auto mode calls `window.location.reload()` on `activated` with `isUpdate` (`vite-plugin-pwa/dist/client/build/register.js:41`). `PwaReloadPrompt`'s `onNeedRefresh` is never invoked in this mode, so the banner is dead code. | A deploy during a show plus a moment of signal can reload the page mid-song. Switch to `registerType: 'prompt'` so the existing banner does its job (§8.3, PR 2.0). |
 | C5 | §4: offline PDF selection "is saved to the server next time we are online, best effort". §Out of scope: "any write queue". | `handleSelectSheetMusic` (`SetlistPerformanceView.tsx:619`) writes to the server immediately and **toasts an error on failure**. | Offline, every PDF switch would show an error toast. This spec keeps one tiny, explicitly bounded write: preference overrides live in the snapshot and are flushed once, best effort, next time performance mode opens online (§5.6). Nothing else is queued. Amend the intent's out-of-scope line to say so. |
@@ -29,6 +58,8 @@ the intent should be amended where noted.
 | C8 | Finding #6: the Workbox cache is keyed by URL and ignores auth. | The `supabase-api` NetworkFirst rule matches **every** `*.supabase.co` request, including signed-URL PDF GETs (`statuses: [0, 200]`). Downloading a PDF through the SW copies up to 50 MB into that cache too. | Narrow the rule to `/rest/v1/` and `/auth/v1/` (or exclude `/storage/v1/`) so PDF bytes are stored exactly once, in the snapshot (§8.4, PR 2.0). |
 | C9 | §2: performance mode reads through one entry point. | `usePerformanceSync` calls `getUserBandRole` and `getActiveSessionWithHost` on mount and opens a Realtime channel on join; `subscribeToSession` has no offline guard. | The hook gets an `enabled` flag; offline it does nothing and reports `unavailable` (§5.5). |
 | C10 | "No redirect to login" (Done when #2). | No route is guarded. With `user === null` the performance view mounts, `getSetlist` throws "User not authenticated", and the view **bounces to `/setlists`** with an error toast. | The failure mode is a bounce, not a login redirect. Acceptance criteria are phrased against the bounce (§9). |
+| C11 | "Signing out deletes all offline data" (Done when #5); sign-out wipe (§5). | auth-js 2.70 emits `SIGNED_OUT` from `_removeSession()`, which also runs when a token refresh fails with a **non-retryable** error (`_callRefreshToken`, `_recoverAndRefresh`). A retryable network error keeps the stored session and emits nothing. `youtubeService.requestAuthorization()` calls `signOut()` and immediately signs the same user back in. | Wiping on `SIGNED_OUT` would delete everything on a captive portal or when the user connects YouTube. Only `AuthButton.logout` wipes; other sign-outs hide (A1, §3.5, §7.1). Done-when #5 still holds for the user action it describes. |
+| C12 | Update check "notify, don't auto-download" covers rows and files alike (§2b). | Performance mode writes reorders (`handleSaveOrder` → `updateSetlist`) and preferences to the server; a snapshot that is not updated keeps rendering the old rows. | Rows refresh automatically online; only files wait for the user (A3, §8.2). Amend the intent's *Decisions*. |
 
 Confirmed consistent with the intent: storage paths are `{bandId}/{songId}/{sheetMusicId}.pdf` and `song_sheet_music.file_url` stores the **path**, not a URL (`SheetMusicUpload.tsx:706`); the bucket is private with a band-membership SELECT policy on `storage.objects`; there is no "replace PDF in place" flow (only create and delete), so a changed file always has a new row id and path; guests can read everything the snapshot needs; the legacy `songs.sheet_music_url` column is read by no view and is ignored here.
 
@@ -42,8 +73,12 @@ This spec assumes, and PR 2.0 verifies before anything else lands:
 2. `supabase-api` runtime cache has `networkTimeoutSeconds` (3–4 s).
 3. `BandContext` obtains the user from `getSession()` first and only falls back
    to `getUser()` when online.
-4. **Not** covered by Phase 1 and handled here: `lastKnownUserId` (C2), band
-   resolution offline (C3), SW update mode (C4), storage-rule narrowing (C8).
+4. **Not** covered by Phase 1 and handled here: `lastKnownUserId` (C2, PR
+   2.2), band resolution offline (C3: error path in PR 2.0, local bands in PR
+   2.2), SW update mode (C4, PR 2.0), storage-rule narrowing (C8, PR 2.0).
+
+As of 2026-09-25 `BandContext` still calls `getUser()` (`BandContext.tsx:33`),
+so Phase 1 item 3 is not merged yet; PR 2.0 must not start until it is.
 
 ---
 
@@ -57,6 +92,15 @@ This spec assumes, and PR 2.0 verifies before anything else lands:
   store, files to fetch, files already present, files to delete, byte estimate.
 - **Fingerprint** — the structured description of "what the server had when
   this snapshot was taken" (§6.1), used by the update check.
+- **Row refresh** — refetching a snapshot's data rows (setlist, referenced
+  songs, `song_sheet_music`, preferences, band) and committing them to the
+  snapshot **without downloading any PDF** (§8.2, §6.3). Automatic whenever
+  online.
+- **Outdated** — the snapshot's rows are current but it references PDFs that
+  are not in the store (added or replaced on the server). Fixed only by the
+  user tapping "Update offline copy".
+- **Hidden** — snapshots exist on the device but no reads return them,
+  because the session was lost without the user signing out (§7.1).
 - **Store** — the single IndexedDB database behind `idb-keyval` (§3.3).
 
 ---
@@ -73,6 +117,17 @@ import only from the service and from hooks.
 /** Bump when any stored shape changes. Old versions are wiped, not migrated (§3.5). */
 export const OFFLINE_SCHEMA_VERSION = 1 as const;
 ```
+
+A bump deletes every offline copy on every device the next time the app
+opens, so it is never silent: the wipe records which setlists existed and the
+UI tells the user to download them again (§3.5 #2, A9). A PR that bumps the
+version must say why in its description (CLAUDE.md rule, PR 2.6).
+
+The wipe reads only `snapshot-meta:*` keys to build the notice. Those records
+are from an older schema, so the reader relies on nothing but three fields
+that every version must keep with the same name and type: `setlistId`,
+`setlistName`, `userId` (plus `bandId` when present). This is the one
+cross-version contract of the store.
 
 ### 3.2 Types
 
@@ -107,10 +162,20 @@ export interface OfflineSnapshotMeta {
   fileCount: number;
   missingFiles: OfflineMissingFile[];
   fingerprint: OfflineFingerprint;
-  /** Phase 3. "unknown" until the first successful check after savedAt. */
+  /**
+   * "unknown" until the first successful row refresh after savedAt.
+   * "fresh"    = rows current, every referenced file present (or failed: see completeness).
+   * "outdated" = rows current, but some referenced files were added/replaced on
+   *              the server and are not in the store (missingFiles reason "not-downloaded").
+   * "deleted"  = the setlist row is gone on the server (or RLS hides it).
+   * Row-only changes never produce "outdated": they are committed by the refresh (A3).
+   */
   freshness: "unknown" | "fresh" | "outdated" | "deleted";
+  /** Last successful row refresh (Phase 2: perform-mode open; Phase 3: every check). */
   lastCheckedAt: string | null;
-  /** Phase 3: what the last check found, for the "what changed" summary. */
+  /** When rows were last committed by a refresh or a perform-mode write (≥ savedAt). */
+  rowsUpdatedAt: string;
+  /** Phase 3: what the last refresh applied and what files it left pending. */
   lastDiff: OfflineDiff | null;
   /** Phase 3: last time every file was read back successfully (§6.5). */
   verifiedAt: string | null;
@@ -120,7 +185,12 @@ export interface OfflineMissingFile {
   storagePath: string;
   sheetMusicId: string;
   songId: string;
-  reason: "quota" | "network" | "not-found" | "forbidden" | "unknown";
+  /**
+   * "not-downloaded": referenced by rows that a refresh brought in after the
+   * last download (A3). It does not make completeness "partial"; it makes
+   * freshness "outdated". Every other reason is a failed download.
+   */
+  reason: "quota" | "network" | "not-found" | "forbidden" | "unknown" | "not-downloaded";
   bytes: number | null;
 }
 
@@ -152,17 +222,32 @@ export interface OfflineFileRef {
   storagePath: string;        // "{bandId}/{songId}/{sheetMusicId}.pdf" == SheetMusic.file_url
   sheetMusicId: string;
   songId: string;
-  /** song_sheet_music.updated_at at download time; part of the fingerprint. */
+  /** song_sheet_music.updated_at of the row as last refreshed; part of the fingerprint. Not a file identity. */
   rowUpdatedAt: string;
 }
 
-/** Stored once per storage path, shared across snapshots. */
+/**
+ * Stored once per storage path, shared across snapshots. The path is the file's
+ * identity: there is no replace-in-place flow, so bytes at a path never change
+ * (§0). Row metadata (name, instrument, timings) lives in the snapshot rows and
+ * is refreshed without touching this record (A3).
+ */
 export interface OfflineFileRecord {
   storagePath: string;
   blob: Blob;                 // type "application/pdf"
   bytes: number;
-  rowUpdatedAt: string;
   downloadedAt: string;
+}
+
+/** Written by a schema-mismatch wipe (§3.5 #2); read once per user, then dismissed. */
+export interface OfflineSchemaWipeNotice {
+  wipedAt: string;
+  fromVersion: number | null;          // null when meta was missing/unreadable
+  toVersion: typeof OFFLINE_SCHEMA_VERSION;
+  /** Only this user's entries are ever shown to them (§3.5 #1). */
+  lost: Array<{ userId: string; setlistId: string; setlistName: string; bandId: number | null }>;
+  /** userIds that have dismissed it; the key is deleted once every userId in `lost` has. */
+  dismissedBy: string[];
 }
 
 /** Progress of an in-flight or interrupted download (§4). Deleted on commit or cancel. */
@@ -179,6 +264,34 @@ export interface OfflineDownloadJournal {
 }
 ```
 
+Performance position (A2) is **not** in IndexedDB: it is written on every
+song change and must be readable synchronously on mount. It lives in
+`localStorage`, handled by `src/lib/performPosition.ts` (no Supabase, so not a
+service):
+
+```ts
+/** localStorage key: `bandmate_perform_position_{userId}_{setlistId}`. */
+export interface PerformPosition {
+  currentIndex: number;
+  contentView: "chords" | "lyrics" | "sheetMusic";   // same union as SetlistPerformanceView.tsx:222
+  selectedSheetMusicId: string | null;
+  savedAt: string;                                    // ISO
+}
+
+export const PERFORM_POSITION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+/** null when absent, unparsable, or savedAt older than 12 h (and then removed). */
+export function readPerformPosition(userId: string, setlistId: string): PerformPosition | null;
+export function writePerformPosition(userId: string, setlistId: string, p: Omit<PerformPosition, "savedAt">): void;
+/** Removes every `bandmate_perform_position_*` key. Called by wipeAll(). */
+export function clearAllPerformPositions(): void;
+```
+
+It applies to every performance-mode session, with or without a snapshot.
+`currentIndex` is clamped to the item count on restore (the setlist may have
+changed); a `selectedSheetMusicId` that no longer exists falls back to the
+preferred PDF.
+
 ### 3.3 IndexedDB key layout
 
 One database, one object store, string keys with a type prefix. `idb-keyval`
@@ -193,7 +306,11 @@ database is not an option; prefixes are.
 | `snapshot:{setlistId}` | `OfflineSnapshot` | Read only by performance mode / offline detail. |
 | `file:{storagePath}` | `OfflineFileRecord` | Blob values. Never enumerate with `values()`/`entries()`; use `keys()` and load one at a time. |
 | `download:{setlistId}` | `OfflineDownloadJournal` | Present only while a download is in flight or was interrupted. |
-| `last-user` | `string` (auth uid) | Written by `BandContext` on `SIGNED_IN` / `TOKEN_REFRESHED` / `INITIAL_SESSION`; cleared on sign-out (C2). Lives here rather than `localStorage` so `wipeAll()` covers it. |
+| `last-user` | `string` (auth uid) | Written by `BandContext` whenever a **valid session** is established (`SIGNED_IN` / `TOKEN_REFRESHED` / `INITIAL_SESSION` with a session). Removed **only** by `wipeAll()`; an involuntary `SIGNED_OUT` keeps it (A1, §7.1). Lives here rather than `localStorage` so `wipeAll()` covers it. |
+| `schema-wipe-notice` | `OfflineSchemaWipeNotice` | Written by the schema-mismatch wipe (§3.5 #2) *after* re-initializing `meta`, so it survives that wipe. Removed by `wipeAll()` and once dismissed by every affected user. |
+
+Outside IndexedDB, `wipeAll()` also removes the `localStorage` keys
+`bandmate_perform_position_*` (A2), because they identify setlists.
 
 Database name `bandmate-offline`, store name `kv`, created with
 `idb-keyval`'s `createStore`. The database name includes no user id: user
@@ -212,13 +329,22 @@ rows). Files dominate: up to 50 MB each (bucket limit). The `bytes` on
 
 ### 3.5 Invariants
 
-1. **Owner.** Every read filters by `userId === currentUserId`. On sign-in, if
-   `last-user` exists and differs from the new uid, `wipeAll()` runs before
-   anything else (a shared device changed hands without signing out, e.g. after
-   a token revocation).
+1. **Owner.** Every read filters by `userId === currentUserId`, where
+   `currentUserId` is `null` in `authMode: "session-lost"` (§7.1), so hidden
+   snapshots are returned by no read. On a **confirmed** sign-in (a valid
+   session from `getSession()` or a `SIGNED_IN` event), if `last-user` exists
+   and differs from the new uid, `wipeAll()` runs before anything else and
+   before any list renders (a shared device changed hands without signing
+   out). A missing session is never a confirmed sign-in.
 2. **Schema.** If `meta.schemaVersion !== OFFLINE_SCHEMA_VERSION`, or a record
    carries a different version, the whole store is wiped and re-initialized.
    There is no migration path in v1; downloading again is the migration.
+   Before clearing, the wipe collects `{ userId, setlistId, setlistName,
+   bandId }` from every `snapshot-meta:*` key (§3.1) and, when that list is
+   non-empty, writes `schema-wipe-notice` after the new `meta`. The notice is
+   shown once per affected user (§7.3, A9). A schema wipe keeps `last-user`
+   (it is not an auth event) and does not touch perform-position keys (their
+   shape is independent of the store schema).
 3. **Files are shared.** `file:{path}` may be referenced by several snapshots.
    It is deleted only when no `snapshot-meta` (and no `download` journal)
    references it (§4.6).
@@ -227,11 +353,33 @@ rows). Files dominate: up to 50 MB each (bucket limit). The `bytes` on
    treat the snapshot as absent and schedule GC.
 5. **Files before meta.** A `snapshot-meta` is only ever written after every
    file in its plan has either been stored or recorded in `missingFiles`.
-6. **Sign-out.** `wipeAll()` clears the store (`clear()`), then
-   `localStorage` keys `bandmate_preferred_instrument_*` are left alone (they
-   are not offline data). It is awaited in `AuthButton.logout` **before**
-   `supabase.auth.signOut()` resolves, and also run from the `SIGNED_OUT` auth
-   event so other tabs / token revocations are covered.
+6. **Wipe triggers — exactly two.** `wipeAll()` clears the store (`clear()`)
+   and removes `bandmate_perform_position_*` from `localStorage`;
+   `bandmate_preferred_instrument_*` keys are left alone (they are not offline
+   data). It runs **only**:
+   - (a) on **user-initiated sign-out**: awaited in `AuthButton.logout`
+     **before** `supabase.auth.signOut()` is called; and
+   - (b) on a **confirmed sign-in whose uid differs from `last-user`** (#1).
+
+   Nothing else deletes offline data on an auth signal. In particular:
+   - A `SIGNED_OUT` event not preceded by (a) in this tab — a refresh that
+     failed with a non-retryable error (captive portal HTML, revoked token),
+     another tab signing out, `youtubeService.requestAuthorization()`'s
+     sign-out/sign-in (C11) — **hides** snapshots (§7.1). `last-user` is kept.
+   - `getSession()` returning `null` online **hides** them too, and is never a
+     reason to delete.
+   - They reappear, with no download, as soon as a valid session for the
+     same uid exists.
+
+   **Accepted tradeoff:** after a token revocation or an involuntary sign-out,
+   the blobs and rows stay on the device until the next sign-in (same user:
+   shown again; different user: wiped by (b)) or until the user signs out
+   explicitly. Until then no read returns them, because every read filters by
+   `userId` and `currentUserId` is `null`. On a shared device this means a
+   previous user's PDFs remain in IndexedDB — unreachable through the app,
+   but not erased — for that window. Another tab's explicit sign-out is seen
+   here as involuntary; the store is shared, so the wipe that tab ran already
+   covers it.
 
 ---
 
@@ -253,8 +401,10 @@ idle ──download()──▶ planning ──▶ awaiting-confirmation ──co
 - **planning** — network. Fetch setlist, referenced songs, their
   `song_sheet_music` rows, the user's preferences for those songs, the band
   row; list each song's storage folder for sizes (C7). Compare with the store:
-  files whose `(storagePath, rowUpdatedAt)` already exist are `skipped-present`.
-  Produce a `DownloadPlan`. No writes yet.
+  files whose `file:{storagePath}` key already exists are `skipped-present`
+  (the path is the identity; `rowUpdatedAt` is not compared, so a renamed or
+  re-timed PDF is not downloaded again). Produce a `DownloadPlan`. No writes
+  yet.
 - **awaiting-confirmation** — the UI shows `bytesToDownload`, `fileCount`,
   `bytesAlreadyPresent`, and the `navigator.storage.estimate()` headroom. The
   first ever download also calls `navigator.storage.persist()` here and records
@@ -283,7 +433,7 @@ export interface DownloadPlan {
   /** Phase 3 incremental update only: files the old snapshot had that the server no longer has. */
   filesToDelete: OfflineFileRef[];
   bytesToDownload: number;          // sum of known sizes
-  bytesUnknown: number;             // count of files with null size
+  filesWithUnknownSize: number;     // count of files with null size
   bytesAlreadyPresent: number;
   estimate: { usage: number; quota: number } | null;  // navigator.storage.estimate(), null if unsupported
 }
@@ -291,7 +441,8 @@ export interface DownloadPlan {
 
 Size comes from `storage.from("sheet-music").list("{bandId}/{songId}")`, one
 call per distinct song, run in parallel with a concurrency cap of 4. A song
-whose listing fails still downloads; its files count under `bytesUnknown`.
+whose listing fails still downloads; its files count under
+`filesWithUnknownSize`, and the confirmation says "+ N files of unknown size".
 
 ### 4.3 Atomicity
 
@@ -305,6 +456,12 @@ whose listing fails still downloads; its files count under `bytesUnknown`.
   the journal remains for resume.
 - The previous snapshot of the same setlist (Phase 3 update) stays readable
   throughout; it is replaced by the commit transaction, never deleted first.
+- **Rows vs. an in-flight download (A3).** `refreshSnapshotRows` does not run
+  for a setlist that has a `download:` journal; the download's commit would
+  otherwise overwrite newer rows with its `pendingSnapshot`. A resumed
+  download (§4.4) can carry rows up to 7 days old, so every download commit is
+  followed by one `refreshSnapshotRows` (a resume only runs online). The view
+  therefore never regresses to older rows than it last showed.
 
 ### 4.4 Resume and cleanup
 
@@ -351,10 +508,13 @@ still allows the download.
 ### 4.6 Garbage collection
 
 `collectGarbage()` runs at app start (after resume), after `removeSnapshot`,
-after `cancel`, and after a Phase 3 update commit. It lists `file:*` keys and
-deletes any not referenced by a `snapshot` or `download` journal of the
-current user. It never touches keys of another user except through
-`wipeAll()` (§3.5 #1).
+after `cancel`, after a Phase 3 update commit, and after a row refresh commit
+that released files (§8.2). It lists `file:*` keys and deletes any not
+referenced by **any** `snapshot` or `download` journal in the store,
+whatever its `userId`. (Referencing only the current user's would delete a
+hidden user's files — §3.5 #6 — or, in `session-lost` mode with no current
+user, every file.) Other users' data is only ever removed by `wipeAll()`
+(§3.5 #1).
 
 ---
 
@@ -366,8 +526,28 @@ current user. It never touches keys of another user except through
 ### 5.1 Reads (work offline)
 
 ```ts
-/** Store meta and schema check; wipes on mismatch. Cheap; memoized per session. */
+/** Store meta and schema check; wipes on mismatch (recording the notice, §3.5 #2). Cheap; memoized per session. */
 export function openOfflineStore(): Promise<OfflineStoreMeta>;
+
+/**
+ * Set by BandContext on every auth resolution (§7.1). Every read below filters by
+ * this id; null (signed out or session-lost) makes them all return empty/null
+ * without deleting anything (A1).
+ */
+export function setOfflineCurrentUser(userId: string | null): void;
+
+/** The last uid that had a valid session on this device (`last-user`), or null. Read by BandContext only. */
+export function getLastUserId(): Promise<string | null>;
+/** Called by BandContext with the uid of a valid session. Runs wipeAll() first if it differs from `last-user` (§3.5 #1). */
+export function confirmSignedInUser(userId: string): Promise<{ wiped: boolean }>;
+
+/** Whether hidden snapshots of `userId` exist, for the "Sign in again" state. Counts only; returns no names. */
+export function countHiddenSnapshots(userId: string): Promise<number>;
+
+/** The schema-wipe notice entries for the current user, or null (A4). */
+export function getSchemaWipeNotice(): Promise<Array<{ setlistId: string; setlistName: string; bandId: number | null }> | null>;
+/** No id: dismiss all of the current user's entries. With an id: drop that entry (downloaded again, or gone). */
+export function dismissSchemaWipeNotice(setlistId?: string): Promise<void>;
 
 /** All snapshot metas of the current user, newest savedAt first. Empty if none or store unavailable. */
 export function listSnapshots(): Promise<OfflineSnapshotMeta[]>;
@@ -428,8 +608,39 @@ export function cancelDownload(setlistId: string): void;
 export function removeSnapshot(setlistId: string): Promise<void>;
 export function collectGarbage(): Promise<{ deletedFiles: number; freedBytes: number }>;
 export function requestPersistence(): Promise<boolean | null>;   // null if unsupported
+/** Only callers: AuthButton.logout and confirmSignedInUser (§3.5 #6). */
 export function wipeAll(): Promise<void>;
 ```
+
+Row refresh and write-through (A3; Phase 2, used by performance mode):
+
+```ts
+export interface RowRefreshResult {
+  status: "unchanged" | "updated" | "deleted" | "failed";
+  /** Refs the new rows reference that are not in the store (reason "not-downloaded"). */
+  filesNotDownloaded: OfflineFileRef[];
+  /** Refs the old rows had and the new ones do not; GC runs after commit. */
+  filesReleased: OfflineFileRef[];
+}
+
+/**
+ * Fetches setlist, referenced songs, their song_sheet_music rows, the user's
+ * preferences and the band row; if any differ from the snapshot, commits them
+ * in one setMany (snapshot + snapshot-meta + band). Never fetches a PDF.
+ * "deleted": setlist row gone → meta.freshness = "deleted", rows kept (D5).
+ * "failed": network error → nothing written, snapshot untouched.
+ */
+export function refreshSnapshotRows(setlistId: string): Promise<RowRefreshResult>;
+
+/** After a successful server write from performance mode: replace the snapshot's setlist row. */
+export function patchSnapshotSetlist(setlistId: string, setlist: Setlist): Promise<void>;
+/** After a successful setMySheetMusicPreference online: update preferredSheetMusicIds. */
+export function patchSnapshotPreference(setlistId: string, songId: string, sheetMusicId: string): Promise<void>;
+```
+
+Both patches are no-ops when there is no snapshot for the setlist, and never
+reject to the caller (log and fall back to `refreshSnapshotRows` on the next
+open).
 
 ### 5.3 Freshness (Phase 3, need network)
 
@@ -440,7 +651,12 @@ export type FreshnessResult =
   | { status: "deleted"; checkedAt: string }
   | { status: "unknown"; checkedAt: string; reason: "offline" | "error" };
 
-/** Checks every snapshot of the current user (or the given ids), updates each meta, returns results. */
+/**
+ * For every snapshot of the current user (or the given ids): cheap fingerprint
+ * check (§6.3); where rows differ, refreshSnapshotRows() commits them. Then
+ * sets freshness from the files alone: "outdated" iff the committed rows
+ * reference files not in the store. Never downloads a PDF.
+ */
 export function checkForUpdates(setlistIds?: string[]): Promise<Record<string, FreshnessResult>>;
 
 /** Reads back every file of a snapshot; updates verifiedAt or completeness/missingFiles. Works offline. */
@@ -454,15 +670,15 @@ export function verifySnapshot(setlistId: string): Promise<{ ok: boolean; missin
 
 | `code` | Thrown by | When |
 |--------|-----------|------|
-| `not-authenticated` | plan, download, check | No current user id (neither session nor `last-user`). |
+| `not-authenticated` | plan, download, check, refresh | No valid session. Downloads and refreshes need one; `offline-cached` and `session-lost` both count as not authenticated here. |
 | `offline` | plan, download, check | `useOnlineStatus` says offline, or the first request fails with a network error. |
 | `setlist-not-found` | plan | `setlists` returns no row (deleted, or RLS hides it). Same for a song that vanished between plan and download: recorded per file as `not-found`. |
 | `download-in-progress` | download | Another download is running. The UI offers to cancel it. |
 | `plan-stale` | download | `plan.setlistId` already has a newer journal or the plan is older than 10 minutes (signed URLs and sizes may have changed). Re-plan. |
 | `storage-unavailable` | any | `indexedDB.open` fails (Safari private mode, "InvalidStateError", disk full at open). Every read API then returns empty/null and the UI hides offline features with an explanation. |
 | `quota-rows` | download (returned as `failed`) | The commit transaction itself does not fit (§4.5). |
-| `schema-mismatch` | never thrown | Handled by wiping (§3.5 #2); surfaced as "nothing downloaded". |
-| `snapshot-owned-by-other-user` | never thrown | Filtered out by reads; wiped at sign-in (§3.5 #1). |
+| `schema-mismatch` | never thrown | Handled by wiping (§3.5 #2); surfaced through the `schema-wipe-notice` ("The app was updated…"), never as a silent empty list. |
+| `snapshot-owned-by-other-user` | never thrown | Filtered out by reads; wiped at a confirmed sign-in of a different uid (§3.5 #1). |
 | `cancelled` | download (returned as `cancelled`) | `cancelDownload` or `signal.abort()`. |
 
 Per-file `reason` values: `quota`, `network` (fetch threw or status 0/5xx),
@@ -475,7 +691,8 @@ changed mid-download), `unknown`.
 export type OfflineEvent =
   | { type: "snapshot-changed"; setlistId: string }   // saved, updated, removed, freshness changed
   | { type: "download-progress"; setlistId: string; progress: DownloadProgress }
-  | { type: "store-wiped" };
+  | { type: "store-wiped"; reason: "sign-out" | "user-changed" | "schema" }
+  | { type: "visibility-changed" };                   // current user set/cleared (hidden ⇄ shown)
 
 export function subscribe(listener: (e: OfflineEvent) => void): () => void;
 ```
@@ -497,6 +714,13 @@ export function flushLocalPreferences(setlistId: string): Promise<void>;
 a snapshot present, and is fire-and-forget: a failure logs and keeps the
 overrides for the next attempt. It never blocks rendering and never toasts.
 This is the entire extent of offline writes (C5).
+
+Online, a PDF choice goes to the server as today and, once
+`setMySheetMusicPreference` resolves, `patchSnapshotPreference` updates the
+snapshot (A3), so the choice survives going offline. The flush runs **before**
+the row refresh on open, so the refresh reads back the flushed preferences
+instead of overwriting the local overrides with stale server values; an
+override that failed to flush wins over the refreshed server value.
 
 ---
 
@@ -524,36 +748,46 @@ Rules:
   snapshot's song ids are compared against it, so removed songs are seen.
 - Rows are compared as **sets of ids first, timestamps second**. A row present
   in the snapshot and absent from the server response is a **deletion**
-  (setlists: `deleted` status; songs and sheet music: `outdated` with the id in
-  `diff.removed…`). A row present on the server and absent from the snapshot
-  is an addition. Deletions are never inferred from timestamps.
+  (setlists: `deleted` status; songs and sheet music: removed from the
+  snapshot by the row refresh, with the id in `lastDiff.applied.…Removed`).
+  A row present on the server and absent from the snapshot is an addition.
+  Deletions are never inferred from timestamps.
 - An id that disappears because the user lost access (RLS now hides it) is
   indistinguishable from a deletion and is treated the same: the local copy
   is stale either way.
 - Strings are compared byte-for-byte. Never parse the timestamps: PostgREST
   formats them consistently, and parsing loses sub-millisecond precision.
 - Band name/avatar are **not** part of the fingerprint. They refresh on any
-  update.
+  row refresh.
+- The fingerprint is a **trigger for a row refresh**, not a freshness verdict
+  (A3). A fingerprint mismatch leads to `refreshSnapshotRows`, which commits
+  the rows and recomputes the fingerprint; freshness is then decided by files
+  alone.
 
 What each user action maps to:
 
-| Edit | Detected via |
-|------|--------------|
-| Reorder items, change notes, add/remove songs, rename setlist | `setlists.updated_at` (every write in `setlistsService` sets it) |
-| Lyrics, chords, key, tempo, timing data | `songs.updated_at` — **only after the migration in §6.2** |
-| Add / delete a PDF | id set difference on `song_sheet_music` |
-| Rename PDF, change instrument, page timings, reorder PDFs | `song_sheet_music.updated_at` (trigger exists) |
-| Replace a PDF | Does not exist as a flow; it is delete + add, covered above |
-| Setlist deleted | `setlists` query returns no row → `deleted` |
+| Edit | Detected via | Effect when online (A3) |
+|------|--------------|-------------------------|
+| Reorder items, change notes, add/remove songs, rename setlist | `setlists.updated_at` (every write in `setlistsService` sets it) | Rows refreshed automatically; stays `fresh` unless an added song brings PDFs not in the store |
+| Lyrics, chords, key, tempo, timing data | `songs.updated_at` — **only after the migration in §6.2** | Rows refreshed automatically; stays `fresh` |
+| Add a PDF | id set difference on `song_sheet_music` | Row refreshed; the PDF shows "Not downloaded"; `outdated` |
+| Delete a PDF | id set difference on `song_sheet_music` | Row refreshed; the PDF disappears from the selector; its file is GC'd if unreferenced; stays `fresh` |
+| Rename PDF, change instrument, page timings, reorder PDFs | `song_sheet_music.updated_at` (trigger exists) | Rows refreshed automatically; the stored file is reused (path unchanged); stays `fresh` |
+| Replace a PDF | Does not exist as a flow; it is delete + add, covered above | `outdated` (the new file) |
+| Setlist deleted | `setlists` query returns no row → `deleted` | `deleted`; rows kept so it still performs until removed |
 
 ```ts
 export interface OfflineDiff {
-  setlistChanged: boolean;
-  songsChanged: string[]; songsAdded: string[]; songsRemoved: string[];
-  sheetMusicChanged: string[]; sheetMusicAdded: string[]; sheetMusicRemoved: string[];
-  /** Files that would be downloaded by an incremental update, with sizes if known. */
+  /** Row changes the last refresh found and already committed (informational, for "what changed"). */
+  applied: {
+    setlistChanged: boolean;
+    songsChanged: string[]; songsAdded: string[]; songsRemoved: string[];
+    sheetMusicChanged: string[]; sheetMusicAdded: string[]; sheetMusicRemoved: string[];
+  };
+  /** Files the current rows reference that are not in the store. Non-empty ⇔ freshness "outdated". */
   filesToDownload: Array<OfflineFileRef & { bytes: number | null }>;
-  filesToDelete: OfflineFileRef[];
+  /** Files the previous rows referenced and the current rows do not; already handed to GC. */
+  filesReleased: OfflineFileRef[];
 }
 ```
 
@@ -574,7 +808,7 @@ Until this migration is applied, the fingerprint stores `""` for song
 timestamps and the check treats song content as unchanged; the PR that adds
 the check must land after the migration is applied to production.
 
-### 6.3 The check — three queries, no files
+### 6.3 The check — three cheap queries, then rows if needed, never files
 
 `checkForUpdates` runs, per snapshot:
 
@@ -582,26 +816,37 @@ the check must land after the migration is applied to production.
    → `null` ⇒ `deleted`.
 2. `songs.select("id, updated_at").in("id", unionOfServerAndSnapshotSongIds)`.
 3. `song_sheet_music.select("id, song_id, updated_at, file_url").in("song_id", serverSongIds)`.
+4. Only if the fingerprint differs: `refreshSnapshotRows(setlistId)` (§5.2),
+   which fetches full rows and commits them. The user's preferences are not
+   in the fingerprint, so they are refreshed whenever step 4 runs and on
+   every perform-mode open (§8.2), not on the cheap check alone.
 
 Snapshots of the same band are checked in one batch (queries 2 and 3 use the
 union of ids across them) so a device with five setlists still issues about
-three requests per band. Each result updates `snapshot-meta.freshness`,
-`lastCheckedAt`, `lastDiff` and emits `snapshot-changed`.
+three requests per band when nothing changed. Each result updates
+`snapshot-meta.freshness` (from files only, §3.2), `lastCheckedAt`,
+`lastDiff`, and emits `snapshot-changed`.
 
 Triggers: app start (once, after resume + GC), `online` event with a 5 s
-debounce, opening a snapshot's detail or performance mode online, and the
-Refresh button in management. Never on a timer while performing, never
-downloads anything, never runs offline (returns `unknown/offline`).
+debounce, opening a snapshot's detail online, and the Refresh button in
+management. Opening performance mode online runs `refreshSnapshotRows`
+directly (Phase 2, §8.2) rather than the cheap check. Never on a timer while
+performing, never downloads a PDF, never runs offline (returns
+`unknown/offline`). A row refresh that commits while performance mode is open
+re-renders it (§8.2).
 
 ### 6.4 Incremental update
 
-"Update offline copy" = `planDownload(setlistId, { incremental: true })` →
-confirmation with the diff's bytes → `downloadSetlist(plan)`. The plan's
-`filesToDownload` is the diff's list; `filesAlreadyPresent` is everything else
-in the new snapshot; `filesToDelete` are files of the old snapshot not in the
-new one. Rows are always refetched in full (cheap). Commit replaces the
-snapshot in one transaction (§4.3); old files are GC'd after commit if no
-other snapshot references them. The `outdated` state survives a failed update.
+"Update offline copy" now concerns **files only**: rows are already current
+(A3). It = `planDownload(setlistId, { incremental: true })` → confirmation
+with the bytes of `lastDiff.filesToDownload` → `downloadSetlist(plan)`. The
+plan's `filesToDownload` is that list (recomputed against the store at plan
+time); `filesAlreadyPresent` is every other file the rows reference;
+`filesToDelete` is empty in practice, because files the rows stopped
+referencing were already released by the row refresh and GC'd. Rows are
+refetched in full anyway (cheap, and the plan must not commit older rows than
+the snapshot holds). Commit replaces the snapshot in one transaction (§4.3).
+The `outdated` state survives a failed update.
 
 ### 6.5 Verify
 
@@ -623,7 +868,10 @@ snapshot: band, name, saved date, size, freshness badge, Verify, Refresh
 (update), Remove. Interrupted downloads appear with Resume/Discard.
 
 Freshness badge states in `SetlistList` and `SetlistDetailView`: none,
-"Available offline · {date}", "Outdated", "Deleted on server", "Partial".
+"Available offline · {date}", "Outdated" (tooltip: "New sheet music to
+download"), "Deleted on server", "Partial". `{date}` is `savedAt`; the
+management view also shows "Updated {rowsUpdatedAt}" when rows were
+refreshed after the download.
 
 ---
 
@@ -631,29 +879,80 @@ Freshness badge states in `SetlistList` and `SetlistDetailView`: none,
 
 ### 7.1 Who is the user
 
+```ts
+export type AuthMode =
+  | "session"          // valid session; snapshots of that uid visible
+  | "offline-cached"   // no usable token, the refresh failed on the network; last-user's snapshots visible
+  | "session-lost"     // no stored session, but last-user exists and never signed out; snapshots HIDDEN
+  | "signed-out";      // no session, no last-user → landing
+```
+
 `BandContext` resolves `user` in this order, stopping at the first hit:
 
-1. `getSession()` (Phase 1).
-2. Offline only: `last-user` from the store → a **minimal user object**
-   `{ id }` typed as `OfflineUser`, and `authMode: "offline-cached"`. Every
-   consumer that needs more than the id (`AuthButton` display name, invitation
-   flows) already handles `user` loosely; the context exposes `authMode` so
-   they can hide themselves.
-3. Otherwise `null` → landing page.
+1. `getSession()` returns a session → `user` from it, `authMode: "session"`.
+   Call `confirmSignedInUser(uid)` (writes `last-user`; wipes first if it
+   differs — §3.5 #1) **before** `setOfflineCurrentUser(uid)` and before any
+   list renders.
+2. `getSession()` returns `null` **with an `AuthRetryableFetchError`** (the
+   refresh could not reach the auth server: airplane mode, weak signal, no
+   data behind a connected Wi-Fi — C2; auth-js keeps the stored session in
+   this case, C11) and `last-user` exists → a **minimal user object** `{ id }`
+   typed as `OfflineUser`, `authMode: "offline-cached"`,
+   `setOfflineCurrentUser(lastUserId)`, and `reportNetworkFailure()` (§7.3).
+   This holds whether `navigator.onLine` is true or false: it is what makes B1
+   pass and what keeps a venue's weak signal from hiding the show.
+3. `getSession()` returns `null` otherwise (no stored session, or a
+   non-retryable error) and `last-user` exists → `user: null`,
+   `authMode: "session-lost"`, `setOfflineCurrentUser(null)`. Nothing is
+   deleted; `last-user` is kept.
+4. Otherwise `null`, `authMode: "signed-out"` → landing page.
 
-When `authMode === "offline-cached"` and the device comes back online, the
-context re-runs step 1; if that yields a different uid or null, `wipeAll()`
-runs (§3.5 #1) and the app behaves as signed out.
+Every consumer that needs more than the id (`AuthButton` display name,
+invitation flows) already handles `user` loosely; the context exposes
+`authMode` so they can hide themselves.
+
+Auth events:
+
+- `SIGNED_IN` / `TOKEN_REFRESHED` / `INITIAL_SESSION` **with** a session →
+  step 1 (so leaving `offline-cached` or `session-lost` for the same uid
+  shows the snapshots again with no download; a different uid wipes).
+- `SIGNED_OUT` while `AuthButton.logout` is running in this tab → nothing
+  extra (the wipe already ran, §3.5 #6a); `authMode: "signed-out"`.
+- Any other `SIGNED_OUT` → **involuntary**: `authMode: "session-lost"`,
+  `setOfflineCurrentUser(null)`, emit `visibility-changed`. No wipe.
+
+Coming back online in `offline-cached` re-runs `getSession()`: a session →
+step 1; a retryable error → stay; anything else → step 3. None of these
+deletes anything.
+
+**What `session-lost` looks like.** `user` is `null`, so routes behave as
+signed out, except `/`: when `countHiddenSnapshots(lastUserId) > 0`, `Home`
+renders `OfflineHome` in its locked state — "Sign in again to use your
+offline setlists" with a Sign in button — instead of the landing. It shows a
+count only, no setlist names (the device may have changed hands). Signing in
+as the same user shows them again with no download; signing in as someone
+else wipes them first (§3.5 #1).
+
+**Known residual risk.** A captive portal that yields a non-retryable auth
+error makes auth-js delete the stored session (C11). The snapshots are safe
+but hidden, and signing in again needs a real connection. The venue risk
+moves from "data deleted" to "data locked until you get signal once";
+acceptable, and the checklist covers it (§11).
 
 ### 7.2 Which band
 
-`BandContext` band resolution becomes:
+`BandContext` band resolution becomes (split across PRs by A5):
 
-- Online: `getMyBands()` as today, **with a catch** that falls back to the
-  offline branch on network failure (a weak connection is the common case).
-- Offline branch: `listOfflineBands()` → `bands`; `selectedBand` = the one in
-  `BandStorage`, else the only one, else `null`. `isResolvingBand` becomes
-  `false` in every path.
+- **PR 2.0 — no infinite spinner (C3).** Both `getMyBands()` calls get a
+  `catch`; `isResolvingBand` becomes `false` in every path (success, error,
+  no user). On error `bands` stays `[]`, `selectedBand` `null`, and
+  `reportNetworkFailure()` is called. Before PR 2.2 this renders the normal
+  no-band UI instead of a spinner; that is the whole fix, and it is enough
+  on its own.
+- **PR 2.2 — offline branch.** On the same catch, and whenever
+  `authMode === "offline-cached"`: `listOfflineBands()` → `bands`;
+  `selectedBand` = the one in `BandStorage`, else the only one, else `null`.
+  In `session-lost` and `signed-out` there are no bands.
 - With `user` set and no local bands: `BandSelector` is **not** shown offline
   (it would try to create/list bands). An `OfflineEmptyState` renders instead:
   "You're offline and nothing is saved on this device."
@@ -663,7 +962,17 @@ runs (§3.5 #1) and the app behaves as signed out.
 - **`/`** offline with a user: `Home` renders `OfflineHome` instead of the
   dashboard: the snapshot list of the selected band (name, saved date,
   completeness, Perform button) plus interrupted downloads. No dashboard
-  fetches are issued.
+  fetches are issued. In `session-lost`: the locked state of §7.1.
+- **Schema-wipe notice (A4).** When `getSchemaWipeNotice()` returns entries,
+  a one-time notice renders at the top of the online dashboard `Home`, of
+  `OfflineHome` and of `OfflineSetlistList`: "The app was updated. Download
+  these setlists again to use them offline", listing each `setlistName` with
+  a **Download** button (opens the normal plan/confirm flow for that
+  `setlistId`) when online, and "Needs a connection" when offline. Entries of
+  bands other than the selected one are listed too, labeled by band when
+  known. Dismissing it, or downloading every listed setlist, calls
+  `dismissSchemaWipeNotice()`. A setlist that no longer exists fails
+  planning with `setlist-not-found` and is removed from the notice.
 - **`/setlists`** offline: `SetlistsView` renders the same list component.
 - **`/setlists/:setlistId`** offline: if a snapshot exists, a new, small
   `OfflineSetlistDetail` renders (name, description, items in order with
@@ -717,7 +1026,16 @@ export interface PerformanceData {
   resolvePdfUrl: (sm: SheetMusic) => Promise<string>;
   /** Persists the choice wherever the mode allows (server online, snapshot offline). Never toasts. */
   selectSheetMusic: (sm: SheetMusic) => void;
+  /**
+   * Reorder save. Online: updateSetlist, then (PR 2.4) patchSnapshotSetlist with the
+   * returned row. Rejects on server failure so the view keeps its existing error toast.
+   */
+  saveOrder: (items: SetlistItem[]) => Promise<void>;
+  /** Called by the view after SheetMusicUpload succeeds; (PR 2.4) triggers refreshSnapshotRows. */
+  onSheetMusicUploaded: () => void;
   source: "network" | "snapshot";
+  /** PR 2.4. Sheet music ids referenced by the rows but not in the store; the selector shows them as "Not downloaded". */
+  unavailableSheetMusicIds: ReadonlySet<string>;
   capabilities: { canReorder: boolean; canUpload: boolean; canSync: boolean; canEditNotes: boolean };
 }
 ```
@@ -733,8 +1051,10 @@ improvements that are needed anyway:
   longer fetches per song. `loadSheetMusicList` becomes a pure lookup.
 
 `resolvePdfUrl` online keeps calling `getSheetMusicUrl`. The component keeps
-its `allSongs.find` sites by reading from `songsById`; the reorder, upload
-and sync code paths are untouched in this PR. `capabilities` are all `true`
+its `allSongs.find` sites by reading from `songsById`. `handleSaveOrder`
+calls `saveOrder` instead of `updateSetlist` directly (same behaviour in this
+PR), so PR 2.4 can add the snapshot patch in one place; upload and sync code
+paths are otherwise untouched. `capabilities` are all `true`
 except `canReorder`/`canUpload`/`canEditNotes`, which follow the existing
 guest rule (`selectedBand.user_role !== "guest"`).
 
@@ -752,18 +1072,49 @@ selection changes and on unmount. `selectSheetMusic` calls
 
 Source selection in the hook, in this order:
 
-1. Snapshot exists for this user → **snapshot**, even when online. (Instant,
-   immune to weak signal; the intent's §2. Online, the freshness banner covers
-   staleness.) Online with a snapshot also triggers `flushLocalPreferences`
-   and, Phase 3, `checkForUpdates([setlistId])`.
+1. Snapshot exists for this user → **snapshot**, even when online. Render
+   from it immediately (instant, immune to weak signal; the intent's §2).
+   Then, **if online** (A3), in the background and in this order:
+   1. `flushLocalPreferences(setlistId)` (§5.6);
+   2. `refreshSnapshotRows(setlistId)`: fetches the setlist, referenced songs,
+      `song_sheet_music`, preferences and band. If anything differs, it
+      commits the new rows to the snapshot in one transaction and the hook
+      re-reads the snapshot and re-renders. **No PDF is downloaded.**
+      Files released by the new rows go to GC; files the new rows reference
+      but the store lacks become `missingFiles` with reason
+      `"not-downloaded"`, appear in `unavailableSheetMusicIds`, and set
+      freshness to `"outdated"`, which (Phase 3) shows the "Update offline
+      copy" banner — now only about files.
+   3. A failed refresh (weak signal) is silent: the snapshot keeps rendering,
+      `reportNetworkFailure()` is called, nothing is written.
+
+   Re-render rules for a refresh that lands mid-performance: the current
+   item is kept by identity (`SetlistItem.id`, or `song_id` for songs), not
+   by index; if it was removed, the index is clamped. The selected PDF is
+   kept if it still exists.
 2. No snapshot and online → **network**, with the Phase 1 timeout.
 3. No snapshot and offline → `status: "error", error: "network"`, rendered
    as "Not available offline" with a Back button. No `navigate("/setlists")`
    bounce, no toast (C10).
 
 `capabilities` offline: `canReorder`, `canUpload`, `canEditNotes`, `canSync`
-all `false`. Online with a snapshot: as today (writes go to the server; the
-next update check will flag the snapshot as outdated, which is correct).
+all `false`. Online with a snapshot: as today, with **write-through**:
+
+- Reorder: `saveOrder` → `updateSetlist` → on success
+  `patchSnapshotSetlist(setlistId, returnedRow)` (`updateSetlist` returns the
+  updated `Setlist`; the patch normalizes its items and also updates
+  `fingerprint.setlistUpdatedAt`, so the next check does not see the user's
+  own write as a change). The view shows the new order immediately and after
+  leaving and reopening, online or offline.
+- PDF preference: `setMySheetMusicPreference` → on success
+  `patchSnapshotPreference` (§5.6).
+- Upload: after `SheetMusicUpload` succeeds, `onSheetMusicUploaded` runs
+  `refreshSnapshotRows`; the new PDF appears as "Not downloaded" and the
+  snapshot becomes `outdated` (the bytes are not copied from the upload into
+  the store: that would be a second download path to keep consistent).
+
+A server write that fails leaves the snapshot untouched. There is no queue:
+offline these actions are disabled (above).
 
 ### 8.3 UX gating in the view (same PR)
 
@@ -777,7 +1128,10 @@ next update check will flag the snapshot as outdated, which is correct).
 - Reorder button, Add PDF button and the upload modal are hidden when their
   capability is false. The PDF selector still switches among the snapshot's
   PDFs; a PDF listed in the snapshot but missing from the store
-  (`missingFiles`) is shown disabled with "Not downloaded".
+  (`unavailableSheetMusicIds`: any `missingFiles` reason, including
+  `"not-downloaded"` from a row refresh) is shown disabled with "Not
+  downloaded", online and offline alike; the Update banner (Phase 3) or
+  Retry is how it gets fetched.
 - `PDFErrorBoundary` fallback text offline says the file is not on the device.
 
 ### 8.4 Service worker changes (PR 2.0)
@@ -826,9 +1180,14 @@ assumed.
    can be killed and relaunched; the relaunch is a fresh navigation that the
    waiting worker could take over **if** `skipWaiting` were on — it is not. →
    The banner defers on the perform route (§8.4). Performance mode also
-   persists `currentIndex`, `contentView` and `selectedSheetMusicId` per
-   setlist in `sessionStorage` and restores them on mount, so a relaunch
-   during a show returns to the same song. (Small; PR 2.4.)
+   persists `{ currentIndex, contentView, selectedSheetMusicId, savedAt }`
+   per setlist in **`localStorage`** under
+   `bandmate_perform_position_{userId}_{setlistId}` (§3.2,
+   `src/lib/performPosition.ts`) on every change, and restores it on mount,
+   so a relaunch during a show returns to the same song. `sessionStorage` is
+   not an option: iOS clears it when it kills and relaunches the PWA (A2). A
+   position older than 12 hours is discarded on read, so next week's show
+   starts at the top. `wipeAll()` removes these keys. (Small; PR 2.4.)
 5. **Memory.** Holding several 50 MB blobs and their blob URLs at once can
    crash the tab on older iPhones. → Only the current PDF has a blob URL;
    the previous one is revoked before the next is created; `getFile` is never
@@ -874,6 +1233,13 @@ songs, 2 of them with 2 PDFs each, one break and one section item.
   action is present and works.
 - **A8** Given I am offline, when I open `S1`'s detail (no snapshot), then the
   action is disabled with "Needs a connection".
+- **A9** Given `S1` and `S2` are downloaded and a new version of the app
+  bumps `OFFLINE_SCHEMA_VERSION`, when I open the app, then Home and the
+  offline list show once "The app was updated. Download these setlists again
+  to use them offline" naming `S1` and `S2`, each with a Download button when
+  online ("Needs a connection" offline); downloading one removes it from the
+  notice, dismissing hides it for good, and another user signing in on the
+  device does not see my setlist names.
 
 ### Phase 2 — perform
 
@@ -894,8 +1260,12 @@ songs, 2 of them with 2 PDFs each, one break and one section item.
 - **B6** Given B3, when I pick a different PDF, then no error toast appears,
   the choice is remembered when I return to that song, and after going online
   and reopening performance mode the server preference matches.
-- **B7** Given B2, when the app is backgrounded for 10 minutes and resumed
-  (or relaunched), then it returns to the same song and view.
+- **B7** Given B2 on song 5 in Sheet music view with the second PDF
+  selected, when (a) the app is backgrounded for 10 minutes and resumed, and
+  (b) the app is **killed from the app switcher and relaunched** (offline),
+  then in both cases performance mode returns to song 5, Sheet music view,
+  same PDF. Given the same position saved more than 12 hours ago, then the
+  view opens at the first item.
 - **B8** Given I am offline and `S2` has **no** snapshot, when I open
   `/setlists/S2/perform` by deep link, then I see "Not available offline" with
   a Back button; no toast, no bounce to `/setlists`.
@@ -903,34 +1273,70 @@ songs, 2 of them with 2 PDFs each, one break and one section item.
   open that song's sheet music offline, then that PDF is listed as "Not
   downloaded" and the other PDF still opens.
 - **B10** Given `S1` is downloaded, when I open it **online**, then it renders
-  from the snapshot (`source: "snapshot"`), the "Offline copy" badge shows,
-  and editing actions are available.
+  from the snapshot (`source: "snapshot"`) before any network response, the
+  "Offline copy" badge shows, editing actions are available, and a row
+  refresh runs in the background with no `/storage/` request.
+- **B11** Given `S1` is downloaded and a bandmate reorders it, when I open
+  performance mode online, then the new order renders without tapping
+  Update, and no `/storage/` request is made.
+- **B12** Given I reorder `S1` in performance mode online, then the new order
+  persists after leaving and reopening performance mode, both online and
+  after going offline with a relaunch.
+- **B13** Given `S1` is downloaded and a bandmate adds a PDF to one of its
+  songs, when I open `S1` in performance mode online, then the new PDF
+  appears in the selector as "Not downloaded", no `/storage/` request is
+  made, and `freshness` is `"outdated"`. (Phase 3 adds: the "Update offline
+  copy" banner offers to fetch it — see D2.)
 
 ### Phase 2 — sign-out and privacy
 
-- **C1** Given `S1` is downloaded, when I sign out, then `listSnapshots()` is
-  empty, the IndexedDB store has no `file:` keys, and the offline home shows
-  nothing after relaunching offline.
+- **C1** Given `S1` is downloaded, when I sign out **from the user menu**,
+  then `listSnapshots()` is empty, the IndexedDB store has no `file:` keys
+  and no `last-user`, no `bandmate_perform_position_*` key remains in
+  `localStorage`, and the offline home shows nothing after relaunching
+  offline.
 - **C2** Given user A downloaded `S1`, when user B signs in on the same device
   without A signing out (session replaced), then A's snapshots are wiped before
   B sees any list.
 - **C3** Given a PDF was downloaded, then the `supabase-api` Cache Storage
   cache contains no `/storage/v1/` entries.
+- **C4** Given `S1` is downloaded, when the token refresh fails with a
+  network error while `navigator.onLine` is true (e.g. Wi-Fi connected with
+  no upstream, or throttled to drop `/auth/v1/token`), then no snapshot, file
+  or `last-user` is deleted, and `S1` is still listed and performs
+  (`authMode: "offline-cached"`).
+- **C5** Given `S1` is downloaded, when an involuntary `SIGNED_OUT` occurs
+  (the refresh returns a non-retryable error, e.g. `/auth/v1/token` answered
+  with a 200 HTML page; or `youtubeService.requestAuthorization()` signs out),
+  then snapshots are hidden, not deleted (`file:` keys still present), Home
+  shows "Sign in again to use your offline setlists" with no setlist names,
+  and signing back in as the same user shows `S1` again with no download (no
+  `/storage/` request).
+- **C6** Given user A's snapshots are hidden (C5), when user B signs in, then
+  A's data is wiped before B sees any list (same guarantee as C2).
 
 ### Phase 3 — update check
 
 - **D1** Given `S1` is downloaded and unchanged, when I go online and open
   its detail, then the badge reads "Available offline" and `freshness` is
   `"fresh"`.
-- **D2** Given a bandmate reorders `S1`, when I go online and open the app,
-  then within one check cycle `S1` is "Outdated" in the list and the detail
-  and performance banners read "This setlist changed since you downloaded it".
+- **D2** Given a bandmate adds a PDF to a song in `S1`, when I go online and
+  open the app, then within one check cycle `S1` is "Outdated" in the list,
+  and the detail and performance banners read "New sheet music is available
+  for this setlist — Update offline copy", with the size to download.
+- **D2b** Given a bandmate reorders `S1`, when I go online and open the app,
+  then within one check cycle the snapshot's rows are refreshed, `S1` stays
+  "Available offline" (`fresh`), no banner shows, and going offline
+  afterwards performs the new order.
 - **D3** Given a bandmate edits the lyrics of a song in `S1` (after the
-  `songs.updated_at` migration), when the check runs, then `S1` is "Outdated"
-  with that song in `diff.songsChanged`.
+  `songs.updated_at` migration), when the check runs, then the new lyrics are
+  in the snapshot, that song is in `lastDiff.applied.songsChanged`, and `S1`
+  stays `fresh`.
 - **D4** Given a bandmate deletes one PDF of a song in `S1`, when the check
-  runs, then `S1` is "Outdated" with the id in `diff.sheetMusicRemoved`, and
-  no PDF is downloaded by the check itself (no `/storage/` requests).
+  runs, then the id is in `lastDiff.applied.sheetMusicRemoved`, the PDF is
+  gone from the selector, its `file:` key is gone after GC (unless another
+  snapshot references it), `S1` stays `fresh`, and the check made no
+  `/storage/` requests.
 - **D5** Given a bandmate deletes `S1`, when the check runs, then the snapshot
   shows "Deleted on server" with only Remove offered, and it still performs
   offline until removed.
@@ -940,11 +1346,15 @@ songs, 2 of them with 2 PDFs each, one break and one section item.
 ### Phase 3 — incremental update
 
 - **E1** Given D2, when I tap "Update offline copy", then the confirmation
-  shows 0 bytes to download, and after it completes the snapshot is "fresh"
-  and reflects the new order.
-- **E2** Given a bandmate replaced a PDF (delete + add) in `S1`, when I
-  update, then exactly one file downloads, the old file's key is gone after
-  GC, and the other files are untouched (`downloadedAt` unchanged).
+  shows exactly the new PDF's size, only that file downloads, and after it
+  completes the snapshot is "fresh" and the PDF opens offline.
+- **E2** Given a bandmate replaced a PDF (delete + add) in `S1`, when the
+  check runs, then the old PDF leaves the selector and its key is gone after
+  GC, and `S1` is "Outdated"; when I then update, exactly one file downloads
+  and the other files are untouched (`downloadedAt` unchanged).
+- **E2b** Given a bandmate renames a PDF of `S1` or changes its page timings,
+  when the check runs, then the new name/timings are in the snapshot, `S1`
+  stays `fresh`, and a later update downloads nothing for that PDF.
 - **E3** Given `S1` and `S3` share a song, when I remove `S3`, then the shared
   PDFs remain and `S1` still performs offline with them.
 - **E4** Given an update fails midway (airplane mode during it), then the old
@@ -971,6 +1381,9 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] Install the app; sign in inside the installed app; kill and relaunch: still signed in.
 - [ ] iOS: download `S1` in the installed app; open the site in a Safari tab: `S1` is *not* listed there (isolation confirmed) and the hint to use the installed app shows.
 - [ ] Turn on airplane mode, wait > 1 h (or set the device clock forward), kill and relaunch: offline home with `S1`.
+- [ ] Wi-Fi on but upstream blocked (phone hotspot with no data, or a router with WAN unplugged), token > 1 h old, relaunch: `S1` listed and performs; nothing deleted (C4).
+- [ ] Captive-portal Wi-Fi (hotel/venue guest network before accepting), token > 1 h old, relaunch: record whether auth-js removes the session. If it does: "Sign in again…" shows, `S1` hidden but not deleted; after real signal and signing in as the same user, `S1` is back with no download (C5).
+- [ ] Connect YouTube (re-auth flow) with `S1` downloaded: `S1` still there afterwards, no re-download.
 
 **Download**
 - [ ] Size estimate shown before download matches the sum of PDF sizes within rounding.
@@ -978,19 +1391,27 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] Kill the app mid-download; relaunch online: resumes, does not re-download stored files.
 - [ ] Fill the device storage (large video files) until a PDF does not fit: partial result, message names the PDF; free space, Retry: completes.
 - [ ] `navigator.storage.persist()` answer shown in management; note the value per OS.
+- [ ] Install a build with `OFFLINE_SCHEMA_VERSION` bumped (test build only) over a device with snapshots: the "download these again" notice lists them once; Download works per setlist (A9).
 
 **Perform offline**
 - [ ] Airplane mode + relaunch: perform `S1` end to end, both PDFs of a song, page turns, invert, font size.
 - [ ] Sync controls disabled with explanation; no error toasts anywhere during the run.
 - [ ] Rotate the device and lock/unlock the screen mid-song: same song after unlock.
-- [ ] Background for 10+ minutes, resume: same song. Relaunch: same song.
+- [ ] Background for 10+ minutes, resume: same song, view and PDF.
+- [ ] **Kill from the app switcher** mid-song (Sheet music view, second PDF), relaunch offline, open `S1` again: same song, view and PDF (A2). Repeat with the device clock moved forward 13 h: starts at the first item.
 - [ ] Switch PDFs offline; come online; open performance mode again; check the server preference in another device.
 
+**Perform online with a snapshot**
+- [ ] On a laptop, reorder `S1`; on the phone, online, open performance mode: new order without tapping Update; network log shows no `/storage/` request.
+- [ ] Reorder `S1` on the phone in performance mode; leave; turn on airplane mode; relaunch; perform: new order.
+- [ ] On a laptop, add a PDF to a song of `S1`; on the phone, online, open that song: new PDF shows "Not downloaded".
+
 **Update and management (Phase 3)**
-- [ ] Edit `S1` on a laptop; on the phone, come online: "Outdated" appears without opening the setlist.
-- [ ] Update offline copy: only the changed file downloads (watch bytes).
+- [ ] Reorder `S1` on a laptop; on the phone, come online: no "Outdated", and going offline afterwards performs the new order.
+- [ ] Add a PDF to `S1` on a laptop; on the phone, come online: "Outdated" appears without opening the setlist.
+- [ ] Update offline copy: only the new file downloads (watch bytes).
 - [ ] Verify after a week without opening the app: still verified (eviction check). Record the result per OS; this is the data point the intent's risk asks for.
-- [ ] Sign out: management view is empty; relaunch offline: nothing listed.
+- [ ] Sign out from the user menu: management view is empty; relaunch offline: nothing listed; no `bandmate_perform_position_*` keys left (check via remote inspector).
 
 **Service worker**
 - [ ] Deploy a new version while performance mode is open online: no reload; leaving performance mode shows the reload banner.
@@ -1004,27 +1425,31 @@ Each PR is reviewable alone, passes lint + build, and updates docs in the
 same PR (CLAUDE.md service/hook tables, README Features, `en.json` +
 `es.json`). Order matters within a phase.
 
+Acceptance criteria by PR: A1–A8 → 2.3; A9 → 2.5 (recording in 2.2);
+B2–B13 → 2.4 (reached by deep link); B1 → 2.5 (needs `OfflineHome`);
+C1–C2, C4–C6 → 2.2 (C5's locked Home copy → 2.5); C3 → 2.0.
+
 ### Phase 2
 
 | PR | Title | Contents | Depends on |
 |----|-------|----------|------------|
-| 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; `last-user` written on auth events. Verify Phase 1 items (§1). | Phase 1 |
-| 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; view consumes the hook. No offline code. | — |
-| 2.2 | Offline store and service core | `idb-keyval` dependency; `offlineStore.ts` key layout + schema guard + wipe; `offlineSetlistService`: reads, plan, download state machine, journal/resume, quota handling, GC, events, `wipeAll` wired to sign-out and `SIGNED_OUT`. No UI, no migration. | 2.0 |
-| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. | 2.2 |
-| 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; per-setlist position persistence; error boundary copy. | 2.1, 2.3 |
-| 2.5 | Offline entry point | `BandContext` offline user/band resolution (§7.1–7.2); `OfflineHome`, `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |
-| 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, sign-out rule), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6 amendments. | 2.5 |
+| 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**. Verify Phase 1 items (§1). No IndexedDB. | Phase 1 |
+| 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
+| 2.2 | Offline store, service core, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + schema guard + wipe **with schema-wipe notice record**; `offlineSetlistService`: reads, plan, download state machine, journal/resume, quota handling, GC (all users' refs), events, `refreshSnapshotRows`, `patchSnapshot*`; `wipeAll` wired to `AuthButton.logout` and confirmed user change **only**. **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); `listOfflineBands` offline branch (§7.2).** No UI beyond what `BandContext` needs, no migration. | 2.0 |
+| 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2 keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2 |
+| 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
+| 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |
+| 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
 
 ### Phase 3
 
 | PR | Title | Contents | Depends on |
 |----|-------|----------|------------|
 | 3.0 | `songs.updated_at` migration | Migration + trigger + `Song.updated_at`; note policies checked; apply to prod before 3.1 ships. | — |
-| 3.1 | Fingerprint and update check | `OfflineFingerprint` computed at download; `checkForUpdates` with batching; freshness state + `lastDiff` in meta; triggers (start, online, open); `verifySnapshot`. | 2.6, 3.0 |
-| 3.2 | Outdated / deleted UX | Badge states in list and detail; banners in detail and performance mode with "Update offline copy"; "Deleted on server" state. | 3.1 |
-| 3.3 | Incremental update | `planDownload({ incremental })`, `filesToDelete`, refcounted GC after commit, old snapshot readable until commit. | 3.2 |
-| 3.4 | Offline setlists management | Section in `BandSettings` + user-menu entry; usage/quota/persisted; per-snapshot Verify/Refresh/Remove; interrupted downloads Resume/Discard; iOS install hint. | 3.3 |
+| 3.1 | Fingerprint and update check | `OfflineFingerprint` computed at download; `checkForUpdates` with batching, **calling `refreshSnapshotRows` on mismatch**; freshness from files only + `lastDiff` (`applied` / `filesToDownload` / `filesReleased`) in meta; triggers (start, online, open detail); `verifySnapshot`. | 2.6, 3.0 |
+| 3.2 | Outdated / deleted UX | Badge states in list and detail; banners in detail and performance mode with "Update offline copy" (**files only**); "Deleted on server" state. | 3.1 |
+| 3.3 | Incremental update | `planDownload({ incremental })` over `lastDiff.filesToDownload`, refcounted GC after commit, old snapshot readable until commit. | 3.2 |
+| 3.4 | Offline setlists management | Section in `BandSettings` + user-menu entry; usage/quota/persisted; per-snapshot Verify/Refresh/Remove; interrupted downloads Resume/Discard; schema-wipe notice also shown here; iOS install hint. | 3.3 |
 | 3.5 | Docs | CLAUDE.md/README updates; intent status → "shipped (phases 1–3)"; device checklist results recorded in `docs/OFFLINE.md`. | 3.4 |
 
 Not in any PR above (separate intents): backing tracks persistence (Phase 4),
