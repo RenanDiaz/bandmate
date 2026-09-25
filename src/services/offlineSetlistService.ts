@@ -2,26 +2,41 @@ import type { Band } from "./bandsService";
 import type { Setlist } from "./setlistsService";
 import type { Song } from "./songsService";
 import type { SheetMusic } from "./songSheetMusicService";
-import type { OfflineSchemaWipeNotice, OfflineStoreMeta } from "../lib/offlineStore";
+import type { OfflineSchemaWipeNotice, OfflineStoreMeta, StoreTx } from "../lib/offlineStore";
 import {
   OFFLINE_KEY_PREFIX,
   OFFLINE_SCHEMA_VERSION,
+  StoreEpochChangedError,
   clearStore,
+  isQuotaExceeded,
+  localWipeCount,
   offlineKeys,
   openStore,
+  readEpoch,
   readKey,
   readKeys,
   readMany,
   removeKey,
+  transact,
   wipeStoreForSchema,
   writeKey,
 } from "../lib/offlineStore";
+import { FileFetchError, classifyHttpStatus, fetchFileWithStallTimeout, mapWithConcurrency } from "../lib/offlineFetch";
+import { isNetworkError } from "../lib/networkErrors";
 import { clearAllPerformPositions } from "../lib/performPosition";
+import { getSetlist, isSongItem } from "./setlistsService";
+import { getSongsByIds } from "./songsService";
+import { getSheetMusicForSongs } from "./songSheetMusicService";
+import { getMySheetMusicPreferences, getPreferredInstrument } from "./sheetMusicPreferencesService";
+import { getMyBands } from "./bandsService";
+import { createSheetMusicDownloadUrl, listSheetMusicFolderSizes } from "./sheetMusicStorageService";
 
 /**
  * Offline copies of setlists (spec docs/specs/offline-performance-phase2-3.md,
  * §3 and §5). PR 2.2a: the store, reads, owner filter, auth hooks and wipe.
- * Downloads, journal/resume, quota, GC and persistence arrive in PR 2.2b.
+ * PR 2.2b: the download engine (plan, download, journal/resume, quota, GC,
+ * persistence). Row refresh and the perform-mode patches arrive with the
+ * snapshot source (PR 2.4).
  *
  * Every read filters by the current user set through setOfflineCurrentUser();
  * with no current user (signed out or session-lost) they return empty/null
@@ -142,7 +157,7 @@ export interface DownloadPlan {
   estimate: { usage: number; quota: number } | null;
 }
 
-/** Progress of an in-flight or interrupted download (§4). Written by PR 2.2b. */
+/** Progress of an in-flight or interrupted download (§4). Deleted on commit or cancel. */
 export interface OfflineDownloadJournal {
   schemaVersion: typeof OFFLINE_SCHEMA_VERSION;
   setlistId: string;
@@ -178,7 +193,6 @@ export class OfflineError extends Error {
   }
 }
 
-/** PR 2.2b fills this in; declared here so the event union is complete. */
 export interface DownloadProgress {
   state: "planning" | "awaiting-confirmation" | "downloading" | "committing";
   filesDone: number;
@@ -266,6 +280,7 @@ async function safeRead<T>(fallback: T, read: () => Promise<T>): Promise<T> {
 async function hasCurrentSchema(record: { schemaVersion?: unknown }): Promise<boolean> {
   if (record.schemaVersion === OFFLINE_SCHEMA_VERSION) return true;
   const fromVersion = typeof record.schemaVersion === "number" ? record.schemaVersion : null;
+  abortActiveDownload("wiped");
   await wipeStoreForSchema(fromVersion);
   emit({ type: "store-wiped", reason: "schema" });
   return false;
@@ -276,16 +291,27 @@ async function hasCurrentSchema(record: { schemaVersion?: unknown }): Promise<bo
 // ---------------------------------------------------------------------------
 
 let currentUserId: string | null = null;
+// True only in authMode "session": downloads need a valid session (§5.4), and
+// "offline-cached" shows copies without one.
+let currentUserAuthenticated = false;
 
 /**
  * Set by BandContext on every auth resolution (§7.1). Every read filters by
  * this id; null (signed out or session-lost) makes them all return empty/null
- * without deleting anything (A1).
+ * without deleting anything (A1). `authenticated` is true only for a valid
+ * session ("session"), never for "offline-cached": downloads check it before
+ * starting and before every file (race rule 2).
  */
-export function setOfflineCurrentUser(userId: string | null): void {
+export function setOfflineCurrentUser(userId: string | null, opts: { authenticated?: boolean } = {}): void {
+  currentUserAuthenticated = !!userId && opts.authenticated === true;
   if (userId === currentUserId) return;
   currentUserId = userId;
   emit({ type: "visibility-changed" });
+}
+
+/** The current user if they have a valid session, else null. */
+function authenticatedUserId(): string | null {
+  return currentUserAuthenticated ? currentUserId : null;
 }
 
 export function getOfflineCurrentUser(): string | null {
@@ -353,6 +379,9 @@ export function wipeAll(): Promise<void> {
 }
 
 async function runWipe(reason: "sign-out" | "user-changed"): Promise<boolean> {
+  // Race rule 1: the in-flight download stops now; its later writes are
+  // refused by the epoch the clear below replaces.
+  abortActiveDownload("wiped");
   clearAllPerformPositions();
   if (!(await storeReady())) {
     emit({ type: "store-wiped", reason });
@@ -522,9 +551,933 @@ export function dismissSchemaWipeNotice(setlistId?: string): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Downloads (§4, §5.2). One at a time per device: an in-tab claim plus a Web
+// Lock across tabs (race rule 4). Every write of a download is guarded by the
+// store epoch (race rule 1) and checks that the owner still has a valid
+// session (race rule 2). GC keeps whatever any journal references (race rule 3).
+// ---------------------------------------------------------------------------
+
+export interface DownloadOptions {
+  onProgress?: (p: DownloadProgress) => void;
+  signal?: AbortSignal;
+  /** Phase 3: only fetch what the diff says changed. Default false = full plan. */
+  incremental?: boolean;
+}
+
+export interface DownloadResult {
+  state: "done" | "done-with-errors" | "cancelled" | "failed";
+  /** null on cancelled/failed. */
+  meta: OfflineSnapshotMeta | null;
+  missingFiles: OfflineMissingFile[];
+  failure: OfflineError | null;
+}
+
+/** A plan older than this is refused with `plan-stale` (§5.4): signed URLs and sizes may have changed. */
+export const PLAN_MAX_AGE_MS = 10 * 60 * 1000;
+/** An interrupted download older than this is discarded instead of resumed (§4.4). */
+export const JOURNAL_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+/** Storage folders listed in parallel at plan time (C7). */
+export const PLAN_LIST_CONCURRENCY = 4;
+/** Web Lock held for the whole of a download, across tabs (race rule 4). */
+export const DOWNLOAD_LOCK_NAME = "bandmate-offline-download";
+
+type Outcome = OfflineDownloadJournal["outcomes"][string];
+type FailureReason = OfflineMissingFile["reason"];
+
+/**
+ * What a plan needs that DownloadPlan (the public, serializable part) does not
+ * carry: its owner, when it was made, and the rows fetched at plan time. Keyed
+ * by the plan object, so a plan that did not come from planDownload() in this
+ * page is `plan-stale`.
+ */
+interface PlanContext {
+  userId: string;
+  createdAt: number;
+  pendingSnapshot: OfflineDownloadJournal["pendingSnapshot"];
+}
+const planContexts = new WeakMap<DownloadPlan, PlanContext>();
+
+interface DownloadJob {
+  setlistId: string;
+  userId: string;
+  controller: AbortController;
+  abortReason: "cancel" | "wiped" | null;
+  /** localWipeCount() when the job was claimed: a clear in this tab since then stops it. */
+  wipesAtClaim: number;
+  /** Storage paths this job may still store or commit; GC in this tab keeps them. */
+  paths: Set<string>;
+}
+let activeJob: DownloadJob | null = null;
+
+function abortActiveDownload(reason: "cancel" | "wiped"): void {
+  const job = activeJob;
+  if (!job) return;
+  job.abortReason ??= reason;
+  job.controller.abort();
+}
+
+function isBrowserOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+function referencedSongIds(setlist: Setlist): string[] {
+  return [...new Set((setlist.songs || []).filter(isSongItem).map((item) => item.song_id))];
+}
+
+function folderOf(storagePath: string): string {
+  const slash = storagePath.lastIndexOf("/");
+  return slash > 0 ? storagePath.slice(0, slash) : "";
+}
+
+async function storageEstimate(): Promise<{ usage: number; quota: number } | null> {
+  try {
+    const estimate = await navigator.storage?.estimate?.();
+    if (!estimate || typeof estimate.quota !== "number") return null;
+    return { usage: estimate.usage ?? 0, quota: estimate.quota };
+  } catch {
+    return null;
+  }
+}
+
+function toPlanError(error: unknown): unknown {
+  if (error instanceof OfflineError) return error;
+  if (error instanceof Error && error.message === "User not authenticated") {
+    return new OfflineError("not-authenticated", undefined, { cause: error });
+  }
+  if ((error as { code?: unknown } | null)?.code === "PGRST116") {
+    return new OfflineError("setlist-not-found", undefined, { cause: error });
+  }
+  if (isNetworkError(error)) return new OfflineError("offline", undefined, { cause: error });
+  return error;
+}
+
+async function requireStoreForDownload(): Promise<void> {
+  if (!(await storeReady())) throw new OfflineError("storage-unavailable");
+}
+
+/**
+ * Planning only (§4.1 planning, §4.2): fetches the rows, sizes each storage
+ * folder (C7, concurrency 4) and compares file keys with the store (by storage
+ * path only). No writes. Rejects with OfflineError `not-authenticated`,
+ * `offline`, `setlist-not-found` or `storage-unavailable`.
+ *
+ * `incremental` is accepted for the Phase 3 signature and ignored: every plan
+ * is a full plan, which already downloads only the files the store lacks.
+ */
+export async function planDownload(setlistId: string, opts: { incremental?: boolean } = {}): Promise<DownloadPlan> {
+  void opts.incremental; // Phase 3 (PR 3.3)
+  const userId = authenticatedUserId();
+  if (!userId) throw new OfflineError("not-authenticated");
+  if (isBrowserOffline()) throw new OfflineError("offline");
+  await requireStoreForDownload();
+
+  let setlist: Setlist;
+  let songs: Song[];
+  let sheetMusicBySongId: Record<string, SheetMusic[]>;
+  let preferredSheetMusicIds: Record<string, string>;
+  let band: Band | undefined;
+  try {
+    setlist = await getSetlist(setlistId);
+    const songIds = referencedSongIds(setlist);
+    [songs, sheetMusicBySongId, preferredSheetMusicIds, band] = await Promise.all([
+      getSongsByIds(songIds),
+      getSheetMusicForSongs(songIds),
+      // Preferences only choose which PDF opens first; the band order is the fallback.
+      getMySheetMusicPreferences(songIds).catch((error: unknown) => {
+        console.error("Offline plan: could not load sheet music preferences:", error);
+        return {} as Record<string, string>;
+      }),
+      getMyBands(userId).then((bands) => bands.find((b) => b.id === setlist.band_id)),
+    ]);
+  } catch (error) {
+    throw toPlanError(error);
+  }
+  if (!band) throw new OfflineError("setlist-not-found", "The setlist's band is not one of yours");
+  if (authenticatedUserId() !== userId) throw new OfflineError("not-authenticated");
+
+  const songsById: Record<string, Song> = {};
+  for (const song of songs) songsById[song.id] = song;
+
+  const files: OfflineFileRef[] = [];
+  const seen = new Set<string>();
+  for (const songId of referencedSongIds(setlist)) {
+    for (const sm of sheetMusicBySongId[songId] ?? []) {
+      if (!sm.file_url || seen.has(sm.file_url)) continue;
+      seen.add(sm.file_url);
+      files.push({ storagePath: sm.file_url, sheetMusicId: sm.id, songId, rowUpdatedAt: sm.updated_at ?? "" });
+    }
+  }
+
+  const folders = [...new Set(files.map((f) => folderOf(f.storagePath)))];
+  const listings = await mapWithConcurrency(folders, PLAN_LIST_CONCURRENCY, (folder) =>
+    listSheetMusicFolderSizes(folder).catch((error: unknown) => {
+      // The files still download; they count under filesWithUnknownSize.
+      console.warn(`Offline plan: could not list ${folder}:`, error);
+      return {} as Record<string, number | null>;
+    })
+  );
+  const sizes: Record<string, number | null> = Object.assign({}, ...listings);
+
+  const storedKeys = new Set(await readKeys());
+  const filesToDownload: DownloadPlan["filesToDownload"] = [];
+  const filesAlreadyPresent: OfflineFileRef[] = [];
+  let bytesAlreadyPresent = 0;
+  for (const ref of files) {
+    const key = offlineKeys.file(ref.storagePath);
+    if (storedKeys.has(key)) {
+      filesAlreadyPresent.push(ref);
+      const record = await readKey<OfflineFileRecord>(key);
+      bytesAlreadyPresent += record?.bytes ?? 0;
+    } else {
+      filesToDownload.push({ ...ref, bytes: sizes[ref.storagePath] ?? null });
+    }
+  }
+
+  const plan: DownloadPlan = {
+    setlistId,
+    bandId: setlist.band_id,
+    songCount: referencedSongIds(setlist).length,
+    filesToDownload,
+    filesAlreadyPresent,
+    filesToDelete: [],
+    bytesToDownload: filesToDownload.reduce((sum, f) => sum + (f.bytes ?? 0), 0),
+    filesWithUnknownSize: filesToDownload.filter((f) => f.bytes === null).length,
+    bytesAlreadyPresent,
+    estimate: await storageEstimate(),
+  };
+  planContexts.set(plan, {
+    userId,
+    createdAt: Date.now(),
+    pendingSnapshot: {
+      schemaVersion: OFFLINE_SCHEMA_VERSION,
+      setlistId,
+      userId,
+      band,
+      setlist,
+      songsById,
+      sheetMusicBySongId,
+      files,
+      preferredSheetMusicIds,
+      preferredInstrument: getPreferredInstrument(setlist.band_id),
+      localPreferenceOverrides: {},
+    },
+  });
+  return plan;
+}
+
+const LOCK_BUSY = Symbol("lock-busy");
+
+/**
+ * Runs `body` holding the cross-tab download lock (race rule 4). Resolves
+ * LOCK_BUSY without running it when another tab holds the lock. Without the
+ * Web Locks API (Safari < 15.4) only the in-tab claim applies: two tabs could
+ * then download at once; their writes stay consistent (every file is one
+ * transaction, the journal is per setlist) but can race for quota.
+ */
+async function withDownloadLock<T>(body: () => Promise<T>): Promise<T | typeof LOCK_BUSY> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks?.request) return body();
+  return locks.request(DOWNLOAD_LOCK_NAME, { ifAvailable: true }, async (lock) => (lock ? body() : LOCK_BUSY));
+}
+
+/**
+ * Runs a plan from planDownload() to completion (§4.1). Rejects only for
+ * pre-conditions: `plan-stale`, `not-authenticated`, `offline`,
+ * `download-in-progress`, `storage-unavailable`. Per-file failures, quota,
+ * cancellation and an interruption are returned.
+ */
+export async function downloadSetlist(plan: DownloadPlan, opts: DownloadOptions = {}): Promise<DownloadResult> {
+  const ctx = planContexts.get(plan);
+  if (!ctx) throw new OfflineError("plan-stale", "This plan was not made by planDownload() on this page");
+  if (authenticatedUserId() !== ctx.userId) throw new OfflineError("not-authenticated");
+  if (isBrowserOffline()) throw new OfflineError("offline");
+  if (Date.now() - ctx.createdAt > PLAN_MAX_AGE_MS) throw new OfflineError("plan-stale");
+  if (activeJob) throw new OfflineError("download-in-progress");
+
+  // Claimed synchronously, before any await, so two calls in this tab can't both start.
+  const job = newJob(plan.setlistId, ctx.userId, ctx.pendingSnapshot.files, opts.signal);
+  activeJob = job;
+  try {
+    await requireStoreForDownload();
+    const existing = await readKey<OfflineDownloadJournal>(offlineKeys.download(plan.setlistId));
+    if (existing && Date.parse(existing.startedAt) > ctx.createdAt) {
+      throw new OfflineError("plan-stale", "A newer download of this setlist exists");
+    }
+    const outcome = await withDownloadLock(async () => {
+      void maybeRequestPersistence();
+      const journal: OfflineDownloadJournal = {
+        schemaVersion: OFFLINE_SCHEMA_VERSION,
+        setlistId: plan.setlistId,
+        userId: ctx.userId,
+        startedAt: new Date().toISOString(),
+        plan,
+        outcomes: {},
+        pendingSnapshot: ctx.pendingSnapshot,
+      };
+      return runJob(job, journal, { fresh: true, onProgress: opts.onProgress });
+    });
+    if (outcome === LOCK_BUSY) throw new OfflineError("download-in-progress", "Another tab is downloading");
+    return outcome;
+  } finally {
+    if (activeJob === job) activeJob = null;
+    job.dispose();
+  }
+}
+
+function newJob(
+  setlistId: string,
+  userId: string,
+  files: OfflineFileRef[],
+  signal?: AbortSignal
+): DownloadJob & { dispose: () => void } {
+  const controller = new AbortController();
+  const job: DownloadJob & { dispose: () => void } = {
+    setlistId,
+    userId,
+    controller,
+    abortReason: null,
+    wipesAtClaim: localWipeCount(),
+    paths: new Set(files.map((f) => f.storagePath)),
+    dispose: () => signal?.removeEventListener("abort", onAbort),
+  };
+  const onAbort = () => {
+    job.abortReason ??= "cancel";
+    controller.abort();
+  };
+  if (signal?.aborted) onAbort();
+  signal?.addEventListener("abort", onAbort);
+  return job;
+}
+
+/** The owner lost their valid session (or the device went offline) mid-download: race rule 2. */
+class DownloadInterrupted extends Error {
+  readonly code: "not-authenticated" | "offline";
+  constructor(code: "not-authenticated" | "offline") {
+    super(code);
+    this.code = code;
+  }
+}
+
+function interruption(job: DownloadJob): DownloadInterrupted | null {
+  if (authenticatedUserId() !== job.userId) {
+    // Same uid without a valid session is "offline-cached": offline, the journal waits.
+    return new DownloadInterrupted(currentUserId === job.userId ? "offline" : "not-authenticated");
+  }
+  if (isBrowserOffline()) return new DownloadInterrupted("offline");
+  return null;
+}
+
+function abortReasonOf(job: DownloadJob): DownloadJob["abortReason"] {
+  return job.abortReason;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (error as { name?: unknown } | null)?.name === "AbortError";
+}
+
+function classifyStorageError(error: unknown): FailureReason {
+  if (error instanceof FileFetchError) return error.reason;
+  if (isNetworkError(error)) return "network";
+  const { name, message, status, statusCode } = (error ?? {}) as {
+    name?: unknown;
+    message?: unknown;
+    status?: unknown;
+    statusCode?: unknown;
+  };
+  // storage-js wraps a failed fetch in StorageUnknownError.
+  if (name === "StorageUnknownError") return "network";
+  if (typeof message === "string" && /not.?found/i.test(message)) return "not-found";
+  const code = Number(status ?? statusCode);
+  return Number.isFinite(code) && code > 0 ? classifyHttpStatus(code) : "unknown";
+}
+
+function missingFrom(
+  ref: OfflineFileRef,
+  reason: FailureReason,
+  bytes: number | null
+): OfflineMissingFile {
+  return { storagePath: ref.storagePath, sheetMusicId: ref.sheetMusicId, songId: ref.songId, reason, bytes };
+}
+
+function currentFileLabel(snapshot: OfflineDownloadJournal["pendingSnapshot"], ref: OfflineFileRef) {
+  const songTitle = snapshot.songsById[ref.songId]?.title ?? "";
+  const name = snapshot.sheetMusicBySongId[ref.songId]?.find((sm) => sm.id === ref.sheetMusicId)?.name ?? "";
+  return { songTitle, name };
+}
+
+const cancelledResult = (message: string): DownloadResult => ({
+  state: "cancelled",
+  meta: null,
+  missingFiles: [],
+  failure: new OfflineError("cancelled", message),
+});
+
+/**
+ * The `downloading` and `committing` states (§4.1), shared by a new download
+ * and a resume. `fresh`: the journal is written first; otherwise it exists and
+ * its `stored` outcomes are skipped once their key is confirmed.
+ */
+async function runJob(
+  job: DownloadJob,
+  journal: OfflineDownloadJournal,
+  opts: { fresh: boolean; onProgress?: (p: DownloadProgress) => void }
+): Promise<DownloadResult> {
+  const epoch = await readEpoch();
+  const journalKey = offlineKeys.download(journal.setlistId);
+  const snapshot = journal.pendingSnapshot;
+  const outcomes: Record<string, Outcome> = { ...journal.outcomes };
+  const knownBytes = new Map(journal.plan.filesToDownload.map((f) => [f.storagePath, f.bytes]));
+  const wasWiped = () => job.abortReason === "wiped" || localWipeCount() !== job.wipesAtClaim;
+  const writeJournal = (tx: StoreTx) => tx.put(journalKey, { ...journal, outcomes: { ...outcomes } });
+
+  // A wipe between the claim and readEpoch() would hand us the new epoch: the
+  // claim-time wipe count catches it in this tab, the owner check in another
+  // (its sign-out reaches this tab as SIGNED_OUT). The session/network check
+  // is per file fetch (below), not here: a job with nothing left to fetch
+  // commits offline.
+  if (wasWiped()) return cancelledResult("Offline copies were deleted");
+  // (Through a call: TS would otherwise keep this narrowing across the awaits below.)
+  if (abortReasonOf(job) === "cancel") return cancelledResult("Download cancelled");
+
+  try {
+    if (opts.fresh) {
+      await transact("readwrite", async (tx) => writeJournal(tx), { epoch });
+    }
+
+    // With the journal in place GC keeps every file it names (race rule 3), so
+    // a file seen now stays until commit. Check presence only after that write.
+    const toFetch: OfflineFileRef[] = [];
+    await transact("readonly", async (tx) => {
+      for (const ref of snapshot.files) {
+        const previous = outcomes[ref.storagePath];
+        const present = await tx.has(offlineKeys.file(ref.storagePath));
+        if (present && (opts.fresh || previous === "stored" || previous === "skipped-present")) {
+          outcomes[ref.storagePath] = previous === "stored" ? "stored" : "skipped-present";
+        } else {
+          delete outcomes[ref.storagePath];
+          toFetch.push(ref);
+        }
+      }
+    });
+
+    const progress: DownloadProgress = {
+      state: "downloading",
+      filesDone: 0,
+      filesTotal: toFetch.length,
+      bytesDone: 0,
+      bytesTotal: toFetch.reduce((sum, f) => sum + (knownBytes.get(f.storagePath) ?? 0), 0),
+      currentFile: null,
+    };
+    const report = () => {
+      const copy = { ...progress };
+      opts.onProgress?.(copy);
+      emit({ type: "download-progress", setlistId: journal.setlistId, progress: copy });
+    };
+    report();
+
+    // §4.5: after a file fails on quota, only smaller files are still tried.
+    let quotaCeiling = Infinity;
+    const failed: Record<string, number | null> = {};
+
+    for (let i = 0; i < toFetch.length; i++) {
+      const ref = toFetch[i];
+      if (job.abortReason || wasWiped()) break;
+      const interrupted = interruption(job);
+      if (interrupted) {
+        // Race rule 2: a fetch needs a signed URL, so a valid session and a
+        // browser that says online. What is left is recorded as a network
+        // failure and the journal stays for resume. Nothing is committed.
+        // (navigator.onLine only: the context's forced-offline window after
+        // one failed request must not skip the remaining files.)
+        for (const rest of toFetch.slice(i)) outcomes[rest.storagePath] = "network";
+        await transact("readwrite", async (tx) => writeJournal(tx), { epoch });
+        return {
+          state: "failed",
+          meta: null,
+          missingFiles: toFetch.slice(i).map((r) => missingFrom(r, "network", knownBytes.get(r.storagePath) ?? null)),
+          failure: new OfflineError(interrupted.code, "The download was interrupted; it resumes from where it stopped"),
+        };
+      }
+
+      progress.currentFile = currentFileLabel(snapshot, ref);
+      report();
+      const bytesBefore = progress.bytesDone;
+      const expected = knownBytes.get(ref.storagePath) ?? null;
+      let outcome: Outcome;
+      let failedBytes: number | null = expected;
+
+      if (expected !== null && expected >= quotaCeiling) {
+        outcome = "quota";
+      } else {
+        try {
+          const url = await createSheetMusicDownloadUrl(ref.storagePath);
+          let announced: number | null = null;
+          const blob = await fetchFileWithStallTimeout(url, {
+            signal: job.controller.signal,
+            onLength: (length) => {
+              announced = length;
+              return !(length !== null && length >= quotaCeiling);
+            },
+            onBytes: (received) => {
+              progress.bytesDone = bytesBefore + received;
+              report();
+            },
+          });
+          if (!blob || blob.size >= quotaCeiling) {
+            outcome = "quota";
+            failedBytes = blob?.size ?? announced ?? expected;
+          } else {
+            outcomes[ref.storagePath] = "stored";
+            const record: OfflineFileRecord = {
+              storagePath: ref.storagePath,
+              blob,
+              bytes: blob.size,
+              downloadedAt: new Date().toISOString(),
+            };
+            try {
+              // The file and its outcome in one transaction (§4.3): a crash
+              // can't leave a stored file the journal doesn't know about.
+              await transact(
+                "readwrite",
+                async (tx) => {
+                  tx.put(offlineKeys.file(ref.storagePath), record);
+                  writeJournal(tx);
+                },
+                { epoch }
+              );
+              outcome = "stored";
+            } catch (error) {
+              delete outcomes[ref.storagePath];
+              if (!isQuotaExceeded(error)) throw error;
+              outcome = "quota";
+              failedBytes = blob.size;
+              quotaCeiling = Math.min(quotaCeiling, blob.size);
+            }
+          }
+        } catch (error) {
+          if (error instanceof StoreEpochChangedError) throw error;
+          if (isAbortError(error) && job.abortReason) break;
+          outcome = classifyStorageError(error);
+          if (outcome === "unknown") console.error(`Offline download of ${ref.storagePath} failed:`, error);
+        }
+      }
+
+      if (outcome !== "stored") {
+        outcomes[ref.storagePath] = outcome;
+        failed[ref.storagePath] = failedBytes;
+        await transact("readwrite", async (tx) => writeJournal(tx), { epoch });
+      }
+      progress.filesDone++;
+      progress.bytesDone = bytesBefore + (outcome === "stored" ? (knownBytes.get(ref.storagePath) ?? 0) : 0);
+      progress.currentFile = null;
+      report();
+    }
+
+    if (wasWiped()) return cancelledResult("Offline copies were deleted");
+    if (job.abortReason === "cancel") {
+      // §4.4: the journal goes, stored files stay for GC.
+      await transact("readwrite", async (tx) => tx.delete(journalKey), { epoch }).catch((error: unknown) => {
+        if (!(error instanceof StoreEpochChangedError)) throw error;
+      });
+      job.paths.clear(); // this job no longer protects its files
+      await collectGarbage();
+      return cancelledResult("Download cancelled");
+    }
+
+    progress.state = "committing";
+    report();
+    return await commit(job, journal, outcomes, failed, epoch);
+  } catch (error) {
+    if (error instanceof StoreEpochChangedError || wasWiped()) return cancelledResult("Offline copies were deleted");
+    throw error;
+  }
+}
+
+/**
+ * The commit transaction (§4.3, §4.5): meta + snapshot + band written and the
+ * journal deleted together, after checking every referenced file is present
+ * (§3.5 #5). It is local, so it needs neither network nor a valid session:
+ * only an unchanged epoch and the plan's owner as the current user (race
+ * rule 2), so offline, "offline-cached" and a same-uid resume all commit. A
+ * quota failure is retried once after GC; a second one is `quota-rows`.
+ */
+async function commit(
+  job: DownloadJob,
+  journal: OfflineDownloadJournal,
+  outcomes: Record<string, Outcome>,
+  failedBytes: Record<string, number | null>,
+  epoch: string | null
+): Promise<DownloadResult> {
+  const snapshot = journal.pendingSnapshot;
+  const setlistId = journal.setlistId;
+  // Outside the transaction: awaiting anything but an IDB request inside one lets it commit early.
+  const fingerprint = await fingerprintOf(snapshot);
+
+  const attempt = () =>
+    transact(
+      "readwrite",
+      async (tx) => {
+        if (currentUserId !== job.userId) throw new DownloadInterrupted("not-authenticated");
+        const previous = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
+        let bytes = 0;
+        let fileCount = 0;
+        const missingFiles: OfflineMissingFile[] = [];
+        for (const ref of snapshot.files) {
+          const record = await tx.get<OfflineFileRecord>(offlineKeys.file(ref.storagePath));
+          if (record) {
+            bytes += record.bytes;
+            fileCount++;
+            continue;
+          }
+          const outcome = outcomes[ref.storagePath];
+          const reason: FailureReason =
+            outcome && outcome !== "stored" && outcome !== "skipped-present" ? outcome : "unknown";
+          missingFiles.push(missingFrom(ref, reason, failedBytes[ref.storagePath] ?? null));
+        }
+        const savedAt = new Date().toISOString();
+        const meta: OfflineSnapshotMeta = {
+          schemaVersion: OFFLINE_SCHEMA_VERSION,
+          setlistId,
+          bandId: snapshot.band.id,
+          userId: job.userId,
+          setlistName: snapshot.setlist.name,
+          savedAt,
+          completeness: missingFiles.length > 0 ? "partial" : "complete",
+          bytes,
+          fileCount,
+          missingFiles,
+          fingerprint,
+          freshness: "unknown",
+          lastCheckedAt: null,
+          rowsUpdatedAt: savedAt,
+          lastDiff: null,
+          verifiedAt: null,
+        };
+        // Offline PDF choices not flushed yet survive a re-download (§5.6).
+        const localPreferenceOverrides =
+          previous && previous.userId === job.userId ? (previous.localPreferenceOverrides ?? {}) : {};
+        tx.put(offlineKeys.snapshotMeta(setlistId), meta);
+        tx.put(offlineKeys.snapshot(setlistId), { ...snapshot, localPreferenceOverrides });
+        tx.put(offlineKeys.band(snapshot.band.id), snapshot.band);
+        tx.delete(offlineKeys.download(setlistId));
+        return { meta, replaced: !!previous };
+      },
+      { epoch }
+    );
+
+  let committed: { meta: OfflineSnapshotMeta; replaced: boolean };
+  try {
+    try {
+      committed = await attempt();
+    } catch (error) {
+      if (!isQuotaExceeded(error)) throw error;
+      await collectGarbage();
+      committed = await attempt();
+    }
+  } catch (error) {
+    if (error instanceof DownloadInterrupted) {
+      return {
+        state: "failed",
+        meta: null,
+        missingFiles: [],
+        failure: new OfflineError(error.code, "Another user is current; the download was not saved"),
+      };
+    }
+    if (!isQuotaExceeded(error)) throw error;
+    // §4.5: the rows themselves don't fit. The journal goes; GC reclaims the files.
+    await transact("readwrite", async (tx) => tx.delete(offlineKeys.download(setlistId)), { epoch }).catch(
+      (deleteError: unknown) => {
+        if (!(deleteError instanceof StoreEpochChangedError)) throw deleteError;
+      }
+    );
+    job.paths.clear();
+    await collectGarbage();
+    return {
+      state: "failed",
+      meta: null,
+      missingFiles: [],
+      failure: new OfflineError("quota-rows", "Not enough space to save this setlist; remove another one", {
+        cause: error,
+      }),
+    };
+  }
+
+  emit({ type: "snapshot-changed", setlistId });
+  if (committed.replaced) await collectGarbage();
+  const { meta } = committed;
+  return {
+    state: meta.completeness === "complete" ? "done" : "done-with-errors",
+    meta,
+    missingFiles: meta.missingFiles,
+    failure: null,
+  };
+}
+
+/** §6.1. Song timestamps are "" until `songs.updated_at` exists (§6.2, PR 3.0). */
+async function fingerprintOf(snapshot: OfflineDownloadJournal["pendingSnapshot"]): Promise<OfflineFingerprint> {
+  const songs = Object.values(snapshot.songsById)
+    .map((song): [string, string] => [song.id, (song as { updated_at?: string }).updated_at ?? ""])
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const sheetMusic = Object.values(snapshot.sheetMusicBySongId)
+    .flat()
+    .map((sm): [string, string, string, string] => [sm.id, sm.song_id, sm.updated_at ?? "", sm.file_url])
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const base = { setlistUpdatedAt: snapshot.setlist.updated_at ?? "", songs, sheetMusic };
+  let hash = "";
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(base)));
+    hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    // No crypto.subtle (insecure context): the fields still compare.
+  }
+  return { ...base, hash };
+}
+
+/**
+ * §4.4: for every interrupted download of the current user, resume it
+ * (stored files are not fetched again; rows come from the journal), discard it
+ * when older than 7 days (returned as `failed` / `plan-stale`). One that still
+ * has files to fetch needs a valid session and the browser online, and is
+ * left alone otherwise; one whose files are all stored just commits, offline
+ * and in "offline-cached" too. Never rejects.
+ */
+export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
+  const userId = currentUserId;
+  if (!userId || !(await storeReady())) return [];
+  const results: DownloadResult[] = [];
+  let discarded = false;
+  try {
+    for (const journal of await readOwnedJournals(userId)) {
+      if (Date.now() - Date.parse(journal.startedAt) > JOURNAL_MAX_AGE_MS) {
+        await removeKey(offlineKeys.download(journal.setlistId));
+        discarded = true;
+        results.push({
+          state: "failed",
+          meta: null,
+          missingFiles: [],
+          failure: new OfflineError("plan-stale", "The interrupted download is too old; download it again"),
+        });
+        continue;
+      }
+      if (activeJob || currentUserId !== userId) continue;
+      const canFetch = !isBrowserOffline() && authenticatedUserId() === userId;
+      if (!canFetch && (await hasFilesToFetch(journal))) continue;
+
+      const job = newJob(journal.setlistId, userId, journal.pendingSnapshot.files);
+      activeJob = job;
+      try {
+        const outcome = await withDownloadLock(async () => {
+          // Another tab may have finished or cancelled it while we waited.
+          const current = await readKey<OfflineDownloadJournal>(offlineKeys.download(journal.setlistId));
+          if (!current || current.startedAt !== journal.startedAt) return null;
+          return runJob(job, current, { fresh: false });
+        });
+        if (outcome && outcome !== LOCK_BUSY) results.push(outcome);
+      } finally {
+        if (activeJob === job) activeJob = null;
+        job.dispose();
+      }
+    }
+  } catch (error) {
+    console.error("Could not resume offline downloads:", error);
+  }
+  if (discarded) await collectGarbage();
+  return results;
+}
+
+/** Whether some file of the journal is neither recorded as stored nor present (the same test runJob uses). */
+async function hasFilesToFetch(journal: OfflineDownloadJournal): Promise<boolean> {
+  return transact("readonly", async (tx) => {
+    for (const ref of journal.pendingSnapshot.files) {
+      const outcome = journal.outcomes[ref.storagePath];
+      if (outcome !== "stored" && outcome !== "skipped-present") return true;
+      if (!(await tx.has(offlineKeys.file(ref.storagePath)))) return true;
+    }
+    return false;
+  });
+}
+
+async function readOwnedJournals(userId: string): Promise<OfflineDownloadJournal[]> {
+  const journalKeys = keysWithPrefix(await readKeys(), OFFLINE_KEY_PREFIX.download);
+  const journals: OfflineDownloadJournal[] = [];
+  for (const value of await readMany<OfflineDownloadJournal>(journalKeys)) {
+    if (!value || typeof value !== "object" || typeof value.setlistId !== "string") continue;
+    if (!(await hasCurrentSchema(value))) return [];
+    if (value.userId === userId) journals.push(value);
+  }
+  return journals;
+}
+
+/** Interrupted downloads of the current user, for the list UI. */
+export function listInterruptedDownloads(): Promise<Array<{ setlistId: string; setlistName: string; startedAt: string }>> {
+  const userId = currentUserId;
+  if (!userId) return Promise.resolve([]);
+  return safeRead([], async () =>
+    (await readOwnedJournals(userId))
+      .filter((j) => activeJob?.setlistId !== j.setlistId)
+      .map((j) => ({ setlistId: j.setlistId, setlistName: j.pendingSnapshot?.setlist?.name ?? "", startedAt: j.startedAt }))
+  );
+}
+
+/**
+ * Cancels the running download of `setlistId` (its fetch is aborted, the
+ * journal deleted, stored files left for GC). With no running download, it
+ * discards that setlist's interrupted download of the current user instead
+ * ("Discard", PR 3.4).
+ */
+export function cancelDownload(setlistId: string): void {
+  if (activeJob?.setlistId === setlistId) {
+    abortActiveDownload("cancel");
+    return;
+  }
+  const userId = currentUserId;
+  if (!userId) return;
+  void safeRead(undefined, async () => {
+    const journal = await readKey<OfflineDownloadJournal>(offlineKeys.download(setlistId));
+    if (!journal || journal.userId !== userId) return;
+    await removeKey(offlineKeys.download(setlistId));
+    await collectGarbage();
+  });
+}
+
+/** Removes the current user's snapshot of `setlistId`, then GC reclaims files nothing else references. */
+export async function removeSnapshot(setlistId: string): Promise<void> {
+  const userId = currentUserId;
+  if (!userId || !(await storeReady())) return;
+  const removed = await transact("readwrite", async (tx) => {
+    const meta = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+    const snapshot = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
+    const owner = meta?.userId ?? snapshot?.userId;
+    if (owner !== userId) return false;
+    tx.delete(offlineKeys.snapshotMeta(setlistId));
+    tx.delete(offlineKeys.snapshot(setlistId));
+    // The band row goes with the last snapshot (of any user) that names it.
+    const bandId = meta?.bandId ?? snapshot?.band?.id;
+    if (bandId !== undefined) {
+      const otherMetas = keysWithPrefix(await tx.keys(), OFFLINE_KEY_PREFIX.snapshotMeta).filter(
+        (k) => k !== offlineKeys.snapshotMeta(setlistId)
+      );
+      let bandUsed = false;
+      for (const key of otherMetas) {
+        if ((await tx.get<OfflineSnapshotMeta>(key))?.bandId === bandId) bandUsed = true;
+      }
+      if (!bandUsed) tx.delete(offlineKeys.band(bandId));
+    }
+    return true;
+  });
+  if (!removed) return;
+  emit({ type: "snapshot-changed", setlistId });
+  await collectGarbage();
+}
+
+/**
+ * §4.6: deletes every `file:` key that no `snapshot:` and no `download:`
+ * journal references, **whatever its userId** (hidden users' files survive).
+ * One readwrite transaction, so it can't interleave with a download's writes
+ * in any tab (race rule 3); files the running download of this tab may still
+ * store are kept too. Never rejects.
+ */
+export async function collectGarbage(): Promise<{ deletedFiles: number; freedBytes: number }> {
+  if (!(await storeReady())) return { deletedFiles: 0, freedBytes: 0 };
+  try {
+    return await transact("readwrite", async (tx) => {
+      const all = await tx.keys();
+      const referenced = new Set<string>(activeJob?.paths ?? []);
+      for (const key of keysWithPrefix(all, OFFLINE_KEY_PREFIX.snapshot)) {
+        const snapshot = await tx.get<OfflineSnapshot>(key);
+        for (const f of snapshot?.files ?? []) referenced.add(f.storagePath);
+      }
+      for (const key of keysWithPrefix(all, OFFLINE_KEY_PREFIX.download)) {
+        const journal = await tx.get<OfflineDownloadJournal>(key);
+        for (const f of journal?.pendingSnapshot?.files ?? []) referenced.add(f.storagePath);
+        for (const f of journal?.plan?.filesToDownload ?? []) referenced.add(f.storagePath);
+        for (const f of journal?.plan?.filesAlreadyPresent ?? []) referenced.add(f.storagePath);
+      }
+      let deletedFiles = 0;
+      let freedBytes = 0;
+      for (const key of keysWithPrefix(all, OFFLINE_KEY_PREFIX.file)) {
+        if (referenced.has(key.slice(OFFLINE_KEY_PREFIX.file.length))) continue;
+        const record = await tx.get<OfflineFileRecord>(key);
+        freedBytes += record?.bytes ?? 0;
+        deletedFiles++;
+        tx.delete(key);
+      }
+      const meta = await tx.get<OfflineStoreMeta>(offlineKeys.meta);
+      if (meta) tx.put(offlineKeys.meta, { ...meta, lastGcAt: new Date().toISOString() });
+      return { deletedFiles, freedBytes };
+    });
+  } catch (error) {
+    console.error("Offline garbage collection failed:", error);
+    return { deletedFiles: 0, freedBytes: 0 };
+  }
+}
+
+/** navigator.storage.persist(), recorded in meta.persisted. null when unsupported. Never rejects. */
+export async function requestPersistence(): Promise<boolean | null> {
+  const storage = typeof navigator !== "undefined" ? navigator.storage : undefined;
+  if (!storage?.persist) return null;
+  let persisted: boolean;
+  try {
+    persisted = await storage.persist();
+  } catch (error) {
+    console.warn("navigator.storage.persist() failed:", error);
+    return null;
+  }
+  if (await storeReady()) {
+    await transact("readwrite", async (tx) => {
+      const meta = await tx.get<OfflineStoreMeta>(offlineKeys.meta);
+      if (meta) tx.put(offlineKeys.meta, { ...meta, persisted });
+    }).catch((error: unknown) => console.error("Could not record storage persistence:", error));
+  }
+  return persisted;
+}
+
+/** §4.1: the first download on the device asks for persistent storage (not awaited: Firefox prompts). */
+async function maybeRequestPersistence(): Promise<void> {
+  try {
+    const meta = await readKey<OfflineStoreMeta>(offlineKeys.meta);
+    if (meta && meta.persisted === null) await requestPersistence();
+  } catch (error) {
+    console.warn("Could not request storage persistence:", error);
+  }
+}
+
+export async function getStorageUsage(): Promise<{
+  usage: number | null;
+  quota: number | null;
+  persisted: boolean | null;
+  bySetlist: Array<{ setlistId: string; bytes: number }>;
+  distinctFileBytes: number;
+}> {
+  const estimate = await storageEstimate();
+  const empty = { usage: estimate?.usage ?? null, quota: estimate?.quota ?? null, persisted: null, bySetlist: [], distinctFileBytes: 0 };
+  const userId = currentUserId;
+  return safeRead(empty, async () => {
+    const meta = await readKey<OfflineStoreMeta>(offlineKeys.meta);
+    const metas = userId ? await readOwnedMetas(userId) : [];
+    const paths = new Set<string>();
+    for (const m of metas) {
+      const snapshot = await readKey<OfflineSnapshot>(offlineKeys.snapshot(m.setlistId));
+      for (const f of snapshot?.files ?? []) paths.add(f.storagePath);
+    }
+    let distinctFileBytes = 0;
+    // One file record at a time: never load every blob at once (§3.3).
+    for (const path of paths) distinctFileBytes += (await readKey<OfflineFileRecord>(offlineKeys.file(path)))?.bytes ?? 0;
+    return {
+      ...empty,
+      persisted: meta?.persisted ?? null,
+      bySetlist: metas.map((m) => ({ setlistId: m.setlistId, bytes: m.bytes })),
+      distinctFileBytes,
+    };
+  });
+}
+
 /** Test-only: reset module state between tests. */
 export function __resetOfflineServiceForTests(): void {
   currentUserId = null;
+  currentUserAuthenticated = false;
+  activeJob = null;
   schemaWipeAnnounced = false;
   authQueue = Promise.resolve();
   listeners.clear();

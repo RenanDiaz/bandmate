@@ -127,8 +127,9 @@ Always build with `npm run build` — a bare `vite build` skips the landing
 prerender and the precache check (which fails the build if a shell file would
 be missing offline). See [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
-Unit tests run with Vitest (`npm test`); they cover the offline store and
-the offline auth logic. There are no component or end-to-end tests yet.
+Unit tests run with Vitest (`npm test`); they cover the offline store, the
+offline download engine and the offline auth logic. There are no component or
+end-to-end tests yet.
 
 ## 🗂️ Project Layout
 

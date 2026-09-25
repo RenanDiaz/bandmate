@@ -23,6 +23,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
+// Dev only: window.__bandmateOffline drives the offline download engine from
+// the console (see src/lib/devOfflineHook.ts). `import.meta.env.DEV` is false in
+// production builds, so this branch and the module are dropped entirely.
+if (import.meta.env.DEV) {
+  void import("./lib/devOfflineHook").then((m) => m.installOfflineDevHook());
+}
+
 // The build prerenders the landing into index.html so crawlers and slow
 // connections get real content (see src/entry-server.tsx). `createRoot` throws
 // that markup away on its first commit, so drop the stylesheet that went with

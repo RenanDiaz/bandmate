@@ -79,7 +79,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
 | `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode) |
-| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song |
+| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads |
 | `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
 | `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
 | `showsService.ts` | Show/gig scheduling |
@@ -88,7 +88,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
-| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events. Downloads arrive in PR 2.2b. See "Offline store" below |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user, `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). Row refresh / `patchSnapshot*` arrive in PR 2.4. See "Offline store" and "Offline downloads" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -199,8 +199,9 @@ store `kv`, prefixed keys: `meta`, `last-user`, `schema-wipe-notice`,
 `band:{id}`, `snapshot-meta:{setlistId}`, `snapshot:{setlistId}`,
 `file:{storagePath}`, `download:{setlistId}` (layout: spec §3.3).
 
-- Every read filters by the id set with `setOfflineCurrentUser()`; `null`
-  returns empty/null. Reads never throw: an empty store and
+- Every read filters by the id set with `setOfflineCurrentUser(id, {
+  authenticated })`; `null` returns empty/null. `authenticated` is `true` only
+  in `authMode: "session"` (the controller sets it); downloads need it. Reads never throw: an empty store and
   `storage-unavailable` (no IndexedDB, open fails) both return empty/null;
   only `openOfflineStore()` rejects, with `OfflineError("storage-unavailable")`.
 - `meta.schemaVersion !== OFFLINE_SCHEMA_VERSION` (or a record of another
@@ -213,6 +214,55 @@ store `kv`, prefixed keys: `meta`, `last-user`, `schema-wipe-notice`,
   device: justify it in the PR description.** Old `snapshot-meta` records must
   keep `setlistId`, `setlistName`, `userId`, `bandId` (the one cross-version
   contract).
+
+### Offline downloads
+
+`planDownload(id)` fetches rows, sizes each storage folder (`list()`,
+concurrency 4) and marks files already in the store (by storage path) —
+no writes. `downloadSetlist(plan)` writes the journal `download:{id}` first,
+fetches files **one at a time** (a 60 s no-progress timeout per file,
+`src/lib/offlineFetch.ts`), then commits meta + snapshot + band and deletes
+the journal in one transaction. Pre-conditions reject (`OfflineError`:
+`not-authenticated`, `offline`, `plan-stale` — plan > 10 min or not from this
+page, `download-in-progress`, `storage-unavailable`); per-file failures,
+quota, cancel and interruptions are **returned** in `DownloadResult`. Rules
+that keep it correct (spec changelog, PR 2.2b) — keep them when changing it:
+
+1. **Wipe during a download.** Every download write goes through
+   `transact(..., { epoch })`, which reads `meta.epoch` in the same
+   transaction and writes nothing if a clear (`wipeAll`, schema wipe, any tab)
+   replaced it. A local wipe also aborts the running fetch. Never write a
+   download record with plain `writeKey`/`writeMany`.
+2. **Auth drops.** Before each file **fetch** the owner must still be the
+   `authenticated` current user and `navigator.onLine` not `false` (never the
+   context's `isOnline`: its 30 s forced-offline window would skip every
+   remaining file after one failure; one file's network error only marks that
+   file). Otherwise the rest is recorded as `network` and the journal stays
+   for `resumeInterruptedDownloads()`. The **commit** is local: it needs only
+   an unchanged epoch and the plan's owner as current uid, so it runs offline
+   and in `offline-cached`; `session-lost` or another uid commits nothing. A
+   resume with every file stored commits offline too.
+3. **GC** (`collectGarbage`) is one readwrite transaction and keeps every file
+   any `snapshot:` or `download:` record references, **whatever its
+   `userId`**, plus the running job's files. It is the only thing that deletes
+   `file:` keys besides `wipeAll`.
+4. **One download per device**: an in-tab claim plus the Web Lock
+   `bandmate-offline-download` (`ifAvailable`); without Web Locks only the
+   in-tab claim holds.
+
+Quota (§4.5): a file that fails with `QuotaExceededError` (also Safari's
+aborted-transaction form, `isQuotaExceeded`) is recorded as `quota` and only
+smaller files are tried after it; a commit that doesn't fit is retried once
+after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
+`__setWriteFaultForTests` (fake-indexeddb has none).
+
+**Dev hook:** in `npm run dev`, `window.__bandmateOffline` exposes
+`planDownload`, `downloadSetlist`, `download(id)`, `listSnapshots`,
+`getStorageUsage`, `listInterruptedDownloads`, `resumeInterruptedDownloads`,
+`cancelDownload`, `removeSnapshot`, `collectGarbage`, `getFile`
+(`src/lib/devOfflineHook.ts`, loaded from `main.tsx` behind
+`import.meta.env.DEV`; production builds contain no reference to it — keep it
+that way).
 
 **Online status** (`useOnlineStatus` hook): `navigator.onLine` plus the
 `online`/`offline` events, and `reportNetworkFailure()`, which forces offline
@@ -391,7 +441,9 @@ following the style of the existing files.
 Unit tests use Vitest (`npm test`, config in `vitest.config.ts`, node
 environment with `fake-indexeddb` and an in-memory `localStorage` from
 `src/test/setup.ts`). Tests live in `__tests__/` next to the code and are
-type-checked by `npm run build`. Mock Supabase rather than calling it. There
+type-checked by `npm run build`. Mock Supabase rather than calling it
+(`setup.ts` mocks `src/lib/supabaseClient` for every test; mock the service
+functions a test needs). There
 are no component tests yet. Before considering a change done:
 
 1. `npm run lint` passes with no new errors.

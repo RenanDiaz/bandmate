@@ -12,6 +12,94 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-25 — PR 2.2b: download engine (decisions the spec did not cover).**
+  - **Scope moved to 2.4:** `refreshSnapshotRows`, `patchSnapshotSetlist`,
+    `patchSnapshotPreference` and the post-commit row refresh of §4.3 ship
+    with their only caller, the snapshot source. Nothing renders a snapshot
+    before 2.4, so a resumed download's older rows are refreshed before
+    anyone sees them. §12 updated.
+  - **Valid session vs. cached user.** `setOfflineCurrentUser(userId,
+    { authenticated })`: `true` only in `authMode: "session"`. Reads keep
+    filtering by `userId` alone; plan, download and resume require
+    `authenticated` (§5.4 `not-authenticated`).
+  - **Race 1 — wipe during a download.** `meta` gains an optional `epoch`
+    (random, replaced by every clear: `wipeAll`, schema wipe). Every write of a
+    download runs in one transaction that first reads `meta.epoch` and aborts,
+    writing nothing, when it differs from the epoch the download started with.
+    IDB serializes readwrite transactions on the store **across tabs**, so a
+    wipe either committed before (refused) or runs after (and clears it). A
+    wipe in this tab also aborts the in-flight fetch at once, and the job
+    compares a wipe counter taken when it was claimed, so a wipe landing
+    before the job has read the epoch is caught too. Chosen over an in-memory
+    generation because another tab's sign-out must count. `epoch` is optional
+    and additive (a pre-2.2b meta reads as `null`), so no schema bump.
+  - **Race 2 — auth drops mid-download.** Fetching needs a signed URL, so
+    before **each file fetch** the owner must still be the `authenticated`
+    current user and `navigator.onLine` must not be `false`. If not, the
+    remaining files are recorded as `network` in the journal and the result
+    is `failed` (`offline` for the same uid without a valid session or a
+    browser that says offline, `not-authenticated` otherwise); the journal
+    stays for resume. The gate reads `navigator.onLine` only, never the
+    context's `isOnline` (whose 30 s forced-offline window after one failed
+    request would skip every remaining file): a single file failing on the
+    network records `network` and the next file is still tried.
+    **The commit is local and needs neither network nor a session:** only an
+    unchanged epoch and the plan's owner as the current uid (checked inside
+    the commit transaction). So a download that fetched every file and then
+    lost signal, or went `offline-cached`, still commits; `session-lost`
+    (current uid `null`) or another uid commits nothing. Likewise
+    `resumeInterruptedDownloads()` needs only the owner as current user: a
+    journal whose files are all stored commits offline; one with files left to
+    fetch waits for a valid session and the browser online. The snapshot's
+    `userId` is always the plan's owner.
+  - **Race 3 — GC during a download.** `collectGarbage()` is one readwrite
+    transaction (keys, every `snapshot:` and `download:` record, deletes,
+    `lastGcAt`), so it cannot interleave with a download's writes in any tab;
+    it also keeps the paths of this tab's running job. The one window left,
+    a file counted as present at plan time and GC'd before the journal
+    exists, is closed by re-checking presence right after the journal is
+    written (from then on the journal protects it); a missing one is fetched.
+  - **Race 4 — one download per device.** An in-tab claim taken before the
+    first `await`, plus a Web Lock (`navigator.locks.request(
+    "bandmate-offline-download", { ifAvailable: true })`) held for the whole
+    download or resume; busy → `download-in-progress`. Without Web Locks
+    (Safari < 15.4) only the in-tab claim applies; two tabs could then both
+    download, which stays consistent (per-file transactions, per-setlist
+    journal) but may compete for quota. A resume re-reads its journal once it
+    holds the lock and skips it if another tab finished or replaced it.
+  - **Atomicity, tightened (§4.3).** A stored file and its journal outcome are
+    written in one transaction (not `set` then rewrite). The commit writes
+    meta + snapshot + band **and deletes the journal** in one transaction, and
+    checks inside it that every referenced file is present (§3.5 #5); `bytes`
+    and `fileCount` count what is actually stored.
+  - **Quota ceiling (§4.5).** After a file fails on quota, a later file is
+    tried only if it is smaller than the smallest file that failed so far
+    (known size, `Content-Length`, or the fetched size); larger ones are
+    `quota` without being stored (without being fetched when the size is
+    known). Reads §4.5 #3 as a ceiling rather than "stop at the first larger
+    file", so small PDFs later in the setlist still fit.
+  - **Plan.** The rows fetched at plan time live in memory next to the plan
+    (a `DownloadPlan` not returned by `planDownload()` on this page is
+    `plan-stale`). Signed URLs are created per file at download time (600 s),
+    so a slow download never outlives its URLs. `incremental` is accepted and
+    ignored until PR 3.3 (a full plan already fetches only missing files). A
+    setlist's band not in `getMyBands()` is `setlist-not-found`.
+  - **Cancel** runs GC right away (§4.6 lists it; §4.4's "GC at the next app
+    start" is superseded), so cancelled files do not linger. With no download
+    running, `cancelDownload(id)` discards that setlist's interrupted journal
+    (PR 3.4's Discard).
+  - **Persistence.** `navigator.storage.persist()` is asked once, when the
+    first download starts (the confirm tap is the user gesture), not awaited
+    (Firefox prompts); the answer is recorded in `meta.persisted`.
+  - **Also:** the fingerprint (§6.1) is computed at commit already (song
+    timestamps `""` until §6.2); a re-download keeps the snapshot's
+    `localPreferenceOverrides`; `removeSnapshot` deletes `band:{id}` with the
+    last snapshot of any user that names it; the 60 s stall timer covers the
+    wait for headers and each body chunk, not a total time.
+  - **Dev hook.** `window.__bandmateOffline` (plan/download/list/usage/
+    resume/cancel/remove/GC) exists only under `import.meta.env.DEV`; the
+    production bundle has no reference to it.
+
 - **2026-09-26 — 2.2a follow-ups (fixes, no new features).**
   - **A6 amended: the race runs whenever `last-user` exists, online or
     not.** Weak signal and captive portals report `navigator.onLine` true, and
@@ -251,6 +339,8 @@ export interface OfflineStoreMeta {
   persisted: boolean | null;
   /** ISO timestamp of the last successful garbage collection (§4.6). */
   lastGcAt: string | null;
+  /** Replaced by every clear; download writes are refused under another epoch (PR 2.2b, race 1). Optional: absent on pre-2.2b metas. */
+  epoch?: string;
 }
 
 /** Small record used by lists and badges; never contains rows or blobs. */
@@ -646,7 +736,7 @@ export function openOfflineStore(): Promise<OfflineStoreMeta>;
  * this id; null (signed out or session-lost) makes them all return empty/null
  * without deleting anything (A1).
  */
-export function setOfflineCurrentUser(userId: string | null): void;
+export function setOfflineCurrentUser(userId: string | null, opts?: { authenticated?: boolean }): void;
 
 /** The last uid that had a valid session on this device (`last-user`), or null. Read by BandContext only. */
 export function getLastUserId(): Promise<string | null>;
@@ -1643,9 +1733,9 @@ verified by unit tests (fake-indexeddb) in `npm test`.
 | 2.0 | Shell hardening for offline | `registerType: 'prompt'` + banner deferred on perform route, worker registered via `workbox-window` so no path reloads on its own; narrow `supabase-api` rule; `useOnlineStatus` hook exposed via `BandContext`; **`getMyBands()` catch + `isResolvingBand` always resolves (§7.2, fixes C3 on its own)**; **precache guard: `maximumFileSizeToCacheInBytes` 5 MiB + `scripts/check-precache.mjs` in `npm run build`**; **Space Grotesk self-hosted (`@fontsource`), fonts precached**. Verify Phase 1 items (§1). No IndexedDB, no code-splitting (follow-up). | Phase 1 |
 | 2.1 | Extract performance data loading | `useSetlistPerformanceData` + `PerformanceDataSource` + `networkPerformanceDataSource`; `getSongsByIds`; `getSheetMusicForSongs`; `saveOrder` routed through the hook; view consumes the hook. No offline code. | — |
 | 2.2a | Offline store, reads, offline auth | `idb-keyval` dependency; `offlineStore.ts` key layout + store open + schema guard + wipe **with schema-wipe notice record** (A4 lost list exposed by the service; UI in 2.5); `offlineSetlistService`: `openOfflineStore`, `setOfflineCurrentUser`, `getLastUserId`, `confirmSignedInUser`, `listSnapshots`, `getSnapshotMeta`, `getSnapshot`, `getFile`, `listOfflineBands`, `countHiddenSnapshots`, `getSchemaWipeNotice` / `dismissSchemaWipeNotice`, `wipeAll`, `subscribe`/events; reads return empty/null on an empty store and on `storage-unavailable`. `wipeAll` wired to `AuthButton.logout` (awaited before `signOut`) and confirmed user change **only**; also clears `bandmate_perform_position_*` (`performPosition.ts`: prefix + `clearAllPerformPositions`). **`BandContext`: `last-user`, `AuthMode` with `offline-cached` / `session-lost`, involuntary `SIGNED_OUT` → hide (§7.1); offline, `getSession()` raced against a 1.5 s timeout with provisional `offline-cached` from `last-user` and A1 reconciliation (A6, C7); `listOfflineBands` offline branch (§7.2); `isResolvingBand` always resolves; `authMode` exposed.** vitest + fake-indexeddb, `npm test`. No UI beyond what `BandContext` needs, no migration. | 2.0 |
-| 2.2b | Download engine | `planDownload`, `downloadSetlist` state machine, journal + `resumeInterruptedDownloads`, `cancelDownload`, quota handling (§4.5), `collectGarbage` (all users' refs), `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`, `getStorageUsage`, `refreshSnapshotRows`, `patchSnapshot*`; `snapshot-changed` / `download-progress` events. Unit tests against fake-indexeddb. No UI. | 2.2a |
+| 2.2b | Download engine | `planDownload`, `downloadSetlist` state machine, journal + `resumeInterruptedDownloads`, `cancelDownload`, quota handling (§4.5), `collectGarbage` (all users' refs), `requestPersistence`, `removeSnapshot`, `listInterruptedDownloads`, `getStorageUsage`; `snapshot-changed` / `download-progress` events; store epoch, cross-tab lock and the other race rules (changelog 2026-09-25, PR 2.2b); dev-only `window.__bandmateOffline`. Unit tests against fake-indexeddb. No UI. | 2.2a |
 | 2.3 | "Make available offline" action | Button + confirmation + progress modal (reuse `ConfirmModal` tone/busy; a new `OfflineDownloadModal`) in `SetlistDetailView`, `ShowDetailView` ("Get this show ready offline") and performance mode's top bar; partial/error result view; Remove from detail. Badge in `SetlistList`/detail with saved date. Offline check: after airplane mode + relaunch, 2.2a keeps the user and band (no spinner, no landing) and `listSnapshots()` in devtools still returns `S1`; there is no offline *screen* to open it from until 2.4 (deep link) and 2.5. | 2.2b |
-| 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
+| 2.4 | Perform from the snapshot | `snapshotPerformanceDataSource`; source selection; **`refreshSnapshotRows` + `patchSnapshotSetlist` / `patchSnapshotPreference` (moved from 2.2b), the row refresh after every download commit (§4.3); background row refresh online + re-render; write-through for reorder/preference/upload**; `unavailableSheetMusicIds`; blob URL lifecycle; capabilities gating; offline badge; `SyncControls` disabled state; `usePerformanceSync({ enabled })`; local preference override + flush; **position persistence in `localStorage` (`performPosition.ts`, 12 h expiry, cleared by `wipeAll`)**; error boundary copy. Deep link to `/setlists/:id/perform` works offline (B2–B13) before 2.5. | 2.1, 2.3 |
 | 2.5 | Offline entry point (screens) | `OfflineHome` (incl. `session-lost` locked state), `OfflineSetlistList`, `OfflineSetlistDetail`, `OfflineEmptyState`; **schema-wipe notice UI** on Home and the offline list; route wiring for `/`, `/setlists`, `/setlists/:id`; resume + GC at start; generic "needs a connection" fallback for other routes. | 2.4 |
 | 2.6 | Docs and i18n sweep | CLAUDE.md (service, hooks, key layout pointer, **wipe rule: only explicit sign-out and user change**, **"bumping `OFFLINE_SCHEMA_VERSION` requires a justification in the PR description"**), README Features ("Perform a setlist offline"), `docs/OFFLINE.md` linking this spec; intent status → "in progress", C5/C6/C11 amendments. | 2.5 |
 

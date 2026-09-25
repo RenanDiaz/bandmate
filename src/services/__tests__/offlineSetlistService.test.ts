@@ -32,7 +32,12 @@ beforeEach(() => {
 describe("empty store", () => {
   it("initializes meta on first open and every read is empty/null", async () => {
     const meta = await openOfflineStore();
-    expect(meta).toEqual({ schemaVersion: OFFLINE_SCHEMA_VERSION, persisted: null, lastGcAt: null });
+    expect(meta).toEqual({
+      schemaVersion: OFFLINE_SCHEMA_VERSION,
+      persisted: null,
+      lastGcAt: null,
+      epoch: expect.any(String),
+    });
 
     setOfflineCurrentUser(USER_A);
     expect(await listSnapshots()).toEqual([]);

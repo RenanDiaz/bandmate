@@ -1,4 +1,10 @@
 import "fake-indexeddb/auto";
+import { vi } from "vitest";
+
+// Tests never reach Supabase (and CI has no VITE_SUPABASE_URL): the offline
+// service imports the data services, which import the client. A test that needs
+// behaviour mocks the service functions, or this module, itself.
+vi.mock("../lib/supabaseClient", () => ({ supabase: { auth: {} } }));
 
 /** Minimal in-memory localStorage: Node has none, and the offline wipe clears keys from it. */
 class MemoryStorage implements Storage {

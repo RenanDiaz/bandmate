@@ -62,7 +62,8 @@ export interface AuthControllerDeps {
   offline: {
     getLastUserId: () => Promise<string | null>;
     confirmSignedInUser: (userId: string) => Promise<{ wiped: boolean }>;
-    setOfflineCurrentUser: (userId: string | null) => void;
+    /** `authenticated`: a valid session ("session"), which downloads require; false in "offline-cached". */
+    setOfflineCurrentUser: (userId: string | null, opts?: { authenticated?: boolean }) => void;
   };
   isOnline: () => boolean;
   reportNetworkFailure: () => void;
@@ -232,7 +233,7 @@ export class OfflineAuthController {
   private applyOfflineCached(lastUserId: string, provisional: boolean): void {
     const prev = this.state.user;
     const user: AppUser = prev?.id === lastUserId ? prev : { id: lastUserId, offlineCached: true };
-    this.deps.offline.setOfflineCurrentUser(lastUserId);
+    this.deps.offline.setOfflineCurrentUser(lastUserId, { authenticated: false });
     this.publish({ user, authMode: "offline-cached", isCheckingAuth: false, provisional });
   }
 
@@ -259,7 +260,7 @@ export class OfflineAuthController {
     // Keep the reference when only the token changed, so band data isn't
     // refetched on every TOKEN_REFRESHED (e.g. when the tab regains focus).
     const user = prev && !isOfflineUser(prev) && prev.id === sessionUser.id ? prev : sessionUser;
-    this.deps.offline.setOfflineCurrentUser(sessionUser.id);
+    this.deps.offline.setOfflineCurrentUser(sessionUser.id, { authenticated: true });
     this.publish({ user, authMode: "session", isCheckingAuth: false, provisional: false });
 
     // Only for getSession() answers, as before: auth events already come from the server.
