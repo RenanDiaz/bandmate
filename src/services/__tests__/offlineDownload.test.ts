@@ -885,6 +885,77 @@ describe("race 2: auth drops mid-download", () => {
   });
 });
 
+describe("commit is local: no network or valid session needed (race 2)", () => {
+  /** Runs s1 until B2 (the last file) is being fetched, then applies `during` and lets B2 finish. */
+  async function downloadWithLastFile(during: () => void): Promise<DownloadResult> {
+    server.files[B2] = { bytes: 40, hangAfter: 5 };
+    const started = fetchStarted(B2);
+    const done = downloadSetlist(await planDownload("s1"));
+    await started;
+    await flush();
+    during();
+    server.release.get(B2)!();
+    return done;
+  }
+
+  const goOffline = () => {
+    vi.stubGlobal("navigator", { onLine: false, locks: navigator.locks });
+    setOfflineCurrentUser(USER_A, { authenticated: false }); // offline-cached
+  };
+
+  it("all files stored, device offline before the commit → commits a complete snapshot", async () => {
+    const result = await downloadWithLastFile(goOffline);
+    expect(result).toMatchObject({ state: "done", meta: { userId: USER_A, completeness: "complete", fileCount: 4 } });
+    expect(await journalOf("s1")).toBeUndefined();
+    expect(await listSnapshots()).toHaveLength(1);
+  });
+
+  it("resume offline with every file already stored → commits without any request", async () => {
+    // Session lost during the last file: nothing committed, every file stored.
+    const interrupted = await downloadWithLastFile(() => setOfflineCurrentUser(null));
+    expect(interrupted.state).toBe("failed");
+    expect((await journalOf("s1"))?.outcomes).toEqual({ [A1]: "stored", [A2]: "stored", [B1]: "stored", [B2]: "stored" });
+
+    vi.stubGlobal("navigator", { onLine: false, locks: navigator.locks });
+    setOfflineCurrentUser(USER_A, { authenticated: false });
+    server.fetched = [];
+    vi.mocked(createSheetMusicDownloadUrl).mockClear();
+    const [result] = await resumeInterruptedDownloads();
+    expect(result).toMatchObject({ state: "done", meta: { userId: USER_A, completeness: "complete" } });
+    expect(server.fetched).toEqual([]);
+    expect(createSheetMusicDownloadUrl).not.toHaveBeenCalled();
+    expect(await journalOf("s1")).toBeUndefined();
+  });
+
+  it("another uid current before the commit → nothing committed", async () => {
+    const result = await downloadWithLastFile(() => signIn(USER_B));
+    expect(result.state).toBe("failed");
+    expect(await rawKeys()).not.toContain(offlineKeys.snapshotMeta("s1"));
+    expect((await journalOf("s1"))?.userId).toBe(USER_A);
+  });
+});
+
+describe("one file's network failure does not skip the rest", () => {
+  it("file 2 of 4 fails with a network error; files 3–4 still download", async () => {
+    const realFetch = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith(A2)) {
+          server.fetched.push(A2);
+          throw new TypeError("Failed to fetch");
+        }
+        return realFetch(url, init);
+      })
+    );
+    const result = await downloadSetlist(await planDownload("s1"));
+    expect(result.state).toBe("done-with-errors");
+    expect(result.missingFiles.map((m) => [m.storagePath, m.reason])).toEqual([[A2, "network"]]);
+    expect(server.fetched).toEqual([A1, A2, B1, B2]);
+    expect(await fileKeys()).toEqual([A1, B1, B2].map(offlineKeys.file).sort());
+  });
+});
+
 describe("race 3: collectGarbage while a download is in flight", () => {
   it("never deletes a file the in-flight journal references", async () => {
     // A leftover file the plan counts as present, plus a stored one mid-download.

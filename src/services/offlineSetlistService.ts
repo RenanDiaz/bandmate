@@ -933,14 +933,12 @@ async function runJob(
 
   // A wipe between the claim and readEpoch() would hand us the new epoch: the
   // claim-time wipe count catches it in this tab, the owner check in another
-  // (its sign-out reaches this tab as SIGNED_OUT).
+  // (its sign-out reaches this tab as SIGNED_OUT). The session/network check
+  // is per file fetch (below), not here: a job with nothing left to fetch
+  // commits offline.
   if (wasWiped()) return cancelledResult("Offline copies were deleted");
   // (Through a call: TS would otherwise keep this narrowing across the awaits below.)
   if (abortReasonOf(job) === "cancel") return cancelledResult("Download cancelled");
-  const early = interruption(job);
-  if (early) {
-    return { state: "failed", meta: null, missingFiles: [], failure: new OfflineError(early.code) };
-  }
 
   try {
     if (opts.fresh) {
@@ -987,8 +985,11 @@ async function runJob(
       if (job.abortReason || wasWiped()) break;
       const interrupted = interruption(job);
       if (interrupted) {
-        // Race rule 2: what is left is recorded as a network failure and the
-        // journal stays for resume. Nothing is committed.
+        // Race rule 2: a fetch needs a signed URL, so a valid session and a
+        // browser that says online. What is left is recorded as a network
+        // failure and the journal stays for resume. Nothing is committed.
+        // (navigator.onLine only: the context's forced-offline window after
+        // one failed request must not skip the remaining files.)
         for (const rest of toFetch.slice(i)) outcomes[rest.storagePath] = "network";
         await transact("readwrite", async (tx) => writeJournal(tx), { epoch });
         return {
@@ -1096,7 +1097,9 @@ async function runJob(
 /**
  * The commit transaction (§4.3, §4.5): meta + snapshot + band written and the
  * journal deleted together, after checking every referenced file is present
- * (§3.5 #5) and that the owner still has a valid session (race rule 2). A
+ * (§3.5 #5). It is local, so it needs neither network nor a valid session:
+ * only an unchanged epoch and the plan's owner as the current user (race
+ * rule 2), so offline, "offline-cached" and a same-uid resume all commit. A
  * quota failure is retried once after GC; a second one is `quota-rows`.
  */
 async function commit(
@@ -1115,7 +1118,7 @@ async function commit(
     transact(
       "readwrite",
       async (tx) => {
-        if (authenticatedUserId() !== job.userId) throw new DownloadInterrupted("not-authenticated");
+        if (currentUserId !== job.userId) throw new DownloadInterrupted("not-authenticated");
         const previous = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
         let bytes = 0;
         let fileCount = 0;
@@ -1178,7 +1181,7 @@ async function commit(
         state: "failed",
         meta: null,
         missingFiles: [],
-        failure: new OfflineError(error.code, "The session ended before the download was saved; it can resume"),
+        failure: new OfflineError(error.code, "Another user is current; the download was not saved"),
       };
     }
     if (!isQuotaExceeded(error)) throw error;
@@ -1232,13 +1235,15 @@ async function fingerprintOf(snapshot: OfflineDownloadJournal["pendingSnapshot"]
 }
 
 /**
- * §4.4: for every interrupted download of the current user, resume it when
- * online (stored files are not fetched again; rows come from the journal),
- * discard it when older than 7 days (returned as `failed` / `plan-stale`),
- * leave it when offline. Needs a valid session. Never rejects.
+ * §4.4: for every interrupted download of the current user, resume it
+ * (stored files are not fetched again; rows come from the journal), discard it
+ * when older than 7 days (returned as `failed` / `plan-stale`). One that still
+ * has files to fetch needs a valid session and the browser online, and is
+ * left alone otherwise; one whose files are all stored just commits, offline
+ * and in "offline-cached" too. Never rejects.
  */
 export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
-  const userId = authenticatedUserId();
+  const userId = currentUserId;
   if (!userId || !(await storeReady())) return [];
   const results: DownloadResult[] = [];
   let discarded = false;
@@ -1255,7 +1260,9 @@ export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
         });
         continue;
       }
-      if (isBrowserOffline() || activeJob || authenticatedUserId() !== userId) continue;
+      if (activeJob || currentUserId !== userId) continue;
+      const canFetch = !isBrowserOffline() && authenticatedUserId() === userId;
+      if (!canFetch && (await hasFilesToFetch(journal))) continue;
 
       const job = newJob(journal.setlistId, userId, journal.pendingSnapshot.files);
       activeJob = job;
@@ -1277,6 +1284,18 @@ export async function resumeInterruptedDownloads(): Promise<DownloadResult[]> {
   }
   if (discarded) await collectGarbage();
   return results;
+}
+
+/** Whether some file of the journal is neither recorded as stored nor present (the same test runJob uses). */
+async function hasFilesToFetch(journal: OfflineDownloadJournal): Promise<boolean> {
+  return transact("readonly", async (tx) => {
+    for (const ref of journal.pendingSnapshot.files) {
+      const outcome = journal.outcomes[ref.storagePath];
+      if (outcome !== "stored" && outcome !== "skipped-present") return true;
+      if (!(await tx.has(offlineKeys.file(ref.storagePath)))) return true;
+    }
+    return false;
+  });
 }
 
 async function readOwnedJournals(userId: string): Promise<OfflineDownloadJournal[]> {

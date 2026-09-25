@@ -33,14 +33,25 @@ given because they are the contract between PRs; no bodies are written here.
     before the job has read the epoch is caught too. Chosen over an in-memory
     generation because another tab's sign-out must count. `epoch` is optional
     and additive (a pre-2.2b meta reads as `null`), so no schema bump.
-  - **Race 2 — auth drops mid-download.** Before every file, and inside the
-    commit transaction, the owner must still be the current `authenticated`
-    user and the browser online. If not, the remaining files are recorded as
-    `network` in the journal and the result is `failed` with `offline` (same
-    uid, no valid session, or `navigator.onLine` false) or
-    `not-authenticated`; nothing is committed, the journal stays for resume.
-    This refines §4.1 for a device that goes offline: a single file failing on
-    the network while online still records `network` and continues.
+  - **Race 2 — auth drops mid-download.** Fetching needs a signed URL, so
+    before **each file fetch** the owner must still be the `authenticated`
+    current user and `navigator.onLine` must not be `false`. If not, the
+    remaining files are recorded as `network` in the journal and the result
+    is `failed` (`offline` for the same uid without a valid session or a
+    browser that says offline, `not-authenticated` otherwise); the journal
+    stays for resume. The gate reads `navigator.onLine` only, never the
+    context's `isOnline` (whose 30 s forced-offline window after one failed
+    request would skip every remaining file): a single file failing on the
+    network records `network` and the next file is still tried.
+    **The commit is local and needs neither network nor a session:** only an
+    unchanged epoch and the plan's owner as the current uid (checked inside
+    the commit transaction). So a download that fetched every file and then
+    lost signal, or went `offline-cached`, still commits; `session-lost`
+    (current uid `null`) or another uid commits nothing. Likewise
+    `resumeInterruptedDownloads()` needs only the owner as current user: a
+    journal whose files are all stored commits offline; one with files left to
+    fetch waits for a valid session and the browser online. The snapshot's
+    `userId` is always the plan's owner.
   - **Race 3 — GC during a download.** `collectGarbage()` is one readwrite
     transaction (keys, every `snapshot:` and `download:` record, deletes,
     `lastGcAt`), so it cannot interleave with a download's writes in any tab;

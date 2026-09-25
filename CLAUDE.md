@@ -233,10 +233,15 @@ that keep it correct (spec changelog, PR 2.2b) — keep them when changing it:
    transaction and writes nothing if a clear (`wipeAll`, schema wipe, any tab)
    replaced it. A local wipe also aborts the running fetch. Never write a
    download record with plain `writeKey`/`writeMany`.
-2. **Auth drops.** Before each file and inside the commit transaction the
-   owner must still be the `authenticated` current user and the browser
-   online; otherwise the rest is recorded as `network`, the journal stays for
-   `resumeInterruptedDownloads()`, nothing is committed.
+2. **Auth drops.** Before each file **fetch** the owner must still be the
+   `authenticated` current user and `navigator.onLine` not `false` (never the
+   context's `isOnline`: its 30 s forced-offline window would skip every
+   remaining file after one failure; one file's network error only marks that
+   file). Otherwise the rest is recorded as `network` and the journal stays
+   for `resumeInterruptedDownloads()`. The **commit** is local: it needs only
+   an unchanged epoch and the plan's owner as current uid, so it runs offline
+   and in `offline-cached`; `session-lost` or another uid commits nothing. A
+   resume with every file stored commits offline too.
 3. **GC** (`collectGarbage`) is one readwrite transaction and keeps every file
    any `snapshot:` or `download:` record references, **whatever its
    `userId`**, plus the running job's files. It is the only thing that deletes
