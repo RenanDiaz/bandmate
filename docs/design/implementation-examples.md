@@ -1215,4 +1215,4 @@ When implementing components, ensure:
 4. Test components in both light and dark themes
 5. Verify accessibility with tools like axe DevTools or Lighthouse
 
-For questions or improvements to these examples, refer to the main [STYLE_GUIDE.md](/STYLE_GUIDE.md) or open an issue.
+For questions or improvements to these examples, refer to the main [style guide](style-guide.md) or open an issue.

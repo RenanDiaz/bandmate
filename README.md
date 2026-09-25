@@ -73,7 +73,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    |----------|----------|---------|
    | `VITE_SUPABASE_URL` | ✅ | Supabase project URL |
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
-   | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/SPOTIFY_SETUP.md)) |
+   | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
    | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
@@ -96,10 +96,10 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
      ```
 
 4. **Configure authentication** — enable the GitHub and/or Google providers in
-   Supabase → Authentication → Providers ([Google guide](docs/GOOGLE_OAUTH_SETUP.md)).
+   Supabase → Authentication → Providers ([Google guide](docs/setup/google-oauth.md)).
 
 5. **(Optional) Deploy Edge Functions** — `send-invitation-email` (needs a
-   Resend key, see [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md))
+   Resend key, see [docs/setup/email-sending.md](docs/setup/email-sending.md))
    and `calendar-feed`:
    ```bash
    supabase functions deploy send-invitation-email
@@ -125,7 +125,7 @@ npm run icons    # Regenerate PWA icons
 
 Always build with `npm run build` — a bare `vite build` skips the landing
 prerender and the precache check (which fails the build if a shell file would
-be missing offline). See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+be missing offline). See [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
 Unit tests run with Vitest (`npm test`); they cover the offline store and
 the offline auth logic. There are no component or end-to-end tests yet.
@@ -145,7 +145,7 @@ supabase/
 ├── functions/    # Edge Functions
 └── migrations/   # CLI-managed migrations
 migrations/       # Legacy SQL (manual)
-docs/             # Guides
+docs/             # Guides (index: docs/README.md)
 ```
 
 Architecture, conventions, routes and the data model are documented in
@@ -154,12 +154,13 @@ Architecture, conventions, routes and the data model are documented in
 ## 📚 Documentation
 
 - [CLAUDE.md](./CLAUDE.md) — architecture, conventions, definition of done
-- [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) — design system
-- [docs/LANDING_SEO.md](docs/LANDING_SEO.md) — landing prerender, SEO, robots/sitemap
-- [docs/INVITATION_FLOW_COMPLETE.md](docs/INVITATION_FLOW_COMPLETE.md) — member invitations
-- [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) — invitation emails
-- [docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) — Spotify integration
-- [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) — Google OAuth
+- [docs/README.md](docs/README.md) — index of everything in `docs/`
+- [docs/design/style-guide.md](docs/design/style-guide.md) — design system
+- [docs/guides/landing-seo.md](docs/guides/landing-seo.md) — landing prerender, SEO, robots/sitemap
+- [docs/guides/band-members.md](docs/guides/band-members.md) — roles, member security model, invitations
+- [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation emails
+- [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
+- [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec: offline performance, Phases 2–3
 - [migrations/README.md](migrations/README.md) — migrations

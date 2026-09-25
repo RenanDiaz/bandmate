@@ -18,7 +18,7 @@ npm run icons    # Regenerate the PWA icons (needs sharp)
 `src/entry-server.tsx` into `dist-ssr/`, the client build, which injects the
 prerendered landing into `index.html`, and `scripts/check-precache.mjs`. Use
 `npm run build` rather than a bare `vite build` — the latter still succeeds but
-ships an empty shell. See [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+ships an empty shell. See [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
 `scripts/check-precache.mjs` fails the build when any `.js`/`.mjs`/`.css`/`.html`
 file in `dist/` is missing from the service worker's precache manifest (the
@@ -261,7 +261,7 @@ Deno functions deployed with the Supabase CLI (`supabase functions deploy <name>
 They run with the service role key, so they bypass RLS — validate inputs carefully.
 
 - `calendar-feed` — public iCal feed of a band's shows (token-based, via `calendar_subscriptions`)
-- `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md).
+- `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 
 ### Landing Page & SEO
 
@@ -277,7 +277,7 @@ authenticated app stays a pure SPA.
 - `src/lib/siteConfig.ts` — canonical origin, OG image and the list of
   indexable routes. Change the host here *and* in `vercel.json` together.
 
-Full detail in [docs/LANDING_SEO.md](docs/LANDING_SEO.md).
+Full detail in [docs/guides/landing-seo.md](docs/guides/landing-seo.md).
 
 ### Internationalization (i18n)
 
@@ -462,12 +462,14 @@ needed") so reviewers know it was checked, not skipped.
 
 ## External Documentation
 
-- [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) - Comprehensive design system
-- [docs/LANDING_SEO.md](docs/LANDING_SEO.md) - Landing prerender, meta tags, robots/sitemap
-- [docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md) - Spotify API integration
-- [docs/INVITATION_FLOW_COMPLETE.md](docs/INVITATION_FLOW_COMPLETE.md) - Member invitation system
-- [docs/SETUP_EMAIL_SENDING.md](docs/SETUP_EMAIL_SENDING.md) - Invitation emails (Edge Function + Resend)
-- [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) - Google OAuth configuration
+Index: [docs/README.md](docs/README.md).
+
+- [docs/design/style-guide.md](docs/design/style-guide.md) - Comprehensive design system
+- [docs/guides/landing-seo.md](docs/guides/landing-seo.md) - Landing prerender, meta tags, robots/sitemap
+- [docs/guides/song-metadata.md](docs/guides/song-metadata.md) - Song metadata lookup + Spotify setup
+- [docs/guides/band-members.md](docs/guides/band-members.md) - Roles, why `band_members` has no RLS, invitation flow
+- [docs/setup/email-sending.md](docs/setup/email-sending.md) - Invitation emails (Edge Function + Resend)
+- [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
 - [migrations/README.md](migrations/README.md) - Database migration guide

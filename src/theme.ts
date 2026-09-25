@@ -2,7 +2,7 @@
  * Bandmate Design System Theme
  *
  * This theme file implements the Bandmate Style Guide v1.0
- * Reference: /docs/STYLE_GUIDE.md
+ * Reference: /docs/design/style-guide.md
  */
 
 export const theme = {

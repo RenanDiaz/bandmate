@@ -1,28 +1,42 @@
 # Documentation
 
-This directory contains all documentation for the Bandmate project.
+The main development guide — architecture, conventions, routes, data model and
+definition of done — is [CLAUDE.md](../CLAUDE.md). This folder holds the longer
+guides it links to.
 
-## Files
+```
+docs/
+├── setup/      # one-time configuration of external services
+├── guides/     # how a part of the app works
+├── design/     # design system
+├── intents/    # why a feature exists and what "done" means
+├── specs/      # technical specs, with the PR breakdown
+└── research/   # evaluations; not a description of the app
+```
 
-### Setup & Configuration
-- **[GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)** - Google OAuth configuration guide
-- **[SPOTIFY_SETUP.md](SPOTIFY_SETUP.md)** - Spotify API integration guide
-- **[SETUP_EMAIL_SENDING.md](SETUP_EMAIL_SENDING.md)** - Email service configuration
-- **[QUICK_START.md](QUICK_START.md)** - Quick start guide for developers
+## Setup
+- [setup/google-oauth.md](setup/google-oauth.md) — Google OAuth provider in Supabase
+- [setup/email-sending.md](setup/email-sending.md) — invitation emails (Edge Function + Resend)
 
-### Development Guides
-- **[STYLE_GUIDE.md](STYLE_GUIDE.md)** - Complete design system and brand guidelines
-- **[IMPLEMENTATION_EXAMPLES.md](IMPLEMENTATION_EXAMPLES.md)** - Copy-paste ready component examples
-- **[API_RESEARCH.md](API_RESEARCH.md)** - External API evaluation and integration notes
+## Guides
+- [guides/band-members.md](guides/band-members.md) — roles, why `band_members` has no RLS, invitation flow, test checklist
+- [guides/song-metadata.md](guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz, Lyrics.ovh) and Spotify setup
+- [guides/landing-seo.md](guides/landing-seo.md) — landing prerender, meta tags, robots/sitemap
 
-### Project Status & History
-- **[CURRENT_STATUS.md](CURRENT_STATUS.md)** - Current implementation status
-- **[INVITATION_FLOW_COMPLETE.md](INVITATION_FLOW_COMPLETE.md)** - Band invitation feature documentation
-- **[TESTING_BAND_MEMBERS.md](TESTING_BAND_MEMBERS.md)** - Testing guide for band members feature
-- **[APPLY_MIGRATION.md](APPLY_MIGRATION.md)** - Database migration application guide
+## Design
+- [design/style-guide.md](design/style-guide.md) — design system and brand guidelines
+- [design/implementation-examples.md](design/implementation-examples.md) — component examples for the style guide
 
-## Related Documentation
+## Offline performance
+- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress)
+- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3
 
-For the main development guide, see [CLAUDE.md](../CLAUDE.md) in the root directory.
+## Research
+- [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 
-For database migrations, see the [migrations](../migrations/) directory.
+## Elsewhere
+- [../migrations/README.md](../migrations/README.md) — database migrations (both flows)
+
+## Adding a doc
+Put it in the folder that matches, use `kebab-case.md`, and add it here and to
+the **Documentation** list in the root README.

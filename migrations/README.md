@@ -44,7 +44,8 @@ To apply a migration to your Supabase database:
 
 **Note:** Always review the migration file before applying it to ensure it's appropriate for your current database state.
 
-For detailed migration instructions, see [docs/APPLY_MIGRATION.md](../docs/APPLY_MIGRATION.md).
+For how the membership tables and their RLS came to be, see
+[docs/guides/band-members.md](../docs/guides/band-members.md).
 
 ## Migration History
 
