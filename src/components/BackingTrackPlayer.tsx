@@ -2,6 +2,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
+import { useToast } from "../context/useToast";
+import { BackingTrackEngine } from "../lib/backingTrackEngine";
 
 interface BackingTrackPlayerProps {
   songId: string;
@@ -67,132 +69,73 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
   onPlayingChange,
 }, ref) {
   const { t } = useTranslation();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const gainLRef = useRef<GainNode | null>(null);
-  const gainRRef = useRef<GainNode | null>(null);
-  const masterGainRef = useRef<GainNode | null>(null);
-  // Set when the playhead was moved programmatically (stop/seek). Chromium keeps a
-  // small buffer of pre-seek samples inside the MediaElementAudioSourceNode and plays
-  // them for a fraction of a second on the next play; we use this to mute that blip.
-  const didSeekRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [stalled, setStalled] = useState(false);
   const initialVolumes = loadStoredVolumes(songId);
   const [volumeL, setVolumeL] = useState(initialVolumes.l);
   const [volumeR, setVolumeR] = useState(initialVolumes.r);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Latest callbacks, read by the engine's listener.
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+  const onPlayingChangeRef = useRef(onPlayingChange);
+  const stallMessageRef = useRef(() => {});
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+    onPlayingChangeRef.current = onPlayingChange;
+    stallMessageRef.current = () => toast.warning(t("backingTrack.stalled"));
+  }, [onTimeUpdate, onPlayingChange, toast, t]);
+
+  // Playback lives in the engine (fresh element after a stop/seek, stall
+  // watchdog): see src/lib/backingTrackEngine.ts.
+  const engineRef = useRef<BackingTrackEngine | null>(null);
+  useEffect(() => {
+    const engine = new BackingTrackEngine({
+      onTimeUpdate: (time) => {
+        setCurrentTime(time);
+        onTimeUpdateRef.current?.(time);
+      },
+      onDurationChange: setDuration,
+      onPlayingChange: (playing) => {
+        setIsPlaying(playing);
+        if (playing) setStalled(false);
+        onPlayingChangeRef.current?.(playing);
+      },
+      onStalled: () => {
+        setStalled(true);
+        stallMessageRef.current();
+      },
+    });
+    engineRef.current = engine;
+    return () => {
+      engine.dispose();
+      if (engineRef.current === engine) engineRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    engineRef.current?.setSource(trackUrl);
+  }, [trackUrl]);
+
   // Reset player state and load stored volumes when song changes
   useEffect(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    engineRef.current?.stop();
+    setStalled(false);
     const stored = loadStoredVolumes(songId);
     setVolumeL(stored.l);
     setVolumeR(stored.r);
   }, [songId]);
 
-  // Lazily build the Web Audio graph: source → splitter → [gainL, gainR] → merger → destination.
-  // Must run inside a user gesture (play click) so iOS Safari unlocks the AudioContext.
-  const ensureAudioGraph = useCallback(() => {
-    if (audioContextRef.current || !audioRef.current) return;
-    type WebkitWindow = typeof window & { webkitAudioContext?: typeof AudioContext };
-    const Ctor = window.AudioContext || (window as WebkitWindow).webkitAudioContext;
-    if (!Ctor) return;
-
-    const ctx = new Ctor();
-    const source = ctx.createMediaElementSource(audioRef.current);
-    const splitter = ctx.createChannelSplitter(2);
-    const gainL = ctx.createGain();
-    const gainR = ctx.createGain();
-    const merger = ctx.createChannelMerger(2);
-    // Master gain sits at the end of the graph, untouched by the volume controls,
-    // so it can briefly mute the output to hide the post-seek stale-audio blip.
-    const masterGain = ctx.createGain();
-
-    source.connect(splitter);
-    splitter.connect(gainL, 0);
-    splitter.connect(gainR, 1);
-    gainL.connect(merger, 0, 0);
-    gainR.connect(merger, 0, 1);
-    merger.connect(masterGain);
-    masterGain.connect(ctx.destination);
-
-    gainL.gain.value = volumeL;
-    gainR.gain.value = volumeR;
-    masterGain.gain.value = 1;
-
-    audioContextRef.current = ctx;
-    sourceRef.current = source;
-    gainLRef.current = gainL;
-    gainRRef.current = gainR;
-    masterGainRef.current = masterGain;
-  }, [volumeL, volumeR]);
-
   // Keep gain nodes in sync with state and persist to localStorage
   useEffect(() => {
-    if (gainLRef.current) gainLRef.current.gain.value = volumeL;
-    if (gainRRef.current) gainRRef.current.gain.value = volumeR;
+    engineRef.current?.setVolumes({ l: volumeL, r: volumeR });
     persistVolumes(songId, { l: volumeL, r: volumeR });
   }, [songId, volumeL, volumeR]);
-
-  // Tear down the AudioContext on unmount
-  useEffect(() => {
-    return () => {
-      audioContextRef.current?.close().catch(() => undefined);
-      audioContextRef.current = null;
-    };
-  }, []);
-
-  // Handle audio events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      onTimeUpdate?.(audio.currentTime);
-    };
-    const handleDurationChange = () => setDuration(audio.duration);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      onPlayingChange?.(false);
-      // Pressing play after the track ends rewinds to 0 — same stale-audio blip.
-      didSeekRef.current = true;
-    };
-    const handlePlay = () => {
-      setIsPlaying(true);
-      onPlayingChange?.(true);
-    };
-    const handlePause = () => {
-      setIsPlaying(false);
-      onPlayingChange?.(false);
-    };
-
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("durationchange", handleDurationChange);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-
-    return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("durationchange", handleDurationChange);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-    };
-  }, [trackUrl, onTimeUpdate, onPlayingChange]);
 
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,46 +150,16 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
     [songId, onLoadTrack]
   );
 
-  // After a seek, briefly hold the output silent so the stale samples still buffered
-  // inside the MediaElementAudioSourceNode flush out before the real audio is heard.
-  const flushStaleAudioOnRestart = useCallback(() => {
-    const ctx = audioContextRef.current;
-    const master = masterGainRef.current;
-    if (!ctx || !master) return;
-    const now = ctx.currentTime;
-    master.gain.cancelScheduledValues(now);
-    master.gain.setValueAtTime(0, now);
-    master.gain.setValueAtTime(0, now + 0.2);
-    master.gain.linearRampToValueAtTime(1, now + 0.24);
-  }, []);
-
   const handlePlayPause = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !trackUrl) return;
-
-    if (isPlaying) {
-      audio.pause();
-      return;
-    }
-
-    ensureAudioGraph();
-    // iOS Safari ships AudioContext suspended until a user gesture resumes it
-    audioContextRef.current?.resume().catch(() => undefined);
-    if (didSeekRef.current) {
-      flushStaleAudioOnRestart();
-      didSeekRef.current = false;
-    }
-    audio.play().catch(() => undefined);
-  }, [isPlaying, trackUrl, ensureAudioGraph, flushStaleAudioOnRestart]);
+    const engine = engineRef.current;
+    if (!engine || !trackUrl) return;
+    // The element's real state, not React's: they can disagree.
+    if (engine.isPlaying) engine.pause();
+    else engine.play();
+  }, [trackUrl]);
 
   const handleSeek = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const time = parseFloat(event.target.value);
-    audio.currentTime = time;
-    setCurrentTime(time);
-    didSeekRef.current = true;
+    engineRef.current?.seek(parseFloat(event.target.value));
   }, []);
 
   const handleVolumeLChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,14 +171,7 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
   }, []);
 
   const handleStop = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.pause();
-    audio.currentTime = 0;
-    setCurrentTime(0);
-    setIsPlaying(false);
-    didSeekRef.current = true;
+    engineRef.current?.stop();
   }, []);
 
   const handleRemove = useCallback(() => {
@@ -304,9 +210,6 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
         onChange={handleFileSelect}
       />
 
-      <audio ref={audioRef} src={trackUrl ?? undefined} preload="metadata" />
-
-
       <PlayerHeader onClick={() => trackUrl && setIsExpanded(!isExpanded)}>
         <HeaderLeft>
           <PlayerIcon $hasTrack={!!trackUrl}>
@@ -314,7 +217,9 @@ export const BackingTrackPlayer = forwardRef<BackingTrackPlayerHandle, BackingTr
           </PlayerIcon>
           <HeaderInfo>
             <HeaderTitle>{t("backingTrack.title")}</HeaderTitle>
-            {trackUrl && trackFileName ? (
+            {trackUrl && stalled ? (
+              <HeaderWarning role="status">{t("backingTrack.stalled")}</HeaderWarning>
+            ) : trackUrl && trackFileName ? (
               <HeaderFileName>{trackFileName}</HeaderFileName>
             ) : hadTrackPreviously ? (
               <HeaderHint>{t("backingTrack.reloadHint")}</HeaderHint>
@@ -527,6 +432,11 @@ const HeaderFileName = styled.div`
   @media (max-width: ${theme.breakpoints.md}) {
     max-width: 120px;
   }
+`;
+
+const HeaderWarning = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: ${theme.colors.semantic.warning};
 `;
 
 const HeaderHint = styled.div`

@@ -884,7 +884,8 @@
     "collapse": "Collapse controls",
     "channelTrack": "Track",
     "channelClick": "Click / Cues",
-    "openFullPlayer": "Open full player"
+    "openFullPlayer": "Open full player",
+    "stalled": "The track didn't start. Tap play again."
   },
   "sheetMusic": {
     "title": "Sheet Music",

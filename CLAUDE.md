@@ -54,7 +54,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceDataSource, snapshotPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -430,6 +430,17 @@ the source. See §8 of
 
 **Local backing tracks** (`useLocalBackingTracks` hook): audio files stay on the
 device; only a song → file mapping is kept in localStorage. Nothing is uploaded.
+Playback is `BackingTrackEngine` (`src/lib/backingTrackEngine.ts`, plain TS,
+unit-tested) behind `BackingTrackPlayer`: the element goes through a Web Audio
+graph for the L/R volumes. Two rules keep it reliable on the iPad:
+- **Restart = fresh element.** A stop, a seek while paused or the end of the
+  track makes the next play use a new `<audio>` + source node (the old one
+  replays buffered samples from the previous position). Don't go back to
+  muting for a fixed time.
+- **Never pretend to play.** A watchdog checks 1.5 s after each play that the
+  time moved and the `AudioContext` is `running`; otherwise it pauses, warns
+  (toast + header) and the next tap rebuilds the context and element. iOS
+  only unlocks audio inside a user gesture, so there is no automatic retry.
 
 ### Edge Functions (`supabase/functions/`)
 
