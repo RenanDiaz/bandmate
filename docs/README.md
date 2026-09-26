@@ -31,6 +31,12 @@ docs/
 - [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress)
 - [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3
 
+## Backlog specs (from the 2026-09 TODO review)
+- [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
+- [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns
+- [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
+- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, two PRs)
+
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 
