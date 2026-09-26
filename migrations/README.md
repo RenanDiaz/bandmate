@@ -1,6 +1,15 @@
 # Database Migrations
 
-This directory contains SQL migration files for the Bandmate database schema.
+> **History only — don't apply these files.** The whole schema now lives in
+> `supabase/migrations/`, starting with
+> [`20260101000000_baseline.sql`](../supabase/migrations/20260101000000_baseline.sql),
+> a dump of production taken on 2026-09-26 that replaces everything below.
+> A fresh database is `supabase db push` (remote) or `supabase db reset`
+> (local). The files here show how the schema got there; production may
+> differ from them (it did: some policies carry names no file here creates),
+> so read the baseline, not these, to know what exists.
+
+This directory contains the legacy SQL migration files for the Bandmate database schema.
 
 > **Two migration flows exist in this repo:**
 >
@@ -21,7 +30,7 @@ This directory contains SQL migration files for the Bandmate database schema.
 - **[BAND_MEMBERS_MIGRATION.sql](BAND_MEMBERS_MIGRATION.sql)** - Initial band members table and permissions
 - **[BAND_MEMBERS_MIGRATION_FIXED.sql](BAND_MEMBERS_MIGRATION_FIXED.sql)** - Fixed version addressing initial issues
 - **[BAND_MEMBERS_MIGRATION_V3.sql](BAND_MEMBERS_MIGRATION_V3.sql)** - Third iteration with improved RLS policies
-- **[BAND_MEMBERS_MIGRATION_V4.sql](BAND_MEMBERS_MIGRATION_V4.sql)** - Latest version (use this one)
+- **[BAND_MEMBERS_MIGRATION_V4.sql](BAND_MEMBERS_MIGRATION_V4.sql)** - Latest version
 
 ### Band Settings
 - **[supabase/migrations/20260627134532_band_avatar_and_ownership.sql](../supabase/migrations/20260627134532_band_avatar_and_ownership.sql)** - Adds `bands.avatar_url`, the public `band-avatars` storage bucket, widens the band UPDATE policy to owners + admins, and adds the `transfer_band_ownership()` RPC _(moved to the CLI flow — apply with `supabase db push`)_
@@ -39,22 +48,17 @@ This directory contains SQL migration files for the Bandmate database schema.
 > `REHEARSALS_MIGRATION.sql` are replaced by
 > `supabase/migrations/20260927120000_align_content_rls_with_roles.sql`
 > (owner/admin/member may edit and delete any row of their band). The files are
-> kept for history; a fresh setup runs them and then `supabase db push`.
+> kept for history.
 
 ## Usage
 
-To apply a migration to your Supabase database:
-
-1. Open your Supabase project dashboard
-2. Navigate to the SQL Editor
-3. Copy the contents of the migration file you want to apply
-4. Paste and execute in the SQL Editor
-
-**Note:** Always review the migration file before applying it to ensure it's appropriate for your current database state.
+These files were applied by hand in the Supabase SQL Editor. They are no
+longer applied anywhere: new schema changes are CLI migrations in
+`supabase/migrations/` (see the note at the top).
 
 For how the membership tables and their RLS came to be, see
 [docs/guides/band-members.md](../docs/guides/band-members.md).
 
 ## Migration History
 
-The band members feature went through several iterations to resolve RLS (Row Level Security) policy issues and permission conflicts. The latest version (V4) is the recommended migration to use for new setups.
+The band members feature went through several iterations to resolve RLS (Row Level Security) policy issues and permission conflicts. V4 is the last iteration; its result is in the baseline.

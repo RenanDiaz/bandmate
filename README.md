@@ -85,19 +85,17 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 3. **Set up the database**
 
-   > **Known gap:** the base schema for `bands`, `songs` and `setlists` is not
-   > yet versioned in this repo, so a brand-new Supabase project can't be fully
-   > recreated from the migrations alone. If you need a fresh environment, ask
-   > for a schema dump.
-
-   On a database that already has the base schema:
-   - Legacy migrations in [`migrations/`](migrations/README.md) are applied
-     manually in the Supabase SQL Editor (start with `BAND_MEMBERS_MIGRATION_V4.sql`).
-   - Newer migrations live in `supabase/migrations/` and are applied with:
-     ```bash
-     supabase link --project-ref <your-project-ref>
-     supabase db push
-     ```
+   The whole schema is versioned in `supabase/migrations/`, starting with the
+   baseline `20260101000000_baseline.sql` (a dump of production). A new
+   Supabase project is created from the repo with:
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   supabase db push
+   ```
+   For a local database (Docker): `supabase start`, then `supabase db reset`
+   to rebuild it from the migrations. The files in
+   [`migrations/`](migrations/README.md) are the legacy history the baseline
+   replaces; don't apply them.
 
 4. **Configure authentication** — enable the GitHub and/or Google providers in
    Supabase → Authentication → Providers ([Google guide](docs/setup/google-oauth.md)).
@@ -179,7 +177,6 @@ Architecture, conventions, routes and the data model are documented in
 
 ## 🗺️ Roadmap
 
-- Version the base schema so a fresh environment can be created from the repo
 - Move Spotify and Groq calls behind Edge Functions (keep secrets off the client)
 - Automated tests
 

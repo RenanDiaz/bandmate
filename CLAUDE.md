@@ -533,9 +533,13 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `calendar_subscriptions` | One per (band, user): feed `token`, `include_shows`, `include_rehearsals`, `timezone` (IANA, from the browser) |
 | `performance_sessions` | Real-time sync sessions with `current_song_index` |
 
-> The base schema for `bands`, `songs` and `setlists` is **not** versioned in
-> this repo — it predates the migrations. Don't assume a fresh database can be
-> rebuilt from `migrations/` + `supabase/migrations/` alone.
+> The full schema is versioned: `supabase/migrations/20260101000000_baseline.sql`
+> is a dump of production (public schema, plus the `sheet-music` bucket, its
+> Storage policies and the Realtime publication) taken before the CLI
+> migrations, and marked applied in production. `supabase db reset` rebuilds a
+> local database from `supabase/migrations/` alone. It reproduces production
+> as it was, legacy policies included — read it before assuming which
+> policies exist.
 
 ### Role Permissions
 
@@ -589,15 +593,19 @@ VITE_OFFLINE_DOWNLOADS=true                         # feature flag: offline down
 
 ## Database Migrations
 
-There are two flows (details in [migrations/README.md](migrations/README.md)):
-
-- **`supabase/migrations/`** — Supabase CLI flow, applied with `supabase db push`.
-  **All new migrations go here**, named `<YYYYMMDDHHMMSS>_description.sql`.
-- **`migrations/`** — legacy files applied manually via the Supabase Dashboard
-  SQL Editor. Kept for reference; do not add new files here.
+- **`supabase/migrations/`** — the source of truth, applied with
+  `supabase db push`. It starts with `20260101000000_baseline.sql` (see
+  "Database Schema Notes"). **All new migrations go here**, named
+  `<YYYYMMDDHHMMSS>_description.sql`, dated after the latest one.
+- **`migrations/`** — legacy files that built the schema by hand in the
+  Supabase SQL Editor. The baseline replaces them: history only, never apply
+  them, don't add new files ([migrations/README.md](migrations/README.md)).
 
 Migrations must be idempotent where practical (`IF NOT EXISTS`, `DO $$ ... EXCEPTION WHEN duplicate_object`),
-following the style of the existing files.
+following the style of the existing files: they run on top of the baseline in
+`supabase db reset`. `supabase/config.toml` configures the local stack
+(`supabase start`, Docker); check a migration there with `supabase db reset`
+before pushing it.
 
 ## Testing & Definition of Done
 
@@ -684,7 +692,7 @@ needed") so reviewers know it was checked, not skipped.
 
 ### Adding a migration
 1. Create `supabase/migrations/<timestamp>_description.sql`
-2. Apply with `supabase db push`
+2. Check it locally with `supabase db reset`, then apply with `supabase db push`
 3. Update the schema table above if you add a table
 
 ## External Documentation
