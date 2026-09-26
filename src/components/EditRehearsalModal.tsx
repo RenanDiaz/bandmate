@@ -23,6 +23,7 @@ import { getBandSetlists } from "../services/setlistsService";
 import { getBandShows } from "../services/showsService";
 import type { Setlist } from "../services/setlistsService";
 import type { Show } from "../services/showsService";
+import { isPermissionDenied } from "../services/permissionError";
 
 interface Props {
   rehearsal: Rehearsal | null;
@@ -90,7 +91,7 @@ export const EditRehearsalModal: FC<Props> = ({ rehearsal, isOpen, onClose, onRe
       onReload();
     } catch (error) {
       console.error("Failed to update rehearsal:", error);
-      toast.error(t('rehearsals.updateError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('rehearsals.updateError'));
     }
     setLoading(false);
   };

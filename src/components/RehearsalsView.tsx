@@ -15,6 +15,8 @@ import { ConfirmModal } from "./ConfirmModal";
 import { CalendarSubscriptionModal } from "./CalendarSubscriptionModal";
 import { SEO } from "./SEO";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
+import { canManageEvents } from "../services/bandMembersService";
 
 interface Props {
   user: AppUser | null;
@@ -32,6 +34,7 @@ type ConfirmState = {
 
 const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const canManage = canManageEvents(selectedBand?.user_role ?? null);
   const toast = useToast();
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +94,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
           loadRehearsals();
         } catch (error) {
           console.error("Failed to delete rehearsal:", error);
-          toast.error(t('rehearsals.deleteError'));
+          toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('rehearsals.deleteError'));
         }
       },
     });
@@ -103,7 +106,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
       loadRehearsals();
     } catch (error) {
       console.error("Failed to mark rehearsal as completed:", error);
-      toast.error(t('rehearsals.updateStatusError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('rehearsals.updateStatusError'));
     }
   };
 
@@ -118,7 +121,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
           loadRehearsals();
         } catch (error) {
           console.error("Failed to cancel rehearsal:", error);
-          toast.error(t('rehearsals.cancelError'));
+          toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('rehearsals.cancelError'));
         }
       },
     });
@@ -184,7 +187,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
           </SubscribeButton>
         </PageHeader>
 
-        <NewRehearsalForm bandId={selectedBand.id} onRehearsalCreated={loadRehearsals} />
+        {canManage && <NewRehearsalForm bandId={selectedBand.id} onRehearsalCreated={loadRehearsals} />}
 
         <FilterContainer>
           <StyledButtonGroup>
@@ -222,6 +225,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
             onDelete={handleDelete}
             onMarkCompleted={handleMarkCompleted}
             onMarkCancelled={handleMarkCancelled}
+            canEdit={canManage}
           />
         )}
 

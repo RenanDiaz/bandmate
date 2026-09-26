@@ -21,6 +21,8 @@ import { processSongs, DEFAULT_FILTERS, type SortOption, type FilterOptions } fr
 import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
+import { canEditContent } from "../services/bandMembersService";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -31,6 +33,7 @@ interface Props {
 
 const SongsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const canEdit = canEditContent(selectedBand?.user_role ?? null);
   const toast = useToast();
   const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
@@ -111,7 +114,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
           await loadSongs();
         } catch (error) {
           console.error("Failed to delete song:", error);
-          toast.error(t("songs.deleteError"));
+          toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("songs.deleteError"));
         }
       },
     });
@@ -126,7 +129,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       );
     } catch (error) {
       console.error("Failed to transpose song:", error);
-      toast.error(t("songs.transposeError"));
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("songs.transposeError"));
     }
   };
 
@@ -139,7 +142,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       );
     } catch (error) {
       console.error("Failed to reset transposition:", error);
-      toast.error(t("songs.transposeError"));
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("songs.transposeError"));
     }
   };
 
@@ -213,10 +216,12 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
               </StatItem>
             </StatsCard>
             <ActionButtons>
-              <ActionButton onClick={() => setIsImportModalOpen(true)}>
-                <i className="bi bi-file-earmark-arrow-up"></i>
-                {t("songs.importCsv")}
-              </ActionButton>
+              {canEdit && (
+                <ActionButton onClick={() => setIsImportModalOpen(true)}>
+                  <i className="bi bi-file-earmark-arrow-up"></i>
+                  {t("songs.importCsv")}
+                </ActionButton>
+              )}
               {songs.length > 0 && (
                 <ActionButton onClick={() => navigate("/songs/print")}>
                   <i className="bi bi-printer"></i>
@@ -228,7 +233,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
         </PageHeader>
 
         <ContentSection>
-          <NewSongForm bandId={selectedBand.id} onSongCreated={loadSongs} />
+          {canEdit && <NewSongForm bandId={selectedBand.id} onSongCreated={loadSongs} />}
 
           {loading ? (
             <LoadingContainer>
@@ -276,6 +281,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                   onTranspose={handleTransposeSong}
                   onResetTransposition={handleResetTransposition}
                   onRequestAction={handleRequestAction}
+                  canEdit={canEdit}
                 />
               )}
             </>
@@ -289,12 +295,14 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
           onSave={handleSaveSong}
         />
 
-        <ImportSongsModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImportComplete={loadSongs}
-          bandId={selectedBand.id}
-        />
+        {canEdit && (
+          <ImportSongsModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            onImportComplete={loadSongs}
+            bandId={selectedBand.id}
+          />
+        )}
 
         {requestSong && requestType && (
           <NewRequestModal

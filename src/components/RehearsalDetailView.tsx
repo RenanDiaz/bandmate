@@ -17,6 +17,9 @@ import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
 import { buildIcsLabels, downloadRehearsalICS } from "../lib/calendarExport";
+import { isPermissionDenied } from "../services/permissionError";
+import { canManageEvents } from "../services/bandMembersService";
+import { useBandContext } from "../context/useBandContext";
 
 type ConfirmState = {
   title: string;
@@ -63,6 +66,8 @@ const getDaysUntil = (eventDate: string): { text: string; isPast: boolean } => {
 
 const RehearsalDetailView: FC = () => {
   const { t } = useTranslation();
+  const { selectedBand } = useBandContext();
+  const canManage = canManageEvents(selectedBand?.user_role ?? null);
   const toast = useToast();
   const { rehearsalId } = useParams<{ rehearsalId: string }>();
   const navigate = useNavigate();
@@ -139,7 +144,7 @@ const RehearsalDetailView: FC = () => {
           navigate("/rehearsals");
         } catch (err) {
           console.error("Failed to delete rehearsal:", err);
-          toast.error(t('rehearsals.deleteError'));
+          toast.error(isPermissionDenied(err) ? t('common.noPermission') : t('rehearsals.deleteError'));
         }
       },
     });
@@ -152,7 +157,7 @@ const RehearsalDetailView: FC = () => {
       setRehearsal(updated);
     } catch (err) {
       console.error("Failed to update rehearsal:", err);
-      toast.error(t('rehearsals.updateStatusError'));
+      toast.error(isPermissionDenied(err) ? t('common.noPermission') : t('rehearsals.updateStatusError'));
     }
   };
 
@@ -168,7 +173,7 @@ const RehearsalDetailView: FC = () => {
           setRehearsal(updated);
         } catch (err) {
           console.error("Failed to cancel rehearsal:", err);
-          toast.error(t('rehearsals.cancelError'));
+          toast.error(isPermissionDenied(err) ? t('common.noPermission') : t('rehearsals.cancelError'));
         }
       },
     });
@@ -293,7 +298,7 @@ const RehearsalDetailView: FC = () => {
           </HeaderContent>
 
           <ActionButtonsHeader>
-            {isUpcoming && (
+            {canManage && isUpcoming && (
               <>
                 <HeaderButton onClick={handleMarkCompleted} $variant="success">
                   <i className="bi bi-check-circle"></i>
@@ -312,10 +317,12 @@ const RehearsalDetailView: FC = () => {
               <i className="bi bi-calendar-plus"></i>
               {t('rehearsals.addToCalendar')}
             </HeaderButton>
-            <HeaderButton onClick={handleDelete} $variant="danger">
-              <i className="bi bi-trash"></i>
-              {t('common.delete')}
-            </HeaderButton>
+            {canManage && (
+              <HeaderButton onClick={handleDelete} $variant="danger">
+                <i className="bi bi-trash"></i>
+                {t('common.delete')}
+              </HeaderButton>
+            )}
           </ActionButtonsHeader>
         </RehearsalHeader>
 

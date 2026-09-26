@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserEditContent } from "./bandMembersService";
+import { PermissionError } from "./permissionError";
 import {
   transposeChordSheet,
   transposeKey,
@@ -184,7 +185,7 @@ export async function updateSong(songId: string, updates: UpdateSongInput) {
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(song.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit songs in this band");
+    throw new PermissionError("songs.update");
   }
 
   const { data, error } = await supabase
@@ -217,12 +218,19 @@ export async function deleteSong(songId: string) {
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(song.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to delete songs in this band");
+    throw new PermissionError("songs.delete");
   }
 
-  const { error } = await supabase.from("songs").delete().eq("id", songId);
+  // Ask for the deleted id: RLS filters a refused row out and PostgREST still
+  // answers 200, so an empty result is the only sign the delete was refused.
+  const { data, error } = await supabase
+    .from("songs")
+    .delete()
+    .eq("id", songId)
+    .select("id");
 
   if (error) throw error;
+  if (!data || data.length === 0) throw new PermissionError("songs.delete");
 }
 
 // Timing data functions for syncing lyrics/chords with audio
@@ -260,7 +268,7 @@ export async function updateSongTimingData(
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(song.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit songs in this band");
+    throw new PermissionError("songs.update");
   }
 
   const { data, error } = await supabase
@@ -303,7 +311,7 @@ export async function transposeSong(
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(song.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit songs in this band");
+    throw new PermissionError("songs.update");
   }
 
   // If this is the first transposition, save the original key
@@ -368,7 +376,7 @@ export async function resetSongTransposition(songId: string): Promise<Song> {
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(song.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit songs in this band");
+    throw new PermissionError("songs.update");
   }
 
   // Calculate semitones to get back to original

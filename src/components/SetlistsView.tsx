@@ -16,6 +16,8 @@ import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
 import { useBandContext } from "../context/useBandContext";
 import { isNetworkError } from "../lib/networkErrors";
+import { isPermissionDenied } from "../services/permissionError";
+import { canEditContent } from "../services/bandMembersService";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -26,6 +28,7 @@ interface Props {
 
 const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const canEdit = canEditContent(selectedBand?.user_role ?? null);
   const toast = useToast();
   const { reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const [setlists, setSetlists] = useState<Setlist[]>([]);
@@ -85,7 +88,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
           await loadSetlists();
         } catch (error) {
           console.error("Failed to delete setlist:", error);
-          toast.error(t("setlists.deleteError"));
+          toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("setlists.deleteError"));
         }
       },
     });
@@ -150,8 +153,12 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
         </PageHeader>
 
         <ContentSection>
-          <AISetlistGenerator bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
-          <NewSetlistForm bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
+          {canEdit && (
+            <>
+              <AISetlistGenerator bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
+              <NewSetlistForm bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
+            </>
+          )}
 
           {loading ? (
             <LoadingContainer>
@@ -172,6 +179,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
             <SetlistList
               setlists={setlists}
               onDelete={handleDeleteSetlist}
+              canEdit={canEdit}
             />
           )}
         </ContentSection>

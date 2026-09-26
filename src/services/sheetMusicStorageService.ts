@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserEditContent } from "./bandMembersService";
+import { PermissionError } from "./permissionError";
 
 const BUCKET_NAME = "sheet-music";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -32,7 +33,7 @@ export async function uploadSheetMusic(
   // Check user permission
   const hasPermission = await canUserEditContent(bandId);
   if (!hasPermission) {
-    throw new Error("You don't have permission to upload files for this band");
+    throw new PermissionError("song_sheet_music.upload");
   }
 
   // Create file path: bandId/songId/sheetMusicId.pdf

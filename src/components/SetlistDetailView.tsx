@@ -48,6 +48,8 @@ import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
 import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
+import { isPermissionDenied } from "../services/permissionError";
+import { canEditContent } from "../services/bandMembersService";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -461,7 +463,7 @@ const SetlistDetailView: FC = () => {
     .map((item) => getSongById(item.song_id))
     .filter((song): song is Song => song !== undefined);
 
-  const canEditSongs = selectedBand?.user_role !== "guest";
+  const canEditSongs = canEditContent(selectedBand?.user_role ?? null);
 
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
@@ -519,7 +521,7 @@ const SetlistDetailView: FC = () => {
       setIsReorderMode(false);
     } catch (error) {
       console.error("Failed to save order:", error);
-      toast.error(t("setlists.detail.saveOrderError"));
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("setlists.detail.saveOrderError"));
     }
     setSaving(false);
   };
@@ -715,7 +717,7 @@ const SetlistDetailView: FC = () => {
       setSelectedShowId("");
     } catch (error) {
       console.error("Failed to link setlist to show:", error);
-      toast.error(t("setlists.detail.linkError"));
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("setlists.detail.linkError"));
     }
     setLinkingShow(false);
   };

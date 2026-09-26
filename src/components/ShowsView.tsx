@@ -18,6 +18,8 @@ import { CalendarSubscriptionModal } from "./CalendarSubscriptionModal";
 import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
+import { canManageEvents } from "../services/bandMembersService";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -42,6 +44,7 @@ const formatTime = (timeString: string): string => {
 
 const ShowsView: FC<Props> = ({ user, selectedBand }) => {
   const { t } = useTranslation();
+  const canManage = canManageEvents(selectedBand?.user_role ?? null);
   const toast = useToast();
   const navigate = useNavigate();
   const [shows, setShows] = useState<Show[]>([]);
@@ -108,7 +111,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
           await loadShows();
         } catch (error) {
           console.error("Failed to delete show:", error);
-          toast.error(t("shows.deleteError"));
+          toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("shows.deleteError"));
         }
       },
     });
@@ -216,7 +219,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
         </PageHeader>
 
         <ContentSection>
-          <NewShowForm bandId={selectedBand.id} onShowCreated={loadShows} />
+          {canManage && <NewShowForm bandId={selectedBand.id} onShowCreated={loadShows} />}
 
           {todayShows.length > 0 && (
             <HappeningNowSection>
@@ -332,6 +335,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
               onEdit={handleEditShow}
               onDelete={handleDeleteShow}
               onReload={loadShows}
+              canEdit={canManage}
             />
           )}
         </ContentSection>

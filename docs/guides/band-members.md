@@ -9,8 +9,8 @@ How multi-user bands work: roles, the security model, and the invitation flow.
 | Action | Owner | Admin | Member | Guest |
 |--------|-------|-------|--------|-------|
 | View band / songs / setlists | ✅ | ✅ | ✅ | ✅ |
-| Create / edit songs and setlists (`canEditContent`) | ✅ | ✅ | ✅ | ❌ |
-| Manage shows and rehearsals (`canManageEvents`) | ✅ | ✅ | ✅ | ❌ |
+| Create, edit and delete songs and setlists — any row, regardless of creator (`canEditContent`) | ✅ | ✅ | ✅ | ❌ |
+| Create, edit, delete, complete and cancel shows and rehearsals — any row, regardless of creator (`canManageEvents`) | ✅ | ✅ | ✅ | ❌ |
 | Band settings (`canManageBandSettings`) | ✅ | ✅ | ❌ | ❌ |
 | Invite and manage members (`canManageMembers`) | ✅ | ❌ | ❌ | ❌ |
 
@@ -18,6 +18,16 @@ How multi-user bands work: roles, the security model, and the invitation flow.
 - Invitations offer **member** or **guest**. The owner can later promote a member to
   **admin** from the members list.
 - Guest invitations carry `expires_in_days: 30`; other invitations expire after 7 days.
+
+### Why ownership is not a permission
+
+The song library, setlists and calendar belong to the band, not to whoever typed
+them in. Owner, admin and member can edit and delete any song, setlist, show or
+rehearsal of their band; `user_id` on those rows is kept for attribution and
+reports only. The service checks, the UI gating and the RLS UPDATE/DELETE
+policies all follow this rule. Owners who want read-only collaborators use the
+guest role. Details and rationale:
+[docs/specs/content-permissions.md](../specs/content-permissions.md).
 
 ## Security model: `band_members` has no RLS
 

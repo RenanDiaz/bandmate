@@ -19,7 +19,7 @@ interface Props {
   onTranspose?: (songId: string, semitones: number) => void;
   onResetTransposition?: (songId: string) => void;
   onRequestAction?: (song: Song, requestType: RequestType) => void;
-  canEdit?: boolean;
+  canEdit: boolean;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -256,7 +256,7 @@ export const SongList: FC<Props> = ({
   onTranspose,
   onResetTransposition,
   onRequestAction,
-  canEdit = true
+  canEdit
 }) => {
   return (
     <SongsGrid>

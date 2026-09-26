@@ -40,6 +40,8 @@ import { EditSongModal } from "./EditSongModal";
 import { useTranslation } from "react-i18next";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
+import { canEditContent } from "../services/bandMembersService";
 
 // Sortable song card component
 interface SortableSetlistSongCardProps {
@@ -243,7 +245,7 @@ const SetlistEditor: FC = () => {
     })
   );
 
-  const canEditSongs = selectedBand?.user_role !== "guest";
+  const canEditSongs = canEditContent(selectedBand?.user_role ?? null);
 
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
@@ -314,7 +316,7 @@ const SetlistEditor: FC = () => {
       navigate("/setlists");
     } catch (error) {
       console.error("Failed to save setlist:", error);
-      toast.error(t('setlists.editor.saveError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('setlists.editor.saveError'));
     }
     setSaving(false);
   };

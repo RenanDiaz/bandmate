@@ -33,6 +33,14 @@ This directory contains SQL migration files for the Bandmate database schema.
 - **[FIX_BAND_INVITATIONS_POLICY.sql](FIX_BAND_INVITATIONS_POLICY.sql)** - Band invitation policy fixes
 - **[DEBUG_BAND_MEMBERS.sql](DEBUG_BAND_MEMBERS.sql)** - Debugging queries for band members
 
+> **Superseded policies.** The UPDATE and DELETE policies on `songs`, `setlists`,
+> `shows` and `rehearsals` defined in `FIX_BAND_ROLE_PERMISSIONS.sql`,
+> `FIX_SETLIST_UPDATE_POLICY.sql`, `SHOWS_MIGRATION.sql` and
+> `REHEARSALS_MIGRATION.sql` are replaced by
+> `supabase/migrations/20260927120000_align_content_rls_with_roles.sql`
+> (owner/admin/member may edit and delete any row of their band). The files are
+> kept for history; a fresh setup runs them and then `supabase db push`.
+
 ## Usage
 
 To apply a migration to your Supabase database:

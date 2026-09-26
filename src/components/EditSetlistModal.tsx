@@ -17,6 +17,7 @@ import { theme } from "../theme";
 import { useToast } from "../context/useToast";
 import { updateSetlist } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
+import { isPermissionDenied } from "../services/permissionError";
 
 interface Props {
   setlist: Setlist | null;
@@ -56,7 +57,7 @@ export const EditSetlistModal: FC<Props> = ({ setlist, isOpen, onClose, onUpdate
       onClose();
     } catch (error) {
       console.error("Failed to update setlist:", error);
-      toast.error(t('setlists.updateError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('setlists.updateError'));
     }
     setLoading(false);
   };

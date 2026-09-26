@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 import { getSessionUser } from "../lib/authSession";
 import { canUserEditContent } from "./bandMembersService";
+import { PermissionError } from "./permissionError";
 
 // ============================================
 // Setlist Item Types
@@ -332,7 +333,7 @@ export async function convertDraftToSetlist(setlistId: string): Promise<Setlist>
   // Check permission
   const hasPermission = await canUserEditContent(setlist.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to convert this draft");
+    throw new PermissionError("setlists.update");
   }
 
   const { data, error } = await supabase
@@ -370,7 +371,7 @@ export async function updateSetlist(setlistId: string, updates: UpdateSetlistInp
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(setlist.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit setlists in this band");
+    throw new PermissionError("setlists.update");
   }
 
   const { data, error } = await supabase
@@ -408,15 +409,19 @@ export async function deleteSetlist(setlistId: string): Promise<void> {
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(setlist.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to delete setlists in this band");
+    throw new PermissionError("setlists.delete");
   }
 
-  const { error } = await supabase
+  // Ask for the deleted id: RLS filters a refused row out and PostgREST still
+  // answers 200, so an empty result is the only sign the delete was refused.
+  const { data, error } = await supabase
     .from("setlists")
     .delete()
-    .eq("id", setlistId);
+    .eq("id", setlistId)
+    .select("id");
 
   if (error) throw error;
+  if (!data || data.length === 0) throw new PermissionError("setlists.delete");
 }
 
 /**
@@ -443,7 +448,7 @@ export async function updateSetlistYouTubePlaylist(
   // Check if user has permission to edit content in this band
   const hasPermission = await canUserEditContent(setlist.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit setlists in this band");
+    throw new PermissionError("setlists.update");
   }
 
   const { data, error } = await supabase

@@ -544,8 +544,22 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | View band/songs/setlists | ✅ | ✅ | ✅ | ✅ |
 | Create/edit songs | ✅ | ✅ | ✅ | ❌ |
 | Create/edit setlists | ✅ | ✅ | ✅ | ❌ |
+| Delete songs / setlists (any) | ✅ | ✅ | ✅ | ❌ |
+| Create/edit/delete shows and rehearsals (any) | ✅ | ✅ | ✅ | ❌ |
 | Band settings | ✅ | ✅ | ❌ | ❌ |
 | Manage members | ✅ | ❌ | ❌ | ❌ |
+
+"Any" means regardless of who created the row: `user_id` is attribution, not a
+permission input, and the RLS UPDATE/DELETE policies on `songs`, `setlists`,
+`shows` and `rehearsals` check the role only
+(`supabase/migrations/20260927120000_align_content_rls_with_roles.sql`). Views
+gate write actions with `canEditContent` / `canManageEvents` on
+`selectedBand.user_role` (never a bare `!== "guest"`); the list components take
+a required `canEdit`. Services throw `PermissionError`
+(`src/services/permissionError.ts`) on a refused write, including a delete that
+RLS filtered to zero rows, and views toast `common.noPermission` for it
+(`isPermissionDenied`). See
+[docs/specs/content-permissions.md](docs/specs/content-permissions.md).
 
 Because `band_members` has no RLS, every permission check in the UI/services
 matters — don't drop a role check assuming the database will catch it.
@@ -685,7 +699,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
-- [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (draft): content permissions — RLS, services and UI aligned with the role matrix
+- [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (2 PRs)

@@ -1,6 +1,6 @@
 # Spec: Content permissions — align RLS, services and UI with the role matrix
 
-> **Status:** draft · **Created:** 2026-09-26 · **Owner:** Renán Díaz
+> **Status:** implemented · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** TODO "Revisar los permisos para modificar canciones, playlists y
 > shows por parte de otros miembros de la banda, cualquiera con suficiente
 > privilegio debería poder editar y eliminar."
