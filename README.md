@@ -33,7 +33,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 **Shows & rehearsals**
 - Show scheduling with venue, soundcheck and linked setlist; list and calendar views
 - Rehearsal scheduling linked to shows and setlists
-- Calendar sync: a personal iCal feed of the band's shows and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
+- Calendar sync: a personal iCal feed of the band's shows, soundchecks and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
 
 **Performance mode**
 - Full-screen lyrics view with keyboard navigation and reorder on the fly

@@ -4,7 +4,7 @@ import {
   addDays,
   buildIcsCalendar,
   rehearsalToIcsEvent,
-  showToIcsEvent,
+  showToIcsEvents,
 } from "../_shared/ics.ts";
 import type { IcsEvent } from "../_shared/ics.ts";
 
@@ -113,8 +113,8 @@ serve(async (req) => {
     }
 
     const events: IcsEvent[] = [
-      ...(showsResult.data ?? []).map((show) =>
-        showToIcsEvent(show, undefined, appUrl)
+      ...(showsResult.data ?? []).flatMap((show) =>
+        showToIcsEvents(show, undefined, appUrl)
       ),
       ...(rehearsalsResult.data ?? []).map((rehearsal) =>
         rehearsalToIcsEvent(rehearsal, undefined, appUrl)

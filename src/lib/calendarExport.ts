@@ -4,15 +4,16 @@ import {
   buildIcsCalendar,
   DEFAULT_ICS_LABELS,
   rehearsalToIcsEvent,
-  showToIcsEvent,
+  showToIcsEvents,
 } from "../../supabase/functions/_shared/ics";
 import type { IcsEvent, IcsLabels } from "../../supabase/functions/_shared/ics";
 
 /**
- * Single-event iCalendar (.ics) downloads. Compatible with Google Calendar,
+ * Per-event iCalendar (.ics) downloads. Compatible with Google Calendar,
  * Apple Calendar, Outlook, etc. The builder is shared with the calendar-feed
  * Edge Function, so a downloaded event and the subscribed one have the same
- * UID: a calendar that has both keeps one copy.
+ * UID: a calendar that has both keeps one copy. A show's file also carries its
+ * soundcheck as a second event when it has one.
  */
 
 /** Localized labels for event descriptions. */
@@ -35,7 +36,7 @@ export function generateShowICS(
 ): string {
   return buildIcsCalendar({
     prodId: "-//Bandmate//Show//EN",
-    events: [showToIcsEvent(show, labels, appOrigin())],
+    events: showToIcsEvents(show, labels, appOrigin()),
   });
 }
 

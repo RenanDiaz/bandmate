@@ -7,6 +7,8 @@ import {
   foldIcsLine,
   rehearsalToIcsEvent,
   showToIcsEvent,
+  showToIcsEvents,
+  soundcheckToIcsEvent,
 } from "../../../supabase/functions/_shared/ics";
 import { getCalendarSubscribeLinks } from "../../services/calendarSubscriptionService";
 
@@ -118,6 +120,87 @@ describe("ics builder", () => {
     expect(ics).toContain("SUMMARY:Rehearsal: Full run");
     expect(ics).toContain("DTEND:20261008T220000");
     expect(ics).toContain("DTSTAMP:20260926T120000Z");
+  });
+});
+
+describe("soundcheck events", () => {
+  const show = {
+    id: "s1",
+    name: "Gig",
+    venue: "Club",
+    event_date: "2026-10-10",
+    event_time: "21:00:00",
+    status: "scheduled",
+    notes: "Bring the spare cable",
+  };
+
+  it("is omitted when the show has no soundcheck", () => {
+    expect(soundcheckToIcsEvent(show)).toBeNull();
+    expect(showToIcsEvents(show).map((e) => e.uid)).toEqual([
+      "show-s1@bandmate",
+    ]);
+  });
+
+  it("runs from the soundcheck to doors, with the show's place, notes and url", () => {
+    const event = soundcheckToIcsEvent(
+      { ...show, soundcheck_time: "18:00:00", doors_time: "20:00:00" },
+      undefined,
+      "https://www.bandmate.space"
+    );
+    expect(event).toMatchObject({
+      uid: "show-s1-soundcheck@bandmate",
+      summary: "Soundcheck: Gig",
+      date: "2026-10-10",
+      startTime: "18:00:00",
+      endTime: "20:00:00",
+      location: "Club",
+      description: "Bring the spare cable",
+      status: "CONFIRMED",
+      url: "https://www.bandmate.space/shows/s1",
+    });
+  });
+
+  it("ends at show time when there are no doors, and after an hour when neither is later", () => {
+    const untilShow = soundcheckToIcsEvent({
+      ...show,
+      soundcheck_time: "18:00:00",
+    });
+    expect(eventTimeLines(untilShow!)).toEqual([
+      "DTSTART:20261010T180000",
+      "DTEND:20261010T210000",
+    ]);
+
+    const afterShow = soundcheckToIcsEvent({
+      ...show,
+      soundcheck_time: "22:30:00",
+      doors_time: "20:00:00",
+    });
+    expect(afterShow!.endTime).toBeUndefined();
+    expect(eventTimeLines(afterShow!)).toEqual([
+      "DTSTART:20261010T223000",
+      "DTEND:20261010T233000",
+    ]);
+  });
+
+  it("is cancelled with the show and uses the localized label", () => {
+    const event = soundcheckToIcsEvent(
+      { ...show, soundcheck_time: "18:00:00", status: "cancelled" },
+      { soundcheck: "Prueba de sonido", doors: "Puertas", rehearsal: "Ensayo", formatTime: (t) => t.slice(0, 5) }
+    );
+    expect(event).toMatchObject({
+      summary: "Prueba de sonido: Gig",
+      status: "CANCELLED",
+    });
+  });
+
+  it("keeps the show event unchanged and adds the soundcheck after it", () => {
+    const events = showToIcsEvents({ ...show, soundcheck_time: "18:00:00" });
+    expect(events.map((e) => e.uid)).toEqual([
+      "show-s1@bandmate",
+      "show-s1-soundcheck@bandmate",
+    ]);
+    expect(events[0].startTime).toBe("21:00:00");
+    expect(events[0].description).toBe("Soundcheck: 18:00\nBring the spare cable");
   });
 });
 
