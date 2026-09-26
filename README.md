@@ -172,6 +172,9 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec: offline performance, Phases 2–3
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) — spec: content permissions (RLS, services and UI aligned with the role matrix)
+- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) — spec: song country/language as ISO codes with localised dropdowns
+- [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) — spec: themed AI setlist generation
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) — spec: perform a single song from the library
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap

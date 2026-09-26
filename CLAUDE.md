@@ -671,4 +671,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (draft): content permissions — RLS, services and UI aligned with the role matrix
+- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns
+- [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (2 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
