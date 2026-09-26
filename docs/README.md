@@ -31,6 +31,9 @@ docs/
 - [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress)
 - [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3
 
+## Permissions
+- [specs/content-permissions.md](specs/content-permissions.md) — spec: align RLS, services and UI with the role matrix (members edit/delete any content)
+
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 

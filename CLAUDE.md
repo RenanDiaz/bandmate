@@ -670,4 +670,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
+- [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (draft): content permissions — RLS, services and UI aligned with the role matrix
 - [migrations/README.md](migrations/README.md) - Database migration guide

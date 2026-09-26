@@ -171,6 +171,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec: offline performance, Phases 2–3
+- [docs/specs/content-permissions.md](docs/specs/content-permissions.md) — spec: content permissions (RLS, services and UI aligned with the role matrix)
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
