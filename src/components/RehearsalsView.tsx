@@ -12,6 +12,7 @@ import { RehearsalList } from "./RehearsalList";
 import { NewRehearsalForm } from "./NewRehearsalForm";
 import { EditRehearsalModal } from "./EditRehearsalModal";
 import { ConfirmModal } from "./ConfirmModal";
+import { CalendarSubscriptionModal } from "./CalendarSubscriptionModal";
 import { SEO } from "./SEO";
 import { useToast } from "../context/useToast";
 
@@ -37,6 +38,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
   const [filter, setFilter] = useState<FilterType>("upcoming");
   const [editingRehearsal, setEditingRehearsal] = useState<Rehearsal | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
@@ -173,6 +175,13 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
             </PageTitle>
             <PageSubtitle>{t('rehearsals.subtitle')}</PageSubtitle>
           </HeaderContent>
+          <SubscribeButton
+            onClick={() => setIsCalendarSubOpen(true)}
+            title={t('calendar.subscribeToCalendar')}
+          >
+            <i className="bi bi-calendar-plus"></i>
+            {t('calendar.subscribeToCalendar')}
+          </SubscribeButton>
         </PageHeader>
 
         <NewRehearsalForm bandId={selectedBand.id} onRehearsalCreated={loadRehearsals} />
@@ -225,6 +234,12 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
         />
       </Container>
 
+      <CalendarSubscriptionModal
+        isOpen={isCalendarSubOpen}
+        onClose={() => setIsCalendarSubOpen(false)}
+        bandId={selectedBand.id}
+        bandName={selectedBand.name}
+      />
       <ConfirmModal
         isOpen={confirm !== null}
         title={confirm?.title ?? ""}
@@ -264,6 +279,27 @@ const PageHeader = styled.div`
 `;
 
 const HeaderContent = styled.div``;
+
+const SubscribeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
+  background: ${theme.colors.brand.primary}20;
+  border: 1px solid ${theme.colors.brand.primary}40;
+  border-radius: ${theme.radius.base};
+  color: ${theme.colors.brand.primary};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${theme.colors.brand.primary}30;
+    border-color: ${theme.colors.brand.primary};
+  }
+`;
 
 const PageTitle = styled.h1`
   font-size: ${theme.fontSizes.h2};

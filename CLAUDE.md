@@ -92,7 +92,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `rehearsalsService.ts` | Rehearsal scheduling |
 | `requestsService.ts` | Band requests/proposals with comments and votes |
 | `reportsService.ts` | Band reports/statistics |
-| `calendarSubscriptionService.ts` | iCal feed subscriptions (served by the `calendar-feed` Edge Function) |
+| `calendarSubscriptionService.ts` | Per-user iCal feed subscriptions (served by the `calendar-feed` Edge Function): shows/rehearsals toggles, time zone, one-tap subscribe links (`webcal://`, Google, Outlook.com) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
 | `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
@@ -436,7 +436,14 @@ device; only a song → file mapping is kept in localStorage. Nothing is uploade
 Deno functions deployed with the Supabase CLI (`supabase functions deploy <name>`).
 They run with the service role key, so they bypass RLS — validate inputs carefully.
 
-- `calendar-feed` — public iCal feed of a band's shows (token-based, via `calendar_subscriptions`)
+- `calendar-feed` — public iCal feed of a band's shows and rehearsals (token-based, via
+  `calendar_subscriptions`). Deploy with `--no-verify-jwt`: calendar apps send no auth
+  header. It re-checks on every request that the subscriber is still in `band_members`
+  and serves the last 365 days onward. The iCal builder lives in
+  `supabase/functions/_shared/ics.ts`, dependency-free, shared with the app's
+  single-event `.ics` downloads (`src/lib/calendarExport.ts`) and tested from
+  `src/lib/__tests__/ics.test.ts`. Times are floating (the app stores no zone) plus
+  `X-WR-TIMEZONE` from the subscription's `timezone`.
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 
 ### Landing Page & SEO
@@ -508,7 +515,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `shows` | Shows/gigs with venue, date, soundcheck, setlist reference |
 | `rehearsals` | Rehearsals with date/location |
 | `requests`, `request_comments`, `request_votes` | Band proposals (new song, setlist proposal, etc.) |
-| `calendar_subscriptions` | Tokens for the iCal feed |
+| `calendar_subscriptions` | One per (band, user): feed `token`, `include_shows`, `include_rehearsals`, `timezone` (IANA, from the browser) |
 | `performance_sessions` | Real-time sync sessions with `current_song_index` |
 
 > The base schema for `bands`, `songs` and `setlists` is **not** versioned in
