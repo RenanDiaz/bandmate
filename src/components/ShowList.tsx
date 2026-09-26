@@ -15,6 +15,7 @@ import {
 } from "reactstrap";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -23,7 +24,7 @@ interface Props {
   onEdit: (show: Show) => void;
   onDelete: (show: Show) => void;
   onReload: () => void;
-  canEdit?: boolean;
+  canEdit: boolean;
 }
 
 const formatDate = (dateString: string): string => {
@@ -280,7 +281,7 @@ const ShowCardItem: FC<{
   );
 };
 
-export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit = true }) => {
+export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit }) => {
   const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
@@ -308,7 +309,7 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit
       onReload();
     } catch (error) {
       console.error("Failed to mark show as completed:", error);
-      toast.error(t('shows.updateStatusError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('shows.updateStatusError'));
     }
   };
 
@@ -323,7 +324,7 @@ export const ShowList: FC<Props> = ({ shows, onEdit, onDelete, onReload, canEdit
           onReload();
         } catch (error) {
           console.error("Failed to cancel show:", error);
-          toast.error(t('shows.cancelError'));
+          toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('shows.cancelError'));
         }
       },
     });

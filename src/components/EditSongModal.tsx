@@ -9,6 +9,7 @@ import { LineSyncModal } from "./LineSyncModal";
 import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
 
 interface Props {
   song: Song | null;
@@ -189,7 +190,7 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
       onClose();
     } catch (error) {
       console.error("Failed to update song:", error);
-      toast.error(t("songs.updateError"));
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("songs.updateError"));
     } finally {
       setIsSaving(false);
     }

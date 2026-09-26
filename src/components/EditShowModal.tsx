@@ -21,6 +21,7 @@ import { updateShow } from "../services/showsService";
 import type { Show, ShowStatus } from "../services/showsService";
 import { getBandSetlists } from "../services/setlistsService";
 import type { Setlist } from "../services/setlistsService";
+import { isPermissionDenied } from "../services/permissionError";
 
 interface Props {
   show: Show | null;
@@ -89,7 +90,7 @@ export const EditShowModal: FC<Props> = ({ show, isOpen, onClose, onReload, band
       onReload();
     } catch (error) {
       console.error("Failed to update show:", error);
-      toast.error(t('shows.updateError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('shows.updateError'));
     }
     setLoading(false);
   };

@@ -19,7 +19,7 @@ import {
 interface Props {
   setlists: Setlist[];
   onDelete: (setlist: Setlist) => void;
-  canEdit?: boolean;
+  canEdit: boolean;
 }
 
 // Individual setlist card component to manage its own dropdown state
@@ -140,7 +140,7 @@ const SetlistCardItem: FC<{
   );
 };
 
-export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit = true }) => {
+export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit }) => {
   const navigate = useNavigate();
   const offlineMetas = useOfflineSnapshotMetas(isOfflineDownloadsEnabled());
 

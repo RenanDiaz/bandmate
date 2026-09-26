@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserManageEvents } from "./bandMembersService";
 import { getLocalToday } from "../lib/dateUtils";
+import { PermissionError } from "./permissionError";
 
 export type RehearsalStatus = "scheduled" | "completed" | "cancelled";
 
@@ -172,7 +173,7 @@ export async function updateRehearsal(rehearsalId: string, updates: UpdateRehear
   // Check if user has permission to manage events in this band
   const hasPermission = await canUserManageEvents(rehearsal.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit rehearsals in this band");
+    throw new PermissionError("rehearsals.update");
   }
 
   const { data, error } = await supabase
@@ -210,15 +211,19 @@ export async function deleteRehearsal(rehearsalId: string): Promise<void> {
   // Check if user has permission to manage events in this band
   const hasPermission = await canUserManageEvents(rehearsal.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to delete rehearsals in this band");
+    throw new PermissionError("rehearsals.delete");
   }
 
-  const { error } = await supabase
+  // Ask for the deleted id: RLS filters a refused row out and PostgREST still
+  // answers 200, so an empty result is the only sign the delete was refused.
+  const { data, error } = await supabase
     .from("rehearsals")
     .delete()
-    .eq("id", rehearsalId);
+    .eq("id", rehearsalId)
+    .select("id");
 
   if (error) throw error;
+  if (!data || data.length === 0) throw new PermissionError("rehearsals.delete");
 }
 
 /**

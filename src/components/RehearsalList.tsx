@@ -12,7 +12,7 @@ interface Props {
   onDelete: (rehearsal: Rehearsal) => void;
   onMarkCompleted: (rehearsal: Rehearsal) => void;
   onMarkCancelled: (rehearsal: Rehearsal) => void;
-  canEdit?: boolean;
+  canEdit: boolean;
 }
 
 const formatTime = (timeString: string): string => {
@@ -47,7 +47,7 @@ export const RehearsalList: FC<Props> = ({
   onDelete,
   onMarkCompleted,
   onMarkCancelled,
-  canEdit = true,
+  canEdit,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();

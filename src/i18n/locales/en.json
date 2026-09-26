@@ -1,5 +1,6 @@
 {
   "common": {
+    "noPermission": "You don't have permission to do that in this band",
     "loading": "Loading...",
     "save": "Save",
     "saving": "Saving...",

@@ -16,6 +16,9 @@ import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 import { useToast } from "../context/useToast";
+import { isPermissionDenied } from "../services/permissionError";
+import { canManageEvents } from "../services/bandMembersService";
+import { useBandContext } from "../context/useBandContext";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -57,6 +60,8 @@ const getDaysUntil = (eventDate: string): { text: string; isPast: boolean } => {
 
 const ShowDetailView: FC = () => {
   const { t } = useTranslation();
+  const { selectedBand } = useBandContext();
+  const canManage = canManageEvents(selectedBand?.user_role ?? null);
   const toast = useToast();
   const { showId } = useParams<{ showId: string }>();
   const navigate = useNavigate();
@@ -131,7 +136,7 @@ const ShowDetailView: FC = () => {
           navigate("/shows");
         } catch (err) {
           console.error("Failed to delete show:", err);
-          toast.error(t("shows.deleteError"));
+          toast.error(isPermissionDenied(err) ? t("common.noPermission") : t("shows.deleteError"));
         }
       },
     });
@@ -144,7 +149,7 @@ const ShowDetailView: FC = () => {
       setShow(updated);
     } catch (err) {
       console.error("Failed to update show:", err);
-      toast.error(t("shows.updateStatusError"));
+      toast.error(isPermissionDenied(err) ? t("common.noPermission") : t("shows.updateStatusError"));
     }
   };
 
@@ -160,7 +165,7 @@ const ShowDetailView: FC = () => {
           setShow(updated);
         } catch (err) {
           console.error("Failed to cancel show:", err);
-          toast.error(t("shows.cancelError"));
+          toast.error(isPermissionDenied(err) ? t("common.noPermission") : t("shows.cancelError"));
         }
       },
     });
@@ -185,7 +190,7 @@ const ShowDetailView: FC = () => {
       setSetlist(setlistData);
     } catch (err) {
       console.error("Failed to link setlist:", err);
-      toast.error(t("shows.linkSetlistError"));
+      toast.error(isPermissionDenied(err) ? t("common.noPermission") : t("shows.linkSetlistError"));
     }
     setLinkingSetlist(false);
   };
@@ -308,7 +313,7 @@ const ShowDetailView: FC = () => {
           </HeaderContent>
 
           <ActionButtonsHeader>
-            {canChangeStatus && (
+            {canManage && canChangeStatus && (
               <>
                 <HeaderButton onClick={handleMarkCompleted} $variant="success">
                   <i className="bi bi-check-circle"></i>
@@ -320,10 +325,12 @@ const ShowDetailView: FC = () => {
                 </HeaderButton>
               </>
             )}
-            <HeaderButton onClick={handleDelete} $variant="danger">
-              <i className="bi bi-trash"></i>
-              Delete
-            </HeaderButton>
+            {canManage && (
+              <HeaderButton onClick={handleDelete} $variant="danger">
+                <i className="bi bi-trash"></i>
+                Delete
+              </HeaderButton>
+            )}
             <CalendarButton onClick={() => downloadShowICS(show, buildIcsLabels(t))}>
               <i className="bi bi-calendar-plus"></i>
               {t("shows.addToCalendar")}
@@ -412,7 +419,7 @@ const ShowDetailView: FC = () => {
                   <i className="bi bi-music-note-list"></i>
                 </NoSetlistIcon>
                 <NoSetlistText>No setlist linked to this show</NoSetlistText>
-                {availableSetlists.length > 0 ? (
+                {!canManage ? null : availableSetlists.length > 0 ? (
                   <>
                     <NoSetlistHint>
                       Select an existing setlist to link to this show:

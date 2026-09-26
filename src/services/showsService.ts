@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 import { canUserManageEvents } from "./bandMembersService";
 import { getLocalToday } from "../lib/dateUtils";
+import { PermissionError } from "./permissionError";
 
 export type ShowStatus = "upcoming" | "completed" | "cancelled";
 
@@ -161,7 +162,7 @@ export async function updateShow(showId: string, updates: UpdateShowInput): Prom
   // Check if user has permission to manage events in this band
   const hasPermission = await canUserManageEvents(show.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to edit shows in this band");
+    throw new PermissionError("shows.update");
   }
 
   const { data, error } = await supabase
@@ -199,15 +200,19 @@ export async function deleteShow(showId: string): Promise<void> {
   // Check if user has permission to manage events in this band
   const hasPermission = await canUserManageEvents(show.band_id);
   if (!hasPermission) {
-    throw new Error("You don't have permission to delete shows in this band");
+    throw new PermissionError("shows.delete");
   }
 
-  const { error } = await supabase
+  // Ask for the deleted id: RLS filters a refused row out and PostgREST still
+  // answers 200, so an empty result is the only sign the delete was refused.
+  const { data, error } = await supabase
     .from("shows")
     .delete()
-    .eq("id", showId);
+    .eq("id", showId)
+    .select("id");
 
   if (error) throw error;
+  if (!data || data.length === 0) throw new PermissionError("shows.delete");
 }
 
 /**
