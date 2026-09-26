@@ -17,8 +17,8 @@
 --
 -- Known: production still carries legacy owner-only / creator-only policies
 -- on `songs` and `setlists` (e.g. "Users can update their setlists"). They
--- are reproduced here as they are; the RLS alignment migration decides their
--- fate (docs/specs/content-permissions.md).
+-- are reproduced here as they are; 20260927120000_align_content_rls_with_roles
+-- drops them (docs/specs/content-permissions.md).
 
 
 
