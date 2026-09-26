@@ -266,6 +266,53 @@ export function showToIcsEvent(
   };
 }
 
+const SOUNDCHECK_DEFAULT_DURATION_MINUTES = 60;
+
+/**
+ * The soundcheck as its own event (a call time the musician gets a reminder
+ * for), or `null` when the show has none. It ends at doors, else at show time,
+ * else after an hour; a soundcheck stored after both keeps the hour. The UID
+ * derives from the show's so a download and the feed dedupe the same way.
+ */
+export function soundcheckToIcsEvent(
+  show: IcsShowRow,
+  labels: IcsLabels = DEFAULT_ICS_LABELS,
+  appUrl?: string
+): IcsEvent | null {
+  if (!show.soundcheck_time) return null;
+
+  const start = toMinutes(show.soundcheck_time);
+  const endTime = [show.doors_time, show.event_time].find(
+    (time): time is string => !!time && toMinutes(time) > start
+  );
+
+  return {
+    uid: `show-${show.id}-soundcheck@bandmate`,
+    summary: `${labels.soundcheck}: ${show.name}`,
+    date: show.event_date,
+    startTime: show.soundcheck_time,
+    endTime,
+    defaultDurationMinutes: SOUNDCHECK_DEFAULT_DURATION_MINUTES,
+    location: [show.venue, show.venue_address].filter(Boolean).join(", "),
+    description: show.notes,
+    status: show.status === "cancelled" ? "CANCELLED" : "CONFIRMED",
+    lastModified: show.updated_at,
+    url: appUrl ? `${appUrl}/shows/${show.id}` : null,
+  };
+}
+
+/** Every event a show contributes to a calendar: the show, then its soundcheck. */
+export function showToIcsEvents(
+  show: IcsShowRow,
+  labels: IcsLabels = DEFAULT_ICS_LABELS,
+  appUrl?: string
+): IcsEvent[] {
+  const soundcheck = soundcheckToIcsEvent(show, labels, appUrl);
+  return soundcheck
+    ? [showToIcsEvent(show, labels, appUrl), soundcheck]
+    : [showToIcsEvent(show, labels, appUrl)];
+}
+
 export function rehearsalToIcsEvent(
   rehearsal: IcsRehearsalRow,
   labels: IcsLabels = DEFAULT_ICS_LABELS,

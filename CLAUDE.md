@@ -454,7 +454,11 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   `supabase/functions/_shared/ics.ts`, dependency-free, shared with the app's
   single-event `.ics` downloads (`src/lib/calendarExport.ts`) and tested from
   `src/lib/__tests__/ics.test.ts`. Times are floating (the app stores no zone) plus
-  `X-WR-TIMEZONE` from the subscription's `timezone`.
+  `X-WR-TIMEZONE` from the subscription's `timezone`. A show with a
+  `soundcheck_time` contributes two events (`showToIcsEvents`): the show and a
+  `Soundcheck: <show>` event (`show-<id>-soundcheck@bandmate`) that ends at
+  doors, else at show time, else after an hour; it follows `include_shows`, has
+  no toggle of its own, and the `.ics` download of a show carries both.
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 
 ### Landing Page & SEO
