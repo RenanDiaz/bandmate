@@ -1,17 +1,23 @@
 import type { FC } from "react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, ModalHeader, ModalBody, Spinner } from "reactstrap";
+import { Modal, ModalHeader, ModalBody, Spinner, Input, Label } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
 import {
   getCalendarSubscription,
   createCalendarSubscription,
+  updateCalendarSubscriptionOptions,
   regenerateSubscriptionToken,
   deleteCalendarSubscription,
   getCalendarFeedUrl,
+  getCalendarSubscribeLinks,
+  getDeviceTimeZone,
 } from "../services/calendarSubscriptionService";
-import type { CalendarSubscription } from "../services/calendarSubscriptionService";
+import type {
+  CalendarSubscription,
+  CalendarSubscriptionOptions,
+} from "../services/calendarSubscriptionService";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
 
@@ -43,8 +49,11 @@ export const CalendarSubscriptionModal: FC<Props> = ({
   const [subscription, setSubscription] =
     useState<CalendarSubscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const deviceTimeZone = getDeviceTimeZone();
 
   const runConfirm = async () => {
     if (!confirm) return;
@@ -59,11 +68,18 @@ export const CalendarSubscriptionModal: FC<Props> = ({
 
   const loadSubscription = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     try {
-      const sub = await getCalendarSubscription(bandId);
+      let sub = await getCalendarSubscription(bandId);
+      // Subscriptions created before the time zone column get this device's.
+      const timezone = getDeviceTimeZone();
+      if (sub && !sub.timezone && timezone) {
+        sub = await updateCalendarSubscriptionOptions(sub.id, { timezone });
+      }
       setSubscription(sub);
     } catch (err) {
       console.error("Failed to load subscription:", err);
+      setLoadFailed(true);
     }
     setLoading(false);
   }, [bandId]);
@@ -86,6 +102,20 @@ export const CalendarSubscriptionModal: FC<Props> = ({
     setCreating(false);
   };
 
+  const saveOptions = async (options: CalendarSubscriptionOptions) => {
+    if (!subscription) return;
+    setSaving(true);
+    try {
+      setSubscription(
+        await updateCalendarSubscriptionOptions(subscription.id, options)
+      );
+    } catch (err) {
+      console.error("Failed to update subscription:", err);
+      toast.error(t("calendar.updateError"));
+    }
+    setSaving(false);
+  };
+
   const handleRegenerate = async () => {
     if (!subscription) return;
     setConfirm({
@@ -99,6 +129,7 @@ export const CalendarSubscriptionModal: FC<Props> = ({
           setSubscription(updated);
         } catch (err) {
           console.error("Failed to regenerate token:", err);
+          toast.error(t("calendar.updateError"));
         }
       },
     });
@@ -117,6 +148,7 @@ export const CalendarSubscriptionModal: FC<Props> = ({
           setSubscription(null);
         } catch (err) {
           console.error("Failed to delete subscription:", err);
+          toast.error(t("calendar.deleteError"));
         }
       },
     });
@@ -143,6 +175,7 @@ export const CalendarSubscriptionModal: FC<Props> = ({
   };
 
   const feedUrl = subscription ? getCalendarFeedUrl(subscription.token) : "";
+  const links = getCalendarSubscribeLinks(feedUrl, `${bandName} (Bandmate)`);
 
   return (
     <Modal isOpen={isOpen} toggle={onClose} centered>
@@ -155,12 +188,106 @@ export const CalendarSubscriptionModal: FC<Props> = ({
           <LoadingContainer>
             <Spinner color="primary" />
           </LoadingContainer>
+        ) : loadFailed ? (
+          <CreateContent>
+            <CreateDescription>{t("calendar.loadError")}</CreateDescription>
+            <SecondaryButton onClick={loadSubscription}>
+              <i className="bi bi-arrow-clockwise me-1"></i>
+              {t("common.retry")}
+            </SecondaryButton>
+          </CreateContent>
         ) : subscription ? (
           <SubscriptionContent>
             <Description>{t("calendar.subscriptionActive")}</Description>
 
-            <UrlSection>
-              <UrlLabel>{t("calendar.feedUrl")}</UrlLabel>
+            <Section>
+              <SectionLabel>{t("calendar.addTo")}</SectionLabel>
+              <SubscribeLinks>
+                <SubscribeLink href={links.apple}>
+                  <i className="bi bi-apple"></i>
+                  <span>
+                    Apple Calendar
+                    <small>{t("calendar.appleHint")}</small>
+                  </span>
+                </SubscribeLink>
+                <SubscribeLink
+                  href={links.google}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="bi bi-google"></i>
+                  <span>
+                    Google Calendar
+                    <small>{t("calendar.googleHint")}</small>
+                  </span>
+                </SubscribeLink>
+                <SubscribeLink
+                  href={links.outlook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="bi bi-microsoft"></i>
+                  <span>
+                    Outlook.com
+                    <small>{t("calendar.outlookHint")}</small>
+                  </span>
+                </SubscribeLink>
+              </SubscribeLinks>
+            </Section>
+
+            <Section>
+              <SectionLabel>{t("calendar.include")}</SectionLabel>
+              <Toggles>
+                <Toggle>
+                  <Input
+                    type="switch"
+                    id="calendar-include-shows"
+                    checked={subscription.include_shows}
+                    disabled={saving || !subscription.include_rehearsals}
+                    onChange={(e) =>
+                      saveOptions({ include_shows: e.target.checked })
+                    }
+                  />
+                  <Label for="calendar-include-shows" check>
+                    {t("calendar.includeShows")}
+                  </Label>
+                </Toggle>
+                <Toggle>
+                  <Input
+                    type="switch"
+                    id="calendar-include-rehearsals"
+                    checked={subscription.include_rehearsals}
+                    disabled={saving || !subscription.include_shows}
+                    onChange={(e) =>
+                      saveOptions({ include_rehearsals: e.target.checked })
+                    }
+                  />
+                  <Label for="calendar-include-rehearsals" check>
+                    {t("calendar.includeRehearsals")}
+                  </Label>
+                </Toggle>
+              </Toggles>
+              {subscription.timezone && (
+                <TimeZoneNote>
+                  <i className="bi bi-globe2 me-1"></i>
+                  {t("calendar.timezone", { timezone: subscription.timezone })}
+                  {deviceTimeZone && deviceTimeZone !== subscription.timezone && (
+                    <LinkButton
+                      type="button"
+                      disabled={saving}
+                      onClick={() => saveOptions({ timezone: deviceTimeZone })}
+                    >
+                      {t("calendar.useDeviceTimezone", {
+                        timezone: deviceTimeZone,
+                      })}
+                    </LinkButton>
+                  )}
+                </TimeZoneNote>
+              )}
+            </Section>
+
+            <Section>
+              <SectionLabel>{t("calendar.feedUrl")}</SectionLabel>
               <UrlBox>
                 <UrlText>{feedUrl}</UrlText>
                 <CopyButton onClick={handleCopy}>
@@ -168,7 +295,7 @@ export const CalendarSubscriptionModal: FC<Props> = ({
                   {copied ? t("calendar.copied") : t("calendar.copy")}
                 </CopyButton>
               </UrlBox>
-            </UrlSection>
+            </Section>
 
             <InstructionsSection>
               <InstructionsTitle>
@@ -272,18 +399,88 @@ const Description = styled.p`
   font-size: ${theme.fontSizes.body};
 `;
 
-const UrlSection = styled.div`
+const Section = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[2]};
 `;
 
-const UrlLabel = styled.label`
+const SectionLabel = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
+`;
+
+const SubscribeLinks = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ${theme.space[2]};
+`;
+
+const SubscribeLink = styled.a`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[3]};
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  color: var(--color-text-primary);
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  text-decoration: none;
+  transition: border-color ${theme.transitions.fast} ease;
+
+  i {
+    font-size: ${theme.fontSizes.h3};
+    color: ${theme.colors.brand.primary};
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+  }
+
+  small {
+    font-size: ${theme.fontSizes.bodyXs};
+    font-weight: ${theme.fontWeights.regular};
+    color: var(--color-text-tertiary);
+  }
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    color: var(--color-text-primary);
+  }
+`;
+
+const Toggles = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${theme.space[4]};
+`;
+
+const Toggle = styled.div.attrs({ className: "form-check form-switch" })`
+  margin: 0;
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-primary);
+`;
+
+const TimeZoneNote = styled.div`
+  font-size: ${theme.fontSizes.bodyXs};
+  color: var(--color-text-tertiary);
+`;
+
+const LinkButton = styled.button`
+  margin-left: ${theme.space[2]};
+  padding: 0;
+  background: none;
+  border: none;
+  color: ${theme.colors.brand.primary};
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 `;
 
 const UrlBox = styled.div`

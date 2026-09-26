@@ -16,6 +16,7 @@ import type { Song } from "../services/songsService";
 import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
+import { buildIcsLabels, downloadRehearsalICS } from "../lib/calendarExport";
 
 type ConfirmState = {
   title: string;
@@ -304,6 +305,13 @@ const RehearsalDetailView: FC = () => {
                 </HeaderButton>
               </>
             )}
+            <HeaderButton
+              onClick={() => downloadRehearsalICS(rehearsal, buildIcsLabels(t))}
+              $variant="neutral"
+            >
+              <i className="bi bi-calendar-plus"></i>
+              {t('rehearsals.addToCalendar')}
+            </HeaderButton>
             <HeaderButton onClick={handleDelete} $variant="danger">
               <i className="bi bi-trash"></i>
               {t('common.delete')}
@@ -627,25 +635,19 @@ const ActionButtonsHeader = styled.div`
   }
 `;
 
-const HeaderButton = styled(Button)<{ $variant: "success" | "warning" | "danger" }>`
-  background: ${(props) =>
-    props.$variant === "success"
-      ? theme.colors.semantic.successBgDark
-      : props.$variant === "warning"
-      ? theme.colors.semantic.warningBgDark
-      : theme.colors.semantic.errorBgDark} !important;
-  border: 1px solid ${(props) =>
-    props.$variant === "success"
-      ? theme.colors.semantic.success
-      : props.$variant === "warning"
-      ? theme.colors.accent.amber
-      : theme.colors.semantic.error}40 !important;
-  color: ${(props) =>
-    props.$variant === "success"
-      ? theme.colors.semantic.success
-      : props.$variant === "warning"
-      ? theme.colors.accent.amber
-      : theme.colors.semantic.error} !important;
+type HeaderButtonVariant = "success" | "warning" | "danger" | "neutral";
+
+const headerButtonColors: Record<HeaderButtonVariant, { bg: string; fg: string }> = {
+  success: { bg: theme.colors.semantic.successBgDark, fg: theme.colors.semantic.success },
+  warning: { bg: theme.colors.semantic.warningBgDark, fg: theme.colors.accent.amber },
+  danger: { bg: theme.colors.semantic.errorBgDark, fg: theme.colors.semantic.error },
+  neutral: { bg: "var(--color-bg-tertiary)", fg: theme.colors.brand.primary },
+};
+
+const HeaderButton = styled(Button)<{ $variant: HeaderButtonVariant }>`
+  background: ${(props) => headerButtonColors[props.$variant].bg} !important;
+  border: 1px solid ${(props) => headerButtonColors[props.$variant].fg}40 !important;
+  color: ${(props) => headerButtonColors[props.$variant].fg} !important;
   padding: ${theme.space[2]} ${theme.space[3]} !important;
   font-size: ${theme.fontSizes.bodySm} !important;
   display: flex;

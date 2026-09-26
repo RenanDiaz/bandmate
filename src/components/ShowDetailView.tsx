@@ -11,7 +11,7 @@ import { getSetlist, getBandSetlists, isSongItem } from "../services/setlistsSer
 import type { Setlist } from "../services/setlistsService";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
-import { downloadShowICS } from "../lib/calendarExport";
+import { buildIcsLabels, downloadShowICS } from "../lib/calendarExport";
 import { SEO } from "./SEO";
 import { ConfirmModal } from "./ConfirmModal";
 import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
@@ -324,9 +324,9 @@ const ShowDetailView: FC = () => {
               <i className="bi bi-trash"></i>
               Delete
             </HeaderButton>
-            <CalendarButton onClick={() => downloadShowICS(show)}>
+            <CalendarButton onClick={() => downloadShowICS(show, buildIcsLabels(t))}>
               <i className="bi bi-calendar-plus"></i>
-              Add to Calendar
+              {t("shows.addToCalendar")}
             </CalendarButton>
           </ActionButtonsHeader>
         </ShowHeader>

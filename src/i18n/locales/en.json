@@ -35,7 +35,8 @@
     "closeForm": "Close form",
     "creating": "Creating...",
     "saveChanges": "Save Changes",
-    "sending": "Sending..."
+    "sending": "Sending...",
+    "retry": "Retry"
   },
   "nav": {
     "home": "Home",
@@ -567,27 +568,39 @@
     "addToCalendar": "Add to Calendar"
   },
   "calendar": {
-    "title": "Calendar Subscription",
-    "subscribeToCalendar": "Subscribe to Calendar",
-    "subscriptionActive": "Your calendar subscription is active. Any calendar app that supports iCal feeds will automatically sync your shows.",
-    "feedUrl": "Calendar Feed URL",
+    "title": "Sync with your calendar",
+    "subscribeToCalendar": "Sync calendar",
+    "subscriptionActive": "Your calendar link is ready. Add it once and new, changed and cancelled shows and rehearsals update on their own — no need to add each one.",
+    "feedUrl": "Calendar link (other apps)",
     "copy": "Copy",
     "copied": "Copied!",
     "howToSubscribe": "How to subscribe:",
-    "instructionsGoogle": "Settings > Add calendar > From URL > Paste the URL",
-    "instructionsApple": "File > New Calendar Subscription > Paste the URL",
-    "instructionsOutlook": "Add calendar > Subscribe from web > Paste the URL",
-    "refreshNote": "Calendar apps typically refresh every 12-24 hours. Changes to your shows will sync automatically on the next refresh.",
-    "regenerateToken": "Regenerate URL",
+    "instructionsGoogle": "Settings > Add calendar > From URL > Paste the link",
+    "instructionsApple": "File > New Calendar Subscription > Paste the link",
+    "instructionsOutlook": "Add calendar > Subscribe from web > Paste the link",
+    "refreshNote": "Your calendar app checks for changes on its own: Apple every few hours (adjustable), Google and Outlook up to once a day. Changes can take that long to show up.",
+    "regenerateToken": "Regenerate link",
     "regenerate": "Regenerate",
     "deleteSubscription": "Delete subscription",
-    "regenerateConfirm": "This will invalidate the current URL. Any calendar subscriptions using the old URL will stop working. Continue?",
-    "removeSubscription": "Remove Subscription",
-    "deleteConfirm": "This will remove the calendar subscription. Any calendar apps using this URL will stop receiving updates. Continue?",
-    "noSubscription": "Subscribe to Shows",
-    "noSubscriptionDesc": "Generate a calendar feed URL to automatically sync {{bandName}}'s shows with your favorite calendar app (Google Calendar, Apple Calendar, Outlook, etc.)",
-    "generateLink": "Generate Calendar Link",
-    "createError": "Failed to create calendar subscription. Please try again."
+    "regenerateConfirm": "This will invalidate the current link. Calendars using it will stop updating until you add the new one. Continue?",
+    "removeSubscription": "Remove link",
+    "deleteConfirm": "This will remove your calendar link. Calendars using it will stop receiving updates. Continue?",
+    "noSubscription": "Sync with your calendar",
+    "noSubscriptionDesc": "Get a personal link that keeps {{bandName}}'s shows and rehearsals in your phone or computer calendar (Apple, Google, Outlook…), always up to date.",
+    "generateLink": "Get calendar link",
+    "createError": "Failed to create calendar subscription. Please try again.",
+    "addTo": "Add to",
+    "appleHint": "iPhone, iPad, Mac",
+    "googleHint": "Android and web (sign in first)",
+    "outlookHint": "Outlook on the web",
+    "include": "Include",
+    "includeShows": "Shows",
+    "includeRehearsals": "Rehearsals",
+    "timezone": "Times in {{timezone}}",
+    "useDeviceTimezone": "Use {{timezone}}",
+    "loadError": "Couldn't load your calendar link. Check your connection and try again.",
+    "updateError": "Couldn't update your calendar link. Please try again.",
+    "deleteError": "Couldn't remove your calendar link. Please try again."
   },
   "rehearsals": {
     "title": "Rehearsals",
@@ -653,7 +666,8 @@
       "name": "e.g., Weekly Practice, Pre-show Rehearsal",
       "location": "e.g., John's Garage, Studio B",
       "notes": "What to focus on, songs to practice, etc."
-    }
+    },
+    "addToCalendar": "Add to Calendar"
   },
   "bands": {
     "title": "Bands",

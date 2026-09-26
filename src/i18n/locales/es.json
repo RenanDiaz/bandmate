@@ -35,7 +35,8 @@
     "closeForm": "Cerrar formulario",
     "creating": "Creando...",
     "saveChanges": "Guardar Cambios",
-    "sending": "Enviando..."
+    "sending": "Enviando...",
+    "retry": "Reintentar"
   },
   "nav": {
     "home": "Inicio",
@@ -567,27 +568,39 @@
     "addToCalendar": "Agregar al Calendario"
   },
   "calendar": {
-    "title": "Suscripción de Calendario",
-    "subscribeToCalendar": "Suscribirse al Calendario",
-    "subscriptionActive": "Tu suscripción de calendario está activa. Cualquier app de calendario que soporte feeds iCal sincronizará tus shows automáticamente.",
-    "feedUrl": "URL del Feed de Calendario",
+    "title": "Sincronizar con tu calendario",
+    "subscribeToCalendar": "Sincronizar calendario",
+    "subscriptionActive": "Tu enlace de calendario está listo. Agrégalo una vez y los shows y ensayos nuevos, modificados o cancelados se actualizan solos — sin agregarlos uno por uno.",
+    "feedUrl": "Enlace del calendario (otras apps)",
     "copy": "Copiar",
     "copied": "¡Copiado!",
     "howToSubscribe": "Cómo suscribirse:",
-    "instructionsGoogle": "Configuración > Agregar calendario > Desde URL > Pegar la URL",
-    "instructionsApple": "Archivo > Nueva Suscripción de Calendario > Pegar la URL",
-    "instructionsOutlook": "Agregar calendario > Suscribirse desde web > Pegar la URL",
-    "refreshNote": "Las apps de calendario normalmente se actualizan cada 12-24 horas. Los cambios en tus shows se sincronizarán automáticamente en la siguiente actualización.",
-    "regenerateToken": "Regenerar URL",
+    "instructionsGoogle": "Configuración > Agregar calendario > Desde URL > Pega el enlace",
+    "instructionsApple": "Archivo > Nueva suscripción a calendario > Pega el enlace",
+    "instructionsOutlook": "Agregar calendario > Suscribirse desde la web > Pega el enlace",
+    "refreshNote": "Tu app de calendario revisa los cambios por su cuenta: Apple cada pocas horas (configurable), Google y Outlook hasta una vez al día. Los cambios pueden tardar ese tiempo en aparecer.",
+    "regenerateToken": "Regenerar enlace",
     "regenerate": "Regenerar",
     "deleteSubscription": "Eliminar suscripción",
-    "regenerateConfirm": "Esto invalidará la URL actual. Las suscripciones de calendario que usen la URL anterior dejarán de funcionar. ¿Continuar?",
-    "removeSubscription": "Eliminar Suscripción",
-    "deleteConfirm": "Esto eliminará la suscripción de calendario. Las apps de calendario que usen esta URL dejarán de recibir actualizaciones. ¿Continuar?",
-    "noSubscription": "Suscribirse a Shows",
-    "noSubscriptionDesc": "Genera una URL de feed de calendario para sincronizar automáticamente los shows de {{bandName}} con tu app de calendario favorita (Google Calendar, Apple Calendar, Outlook, etc.)",
-    "generateLink": "Generar Enlace de Calendario",
-    "createError": "Error al crear la suscripción de calendario. Por favor intenta de nuevo."
+    "regenerateConfirm": "Esto invalidará el enlace actual. Los calendarios que lo usan dejarán de actualizarse hasta que agregues el nuevo. ¿Continuar?",
+    "removeSubscription": "Eliminar enlace",
+    "deleteConfirm": "Esto eliminará tu enlace de calendario. Los calendarios que lo usan dejarán de recibir actualizaciones. ¿Continuar?",
+    "noSubscription": "Sincronizar con tu calendario",
+    "noSubscriptionDesc": "Obtén un enlace personal que mantiene los shows y ensayos de {{bandName}} en el calendario de tu teléfono o computadora (Apple, Google, Outlook…), siempre al día.",
+    "generateLink": "Obtener enlace de calendario",
+    "createError": "Error al crear la suscripción de calendario. Por favor intenta de nuevo.",
+    "addTo": "Agregar a",
+    "appleHint": "iPhone, iPad, Mac",
+    "googleHint": "Android y web (inicia sesión primero)",
+    "outlookHint": "Outlook en la web",
+    "include": "Incluir",
+    "includeShows": "Shows",
+    "includeRehearsals": "Ensayos",
+    "timezone": "Horas en {{timezone}}",
+    "useDeviceTimezone": "Usar {{timezone}}",
+    "loadError": "No se pudo cargar tu enlace de calendario. Revisa tu conexión e inténtalo de nuevo.",
+    "updateError": "No se pudo actualizar tu enlace de calendario. Inténtalo de nuevo.",
+    "deleteError": "No se pudo eliminar tu enlace de calendario. Inténtalo de nuevo."
   },
   "rehearsals": {
     "title": "Ensayos",
@@ -653,7 +666,8 @@
       "name": "ej., Práctica Semanal, Ensayo Pre-show",
       "location": "ej., Garaje de Juan, Estudio B",
       "notes": "En qué enfocarse, canciones a practicar, etc."
-    }
+    },
+    "addToCalendar": "Agregar al Calendario"
   },
   "bands": {
     "title": "Bandas",

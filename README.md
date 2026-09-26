@@ -33,7 +33,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 **Shows & rehearsals**
 - Show scheduling with venue, soundcheck and linked setlist; list and calendar views
 - Rehearsal scheduling linked to shows and setlists
-- iCal feed subscription for the band's shows
+- Calendar sync: a personal iCal feed of the band's shows and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
 
 **Performance mode**
 - Full-screen lyrics view with keyboard navigation and reorder on the fly
@@ -104,10 +104,10 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 5. **(Optional) Deploy Edge Functions** — `send-invitation-email` (needs a
    Resend key, see [docs/setup/email-sending.md](docs/setup/email-sending.md))
-   and `calendar-feed`:
+   and `calendar-feed` (public feed read by calendar apps, so no JWT check):
    ```bash
    supabase functions deploy send-invitation-email
-   supabase functions deploy calendar-feed
+   supabase functions deploy calendar-feed --no-verify-jwt
    ```
 
 6. **Run it**
