@@ -47,6 +47,7 @@ import { useBandContext } from "../context/useBandContext";
 import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
+import { formatSetlistText, setlistFileName } from "../utils/setlistText";
 import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
@@ -390,7 +391,7 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const toast = useToast();
 
@@ -429,6 +430,7 @@ const SetlistDetailView: FC = () => {
     return allSongs.find((s) => s.id === songId);
   };
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [youtubeExporting, setYoutubeExporting] = useState(false);
   const [youtubeProgress, setYoutubeProgress] = useState({ current: 0, total: 0, songTitle: "" });
@@ -753,64 +755,38 @@ const SetlistDetailView: FC = () => {
     return setlistSong?.notes;
   };
 
+  const buildExportText = (): string => {
+    if (!setlist) return "";
+    const songsById = new Map(allSongs.map((song) => [song.id, song]));
+    return formatSetlistText(
+      { name: setlist.name, description: setlist.description, items: setlistItems, songsById },
+      {
+        layout: "technical",
+        description: exportOptions.includeDescription,
+        show: false,
+        songCount: exportOptions.includeSongCount,
+        totalDuration: exportOptions.includeTotalDuration,
+        artist: exportOptions.includeArtist,
+        key: exportOptions.includeKey,
+        tempo: exportOptions.includeTempo,
+        duration: exportOptions.includeDuration,
+        startTime: false,
+        notes: exportOptions.includeNotes,
+        specialItems: true,
+      },
+      t,
+      i18n.language,
+    );
+  };
+
   const handleExportAsText = () => {
     if (!setlist) return;
 
-    // Build the text content
-    let textContent = `${setlist.name}\n`;
-    textContent += "=".repeat(setlist.name.length) + "\n\n";
-
-    if (exportOptions.includeDescription && setlist.description) {
-      textContent += `${setlist.description}\n\n`;
-    }
-
-    if (exportOptions.includeSongCount) {
-      textContent += `Songs: ${songItemsOnly.length}\n`;
-    }
-
-    const totalDuration = calculateTotalDuration();
-    if (exportOptions.includeTotalDuration && totalDuration > 0) {
-      textContent += `Total Duration: ${formatDuration(totalDuration)}\n`;
-    }
-
-    if (exportOptions.includeSongCount || (exportOptions.includeTotalDuration && totalDuration > 0)) {
-      textContent += "\n";
-    }
-
-    textContent += "SETLIST\n";
-    textContent += "-".repeat(50) + "\n\n";
-
-    // Export only songs (not special items) for the text export
-    songsForReorder.forEach((song, index) => {
-      textContent += `${index + 1}. ${song.title}`;
-      if (exportOptions.includeArtist && song.artist) {
-        textContent += ` - ${song.artist}`;
-      }
-      textContent += "\n";
-
-      const metadata = [];
-      if (exportOptions.includeKey && song.key) metadata.push(`Key: ${song.key}`);
-      if (exportOptions.includeTempo && song.tempo) metadata.push(`Tempo: ${song.tempo} BPM`);
-      if (exportOptions.includeDuration && song.duration) metadata.push(`Duration: ${formatDuration(song.duration)}`);
-
-      if (metadata.length > 0) {
-        textContent += `   ${metadata.join(" | ")}\n`;
-      }
-
-      const notes = getSetlistSongNotes(song.id);
-      if (exportOptions.includeNotes && notes) {
-        textContent += `   Note: ${notes}\n`;
-      }
-
-      textContent += "\n";
-    });
-
-    // Create a blob and download it
-    const blob = new Blob([textContent], { type: "text/plain" });
+    const blob = new Blob([buildExportText()], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${setlist.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.txt`;
+    link.download = setlistFileName(setlist.name);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -818,6 +794,18 @@ const SetlistDetailView: FC = () => {
 
     // Close the modal
     setShowExportModal(false);
+  };
+
+  const handleCopyExportText = async () => {
+    if (!setlist) return;
+    try {
+      await navigator.clipboard.writeText(buildExportText());
+      setExportCopied(true);
+      setTimeout(() => setExportCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy setlist text:", error);
+      toast.error(t("setlists.export.copyError"));
+    }
   };
 
   const toggleExportOption = (option: keyof typeof exportOptions) => {
@@ -1288,6 +1276,10 @@ const SetlistDetailView: FC = () => {
         <ModalFooter>
           <Button color="secondary" onClick={() => setShowExportModal(false)}>
             {t('common.cancel')}
+          </Button>
+          <Button color="secondary" outline onClick={handleCopyExportText}>
+            <i className={`bi ${exportCopied ? "bi-check-lg" : "bi-clipboard"}`}></i>{" "}
+            {exportCopied ? t('setlists.export.copied') : t('setlists.export.copy')}
           </Button>
           <Button color="primary" onClick={handleExportAsText}>
             <i className="bi bi-download"></i> {t('setlists.export.button')}
