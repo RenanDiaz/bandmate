@@ -1,6 +1,6 @@
 # Spec: Setlist actions layout (detail header + list cards)
 
-> **Status:** PR 1 (detail header) implemented; PR 2 (list cards) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented (PR 1: detail header; PR 2: list cards, same branch) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the setlist detail header has nine action buttons in one row,
 > and the setlist list hides its actions until the mouse hovers. Both were
 > reviewed against phone / tablet / desktop and touch / mouse / keyboard.

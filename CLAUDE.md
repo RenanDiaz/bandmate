@@ -716,5 +716,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
-- [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (PR 1 done): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
+- [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

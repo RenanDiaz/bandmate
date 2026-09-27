@@ -83,7 +83,8 @@ describe.each([
   it("SetlistsView: edit/delete, new-setlist form and AI generator", async () => {
     renderView(SetlistsView, role);
     await screen.findAllByText("Set A");
-    expectPresence(screen.queryByTitle("Delete setlist"));
+    // Edit and Delete live behind the card's "More actions" menu (spec setlist-actions-layout §3).
+    expectPresence(screen.queryByTitle("More actions"));
     expectPresence(screen.queryByTestId("new-setlist-form"));
     expectPresence(screen.queryByTestId("ai-generator"));
   });
