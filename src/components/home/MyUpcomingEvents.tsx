@@ -150,16 +150,16 @@ const Section = styled.section`
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
-  margin-bottom: ${theme.space[2]};
+  /* Separates the agenda from the band section that follows (§2). */
+  margin-bottom: ${theme.space[8]};
 `;
 
+/* Title with the hint as a subtitle under it: nothing competes for the width. */
 const Header = styled.div`
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: ${theme.space[1]} ${theme.space[4]};
-  padding: ${theme.space[4]};
+  flex-direction: column;
+  gap: ${theme.space[1]};
+  padding: ${theme.space[3]} ${theme.space[4]};
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-tertiary);
 `;
@@ -184,17 +184,22 @@ const Hint = styled.span`
 `;
 
 const Content = styled.div`
-  padding: ${theme.space[4]};
+  padding: ${theme.space[2]};
 `;
 
+/* Flat rows separated by dividers, not cards inside a card (§2). */
 const EventsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.space[3]};
+
+  > * + * {
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+  }
 `;
 
 const SkeletonLine = styled.div`
-  height: 72px;
+  height: 60px;
   border-radius: ${theme.radius.md};
   background: var(--color-bg-tertiary);
   animation: ${pulse} 1.4s ease-in-out infinite;
@@ -210,6 +215,7 @@ const ErrorLine = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: ${theme.space[2]};
+  padding: ${theme.space[2]} ${theme.space[3]};
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-secondary);
 
@@ -220,6 +226,7 @@ const ErrorLine = styled.div`
 
 const EmptyLine = styled.p`
   margin: 0;
+  padding: ${theme.space[2]} ${theme.space[3]};
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-tertiary);
 `;
@@ -227,7 +234,9 @@ const EmptyLine = styled.p`
 const ToggleRow = styled.div`
   display: flex;
   justify-content: center;
-  margin-top: ${theme.space[3]};
+  margin-top: ${theme.space[2]};
+  padding-top: ${theme.space[2]};
+  border-top: 1px solid var(--color-border);
 `;
 
 const TextButton = styled.button`

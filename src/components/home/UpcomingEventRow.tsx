@@ -17,7 +17,15 @@ interface UpcomingEventRowProps {
   onOpenLink?: () => void;
 }
 
-/** One upcoming show or rehearsal: date block, type badge, name, place, date/time and countdown. */
+/** Countdowns up to this many days away are emphasised; later ones are plain. */
+export const SOON_DAYS = 7;
+
+/**
+ * One upcoming show or rehearsal, two lines (spec my-upcoming-events §2):
+ * the date block (weekday, day, month), then the name, then one meta line
+ * with the band chip, type, place, time and countdown. The Setlist / Show
+ * chip sits on the right.
+ */
 export const UpcomingEventRow = ({
   event,
   locale,
@@ -28,15 +36,8 @@ export const UpcomingEventRow = ({
 }: UpcomingEventRowProps) => {
   const { t } = useTranslation();
   const link = onOpenLink ? eventLink(event) : null;
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString + "T00:00:00");
-    return date.toLocaleDateString(locale, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const isRehearsal = event.type === "rehearsal";
+  const eventDate = new Date(event.date + "T00:00:00");
 
   const formatTime = (timeString: string): string => {
     const [hours, minutes] = timeString.split(":");
@@ -49,207 +50,172 @@ export const UpcomingEventRow = ({
     });
   };
 
-  const getDaysUntil = (eventDate: string): string => {
+  const daysUntil = (): number => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const event = new Date(eventDate + "T00:00:00");
-    const diffTime = event.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  };
 
-    if (diffDays === 0) return t('home.today');
-    if (diffDays === 1) return t('home.tomorrow');
-    if (diffDays <= 7) return t('home.inDays', { count: diffDays });
+  const countdown = (diffDays: number): string => {
+    if (diffDays === 0) return t("home.today");
+    if (diffDays === 1) return t("home.tomorrow");
+    if (diffDays <= 7) return t("home.inDays", { count: diffDays });
 
     const weeks = Math.floor(diffDays / 7);
     const remainingDays = diffDays % 7;
 
     if (remainingDays === 0) {
-      return t('home.inWeeks', { count: weeks });
+      return t("home.inWeeks", { count: weeks });
     }
 
     if (weeks === 1) {
-      return t('home.inWeekAndDays', { days: remainingDays, count: remainingDays });
+      return t("home.inWeekAndDays", { days: remainingDays, count: remainingDays });
     }
 
-    return t('home.inWeeksAndDays', { weeks, days: remainingDays, count: remainingDays });
+    return t("home.inWeeksAndDays", { weeks, days: remainingDays, count: remainingDays });
   };
 
+  const days = daysUntil();
+  const place = event.type === "show" ? event.data.venue : event.data.location;
+
   return (
-    <ShowItem data-testid="upcoming-event-row" onClick={onOpen}>
-      <ShowDate $isRehearsal={event.type === 'rehearsal'}>
-        <ShowDay>
-          {new Date(event.date + "T00:00:00").getDate()}
-        </ShowDay>
-        <ShowMonth>
-          {new Date(event.date + "T00:00:00").toLocaleDateString(locale, {
-            month: "short",
-          })}
-        </ShowMonth>
-      </ShowDate>
-      <ShowDetails>
-        <EventTypeRow>
-          <EventTypeBadge $isRehearsal={event.type === 'rehearsal'}>
-            <i className={event.type === 'show' ? 'bi bi-mic' : 'bi bi-music-note-beamed'}></i>
-            {event.type === 'show' ? t('home.show') : t('home.rehearsal')}
-          </EventTypeBadge>
-        </EventTypeRow>
-        <ShowName>{event.data.name}</ShowName>
-        {event.type === 'show' && event.data.venue && (
-          <ShowVenue>{event.data.venue}</ShowVenue>
-        )}
-        {event.type === 'rehearsal' && event.data.location && (
-          <ShowVenue>{event.data.location}</ShowVenue>
-        )}
-        <ShowMeta>
-          <span>{formatDate(event.date)}</span>
-          {event.time && (
-            <span> {t('home.at')} {formatTime(event.time)}</span>
-          )}
-          <CountdownBadge>{getDaysUntil(event.date)}</CountdownBadge>
-        </ShowMeta>
-      </ShowDetails>
-      {(bandName || link) && (
-        <RowAside>
+    <Row data-testid="upcoming-event-row" onClick={onOpen}>
+      <DateBlock $isRehearsal={isRehearsal} data-testid="event-date">
+        <DateWeekday>{eventDate.toLocaleDateString(locale, { weekday: "short" })}</DateWeekday>
+        <DateDay>{eventDate.getDate()}</DateDay>
+        <DateMonth>{eventDate.toLocaleDateString(locale, { month: "short" })}</DateMonth>
+      </DateBlock>
+      <Details>
+        <Name>{event.data.name}</Name>
+        <Meta data-testid="event-meta">
           {bandName && (
             <BandChip title={bandName}>
-              <BandAvatar name={bandName} avatarUrl={bandAvatarUrl} size={18} initialFallback />
+              <BandAvatar name={bandName} avatarUrl={bandAvatarUrl} size={16} initialFallback />
               <BandChipName>{bandName}</BandChipName>
             </BandChip>
           )}
-          {link && onOpenLink && (
-            <LinkChip
-              type="button"
-              onClick={(e) => {
-                // A real button inside the clickable row: its click (mouse,
-                // Enter or Space) must not also open the event.
-                e.stopPropagation();
-                onOpenLink();
-              }}
-            >
-              <i className={link.labelKey === "home.setlist" ? "bi bi-list-ul" : "bi bi-mic"} aria-hidden="true"></i>
-              {t(link.labelKey)}
-            </LinkChip>
-          )}
-        </RowAside>
+          <EventType $isRehearsal={isRehearsal}>
+            <i className={isRehearsal ? "bi bi-music-note-beamed" : "bi bi-mic"} aria-hidden="true"></i>
+            {isRehearsal ? t("home.rehearsal") : t("home.show")}
+          </EventType>
+          {place && <Place>{place}</Place>}
+          {event.time && <span>{formatTime(event.time)}</span>}
+          <Countdown $soon={days <= SOON_DAYS} data-testid="event-countdown" data-soon={days <= SOON_DAYS}>
+            {countdown(days)}
+          </Countdown>
+        </Meta>
+      </Details>
+      {link && onOpenLink && (
+        <LinkChip
+          type="button"
+          onClick={(e) => {
+            // A real button inside the clickable row: its click (mouse,
+            // Enter or Space) must not also open the event.
+            e.stopPropagation();
+            onOpenLink();
+          }}
+        >
+          <i className={link.labelKey === "home.setlist" ? "bi bi-list-ul" : "bi bi-mic"} aria-hidden="true"></i>
+          {t(link.labelKey)}
+        </LinkChip>
       )}
-    </ShowItem>
+    </Row>
   );
 };
 
-const ShowItem = styled.div`
+const Row = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: ${theme.space[3]};
-  padding: ${theme.space[3]};
-  background: var(--color-bg-tertiary);
+  padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.md};
   cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
+  transition: background ${theme.transitions.fast} ease;
 
   &:hover {
-    background: var(--color-bg-elevated);
-    transform: translateX(4px);
+    background: var(--color-bg-tertiary);
+  }
+
+  /* Narrow: the link chip would squeeze the name, so it drops under the
+     meta line, aligned with the text (spec §2, AC12). */
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: start;
   }
 `;
 
-const ShowDate = styled.div<{ $isRehearsal?: boolean }>`
+const DateBlock = styled.div<{ $isRehearsal?: boolean }>`
   width: 48px;
-  height: 48px;
-  background: ${(props) => props.$isRehearsal ? theme.colors.accent.cyan : theme.gradients.brandPrimary};
+  height: 52px;
+  background: ${(props) => (props.$isRehearsal ? theme.colors.accent.cyan : theme.gradients.brandPrimary)};
   border-radius: ${theme.radius.md};
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   flex-shrink: 0;
+  color: white;
 `;
 
-const ShowDay = styled.span`
+const DateWeekday = styled.span`
+  font-size: 10px;
+  font-weight: ${theme.fontWeights.medium};
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+`;
+
+const DateDay = styled.span`
   font-size: ${theme.fontSizes.bodyLg};
   font-weight: ${theme.fontWeights.bold};
-  color: white;
   line-height: 1;
 `;
 
-const ShowMonth = styled.span`
-  font-size: ${theme.fontSizes.bodyXs};
+const DateMonth = styled.span`
+  font-size: 10px;
   font-weight: ${theme.fontWeights.medium};
-  color: rgba(255, 255, 255, 0.8);
+  line-height: 1;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
 `;
 
-const ShowDetails = styled.div`
+const Details = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
 `;
 
-const ShowName = styled.div`
+const Name = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
   color: var(--color-text-primary);
-  margin-bottom: ${theme.space[1]};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
-const ShowVenue = styled.div`
+/** One line: band · type · place · time · countdown, separated by dots. */
+const Meta = styled.div`
   font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
-  margin-bottom: ${theme.space[1]};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const EventTypeRow = styled.div`
-  margin-bottom: ${theme.space[1]};
-`;
-
-const EventTypeBadge = styled.span<{ $isRehearsal?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: ${theme.space[1]};
-  font-size: ${theme.fontSizes.bodyXs};
-  font-weight: ${theme.fontWeights.medium};
-  color: ${(props) => props.$isRehearsal ? theme.colors.accent.cyan : theme.colors.brand.primary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  i {
-    font-size: ${theme.fontSizes.bodyXs};
-  }
-`;
-
-const ShowMeta = styled.div`
-  font-size: ${theme.fontSizes.bodyXs};
   color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
-  gap: ${theme.space[2]};
   flex-wrap: wrap;
-`;
+  column-gap: ${theme.space[1]};
+  row-gap: 2px;
+  min-width: 0;
 
-const CountdownBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  background: ${theme.colors.accent.amber}20;
-  color: ${theme.colors.accent.amber};
-  padding: ${theme.space[1]} ${theme.space[2]};
-  border-radius: ${theme.radius.sm};
-  font-size: ${theme.fontSizes.bodyXs};
-  font-weight: ${theme.fontWeights.medium};
-`;
-
-const RowAside = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: space-between;
-  align-self: stretch;
-  gap: ${theme.space[2]};
-  flex-shrink: 0;
-  max-width: 40%;
+  > * + *::before {
+    content: "·";
+    margin-right: ${theme.space[1]};
+    color: var(--color-text-disabled);
+  }
 `;
 
 const BandChip = styled.span`
@@ -257,12 +223,12 @@ const BandChip = styled.span`
   align-items: center;
   gap: ${theme.space[1]};
   max-width: 100%;
-  font-size: ${theme.fontSizes.bodyXs};
   color: var(--color-text-secondary);
+  font-weight: ${theme.fontWeights.medium};
 
   > div {
     border-radius: ${theme.radius.sm};
-    font-size: 10px;
+    font-size: 9px;
   }
 `;
 
@@ -272,10 +238,38 @@ const BandChipName = styled.span`
   text-overflow: ellipsis;
 `;
 
+const EventType = styled.span<{ $isRehearsal?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  color: ${(props) => (props.$isRehearsal ? theme.colors.accent.cyan : theme.colors.brand.primary)};
+  white-space: nowrap;
+
+  i {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
+`;
+
+const Place = styled.span`
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+`;
+
+/** Plain text; amber only when the event is close, so the colour means something. */
+const Countdown = styled.span<{ $soon: boolean }>`
+  white-space: nowrap;
+  color: ${(props) => (props.$soon ? theme.colors.accent.amber : "inherit")};
+  font-weight: ${(props) => (props.$soon ? theme.fontWeights.medium : theme.fontWeights.regular)};
+`;
+
 const LinkChip = styled.button`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
+  flex-shrink: 0;
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.sm};
@@ -294,5 +288,11 @@ const LinkChip = styled.button`
   &:focus-visible {
     outline: 2px solid ${theme.colors.brand.primary};
     outline-offset: 2px;
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: ${theme.space[1]};
   }
 `;
