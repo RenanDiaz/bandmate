@@ -1,4 +1,5 @@
 import { NoSnapshotError, PerformanceDataError } from "./performanceDataSource";
+import type { PerformanceTarget } from "./performanceTarget";
 import type {
   PerformanceDataSource,
   PerformanceLoadError,
@@ -19,24 +20,30 @@ import type {
  * 3. none and offline → error "network" with `unavailableOffline`, which the
  *    view renders as "Not available offline" (no toast, no bounce, B8).
  * With them disabled, the network source only, as before PR 2.4.
+ *
+ * A song target (docs/specs/song-performance.md §3.3) opens the song source
+ * only, flag on or off, online or offline: never the snapshot, never
+ * `unavailableOffline` (the route is gated by NeedsConnection; reached offline
+ * anyway, the load fails with "network").
  */
 
 export interface PerformanceDataState {
   status: "loading" | "ready" | "error";
   error: PerformanceLoadError | null;
   rows: PerformanceRows | null;
-  source: "network" | "snapshot";
+  source: PerformanceDataSource["kind"];
   /** No offline copy and no connection (rule 3). */
   unavailableOffline: boolean;
 }
 
 export interface PerformanceDataControllerOptions {
-  setlistId: string;
+  target: PerformanceTarget;
   /** isOfflineDownloadsEnabled(), read once per mount. */
   useSnapshots: boolean;
   isOnline: () => boolean;
   network: PerformanceDataSource;
   snapshot: PerformanceDataSource;
+  song: PerformanceDataSource;
 }
 
 function isAbortError(error: unknown): boolean {
@@ -100,7 +107,7 @@ export class PerformanceDataController {
   }
 
   private attach(source: PerformanceDataSource): { session: PerformanceSession; latest: () => PerformanceRows | null } {
-    const session = source.open(this.options.setlistId);
+    const session = source.open(this.options.target);
     this.session = session;
     // An emit can land before load() resolves here (a fast background refresh):
     // keep the latest so it is not lost.
@@ -122,7 +129,12 @@ export class PerformanceDataController {
 
   private async start(): Promise<void> {
     const { signal } = this.abort;
-    const { useSnapshots, isOnline, network, snapshot } = this.options;
+    const { target, useSnapshots, isOnline, network, snapshot, song } = this.options;
+
+    if (target.kind === "song") {
+      await this.loadFrom(song);
+      return;
+    }
 
     if (useSnapshots) {
       const { session, latest } = this.attach(snapshot);
@@ -142,17 +154,23 @@ export class PerformanceDataController {
       }
     }
 
-    const { session, latest } = this.attach(network);
+    await this.loadFrom(network);
+  }
+
+  /** Loads from an online source (network or song); an error ends in the error state. */
+  private async loadFrom(source: PerformanceDataSource): Promise<void> {
+    const { signal } = this.abort;
+    const { session, latest } = this.attach(source);
     try {
       const rows = await session.load(signal);
       if (signal.aborted) return;
-      this.setState({ status: "ready", error: null, rows: latest() ?? rows, source: "network", unavailableOffline: false });
+      this.setState({ status: "ready", error: null, rows: latest() ?? rows, source: source.kind, unavailableOffline: false });
     } catch (error) {
       if (signal.aborted || isAbortError(error)) return;
-      console.error("Failed to load setlist:", error);
+      console.error("Failed to load performance data:", error);
       this.detach();
       const code = error instanceof PerformanceDataError ? error.code : "network";
-      this.setState({ status: "error", error: code, rows: null, source: "network", unavailableOffline: false });
+      this.setState({ status: "error", error: code, rows: null, source: source.kind, unavailableOffline: false });
     }
   }
 }
@@ -167,9 +185,19 @@ export interface PerformanceCapabilities {
 /**
  * §8.3. Offline: nothing that writes or needs Realtime. Guests: no reorder,
  * upload or note editing, online too (closes the guest gap found in PR 2.1;
- * not behind the offline flag).
+ * not behind the offline flag). A song target has no setlist row, so no
+ * reorder, notes or sync for any role; upload as for a setlist.
  */
-export function performanceCapabilities({ role, isOnline }: { role: string | undefined; isOnline: boolean }): PerformanceCapabilities {
+export function performanceCapabilities({
+  role,
+  isOnline,
+  target,
+}: {
+  role: string | undefined;
+  isOnline: boolean;
+  target: PerformanceTarget;
+}): PerformanceCapabilities {
   const canEdit = role !== "guest" && isOnline;
+  if (target.kind === "song") return { canReorder: false, canUpload: canEdit, canEditNotes: false, canSync: false };
   return { canReorder: canEdit, canUpload: canEdit, canEditNotes: canEdit, canSync: isOnline };
 }

@@ -90,7 +90,7 @@ function open(): PerformanceSession {
     },
     revokeObjectURL: (url) => revoked.push(url),
   });
-  return source.open("s1");
+  return source.open({ kind: "setlist", setlistId: "s1" });
 }
 
 async function signIn(authenticated = true): Promise<void> {

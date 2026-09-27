@@ -11,6 +11,7 @@ import {
   getPreferredInstrument,
   setPreferredInstrument,
 } from "../services/sheetMusicPreferencesService";
+import type { PerformanceTarget } from "./performanceTarget";
 
 /** Everything performance mode reads, as one immutable value. */
 export interface PerformanceRows {
@@ -57,9 +58,14 @@ export interface ResolvedPdf {
 }
 
 export interface PerformanceDataSource {
-  readonly kind: "network" | "snapshot";
-  /** One session per mounted setlist. */
-  open(setlistId: string): PerformanceSession;
+  readonly kind: "network" | "snapshot" | "song";
+  /**
+   * One session per mounted target. The network and snapshot sources accept
+   * only setlist targets, the song source only song targets; the controller
+   * never hands them the other kind, and the session rejects with "not-found"
+   * if it happens anyway.
+   */
+  open(target: PerformanceTarget): PerformanceSession;
 }
 
 /**
@@ -103,6 +109,24 @@ export interface PerformanceSession {
 }
 
 /**
+ * A session whose `load()` rejects with `PerformanceDataError("not-found")`:
+ * what a source returns for a target of the wrong kind.
+ */
+export function wrongTargetSession(): PerformanceSession {
+  const reject = () => Promise.reject(new PerformanceDataError("not-found"));
+  return {
+    load: reject,
+    subscribe: () => () => undefined,
+    refresh: async () => undefined,
+    isSheetMusicStale: () => false,
+    resolvePdfUrl: reject,
+    savePreference: reject,
+    saveOrder: reject,
+    close: () => undefined,
+  };
+}
+
+/**
  * The snapshot source found no snapshot of this setlist for the current user.
  * The hook then falls back to the network source when online (§8.2).
  */
@@ -123,7 +147,7 @@ export class PdfUnavailableError extends Error {
   }
 }
 
-function toLoadError(error: unknown): PerformanceDataError {
+export function toLoadError(error: unknown): PerformanceDataError {
   if (error instanceof PerformanceDataError) return error;
   if (error instanceof Error && error.message === "User not authenticated") {
     return new PerformanceDataError("not-authenticated", error);
@@ -134,10 +158,43 @@ function toLoadError(error: unknown): PerformanceDataError {
   return new PerformanceDataError("network", error);
 }
 
-function abortError(): Error {
+export function abortError(): Error {
   const error = new Error("Aborted");
   error.name = "AbortError";
   return error;
+}
+
+/** A signed Storage URL for `sm` (network and song sources). */
+export async function resolveSignedPdfUrl(sm: SheetMusic, signal: AbortSignal): Promise<ResolvedPdf> {
+  if (signal.aborted) throw abortError();
+  const url = await getSheetMusicUrl(sm.file_url);
+  if (signal.aborted) throw abortError();
+  return { url };
+}
+
+/**
+ * `PerformanceSession.savePreference` against the server (network and song
+ * sources). Optimistic: the choice shows at once and stays applied even if the
+ * server write fails.
+ */
+export async function saveServerPreference(
+  rows: PerformanceRows,
+  sm: SheetMusic,
+  emit: (rows: PerformanceRows) => void
+): Promise<void> {
+  if (sm.instrument) setPreferredInstrument(rows.setlist.band_id, sm.instrument);
+  const preferredInstrument = sm.instrument || rows.preferredInstrument;
+  const preferenceChanged = rows.preferredSheetMusicIds[sm.song_id] !== sm.id;
+  if (!preferenceChanged && preferredInstrument === rows.preferredInstrument) return;
+  emit({
+    ...rows,
+    preferredSheetMusicIds: preferenceChanged
+      ? { ...rows.preferredSheetMusicIds, [sm.song_id]: sm.id }
+      : rows.preferredSheetMusicIds,
+    preferredInstrument,
+  });
+  if (!preferenceChanged) return;
+  await setMySheetMusicPreference(sm.song_id, sm.id);
 }
 
 function referencedSongIds(setlist: Setlist): string[] {
@@ -225,30 +282,10 @@ function openNetworkSession(setlistId: string): PerformanceSession {
       return sheetMusicStale;
     },
 
-    async resolvePdfUrl(sm, signal) {
-      if (signal.aborted) throw abortError();
-      const url = await getSheetMusicUrl(sm.file_url);
-      if (signal.aborted) throw abortError();
-      return { url };
-    },
+    resolvePdfUrl: resolveSignedPdfUrl,
 
     async savePreference(sm) {
-      if (!rows) return;
-      // Optimistic, as before this moved here: the choice shows at once and
-      // stays applied even if the server write fails.
-      if (sm.instrument) setPreferredInstrument(rows.setlist.band_id, sm.instrument);
-      const preferredInstrument = sm.instrument || rows.preferredInstrument;
-      const preferenceChanged = rows.preferredSheetMusicIds[sm.song_id] !== sm.id;
-      if (!preferenceChanged && preferredInstrument === rows.preferredInstrument) return;
-      emit({
-        ...rows,
-        preferredSheetMusicIds: preferenceChanged
-          ? { ...rows.preferredSheetMusicIds, [sm.song_id]: sm.id }
-          : rows.preferredSheetMusicIds,
-        preferredInstrument,
-      });
-      if (!preferenceChanged) return;
-      await setMySheetMusicPreference(sm.song_id, sm.id);
+      if (rows) await saveServerPreference(rows, sm, emit);
     },
 
     async saveOrder(items) {
@@ -270,5 +307,5 @@ function openNetworkSession(setlistId: string): PerformanceSession {
 /** Today's behaviour: everything from Supabase, signed URLs for PDFs. */
 export const networkPerformanceDataSource: PerformanceDataSource = {
   kind: "network",
-  open: openNetworkSession,
+  open: (target) => (target.kind === "setlist" ? openNetworkSession(target.setlistId) : wrongTargetSession()),
 };
