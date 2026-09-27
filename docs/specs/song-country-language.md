@@ -6,7 +6,7 @@
 > "Quizás los campos de país de origen e idioma deberían ser dropdown y así
 > manejar traducciones". They are one change: store a code, show a name.
 > **Scope:** the two `songs` columns, the song forms, metadata apply, CSV
-> import, the country report. One PR.
+> import, the country report. One phase, one PR (§8).
 
 This is a design, not code. Signatures are the contract; no bodies here.
 
@@ -270,6 +270,19 @@ src/lib/__tests__/isoCodes.test.ts, src/services/__tests__/reportsService.test.t
 docs/guides/song-metadata.md                            §6
 CLAUDE.md                                               lib list: isoCodes; schema note on the two columns
 ```
+
+## 8. Phases and PRs
+
+### Phase 1 — ISO codes for country and language
+
+**Goal:** country and language are stored as ISO codes and shown as
+localised names in the song forms, metadata apply, CSV import and the
+country report.
+**Closes:** AC1–AC13. **Validate (manual):** AC6–AC10 in the dev server;
+AC11 on the project the data migration ran on.
+
+- **PR 1.1 — codes, selects, normalisation, data migration.** Everything in
+  §3 and §7.
 
 Definition of done: the `CLAUDE.md` checklist; the PR names the project the
 data migration ran on and the count of rows it changed.

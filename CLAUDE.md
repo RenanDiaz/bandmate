@@ -637,6 +637,28 @@ the same on every Node version. Before considering a change done:
 6. If the change touches RLS or a migration, note which policies were checked.
 7. Documentation is up to date (see below).
 
+## Writing Specs
+
+Specs in `docs/specs/` break the work into **phases**, and each phase into
+**PRs**. They are not the same thing:
+
+- A **phase** is an increment the owner can validate on its own. It states
+  its goal, the acceptance criteria it closes and the manual checks that
+  validate it. Phases are numbered 1, 2, …, and a later phase can be
+  postponed or dropped without breaking an earlier one.
+- A **PR** is a review and merge unit inside a phase, numbered
+  `PR <phase>.<n>` (PR 1.1, PR 2.3). A PR may change nothing the user sees
+  (e.g. a data layer); the PR that completes a phase must leave it
+  validatable.
+- Every spec has at least one phase, even when it is one PR ("One phase,
+  one PR").
+- The breakdown is the section **"Phases and PRs"**: one `### Phase N —
+  <name>` per phase with **Goal**, **Closes** (ACs) and **Validate
+  (manual)**, then its PRs with their scope. Sections that belong to one
+  phase say so in the heading ("(Phase 2)"), not a PR number.
+- The spec's header and its line in "External Documentation" state both
+  counts ("Three phases, four PRs"); the status line tracks phases.
+
 ## Before Opening a Pull Request
 
 Review `README.md` (and this file) against the change and update them in the
@@ -708,10 +730,10 @@ Index: [docs/README.md](docs/README.md).
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec: offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
-- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns
-- [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation
-- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (2 PRs)
+- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
+- [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
-- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (draft): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 PRs, no AI; §11 documents the unscheduled AI follow-up)
-- [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 PR; fragments are v2)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (draft): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [migrations/README.md](migrations/README.md) - Database migration guide

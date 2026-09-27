@@ -6,9 +6,9 @@
 > **Scope:** turn the setlist editor from an *ordering* editor into a
 > *selection* editor: a song picker with history signals and filters,
 > multi-select, touch-first reordering, a plan bar with a target duration,
-> structure templates, "start from a copy", and a candidates list. Three PRs
-> (§10), no AI calls. §11 documents the AI follow-up that is **not**
-> scheduled.
+> structure templates, "start from a copy", and a candidates list. Three
+> phases, four PRs (§10), no AI calls. §11 documents the AI follow-up that
+> is **not** scheduled.
 > **Pairs with:** [setlist-medleys.md](setlist-medleys.md) (the picker's
 > multi-select is its entry point, §3.6). Independent of
 > [themed-setlists.md](themed-setlists.md).
@@ -74,7 +74,7 @@ seconds, `energy`, `tags`, `language`, `country`, `release_date`,
    the band shares the target (the detail view shows "48 / 60 min" too),
    and a device-local target would show a different number to each member.
    The migration is one idempotent `ALTER TABLE`; the existing UPDATE
-   policy covers the column. If the migration is not wanted in PR 2, the
+   policy covers the column. If the migration is not wanted in PR 2.1, the
    fallback is device-local storage with the same UI; say so in the PR.
 7. **Templates are items, not a new concept**: "Two sets + break" is two
    `section` items and one `break` item, created with the setlist.
@@ -115,7 +115,7 @@ Rules that hold in every cell:
 - The full-screen picker keeps its filters and selection while open;
   closing it (Add N or Close) returns to the setlist without a route change.
 
-## 3. Song picker (PR 1)
+## 3. Song picker (Phase 1)
 
 ### 3.1 Rows
 
@@ -193,7 +193,7 @@ on pointer the menu exists too (keyboard users), the icons stay.
   the signal line and without the Played chip; no toast (the editor's own
   load error keeps today's toast + redirect).
 
-## 4. Plan bar, templates, start from (PR 2)
+## 4. Plan bar, templates, start from (Phase 2)
 
 ### 4.1 Plan bar
 
@@ -241,7 +241,7 @@ The AI generator's "Save & Edit" is untouched.
 `NewSetlistForm` (and Duplicate) navigate to `/setlists/:id/edit` after
 creating. `onSetlistCreated` stays for the list refresh on return.
 
-## 5. Candidates (PR 3)
+## 5. Candidates (Phase 3)
 
 A third state between "in the library" and "in the setlist".
 
@@ -403,7 +403,7 @@ export function useSortableSensors(): SensorDescriptor<SensorOptions>[]; // Mous
 export interface SongPickerProps {
   songs: Song[];                         // not yet in the setlist
   signals: ReadonlyMap<string, SongSignals>;
-  candidates?: ReadonlySet<string>;      // PR 3
+  candidates?: ReadonlySet<string>;      // Phase 3
   onToggleCandidate?: (songId: string) => void;
   onAdd: (song: Song) => void;           // single "+"
   onAddSelected: (songs: Song[], options: { asMedley: boolean }) => void;
@@ -422,7 +422,7 @@ export interface PlanBarProps {
 
 // src/components/setlist-builder/SetlistRowMenu.tsx  (Move up/down/top/bottom, Remove)
 
-// src/lib/setlistCandidates.ts   (PR 3, localStorage; same shape as performPosition.ts)
+// src/lib/setlistCandidates.ts   (Phase 3, localStorage; same shape as performPosition.ts)
 export function readCandidates(userId: string, setlistId: string): string[];
 export function writeCandidates(userId: string, setlistId: string, songIds: string[]): void;
 export function clearAllCandidates(): void;   // called by wipeAll
@@ -437,7 +437,7 @@ the utils in §6.1–6.3 are pure and tested in node.
   `updateSetlist` / `createSetlist` throw `PermissionError` and the views
   toast `common.noPermission`. Guests never see Duplicate or Start from.
 - `target_minutes` travels with the setlist row, so an offline snapshot made
-  after PR 2 carries it and `OfflineSetlistDetail` may show it; snapshots
+  after Phase 2 carries it and `OfflineSetlistDetail` may show it; snapshots
   made before simply lack it. **No `OFFLINE_SCHEMA_VERSION` bump.**
 - The editor is online-only (offline it renders `NeedsConnection`);
   nothing here changes that.
@@ -513,19 +513,41 @@ boundary):
 - `NewSetlistForm`: template creates the items; copy calls
   `duplicateSetlist` and navigates.
 
-## 10. PR breakdown
+## 10. Phases and PRs
 
-**PR 1 — picker, signals, filters, touch reorder.**
+Each phase ships on its own and leaves the editor usable; Phase 3 can be
+dropped without touching the others. AC13 applies to every phase.
+
+### Phase 1 — pick songs with history, on any device
+
+**Goal:** a band builds a setlist from the library using play history,
+filters and multi-select, and reorders it on an iPad or phone.
+**Closes:** AC1–AC6, AC12. **Validate (manual):** AC4 on an iPad without a
+trackpad, AC5 on a phone, AC6 on desktop with a mouse.
+
+**PR 1.1 — picker, signals, filters.**
 - `songSignals.ts`, `songFilters.ts` additions, `useInputCapabilities`,
-  `useSortableSensors`, `SongPicker`, `SetlistRowMenu`, the narrow-layout
-  sheet, per-device picker state.
+  `SongPicker`, the narrow-layout sheet, per-device picker state.
 - `SetlistEditor` loads setlists + shows, passes signals; library panel
-  replaced by `SongPicker`; sensors swapped in the three views.
-- i18n `setlists.picker.*`, `setlists.rowMenu.*`.
+  replaced by `SongPicker`.
+- i18n `setlists.picker.*`.
+- Tests: `songSignals`, `songFilters`, `SongPicker` (§9).
+
+**PR 1.2 — touch reorder.**
+- `useSortableSensors`, `SetlistRowMenu`; sensors swapped in the three
+  views (editor, detail reorder, performance mode reorder).
+- i18n `setlists.rowMenu.*`.
 - README **Features** (Setlists): "Song picker with play history, filters
   and multi-select; touch-friendly reordering".
 
-**PR 2 — plan bar, templates, copy, navigate-to-editor.**
+### Phase 2 — plan the length and start from a shape
+
+**Goal:** a setlist has a shared target duration with progress, and a new
+setlist can start from a template or a copy.
+**Closes:** AC7–AC10. **Validate (manual):** AC7–AC10; the PR notes the
+policies checked for the migration.
+
+**PR 2.1 — plan bar, templates, copy, navigate-to-editor.**
 - Migration `target_minutes`; service types; `setlistPlan.ts`;
   `setlistTemplates.ts`; `duplicateSetlist`; `PlanBar` in editor and
   detail; section subtotals; `NewSetlistForm` Start from; `SetlistList`
@@ -535,13 +557,19 @@ boundary):
 - README **Features**: "Target duration with progress, structure templates,
   duplicate a setlist".
 
-**PR 3 — candidates.**
+### Phase 3 — candidates
+
+**Goal:** a member keeps a per-device shortlist of songs to consider for a
+setlist.
+**Closes:** AC11. **Validate (manual):** AC11, including sign-out.
+
+**PR 3.1 — candidates.**
 - `setlistCandidates.ts`, `wipeAll` prefix, picker star + tab, empty state.
 - CLAUDE.md "Offline wipe rules" (one more localStorage prefix).
 
 Docs: add this spec to `docs/README.md`, the README Documentation list and
 CLAUDE.md "External Documentation" (done with this spec); update the status
-line as PRs merge.
+line as phases complete.
 
 ## 11. Future: AI inside the builder (documented, not scheduled)
 

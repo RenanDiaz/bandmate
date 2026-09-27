@@ -4,7 +4,7 @@
 > **Origin:** TODO "Poder ver una canción tipo performance desde la lista de
 > canciones".
 > **Scope:** a Perform action on every song card that opens the existing
-> performance mode for that one song. Two PRs (§9). Largest of the five
+> performance mode for that one song. One phase, two PRs (§9). Largest of the five
 > TODO specs; do the others first.
 
 This is a design, not code. Signatures are the contract; no bodies here.
@@ -267,7 +267,7 @@ songs.loadError       Could not load the song
 
 - **The view is 3 000 lines.** The gating is a dozen `isSong &&` checks and
   four navigation targets; the temptation is to "clean up while here".
-  Don't: PR 2 is the gating only, so the diff stays reviewable and AC12
+  Don't: PR 1.2 is the gating only, so the diff stays reviewable and AC12
   stays credible.
 - **Synthetic ids leaking.** `song:<id>` must never reach a service that
   expects a setlist row: `saveOrder` (blocked by capability), sync (disabled),
@@ -307,13 +307,20 @@ README.md                                          Features: perform a single so
 docs/specs/offline-performance-phase2-3.md         changelog line: target type, song follow-up
 ```
 
-## 9. PR breakdown
+## 9. Phases and PRs
 
-- **PR 1 — data layer, no UI change.** §3.1–§3.3, the hook's `target`
+### Phase 1 — perform a single song
+
+**Goal:** from `/songs`, any role opens one song in performance mode and
+exits back to the library; setlist performance is unchanged.
+**Closes:** AC1–AC15. **Validate (manual):** AC9–AC14, including the setlist
+regression smoke (AC12) with two devices for sync; record the devices used.
+
+- **PR 1.1 — data layer, no UI change.** §3.1–§3.3, the hook's `target`
   parameter, tests AC1–AC5, AC8. `SetlistPerformanceView` only wraps its
   param into a target. Behaviour identical; AC3 proves it.
-- **PR 2 — route, view gating, song card.** §3.4–§3.6, tests AC6–AC7, the
+- **PR 1.2 — route, view gating, song card.** §3.4–§3.6, tests AC6–AC7, the
   manual checklist AC9–AC14, docs.
 
-Definition of done per PR: the `CLAUDE.md` checklist; PR 2 records the
-setlist regression smoke (AC12) and the devices used.
+Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
+when PR 1.2 merges with the manual checklist recorded in its description.
