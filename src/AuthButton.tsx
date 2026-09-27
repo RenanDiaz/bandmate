@@ -1,7 +1,7 @@
 import type { FC } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Spinner } from "reactstrap";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { theme } from "./theme";
 import { useTranslation } from "react-i18next";
 import { wipeAll } from "./services/offlineSetlistService";
@@ -11,7 +11,26 @@ import { useToast } from "./context/useToast";
 import { signOutEverywhereOrLocally } from "./lib/authSession";
 import { getPwaUpdater } from "./lib/pwaUpdates";
 
-export const AuthButton: FC = () => {
+/**
+ * The account menu, in two layouts:
+ *
+ * - `dropdown` (default): the desktop navbar. A trigger with the avatar and
+ *   email opens a floating menu below it, closed by Escape, a click outside
+ *   or the trigger.
+ * - `inline`: the mobile navigation drawer. The same content rendered flat
+ *   (account header, language, Check for updates, Sign out) as rows of the
+ *   drawer itself: a floating menu anchored to the drawer's last row opened
+ *   below the viewport and had to be scrolled into view.
+ *
+ * `onAction` fires when an action finished (sign-out done, update check
+ * answered) so the drawer can close.
+ */
+interface AuthButtonProps {
+  variant?: "dropdown" | "inline";
+  onAction?: () => void;
+}
+
+export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction }) => {
   const { t, i18n } = useTranslation();
   // The context's user, not a second getSession(): offline that call can take
   // ≈25 s, and the navbar must agree with the rest of the app (spec §7.1).
@@ -20,6 +39,8 @@ export const AuthButton: FC = () => {
   const [loading, setLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inline = variant === "inline";
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -45,7 +66,8 @@ export const AuthButton: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast, t]);
+    onAction?.();
+  }, [toast, t, onAction]);
 
   // An installed iOS app has no reload gesture: this is how its user asks for
   // the new version without killing the app.
@@ -76,15 +98,37 @@ export const AuthButton: FC = () => {
       setCheckingUpdate(false);
     }
     setShowUserMenu(false);
-  }, [toast, t]);
+    onAction?.();
+  }, [toast, t, onAction]);
+
+  // Dropdown only: close on Escape and on a click outside the menu.
+  useEffect(() => {
+    if (inline || !showUserMenu) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowUserMenu(false);
+    };
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [inline, showUserMenu]);
 
   // Nothing while auth resolves (≤ 750 ms with a last-user, A6): no "Sign in" flash.
   if (isCheckingAuth) return null;
 
   if (!user) {
     return (
-      <SignInContainer>
-        <SignInButton onClick={redirectToLogin}>
+      <SignInContainer $inline={inline}>
+        <SignInButton onClick={redirectToLogin} $inline={inline}>
           <i className="bi bi-box-arrow-in-right"></i>
           <span>{t('auth.signIn')}</span>
         </SignInButton>
@@ -96,86 +140,108 @@ export const AuthButton: FC = () => {
   // "Offline" account instead of an address.
   const isOfflineAccount = authMode === "offline-cached" || !user.email;
   const userLabel = user.email ?? (authMode === "offline-cached" ? t("auth.offlineAccount") : t("auth.user"));
+  const avatar = (
+    <UserAvatar $inline={inline} aria-hidden="true">
+      {isOfflineAccount ? <i className="bi bi-person"></i> : userLabel.charAt(0).toUpperCase()}
+    </UserAvatar>
+  );
+
+  const accountInfo = user.email ? (
+    <>
+      <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
+      <UserInfoEmail>{user.email}</UserInfoEmail>
+    </>
+  ) : authMode === "offline-cached" ? (
+    <UserInfoLabel>{t('auth.offlineAccountHint')}</UserInfoLabel>
+  ) : (
+    <UserInfoEmail>{userLabel}</UserInfoEmail>
+  );
+
+  const items = (
+    <>
+      <LanguageSection $inline={inline}>
+        <LanguageLabel $inline={inline}>
+          <i className="bi bi-globe"></i>
+          <span>{t('settings.language')}</span>
+        </LanguageLabel>
+        <LanguageButtons role="group" aria-label={t('settings.language')}>
+          <LanguageButton
+            $active={i18n.language === 'en' || i18n.language.startsWith('en-')}
+            aria-pressed={i18n.language === 'en' || i18n.language.startsWith('en-')}
+            onClick={() => changeLanguage('en')}
+          >
+            EN
+          </LanguageButton>
+          <LanguageButton
+            $active={i18n.language === 'es' || i18n.language.startsWith('es-')}
+            aria-pressed={i18n.language === 'es' || i18n.language.startsWith('es-')}
+            onClick={() => changeLanguage('es')}
+          >
+            ES
+          </LanguageButton>
+        </LanguageButtons>
+      </LanguageSection>
+      {!inline && <MenuDivider />}
+      <MenuItem $inline={inline} onClick={checkForUpdate} disabled={checkingUpdate}>
+        {checkingUpdate ? (
+          <>
+            <Spinner size="sm" />
+            <span>{t('pwa.checking')}</span>
+          </>
+        ) : (
+          <>
+            <i className="bi bi-arrow-repeat"></i>
+            <span>{t('pwa.checkForUpdates')}</span>
+          </>
+        )}
+      </MenuItem>
+      <MenuItem $inline={inline} onClick={logout} disabled={loading}>
+        {loading ? (
+          <>
+            <Spinner size="sm" />
+            <span>{t('auth.signingOut')}</span>
+          </>
+        ) : (
+          <>
+            <i className="bi bi-box-arrow-right"></i>
+            <span>{t('auth.signOut')}</span>
+          </>
+        )}
+      </MenuItem>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <AccountPanel data-testid="account-panel">
+        <AccountHeader>
+          {avatar}
+          <AccountHeaderText>{accountInfo}</AccountHeaderText>
+        </AccountHeader>
+        {items}
+      </AccountPanel>
+    );
+  }
 
   return (
-    <UserMenuContainer>
+    <UserMenuContainer ref={menuRef}>
       <UserButton
         onClick={() => setShowUserMenu(!showUserMenu)}
         disabled={loading}
         aria-label={t('auth.userMenu')}
+        aria-haspopup="menu"
+        aria-expanded={showUserMenu}
       >
-        <UserAvatar>
-          {isOfflineAccount ? <i className="bi bi-person" aria-hidden="true"></i> : userLabel.charAt(0).toUpperCase()}
-        </UserAvatar>
+        {avatar}
         <UserEmail>{userLabel}</UserEmail>
         <i className={`bi bi-chevron-${showUserMenu ? 'up' : 'down'}`}></i>
       </UserButton>
 
       {showUserMenu && (
-        <UserDropdown>
-          {user.email ? (
-            <>
-              <UserInfo>
-                <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
-                <UserInfoEmail>{user.email}</UserInfoEmail>
-              </UserInfo>
-              <DropdownDivider />
-            </>
-          ) : authMode === "offline-cached" ? (
-            <>
-              <UserInfo>
-                <UserInfoLabel>{t('auth.offlineAccountHint')}</UserInfoLabel>
-              </UserInfo>
-              <DropdownDivider />
-            </>
-          ) : null}
-          <LanguageSection>
-            <LanguageLabel>
-              <i className="bi bi-globe"></i>
-              {t('settings.language')}
-            </LanguageLabel>
-            <LanguageButtons>
-              <LanguageButton
-                $active={i18n.language === 'en' || i18n.language.startsWith('en-')}
-                onClick={() => changeLanguage('en')}
-              >
-                EN
-              </LanguageButton>
-              <LanguageButton
-                $active={i18n.language === 'es' || i18n.language.startsWith('es-')}
-                onClick={() => changeLanguage('es')}
-              >
-                ES
-              </LanguageButton>
-            </LanguageButtons>
-          </LanguageSection>
-          <DropdownDivider />
-          <DropdownItem onClick={checkForUpdate} disabled={checkingUpdate}>
-            {checkingUpdate ? (
-              <>
-                <Spinner size="sm" />
-                <span>{t('pwa.checking')}</span>
-              </>
-            ) : (
-              <>
-                <i className="bi bi-arrow-repeat"></i>
-                <span>{t('pwa.checkForUpdates')}</span>
-              </>
-            )}
-          </DropdownItem>
-          <DropdownItem onClick={logout} disabled={loading}>
-            {loading ? (
-              <>
-                <Spinner size="sm" />
-                <span>{t('auth.signingOut')}</span>
-              </>
-            ) : (
-              <>
-                <i className="bi bi-box-arrow-right"></i>
-                <span>{t('auth.signOut')}</span>
-              </>
-            )}
-          </DropdownItem>
+        <UserDropdown role="menu">
+          <UserInfo>{accountInfo}</UserInfo>
+          <MenuDivider />
+          {items}
         </UserDropdown>
       )}
     </UserMenuContainer>
@@ -184,18 +250,19 @@ export const AuthButton: FC = () => {
 
 // Styled Components
 
-const SignInContainer = styled.div`
+const SignInContainer = styled.div<{ $inline: boolean }>`
   display: flex;
   align-items: center;
   gap: ${theme.space[3]};
   flex-wrap: wrap;
+  ${(props) => props.$inline && css`width: 100%;`}
 
   @media (max-width: ${theme.breakpoints.sm}) {
     gap: ${theme.space[2]};
   }
 `;
 
-const SignInButton = styled.button`
+const SignInButton = styled.button<{ $inline: boolean }>`
   background: ${theme.colors.brand.primary};
   color: white;
   border: none;
@@ -207,6 +274,7 @@ const SignInButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: ${theme.space[2]};
   white-space: nowrap;
 
@@ -229,11 +297,20 @@ const SignInButton = styled.button`
     cursor: not-allowed;
   }
 
-  span {
-    @media (max-width: ${theme.breakpoints.sm}) {
-      display: none;
-    }
-  }
+  ${(props) =>
+    props.$inline
+      ? css`
+          width: 100%;
+          height: 48px;
+          font-size: ${theme.fontSizes.body};
+        `
+      : css`
+          span {
+            @media (max-width: ${theme.breakpoints.sm}) {
+              display: none;
+            }
+          }
+        `}
 `;
 
 const UserMenuContainer = styled.div`
@@ -259,29 +336,38 @@ const UserButton = styled.button`
     background: var(--color-bg-elevated);
   }
 
+  &[aria-expanded="true"] {
+    border-color: ${theme.colors.brand.primary};
+  }
+
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
   }
 
-  i {
+  > i {
     font-size: 12px;
     margin-left: auto;
   }
 `;
 
-const UserAvatar = styled.div`
-  width: 28px;
-  height: 28px;
+const UserAvatar = styled.div<{ $inline: boolean }>`
+  width: ${(props) => (props.$inline ? "40px" : "28px")};
+  height: ${(props) => (props.$inline ? "40px" : "28px")};
   border-radius: ${theme.radius.full};
   background: ${theme.gradients.brandPrimary};
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: ${theme.fontWeights.semibold};
-  font-size: ${theme.fontSizes.bodySm};
+  font-size: ${(props) => (props.$inline ? theme.fontSizes.body : theme.fontSizes.bodySm)};
   color: white;
   flex-shrink: 0;
+
+  i {
+    font-size: ${(props) => (props.$inline ? theme.fontSizes.h5 : theme.fontSizes.body)};
+    margin: 0;
+  }
 `;
 
 const UserEmail = styled.span`
@@ -339,73 +425,153 @@ const UserInfoEmail = styled.div`
   word-break: break-all;
 `;
 
-const DropdownDivider = styled.div`
+const MenuDivider = styled.div`
   height: 1px;
   background: var(--color-border);
   margin: ${theme.space[2]} 0;
 `;
 
-const DropdownItem = styled.button`
+/* Inline (drawer) layout: the account header and the rows below it share the
+   drawer's nav-link rhythm (48 px rows, 24 px icon column). */
+const AccountPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.space[1]};
+  width: 100%;
+`;
+
+const AccountHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  padding: ${theme.space[2]} ${theme.space[2]} ${theme.space[3]};
+  min-width: 0;
+`;
+
+const AccountHeaderText = styled.div`
+  min-width: 0;
+  flex: 1;
+
+  ${UserInfoLabel} {
+    margin-bottom: 2px;
+  }
+
+  ${UserInfoEmail} {
+    font-size: ${theme.fontSizes.body};
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+`;
+
+const rowStyles = css`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[3]};
+  min-height: 48px;
+  padding: ${theme.space[3]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.medium};
+  color: var(--color-text-secondary);
+
+  i {
+    font-size: ${theme.fontSizes.h5};
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+  }
+`;
+
+const MenuItem = styled.button<{ $inline: boolean }>`
   width: 100%;
   background: transparent;
   border: none;
-  color: var(--color-text-primary);
-  padding: ${theme.space[3]} ${theme.space[4]};
   text-align: left;
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-  font-size: ${theme.fontSizes.bodySm};
 
-  i {
-    font-size: ${theme.fontSizes.body};
-    color: var(--color-text-secondary);
-  }
+  ${(props) =>
+    props.$inline
+      ? css`
+          ${rowStyles}
 
-  &:hover:not(:disabled) {
-    background: var(--color-bg-tertiary);
-    color: ${theme.colors.brand.primary};
+          &:hover:not(:disabled) {
+            color: ${theme.colors.brand.primary};
+            background: var(--color-bg-tertiary);
+            transform: translateX(4px);
+          }
+        `
+      : css`
+          color: var(--color-text-primary);
+          padding: ${theme.space[3]} ${theme.space[4]};
+          display: flex;
+          align-items: center;
+          gap: ${theme.space[2]};
+          font-size: ${theme.fontSizes.bodySm};
 
-    i {
-      color: ${theme.colors.brand.primary};
-    }
-  }
+          i {
+            font-size: ${theme.fontSizes.body};
+            color: var(--color-text-secondary);
+          }
+
+          &:hover:not(:disabled) {
+            background: var(--color-bg-tertiary);
+            color: ${theme.colors.brand.primary};
+
+            i {
+              color: ${theme.colors.brand.primary};
+            }
+          }
+
+          &:last-of-type {
+            border-radius: 0 0 ${theme.radius.md} ${theme.radius.md};
+          }
+        `}
 
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
   }
-
-  &:last-of-type {
-    border-radius: 0 0 ${theme.radius.md} ${theme.radius.md};
-  }
 `;
 
-const LanguageSection = styled.div`
-  padding: ${theme.space[3]} ${theme.space[4]};
+const LanguageSection = styled.div<{ $inline: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${theme.space[3]};
+  ${(props) =>
+    props.$inline
+      ? css`
+          ${rowStyles}
+        `
+      : css`
+          padding: ${theme.space[3]} ${theme.space[4]};
+        `}
 `;
 
-const LanguageLabel = styled.div`
+const LanguageLabel = styled.div<{ $inline: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${theme.space[2]};
-  font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-primary);
+  gap: ${(props) => (props.$inline ? theme.space[3] : theme.space[2])};
+  font-size: ${(props) => (props.$inline ? theme.fontSizes.body : theme.fontSizes.bodySm)};
+  color: ${(props) => (props.$inline ? "inherit" : "var(--color-text-primary)")};
 
   i {
-    font-size: ${theme.fontSizes.body};
-    color: var(--color-text-secondary);
+    ${(props) =>
+      !props.$inline &&
+      css`
+        font-size: ${theme.fontSizes.body};
+        color: var(--color-text-secondary);
+      `}
   }
 `;
 
 const LanguageButtons = styled.div`
   display: flex;
   gap: ${theme.space[1]};
+  flex-shrink: 0;
 `;
 
 const LanguageButton = styled.button<{ $active: boolean }>`
@@ -416,6 +582,7 @@ const LanguageButton = styled.button<{ $active: boolean }>`
   border: 1px solid ${(props) =>
     props.$active ? theme.colors.brand.primary : 'var(--color-border)'};
   padding: ${theme.space[1]} ${theme.space[2]};
+  min-width: 40px;
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.semibold};
