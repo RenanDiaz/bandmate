@@ -1,4 +1,5 @@
 import type { Song } from "../services/songsService";
+import { PLAYED_STATUSES, playedStatus, type PlayedStatus, type SongSignals } from "./songSignals";
 
 export type SortOption =
   | "artist_title_asc"
@@ -170,4 +171,171 @@ export function processSongs(
   processed = sortSongs(processed, sortBy);
 
   return processed;
+}
+
+// ============================================
+// Setlist builder picker (docs/specs/setlist-builder.md §6.2)
+// ============================================
+
+export type EnergyBand = "low" | "medium" | "high";
+
+export const ENERGY_BANDS: readonly EnergyBand[] = ["low", "medium", "high"];
+
+/** `song.energy` is Spotify's 0–1 scale. */
+export const ENERGY_LOW_BELOW = 0.4;
+export const ENERGY_HIGH_FROM = 0.7;
+
+export function energyBand(energy: number | undefined | null): EnergyBand | undefined {
+  if (typeof energy !== "number" || !Number.isFinite(energy)) return undefined;
+  if (energy < ENERGY_LOW_BELOW) return "low";
+  if (energy < ENERGY_HIGH_FROM) return "medium";
+  return "high";
+}
+
+export interface PickerFilters {
+  tags: string[];
+  keys: string[];
+  languages: string[];
+  energy: EnergyBand[];
+  played: PlayedStatus[];
+}
+
+export const EMPTY_PICKER_FILTERS: PickerFilters = {
+  tags: [],
+  keys: [],
+  languages: [],
+  energy: [],
+  played: [],
+};
+
+export type PickerSort =
+  | "artist_title_asc" | "title_asc" | "date_desc" // existing SortOption values
+  | "most_played" | "longest_since_played";
+
+export const PICKER_SORTS: readonly PickerSort[] = [
+  "artist_title_asc",
+  "title_asc",
+  "date_desc",
+  "most_played",
+  "longest_since_played",
+];
+
+export interface PickerState {
+  filters: PickerFilters;
+  sort: PickerSort;
+}
+
+export const DEFAULT_PICKER_STATE: PickerState = {
+  filters: EMPTY_PICKER_FILTERS,
+  sort: "artist_title_asc",
+};
+
+export function hasActivePickerFilters(filters: PickerFilters): boolean {
+  return (Object.keys(filters) as (keyof PickerFilters)[]).some((field) => filters[field].length > 0);
+}
+
+function signalsFor(signals: ReadonlyMap<string, SongSignals>, songId: string): SongSignals {
+  return signals.get(songId) ?? { songId, timesPlayed: 0, timesInSetlists: 0 };
+}
+
+/** OR within a filter, AND across filters; empty arrays match everything. */
+export function filterByPicker(
+  songs: Song[],
+  filters: PickerFilters,
+  signals: ReadonlyMap<string, SongSignals>,
+  today: string,
+): Song[] {
+  return songs.filter((song) => {
+    if (filters.tags.length > 0 && !song.tags?.some((tag) => filters.tags.includes(tag.trim()))) return false;
+    if (filters.keys.length > 0 && !filters.keys.includes(song.key?.trim() ?? "")) return false;
+    if (filters.languages.length > 0 && !filters.languages.includes(song.language?.trim() ?? "")) return false;
+    if (filters.energy.length > 0) {
+      const band = energyBand(song.energy);
+      if (!band || !filters.energy.includes(band)) return false;
+    }
+    if (filters.played.length > 0 && !filters.played.includes(playedStatus(signalsFor(signals, song.id), today))) {
+      return false;
+    }
+    return true;
+  });
+}
+
+const byTitle = (a: Song, b: Song) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+
+export function sortForPicker(
+  songs: Song[],
+  sort: PickerSort,
+  signals: ReadonlyMap<string, SongSignals>,
+): Song[] {
+  switch (sort) {
+    case "most_played":
+      return [...songs].sort(
+        (a, b) => signalsFor(signals, b.id).timesPlayed - signalsFor(signals, a.id).timesPlayed || byTitle(a, b)
+      );
+    case "longest_since_played":
+      // Never played first, then the oldest last-played date; ties by title.
+      return [...songs].sort((a, b) => {
+        const lastA = signalsFor(signals, a.id).lastPlayedAt;
+        const lastB = signalsFor(signals, b.id).lastPlayedAt;
+        if (lastA !== lastB) {
+          if (!lastA) return -1;
+          if (!lastB) return 1;
+          return lastA < lastB ? -1 : 1;
+        }
+        return byTitle(a, b);
+      });
+    default:
+      return sortSongs(songs, sort);
+  }
+}
+
+const distinctSorted = (values: (string | undefined)[]): string[] =>
+  [...new Set(values.map((value) => value?.trim()).filter((value): value is string => !!value))].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+
+/** Distinct values present in the catalog, sorted; for the chips. */
+export function pickerFacets(songs: Song[]): {
+  tags: string[]; keys: string[]; languages: string[]; hasEnergy: boolean;
+} {
+  return {
+    tags: distinctSorted(songs.flatMap((song) => song.tags ?? [])),
+    keys: distinctSorted(songs.map((song) => song.key)),
+    languages: distinctSorted(songs.map((song) => song.language)),
+    hasEnergy: songs.some((song) => energyBand(song.energy) !== undefined),
+  };
+}
+
+function stringList<T extends string>(value: unknown, allowed?: readonly T[]): T[] {
+  if (!Array.isArray(value)) return [];
+  const strings = value.filter((entry): entry is T => typeof entry === "string" && entry.trim() !== "");
+  const valid = allowed ? strings.filter((entry) => allowed.includes(entry)) : strings;
+  return [...new Set(valid)];
+}
+
+/** Parse the stored picker state; anything invalid falls back to defaults. */
+export function parseStoredPickerState(raw: string | null): PickerState {
+  if (!raw) return DEFAULT_PICKER_STATE;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return DEFAULT_PICKER_STATE;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return DEFAULT_PICKER_STATE;
+  const record = value as { filters?: unknown; sort?: unknown };
+  const filters =
+    record.filters && typeof record.filters === "object" && !Array.isArray(record.filters)
+      ? (record.filters as Record<string, unknown>)
+      : {};
+  return {
+    filters: {
+      tags: stringList(filters.tags),
+      keys: stringList(filters.keys),
+      languages: stringList(filters.languages),
+      energy: stringList(filters.energy, ENERGY_BANDS),
+      played: stringList(filters.played, PLAYED_STATUSES),
+    },
+    sort: PICKER_SORTS.includes(record.sort as PickerSort) ? (record.sort as PickerSort) : DEFAULT_PICKER_STATE.sort,
+  };
 }

@@ -447,6 +447,51 @@
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
       "saveError": "Error al guardar el setlist. Por favor intenta de nuevo."
     },
+    "picker": {
+      "title": "Biblioteca de Canciones",
+      "addSongs": "Agregar canciones",
+      "filters": "Filtros",
+      "clearFilters": "Limpiar filtros",
+      "filter": {
+        "tags": "Etiquetas",
+        "key": "Tonalidad",
+        "language": "Idioma",
+        "energy": "Energía",
+        "played": "Tocada"
+      },
+      "energy": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta"
+      },
+      "played": {
+        "never": "Nunca tocada",
+        "stale": "Sin tocar en 6+ meses",
+        "played": "Tocada en los últimos 6 meses"
+      },
+      "sort": {
+        "label": "Ordenar",
+        "artist_title_asc": "Artista, título",
+        "title_asc": "Título",
+        "date_desc": "Agregadas recientemente",
+        "most_played": "Más tocadas",
+        "longest_since_played": "Más tiempo sin tocar"
+      },
+      "signals": {
+        "played_one": "Tocada {{count}}× · última: {{place}}, {{date}}",
+        "played_other": "Tocada {{count}}× · última: {{place}}, {{date}}",
+        "inSetlists_one": "En {{count}} setlist · nunca tocada",
+        "inSetlists_other": "En {{count}} setlists · nunca tocada",
+        "never": "Nunca en un setlist"
+      },
+      "addSelected_one": "Agregar {{count}} canción",
+      "addSelected_other": "Agregar {{count}} canciones",
+      "clearSelection": "Limpiar",
+      "selectSong": "Seleccionar {{title}}",
+      "noMatchFilters": "Ninguna canción coincide con estos filtros",
+      "goToSongs": "Ir a Canciones",
+      "addSongsHintNarrow": "Toca “Agregar canciones” para elegir de la biblioteca"
+    },
     "detail": {
       "loading": "Cargando setlist...",
       "notFound": "Setlist No Encontrado",

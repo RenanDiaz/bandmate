@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1: PR 1.1 done, PR 1.2 pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a
@@ -402,7 +402,8 @@ export function useSortableSensors(): SensorDescriptor<SensorOptions>[]; // Mous
 // src/components/setlist-builder/SongPicker.tsx
 export interface SongPickerProps {
   songs: Song[];                         // not yet in the setlist
-  signals: ReadonlyMap<string, SongSignals>;
+  totalSongs: number;                    // library size: "no songs" vs "all added" (§3.6)
+  signals: ReadonlyMap<string, SongSignals> | null; // null: signals failed to load (§3.6)
   candidates?: ReadonlySet<string>;      // Phase 3
   onToggleCandidate?: (songId: string) => void;
   onAdd: (song: Song) => void;           // single "+"
@@ -410,6 +411,8 @@ export interface SongPickerProps {
   onEditSong?: (song: Song) => void;
   layout: "panel" | "sheet";             // wide vs narrow
   capabilities: InputCapabilities;
+  onClose?: () => void;                  // sheet only
+  today?: string;                        // YYYY-MM-DD, tests pin it
 }
 
 // src/components/setlist-builder/PlanBar.tsx
@@ -536,6 +539,8 @@ trackpad, AC5 on a phone, AC6 on desktop with a mouse.
 **PR 1.2 — touch reorder.**
 - `useSortableSensors`, `SetlistRowMenu`; sensors swapped in the three
   views (editor, detail reorder, performance mode reorder).
+- The wide + pointer `Delete` shortcut on the highlighted setlist row (§2):
+  it belongs with the row menu, so PR 1.1 left it out.
 - i18n `setlists.rowMenu.*`.
 - README **Features** (Setlists): "Song picker with play history, filters
   and multi-select; touch-friendly reordering".

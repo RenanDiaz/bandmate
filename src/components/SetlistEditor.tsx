@@ -1,16 +1,18 @@
 import type { FC } from "react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
 import styled from "styled-components";
 import {
   DndContext,
-  closestCenter,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -23,6 +25,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
 import {
   getSetlist,
+  getBandSetlists,
   updateSetlist,
   isSongItem,
   isBreakItem,
@@ -34,6 +37,7 @@ import {
 import type { Setlist, SetlistItem, SetlistSongItem, SetlistBreakItem, SetlistSectionItem, SetlistNoteItem } from "../services/setlistsService";
 import { getBandSongs, updateSong } from "../services/songsService";
 import type { Song, UpdateSongInput } from "../services/songsService";
+import { getBandShows, type Show } from "../services/showsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
 import { groqService, GroqApiError } from "../services/groqService";
 import { EditSongModal } from "./EditSongModal";
@@ -42,6 +46,13 @@ import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
+import { useInputCapabilities } from "../hooks/useInputCapabilities";
+import { computeSongSignals } from "../utils/songSignals";
+import { insertSongs } from "../utils/setlistInsert";
+import { SongPicker } from "./setlist-builder/SongPicker";
+import { PickerSheet } from "./setlist-builder/PickerSheet";
+import { SETLIST_DROP_ID, editorCollisionDetection, songIdFromPickerDrag } from "./setlist-builder/pickerDnd";
+import { SetlistDropZone } from "./setlist-builder/SetlistDropZone";
 
 // Sortable song card component
 interface SortableSetlistSongCardProps {
@@ -212,8 +223,14 @@ const SetlistEditor: FC = () => {
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  // History signals for the picker; null when either read failed (spec §3.6).
+  const [bandSetlists, setBandSetlists] = useState<Setlist[] | null>(null);
+  const [bandShows, setBandShows] = useState<Show[] | null>(null);
+  const capabilities = useInputCapabilities();
+  const [isPickerSheetOpen, setIsPickerSheetOpen] = useState(false);
+  // A picker row being dragged into the setlist, and the row it would land before.
+  const [pickerDragSong, setPickerDragSong] = useState<Song | null>(null);
+  const [dropBeforeKey, setDropBeforeKey] = useState<string | null>(null);
 
   // Modal state for adding/editing special items
   const [isSpecialItemModalOpen, setIsSpecialItemModalOpen] = useState(false);
@@ -260,8 +277,37 @@ const SetlistEditor: FC = () => {
     );
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const songId = songIdFromPickerDrag(event.active.id);
+    if (songId === null) return;
+    setPickerDragSong(availableSongs.find((song) => song.id === songId) ?? null);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    if (songIdFromPickerDrag(event.active.id) === null) return;
+    const overId = event.over ? String(event.over.id) : null;
+    setDropBeforeKey(overId && overId !== SETLIST_DROP_ID ? overId : null);
+  };
+
+  const handleDragCancel = () => {
+    setPickerDragSong(null);
+    setDropBeforeKey(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+
+    const pickerSongId = songIdFromPickerDrag(active.id);
+    if (pickerSongId !== null) {
+      handleDragCancel();
+      if (!over) return;
+      // Dropped on a row: insert before it. On the list below the rows: append.
+      setSetlistItems((items) => {
+        const index = items.findIndex((item) => getSetlistItemKey(item) === over.id);
+        return insertSongs(items, [pickerSongId], index === -1 ? undefined : index);
+      });
+      return;
+    }
 
     if (over && active.id !== over.id) {
       setSetlistItems((items) => {
@@ -292,8 +338,28 @@ const SetlistEditor: FC = () => {
         // Items already carry stable ids (see normalizeSetlistItem)
         setSetlistItems(setlistData.songs || []);
 
-        const songsData = await getBandSongs(setlistData.band_id);
+        // The signals' reads never fail the editor: the picker renders without them.
+        // Drafts are included so a completed show linked to one still counts.
+        const [songsData, setlistsResult, showsResult] = await Promise.all([
+          getBandSongs(setlistData.band_id),
+          getBandSetlists(setlistData.band_id, true).then(
+            (rows) => rows,
+            (error) => {
+              console.warn("Picker signals: setlists failed to load:", error);
+              return null;
+            }
+          ),
+          getBandShows(setlistData.band_id).then(
+            (rows) => rows,
+            (error) => {
+              console.warn("Picker signals: shows failed to load:", error);
+              return null;
+            }
+          ),
+        ]);
         setAvailableSongs(songsData);
+        setBandSetlists(setlistsResult);
+        setBandShows(showsResult);
       } catch (error) {
         console.error("Failed to load setlist:", error);
         toast.error(t('setlists.editor.loadError'));
@@ -321,26 +387,17 @@ const SetlistEditor: FC = () => {
     setSaving(false);
   };
 
+  // The picker returns focus to its search after an add on wide + pointer.
   const handleAddSong = (song: Song) => {
-    const songItems = setlistItems.filter(isSongItem);
-    const isAlreadyAdded = songItems.some((s) => s.song_id === song.id);
-    if (isAlreadyAdded) return;
-
-    const newSong: SetlistSongItem = {
-      type: "song",
-      song_id: song.id,
-      position: setlistItems.length,
-      notes: "",
-    };
-
-    setSetlistItems([...setlistItems, newSong]);
-
-    // On desktop, return focus to the search input so the user can quickly
-    // look up and add the next song without reaching for the mouse again.
-    if (window.matchMedia("(min-width: 1024px)").matches) {
-      searchInputRef.current?.focus();
-    }
+    setSetlistItems((items) => insertSongs(items, [song.id]));
   };
+
+  const handleAddSelected = (songs: Song[]) => {
+    setSetlistItems((items) => insertSongs(items, songs.map((song) => song.id)));
+    setIsPickerSheetOpen(false);
+  };
+
+  const closePickerSheet = useCallback(() => setIsPickerSheetOpen(false), []);
 
   const handleRemoveItem = (index: number) => {
     const filtered = setlistItems.filter((_, i) => i !== index);
@@ -618,27 +675,19 @@ const SetlistEditor: FC = () => {
   // Get only song items for filtering
   const songItemsInSetlist = setlistItems.filter(isSongItem);
 
-  const filteredAvailableSongs = availableSongs
-    .filter((song) => {
-      // Hide songs already added to the setlist
-      const isAlreadyAdded = songItemsInSetlist.some((s) => s.song_id === song.id);
-      if (isAlreadyAdded) return false;
+  // Songs already in the setlist stay hidden from the picker.
+  const pickerSongs = useMemo(() => {
+    const inSetlist = new Set(setlistItems.filter(isSongItem).map((item) => item.song_id));
+    return availableSongs.filter((song) => !inSetlist.has(song.id));
+  }, [availableSongs, setlistItems]);
 
-      // Filter by search query
-      const query = searchQuery.toLowerCase();
-      return (
-        song.title.toLowerCase().includes(query) ||
-        (song.artist && song.artist.toLowerCase().includes(query))
-      );
-    })
-    // Sort by artist then title
-    .sort((a, b) => {
-      const artistA = a.artist || "";
-      const artistB = b.artist || "";
-      const artistCompare = artistA.localeCompare(artistB, undefined, { sensitivity: "base" });
-      if (artistCompare !== 0) return artistCompare;
-      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
-    });
+  const songSignals = useMemo(
+    () =>
+      bandSetlists && bandShows
+        ? computeSongSignals({ songs: availableSongs, setlists: bandSetlists, shows: bandShows })
+        : null,
+    [availableSongs, bandSetlists, bandShows]
+  );
 
   const calculateTotalDuration = (): number => {
     return songItemsInSetlist.reduce((total, setlistSong) => {
@@ -704,180 +753,201 @@ const SetlistEditor: FC = () => {
             <CancelButton onClick={() => navigate("/setlists")} disabled={saving}>
               {t('common.cancel')}
             </CancelButton>
-            <SaveButton onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <>
-                  <Spinner size="sm" style={{ marginRight: "8px" }} />
-                  {t('common.saving')}
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-check-circle"></i>
-                  {t('setlists.editor.saveSetlist')}
-                </>
-              )}
-            </SaveButton>
+            {/* Narrow: Save lives in the sticky footer */}
+            {capabilities.wide && (
+              <SaveButton onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Spinner size="sm" style={{ marginRight: "8px" }} />
+                    {t('common.saving')}
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-circle"></i>
+                    {t('setlists.editor.saveSetlist')}
+                  </>
+                )}
+              </SaveButton>
+            )}
           </HeaderActions>
         </Header>
 
-        <EditorGrid>
-          <SongLibraryPanel>
-            <PanelHeader>
-              <PanelTitle>
-                <i className="bi bi-music-note-beamed"></i>
-                {t('setlists.editor.songLibrary')}
-              </PanelTitle>
-              <PanelStats>{filteredAvailableSongs.length} {t('setlists.editor.available')}</PanelStats>
-            </PanelHeader>
-
-            <SearchBox>
-              <i className="bi bi-search"></i>
-              <SearchInput
-                ref={searchInputRef}
-                type="text"
-                placeholder={t('setlists.editor.searchSongs')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={editorCollisionDetection}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <EditorGrid>
+            {capabilities.wide && (
+              <SongPicker
+                songs={pickerSongs}
+                totalSongs={availableSongs.length}
+                signals={songSignals}
+                onAdd={handleAddSong}
+                onAddSelected={handleAddSelected}
+                onEditSong={canEditSongs ? handleEditSong : undefined}
+                layout="panel"
+                capabilities={capabilities}
               />
-            </SearchBox>
+            )}
 
-            <SongLibraryList>
-              {filteredAvailableSongs.length === 0 ? (
-                <EmptyMessage>
-                  {searchQuery
-                    ? t('setlists.editor.noSongsMatch')
-                    : songItemsInSetlist.length === availableSongs.length
-                    ? t('setlists.editor.allSongsAdded')
-                    : t('setlists.editor.noSongsInLibrary')}
-                </EmptyMessage>
-              ) : (
-                filteredAvailableSongs.map((song) => (
-                  <LibrarySongCard key={song.id}>
-                    <SongInfo>
-                      <SongTitle>{song.title}</SongTitle>
-                      {song.artist && <SongArtist>{song.artist}</SongArtist>}
-                      <SongMetadata>
-                        {song.key && <MetaBadge>{song.key}</MetaBadge>}
-                        {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
-                        {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
-                      </SongMetadata>
-                    </SongInfo>
-                    <AddButton
-                      onClick={() => handleAddSong(song)}
-                      title={t('setlists.editor.addToSetlist')}
-                    >
-                      <i className="bi bi-plus-circle"></i>
-                    </AddButton>
-                  </LibrarySongCard>
-                ))
-              )}
-            </SongLibraryList>
-          </SongLibraryPanel>
+            <SetlistPanel>
+              <PanelHeader>
+                <PanelTitle>
+                  <i className="bi bi-music-note-list"></i>
+                  {t('setlists.title')}
+                </PanelTitle>
+                <PanelStats>
+                  {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
+                  {specialItemCount > 0 && <> · {specialItemCount} {specialItemCount === 1 ? t("setlists.editor.item") : t("setlists.editor.items")}</>}
+                  {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
+                </PanelStats>
+              </PanelHeader>
 
-          <SetlistPanel>
-            <PanelHeader>
-              <PanelTitle>
-                <i className="bi bi-music-note-list"></i>
-                {t('setlists.title')}
-              </PanelTitle>
-              <PanelStats>
-                {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
-                {specialItemCount > 0 && <> · {specialItemCount} {specialItemCount === 1 ? t("setlists.editor.item") : t("setlists.editor.items")}</>}
-                {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
-              </PanelStats>
-            </PanelHeader>
-
-            {/* Add special item button and AI optimize */}
-            <AddItemBar>
-              <AddItemDropdownWrapper>
-                <AddItemButton onClick={() => setShowAddMenu(!showAddMenu)}>
-                  <i className="bi bi-plus-lg"></i>
-                  {t("setlists.items.addSpecialItem")}
-                  <i className={`bi bi-chevron-${showAddMenu ? "up" : "down"}`}></i>
-                </AddItemButton>
-                {showAddMenu && (
-                  <AddItemMenu>
-                    <AddItemMenuItem onClick={() => openAddSpecialItemModal("section")}>
-                      <i className="bi bi-bookmark"></i>
-                      {t("setlists.items.addSection")}
-                    </AddItemMenuItem>
-                    <AddItemMenuItem onClick={() => openAddSpecialItemModal("break")}>
-                      <i className="bi bi-pause-circle"></i>
-                      {t("setlists.items.addBreak")}
-                    </AddItemMenuItem>
-                    <AddItemMenuItem onClick={() => openAddSpecialItemModal("note")}>
-                      <i className="bi bi-sticky"></i>
-                      {t("setlists.items.addNote")}
-                    </AddItemMenuItem>
-                  </AddItemMenu>
+              {/* Add songs (narrow), add special item and AI optimize */}
+              <AddItemBar>
+                {!capabilities.wide && (
+                  <AddSongsButton onClick={() => setIsPickerSheetOpen(true)}>
+                    <i className="bi bi-plus-lg"></i>
+                    {t("setlists.picker.addSongs")}
+                  </AddSongsButton>
                 )}
-              </AddItemDropdownWrapper>
-              {groqService.isConfigured() && songItemsInSetlist.length >= 3 && (
-                <OptimizeButton onClick={handleOptimizeOrder} disabled={optimizing}>
-                  <i className="bi bi-magic"></i>
-                  {t("ai.optimizeOrder")}
-                </OptimizeButton>
-              )}
-            </AddItemBar>
+                <AddItemDropdownWrapper>
+                  <AddItemButton onClick={() => setShowAddMenu(!showAddMenu)}>
+                    <i className="bi bi-plus-lg"></i>
+                    {t("setlists.items.addSpecialItem")}
+                    <i className={`bi bi-chevron-${showAddMenu ? "up" : "down"}`}></i>
+                  </AddItemButton>
+                  {showAddMenu && (
+                    <AddItemMenu>
+                      <AddItemMenuItem onClick={() => openAddSpecialItemModal("section")}>
+                        <i className="bi bi-bookmark"></i>
+                        {t("setlists.items.addSection")}
+                      </AddItemMenuItem>
+                      <AddItemMenuItem onClick={() => openAddSpecialItemModal("break")}>
+                        <i className="bi bi-pause-circle"></i>
+                        {t("setlists.items.addBreak")}
+                      </AddItemMenuItem>
+                      <AddItemMenuItem onClick={() => openAddSpecialItemModal("note")}>
+                        <i className="bi bi-sticky"></i>
+                        {t("setlists.items.addNote")}
+                      </AddItemMenuItem>
+                    </AddItemMenu>
+                  )}
+                </AddItemDropdownWrapper>
+                {groqService.isConfigured() && songItemsInSetlist.length >= 3 && (
+                  <OptimizeButton onClick={handleOptimizeOrder} disabled={optimizing}>
+                    <i className="bi bi-magic"></i>
+                    {t("ai.optimizeOrder")}
+                  </OptimizeButton>
+                )}
+              </AddItemBar>
 
-            <SetlistSongsList>
-              {setlistItems.length === 0 ? (
-                <EmptyState>
-                  <EmptyIcon>
-                    <i className="bi bi-music-note-list"></i>
-                  </EmptyIcon>
-                  <EmptyTitle>{t('setlists.editor.noSongsInSetlist')}</EmptyTitle>
-                  <EmptyText>{t('setlists.editor.addSongsHint')}</EmptyText>
-                </EmptyState>
-              ) : (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={setlistItems.map(getSetlistItemKey)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {setlistItems.map((item, index) => {
-                      if (isSongItem(item)) {
-                        const song = getSongById(item.song_id);
-                        if (!song) return null;
+              <SetlistDropZone>
+                <SetlistSongsList $dropTarget={pickerDragSong !== null}>
+                  {setlistItems.length === 0 ? (
+                    <EmptyState>
+                      <EmptyIcon>
+                        <i className="bi bi-music-note-list"></i>
+                      </EmptyIcon>
+                      <EmptyTitle>{t('setlists.editor.noSongsInSetlist')}</EmptyTitle>
+                      <EmptyText>
+                        {capabilities.wide ? t('setlists.editor.addSongsHint') : t('setlists.picker.addSongsHintNarrow')}
+                      </EmptyText>
+                    </EmptyState>
+                  ) : (
+                    <SortableContext
+                      items={setlistItems.map(getSetlistItemKey)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {setlistItems.map((item, index) => {
+                        const itemKey = getSetlistItemKey(item);
+                        const dropIndicator = dropBeforeKey === itemKey ? <DropIndicator /> : null;
 
-                        return (
-                          <SortableSetlistSongCard
-                            key={item.song_id}
-                            setlistSong={item}
-                            index={index}
-                            song={song}
-                            formatDuration={formatDuration}
-                            onUpdateNotes={handleUpdateNotes}
-                            onRemove={handleRemoveItem}
-                            onEditSong={canEditSongs ? handleEditSong : undefined}
-                            totalSongs={setlistItems.length}
-                          />
-                        );
-                      } else {
-                        // Special item (break, section, note)
-                        const itemId = getSetlistItemKey(item);
-                        return (
-                          <SortableSpecialItemCard
-                            key={itemId}
-                            item={item}
-                            itemId={itemId}
-                            onEdit={() => openEditSpecialItemModal(index)}
-                            onRemove={() => handleRemoveItem(index)}
-                          />
-                        );
-                      }
-                    })}
-                  </SortableContext>
-                </DndContext>
-              )}
-            </SetlistSongsList>
-          </SetlistPanel>
-        </EditorGrid>
+                        if (isSongItem(item)) {
+                          const song = getSongById(item.song_id);
+                          if (!song) return null;
+
+                          return (
+                            <Fragment key={itemKey}>
+                              {dropIndicator}
+                              <SortableSetlistSongCard
+                                setlistSong={item}
+                                index={index}
+                                song={song}
+                                formatDuration={formatDuration}
+                                onUpdateNotes={handleUpdateNotes}
+                                onRemove={handleRemoveItem}
+                                onEditSong={canEditSongs ? handleEditSong : undefined}
+                                totalSongs={setlistItems.length}
+                              />
+                            </Fragment>
+                          );
+                        } else {
+                          // Special item (break, section, note)
+                          return (
+                            <Fragment key={itemKey}>
+                              {dropIndicator}
+                              <SortableSpecialItemCard
+                                item={item}
+                                itemId={itemKey}
+                                onEdit={() => openEditSpecialItemModal(index)}
+                                onRemove={() => handleRemoveItem(index)}
+                              />
+                            </Fragment>
+                          );
+                        }
+                      })}
+                    </SortableContext>
+                  )}
+                </SetlistSongsList>
+              </SetlistDropZone>
+            </SetlistPanel>
+          </EditorGrid>
+
+          <DragOverlay dropAnimation={null}>
+            {pickerDragSong && (
+              <DragPreview>
+                <i className="bi bi-music-note"></i>
+                <span>{pickerDragSong.title}</span>
+                {pickerDragSong.artist && <DragPreviewArtist>{pickerDragSong.artist}</DragPreviewArtist>}
+              </DragPreview>
+            )}
+          </DragOverlay>
+        </DndContext>
+
+        {!capabilities.wide && (
+          <StickyFooter>
+            <StickyFooterStats>
+              {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
+              {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
+            </StickyFooterStats>
+            <SaveButton onClick={handleSave} disabled={saving}>
+              {saving ? <Spinner size="sm" /> : <i className="bi bi-check-circle"></i>}
+              {saving ? t('common.saving') : t('setlists.editor.saveSetlist')}
+            </SaveButton>
+          </StickyFooter>
+        )}
       </Container>
+
+      {!capabilities.wide && isPickerSheetOpen && (
+        <PickerSheet label={t("setlists.picker.title")} onClose={closePickerSheet}>
+          <SongPicker
+            songs={pickerSongs}
+            totalSongs={availableSongs.length}
+            signals={songSignals}
+            onAdd={handleAddSong}
+            onAddSelected={handleAddSelected}
+            onEditSong={canEditSongs ? handleEditSong : undefined}
+            layout="sheet"
+            capabilities={capabilities}
+            onClose={closePickerSheet}
+          />
+        </PickerSheet>
+      )}
 
       {/* Edit Song Modal */}
       <EditSongModal
@@ -1184,20 +1254,16 @@ const EditorGrid = styled.div`
   max-width: 1400px;
   margin: 0 auto;
 
+  /* Grid items default to min-width: auto; long rows must not widen the page. */
+  > * {
+    min-width: 0;
+  }
+
   @media (max-width: ${theme.breakpoints.lg}) {
     grid-template-columns: 1fr;
   }
 `;
 
-const SongLibraryPanel = styled.div`
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.lg};
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 280px);
-  overflow: hidden;
-`;
 
 const SetlistPanel = styled.div`
   background: var(--color-bg-secondary);
@@ -1207,6 +1273,12 @@ const SetlistPanel = styled.div`
   flex-direction: column;
   max-height: calc(100vh - 280px);
   overflow: hidden;
+
+  /* Narrow: the setlist is the page (spec §2); the sticky footer sits below it. */
+  @media (max-width: calc(${theme.breakpoints.lg} - 0.02px)) {
+    max-height: none;
+    overflow: visible;
+  }
 `;
 
 const PanelHeader = styled.div`
@@ -1237,65 +1309,99 @@ const PanelStats = styled.div`
   font-weight: ${theme.fontWeights.medium};
 `;
 
-const SearchBox = styled.div`
-  padding: ${theme.space[4]} ${theme.space[5]};
-  border-bottom: 1px solid var(--color-border);
+
+
+
+const SetlistSongsList = styled.div<{ $dropTarget?: boolean }>`
+  flex: 1;
+  overflow-y: auto;
+  padding: ${theme.space[4]};
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: ${theme.space[3]};
+  outline: ${(props) => (props.$dropTarget ? `2px dashed rgba(139, 92, 246, 0.5)` : "none")};
+  outline-offset: -6px;
+  border-radius: ${theme.radius.lg};
+`;
+
+const DropIndicator = styled.div`
+  height: 3px;
+  margin: -${theme.space[2]} 0;
+  border-radius: ${theme.radius.full};
+  background: ${theme.colors.brand.primary};
+`;
+
+const DragPreview = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  background: var(--color-bg-elevated);
+  border: 1px solid ${theme.colors.brand.primary};
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[2]} ${theme.space[4]};
+  box-shadow: ${theme.shadows.lg};
+  color: var(--color-text-primary);
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: grabbing;
+  max-width: 320px;
+  white-space: nowrap;
 
   i {
-    color: var(--color-text-tertiary);
-    font-size: ${theme.fontSizes.body};
+    color: ${theme.colors.brand.primary};
   }
 `;
 
-const SearchInput = styled.input`
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  font-size: ${theme.fontSizes.body};
-  outline: none;
-  font-family: ${theme.fonts.sans};
-
-  &::placeholder {
-    color: var(--color-text-tertiary);
-  }
+const DragPreviewArtist = styled.span`
+  color: var(--color-text-secondary);
+  font-weight: ${theme.fontWeights.regular};
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
-const SongLibraryList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: ${theme.space[4]};
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.space[3]};
-`;
-
-const SetlistSongsList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: ${theme.space[4]};
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.space[3]};
-`;
-
-const LibrarySongCard = styled.div`
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.base};
-  padding: ${theme.space[3]};
+const StickyFooter = styled.div`
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${theme.space[3]};
-  transition: all ${theme.transitions.fast} ease;
+  margin-top: ${theme.space[4]};
+  padding: ${theme.space[3]} ${theme.space[4]};
+  padding-bottom: calc(${theme.space[3]} + env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.lg};
+  box-shadow: var(--shadow-lg);
 
-  &:hover {
-    border-color: ${theme.colors.brand.primary};
+  button {
+    white-space: nowrap;
   }
 `;
+
+const StickyFooterStats = styled.div`
+  white-space: nowrap;
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  font-weight: ${theme.fontWeights.medium};
+`;
+
+const AddSongsButton = styled.button`
+  background: ${theme.colors.brand.primary};
+  border: none;
+  color: white;
+  min-height: 44px;
+  padding: ${theme.space[2]} ${theme.space[4]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.semibold};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+  white-space: nowrap;
+`;
+
 
 const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
   background: ${(props) =>
@@ -1357,10 +1463,6 @@ const SongPosition = styled.div`
   flex-shrink: 0;
 `;
 
-const SongInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
 
 const SongDetails = styled.div`
   flex: 1;
@@ -1433,27 +1535,6 @@ const SongActions = styled.div`
   flex-shrink: 0;
 `;
 
-const AddButton = styled.button`
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  width: 36px;
-  height: 36px;
-  border-radius: ${theme.radius.base};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-  flex-shrink: 0;
-  font-size: ${theme.fontSizes.bodyLg};
-
-  &:hover {
-    background: var(--color-bg-elevated);
-    border-color: ${theme.colors.brand.primary};
-    color: ${theme.colors.brand.primary};
-  }
-`;
 
 const ActionButton = styled.button<{ $variant?: "delete" }>`
   background: transparent;
@@ -1487,12 +1568,6 @@ const ActionButton = styled.button<{ $variant?: "delete" }>`
   }
 `;
 
-const EmptyMessage = styled.div`
-  text-align: center;
-  padding: ${theme.space[8]} ${theme.space[4]};
-  color: var(--color-text-tertiary);
-  font-size: ${theme.fontSizes.body};
-`;
 
 const EmptyState = styled.div`
   text-align: center;
@@ -1665,6 +1740,7 @@ const AddItemBar = styled.div`
   padding: ${theme.space[3]} ${theme.space[4]};
   border-bottom: 1px solid var(--color-border);
   display: flex;
+  flex-wrap: wrap;
   gap: ${theme.space[3]};
   align-items: center;
 `;
@@ -1672,6 +1748,7 @@ const AddItemBar = styled.div`
 const AddItemDropdownWrapper = styled.div`
   position: relative;
   flex: 1;
+  min-width: 160px;
 `;
 
 const AddItemButton = styled.button`
