@@ -37,6 +37,7 @@ docs/
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
 - [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
+- [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (implemented)
 
 ## Setlist creation (2026-09-27)
 - [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three phases, four PRs, no AI; §11 records the AI follow-up)

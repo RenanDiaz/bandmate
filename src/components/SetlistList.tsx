@@ -1,5 +1,5 @@
 import { useState, type FC } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { Setlist } from "../services/setlistsService";
 import type { OfflineSnapshotMeta } from "../services/offlineSetlistService";
@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownItem,
 } from "reactstrap";
+import { iconButtonCss, outlinedCss } from "./setlist/actionButtons";
 
 interface Props {
   setlists: Setlist[];
@@ -22,7 +23,9 @@ interface Props {
   canEdit: boolean;
 }
 
-// Individual setlist card component to manage its own dropdown state
+// Individual setlist card (docs/specs/setlist-actions-layout.md §3): one
+// actions block for every size and input — Perform always visible, the
+// editing actions behind a "More actions" menu. No hover-reveal.
 const SetlistCardItem: FC<{
   setlist: Setlist;
   onDelete: (setlist: Setlist) => void;
@@ -37,6 +40,7 @@ const SetlistCardItem: FC<{
   const { t } = useTranslation();
 
   const songCount = setlist.songs?.filter(isSongItem).length || 0;
+  const moreLabel = t("common.moreActions");
 
   return (
     <SetlistCard onClick={() => onView(setlist.id)} $clickable>
@@ -46,7 +50,11 @@ const SetlistCardItem: FC<{
         </SetlistIcon>
 
         <SetlistInfo>
-          <SetlistName>{setlist.name}</SetlistName>
+          <SetlistName>
+            <SetlistNameLink to={`/setlists/${setlist.id}`} onClick={(e) => e.stopPropagation()}>
+              {setlist.name}
+            </SetlistNameLink>
+          </SetlistName>
           <MetadataRow>
             <MetadataBadge>
               <i className="bi bi-music-note-beamed"></i>
@@ -56,81 +64,40 @@ const SetlistCardItem: FC<{
           </MetadataRow>
         </SetlistInfo>
 
-        {/* Desktop: Inline action buttons */}
-        <ActionButtons>
-          <ActionButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onPerform(setlist.id);
-            }}
+        <CardActions onClick={(e) => e.stopPropagation()}>
+          <PerformButton
+            type="button"
+            onClick={() => onPerform(setlist.id)}
             title={t('setlists.performTooltip')}
-            $variant="perform"
+            aria-label={t('setlists.perform')}
             disabled={songCount === 0}
           >
             <i className="bi bi-play-circle"></i>
-          </ActionButton>
+            <span>{t('setlists.perform')}</span>
+          </PerformButton>
           {canEdit && (
-            <>
-              <ActionButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditSongs(setlist.id);
-                }}
-                title={t('setlists.editSetlistTooltip')}
-                $variant="edit"
+            <MoreMenu isOpen={dropdownOpen} toggle={toggleDropdown}>
+              <DropdownToggle
+                tag="button"
+                type="button"
+                className="setlist-card-more"
+                title={moreLabel}
+                aria-label={moreLabel}
               >
-                <i className="bi bi-pencil"></i>
-              </ActionButton>
-              <ActionButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(setlist);
-                }}
-                title={t('setlists.deleteSetlistTooltip')}
-                $variant="delete"
-              >
-                <i className="bi bi-trash"></i>
-              </ActionButton>
-            </>
+                <i className="bi bi-three-dots-vertical"></i>
+              </DropdownToggle>
+              <DropdownMenu end dark container="body">
+                <DropdownItem onClick={() => onEditSongs(setlist.id)}>
+                  <i className="bi bi-pencil me-2"></i> {t('common.edit')}
+                </DropdownItem>
+                <DropdownItem divider />
+                <DropdownItem onClick={() => onDelete(setlist)} className="text-danger">
+                  <i className="bi bi-trash me-2"></i> {t('common.delete')}
+                </DropdownItem>
+              </DropdownMenu>
+            </MoreMenu>
           )}
-        </ActionButtons>
-
-        {/* Mobile: Dropdown menu */}
-        <MobileDropdownWrapper onClick={(e) => e.stopPropagation()}>
-          <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
-            <DropdownToggle tag="button" className="mobile-actions-toggle">
-              <i className="bi bi-three-dots-vertical"></i>
-            </DropdownToggle>
-            <DropdownMenu end dark container="body">
-              <DropdownItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPerform(setlist.id);
-                }}
-                disabled={songCount === 0}
-              >
-                <i className="bi bi-play-circle me-2 text-success"></i> {t('setlists.perform')}
-              </DropdownItem>
-              {canEdit && (
-                <>
-                  <DropdownItem onClick={(e) => {
-                    e.stopPropagation();
-                    onEditSongs(setlist.id);
-                  }}>
-                    <i className="bi bi-pencil me-2"></i> {t('common.edit')}
-                  </DropdownItem>
-                  <DropdownItem divider />
-                  <DropdownItem onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(setlist);
-                  }} className="text-danger">
-                    <i className="bi bi-trash me-2"></i> {t('common.delete')}
-                  </DropdownItem>
-                </>
-              )}
-            </DropdownMenu>
-          </Dropdown>
-        </MobileDropdownWrapper>
+        </CardActions>
       </SetlistHeader>
 
       {setlist.description && (
@@ -261,105 +228,55 @@ const MetadataBadge = styled.span`
   }
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: ${theme.space[2]};
-  opacity: 0;
-  transition: opacity ${theme.transitions.fast} ease;
+const SetlistNameLink = styled(Link)`
+  color: inherit;
+  text-decoration: none;
 
-  ${SetlistHeader}:hover & {
-    opacity: 1;
-  }
-
-  /* Hide on mobile - use dropdown instead */
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
-  }
-
-  @media (hover: none) and (min-width: ${theme.breakpoints.md}) {
-    opacity: 1;
+  &:hover {
+    color: ${theme.colors.brand.primary};
   }
 `;
 
-const MobileDropdownWrapper = styled.div`
-  display: none;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: block;
-    flex-shrink: 0;
-  }
-
-  .mobile-actions-toggle {
-    background: transparent;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-secondary);
-    width: 40px;
-    height: 40px;
-    border-radius: ${theme.radius.base};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all ${theme.transitions.fast} ease;
-    font-size: ${theme.fontSizes.bodyLg};
-
-    &:hover,
-    &:focus {
-      background: var(--color-bg-elevated);
-      border-color: ${theme.colors.brand.primary};
-      color: ${theme.colors.brand.primary};
-    }
-
-    &::after {
-      display: none; /* Remove default caret */
-    }
-  }
-`;
-
-const ActionButton = styled.button<{ $variant: "perform" | "view" | "edit" | "delete" }>`
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: ${(props) => {
-    if (props.$variant === "perform") return theme.colors.semantic.success;
-    if (props.$variant === "delete") return theme.colors.semantic.error;
-    return 'var(--color-text-secondary)';
-  }};
-  width: 36px;
-  height: 36px;
-  border-radius: ${theme.radius.base};
+const CardActions = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
+  gap: ${theme.space[2]};
   flex-shrink: 0;
+  align-self: flex-start;
+`;
+
+/** Perform: outlined in the success colour, always visible; icon-only below sm. */
+const PerformButton = styled.button`
+  ${outlinedCss}
+  color: ${theme.colors.semantic.success};
+  border-color: ${theme.colors.semantic.success}55;
+
+  i {
+    color: ${theme.colors.semantic.success};
+  }
 
   &:hover:not(:disabled) {
-    background: ${(props) => {
-      if (props.$variant === "perform") return theme.colors.semantic.successBgDark;
-      if (props.$variant === "delete") return theme.colors.semantic.errorBgDark;
-      return 'var(--color-bg-elevated)';
-    }};
-    border-color: ${(props) => {
-      if (props.$variant === "perform") return theme.colors.semantic.success;
-      if (props.$variant === "delete") return theme.colors.semantic.error;
-      return theme.colors.brand.primary;
-    }};
-    color: ${(props) => {
-      if (props.$variant === "perform") return theme.colors.semantic.success;
-      if (props.$variant === "delete") return theme.colors.semantic.error;
-      return theme.colors.brand.primary;
-    }};
-    transform: translateY(-1px);
+    background: ${theme.colors.semantic.successBgDark};
+    border-color: ${theme.colors.semantic.success};
+    color: ${theme.colors.semantic.success};
   }
 
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
 
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    span {
+      display: none;
+    }
+  }
+`;
+
+// reactstrap's toggle passes `innerRef`, which a styled tag would leak to the
+// DOM, so the toggle is a plain button styled through its class.
+const MoreMenu = styled(Dropdown)`
+  .setlist-card-more {
+    ${iconButtonCss}
   }
 `;
 

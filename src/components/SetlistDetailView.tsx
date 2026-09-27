@@ -48,9 +48,11 @@ import { useBandContext } from "../context/useBandContext";
 import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
-import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
+import { OfflineStatusRow } from "./offline/OfflineDownloadAction";
 import { isPermissionDenied } from "../services/permissionError";
-import { canEditContent } from "../services/bandMembersService";
+import { canEditContent, canManageEvents } from "../services/bandMembersService";
+import { SetlistHeaderActions } from "./setlist/SetlistHeaderActions";
+import { ReorderToolbar } from "./setlist/ReorderToolbar";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -466,7 +468,11 @@ const SetlistDetailView: FC = () => {
     .map((item) => getSongById(item.song_id))
     .filter((song): song is Song => song !== undefined);
 
-  const canEditSongs = canEditContent(selectedBand?.user_role ?? null);
+  // Editing actions are hidden by role (docs/specs/setlist-actions-layout.md §1.5);
+  // the services still throw PermissionError as the safety net.
+  const canEdit = canEditContent(selectedBand?.user_role ?? null);
+  const canLinkShow = canManageEvents(selectedBand?.user_role ?? null);
+  const canOptimize = groqService.isConfigured() && songsForReorder.length >= 3;
 
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
@@ -791,132 +797,29 @@ const SetlistDetailView: FC = () => {
         description={`View and manage the ${setlist.name} setlist. ${songItemsOnly.length} songs with a total duration of ${Math.floor(totalDuration / 60)} minutes.`}
       />
       <StyledContainer>
-        <Header>
-          <HeaderTop>
-            <BackLink onClick={() => navigate("/setlists")}>
-              <i className="bi bi-arrow-left"></i>
-              {t('setlists.detail.backToSetlists')}
-            </BackLink>
-            <ActionButtons>
-              {isReorderMode ? (
-                <>
-                  <ActionButton
-                    onClick={handleCancelReorder}
-                    $variant="edit"
-                    disabled={saving || optimizing}
-                  >
-                    <i className="bi bi-x-lg"></i>
-                    <span>{t('common.cancel')}</span>
-                  </ActionButton>
-                  {groqService.isConfigured() && songsForReorder.length >= 3 && (
-                    <OptimizeButton onClick={handleOptimizeOrder} disabled={saving || optimizing}>
-                      <i className="bi bi-magic"></i>
-                      <span>{t("ai.optimizeOrder")}</span>
-                    </OptimizeButton>
-                  )}
-                  <ActionButton
-                    onClick={handleSaveOrder}
-                    $variant="perform"
-                    disabled={saving || optimizing}
-                  >
-                    {saving ? (
-                      <>
-                        <Spinner size="sm" style={{ marginRight: "8px" }} />
-                        <span>{t('common.saving')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-check-lg"></i>
-                        <span>{t('setlists.detail.saveOrder')}</span>
-                      </>
-                    )}
-                  </ActionButton>
-                </>
-              ) : (
-                <>
-                  <ActionButton
-                    onClick={() => setIsReorderMode(true)}
-                    $variant="edit"
-                    $iconOnly
-                    disabled={songsForReorder.length < 2}
-                    title={t('setlists.detail.reorder')}
-                  >
-                    <i className="bi bi-arrow-down-up"></i>
-                    <span>{t('setlists.detail.reorder')}</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => setShowEditModal(true)}
-                    $variant="edit"
-                    $iconOnly
-                    title={t('setlists.renameSetlist')}
-                  >
-                    <i className="bi bi-pencil"></i>
-                    <span>{t('setlists.renameSetlist')}</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => navigate(`/setlists/${setlistId}/edit`)}
-                    $variant="edit"
-                    $iconOnly
-                    title={t('setlists.editSetlist')}
-                  >
-                    <i className="bi bi-music-note-list"></i>
-                    <span>{t('setlists.editSetlist')}</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => navigate(`/setlists/${setlistId}/print`)}
-                    $variant="edit"
-                    $iconOnly
-                    disabled={setlistItems.length === 0}
-                    title={t('setlists.print')}
-                  >
-                    <i className="bi bi-printer"></i>
-                    <span>{t('setlists.print')}</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => setShowExportModal(true)}
-                    $variant="edit"
-                    $iconOnly
-                    disabled={songItemsOnly.length === 0}
-                    title={t('setlists.export.button')}
-                  >
-                    <i className="bi bi-file-text"></i>
-                    <span>{t('setlists.export.button')}</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => setShowYouTubeModal(true)}
-                    $variant="edit"
-                    $iconOnly
-                    disabled={songItemsOnly.length === 0}
-                    title={t("youtubeMusic.exportToYouTube")}
-                  >
-                    <i className="bi bi-youtube"></i>
-                    <span>YouTube</span>
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => setShowProposeModal(true)}
-                    $variant="edit"
-                    $iconOnly
-                    title={t("requests.proposeSetlist")}
-                  >
-                    <i className="bi bi-chat-square-text"></i>
-                    <span>{t("requests.proposeSetlist")}</span>
-                  </ActionButton>
-                  <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="setlist" />
-                  <ActionButton
-                    onClick={() => navigate(`/setlists/${setlistId}/perform`)}
-                    $variant="perform"
-                    disabled={setlistItems.length === 0}
-                    title={t('setlists.detail.startPerformance')}
-                  >
-                    <i className="bi bi-play-circle"></i>
-                    <span>{t('setlists.detail.startPerformance')}</span>
-                  </ActionButton>
-                </>
-              )}
-            </ActionButtons>
-          </HeaderTop>
+        <BackLink onClick={() => navigate("/setlists")}>
+          <i className="bi bi-arrow-left"></i>
+          {t('setlists.detail.backToSetlists')}
+        </BackLink>
 
-          <SetlistTitle>{setlist.name}</SetlistTitle>
+        <Header>
+          <HeaderRow>
+            <SetlistTitle>{setlist.name}</SetlistTitle>
+            <SetlistHeaderActions
+              canEdit={canEdit}
+              itemCount={setlistItems.length}
+              songCount={songItemsOnly.length}
+              reorderMode={isReorderMode}
+              onPerform={() => navigate(`/setlists/${setlistId}/perform`)}
+              onEdit={() => navigate(`/setlists/${setlistId}/edit`)}
+              onReorder={() => setIsReorderMode(true)}
+              onRename={() => setShowEditModal(true)}
+              onPrint={() => navigate(`/setlists/${setlistId}/print`)}
+              onExport={() => setShowExportModal(true)}
+              onYouTube={() => setShowYouTubeModal(true)}
+              onPropose={() => setShowProposeModal(true)}
+            />
+          </HeaderRow>
 
           <OfflineStatusRow setlistId={setlist.id} setlistName={setlist.name} />
 
@@ -940,20 +843,24 @@ const SetlistDetailView: FC = () => {
                 <i className="bi bi-calendar-event-fill"></i>
                 {t('setlists.detail.linkedToShow')}: {linkedShows[0].name}
               </LinkedShowBadge>
-            ) : (
+            ) : canLinkShow ? (
               <LinkToShowButton onClick={() => setShowLinkModal(true)}>
                 <i className="bi bi-link-45deg"></i>
                 {t('setlists.detail.linkToShow')}
               </LinkToShowButton>
-            )}
+            ) : null}
           </MetadataBar>
         </Header>
 
         {isReorderMode && (
-          <ReorderBanner>
-            <i className="bi bi-info-circle"></i>
-            {t('setlists.detail.reorderHint')}
-          </ReorderBanner>
+          <ReorderToolbar
+            canOptimize={canOptimize}
+            saving={saving}
+            optimizing={optimizing}
+            onCancel={handleCancelReorder}
+            onOptimize={() => void handleOptimizeOrder()}
+            onSave={() => void handleSaveOrder()}
+          />
         )}
 
         {setlistItems.length === 0 ? (
@@ -1059,7 +966,7 @@ const SetlistDetailView: FC = () => {
                           </MetaBadge>
                         )}
                       </SongMetadata>
-                      {canEditSongs && (
+                      {canEdit && (
                         <SongActions>
                           <EditSongButton
                             onClick={() => handleEditSong(song)}
@@ -1560,16 +1467,16 @@ const Header = styled.div`
   margin-bottom: ${theme.space[6]};
 `;
 
-const HeaderTop = styled.div`
+const HeaderRow = styled.div`
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: ${theme.space[6]};
+  gap: ${theme.space[4]};
+  margin-bottom: ${theme.space[4]};
 
   @media (max-width: ${theme.breakpoints.md}) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: ${theme.space[4]};
+    gap: ${theme.space[3]};
   }
 `;
 
@@ -1584,6 +1491,8 @@ const BackLink = styled.button`
   gap: ${theme.space[2]};
   transition: all ${theme.transitions.fast} ease;
   padding: 0;
+  min-height: 40px;
+  margin-bottom: ${theme.space[3]};
 
   &:hover {
     color: ${theme.colors.brand.primary};
@@ -1594,79 +1503,15 @@ const BackLink = styled.button`
   }
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${theme.space[2]};
-  justify-content: flex-end;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 100%;
-    justify-content: stretch;
-  }
-`;
-
-const ActionButton = styled.button<{ $variant: "edit" | "perform"; $iconOnly?: boolean }>`
-  background: ${(props) =>
-    props.$variant === "perform" ? theme.colors.semantic.success : theme.colors.brand.primary};
-  border: none;
-  color: white;
-  padding: ${theme.space[2]} ${theme.space[3]};
-  border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.bodySm};
-  font-weight: ${theme.fontWeights.semibold};
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${theme.space[2]};
-  white-space: nowrap;
-
-  i {
-    font-size: ${theme.fontSizes.body};
-  }
-
-  /* Icon-only buttons on medium screens */
-  ${(props) => props.$iconOnly && `
-    @media (min-width: ${theme.breakpoints.md}) and (max-width: ${theme.breakpoints.xl}) {
-      padding: ${theme.space[2]};
-
-      span {
-        display: none;
-      }
-    }
-  `}
-
-  &:hover:not(:disabled) {
-    background: ${(props) =>
-      props.$variant === "perform"
-        ? "#059669"
-        : theme.colors.brand.primaryHover};
-    transform: translateY(-1px);
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    flex: 1;
-    justify-content: center;
-    min-width: calc(50% - ${theme.space[1]});
-  }
-`;
-
 const SetlistTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
   color: var(--color-text-primary);
-  margin: 0 0 ${theme.space[4]} 0;
+  margin: 0;
+  /* Keep at least ~320px for the name; the actions wrap under it otherwise. */
+  flex: 1 1 320px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   line-height: ${theme.lineHeights.tight};
 
   @media (max-width: ${theme.breakpoints.md}) {
@@ -1782,24 +1627,6 @@ const EmptyText = styled.p`
   font-size: ${theme.fontSizes.body};
   color: var(--color-text-secondary);
   margin: 0;
-`;
-
-const ReorderBanner = styled.div`
-  background: ${theme.colors.brand.primary}20;
-  border: 1px solid ${theme.colors.brand.primary};
-  border-radius: ${theme.radius.base};
-  padding: ${theme.space[3]} ${theme.space[4]};
-  margin-bottom: ${theme.space[4]};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-  font-size: ${theme.fontSizes.body};
-  color: ${theme.colors.brand.primary};
-  font-weight: ${theme.fontWeights.medium};
-
-  i {
-    font-size: ${theme.fontSizes.bodyLg};
-  }
 `;
 
 const SongsList = styled.div`
@@ -2335,41 +2162,6 @@ const CreateShowLink = styled.button`
 `;
 
 // AI Optimization Styles
-const OptimizeButton = styled.button`
-  background: linear-gradient(135deg, ${theme.colors.brand.primary}, #6366f1);
-  border: none;
-  color: white;
-  padding: ${theme.space[2]} ${theme.space[3]};
-  border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.bodySm};
-  font-weight: ${theme.fontWeights.semibold};
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-  display: inline-flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-
-  i {
-    font-size: ${theme.fontSizes.body};
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    flex: 1;
-    justify-content: center;
-    min-width: calc(50% - ${theme.space[1]});
-  }
-`;
-
 const OptimizingContainer = styled.div`
   display: flex;
   flex-direction: column;
