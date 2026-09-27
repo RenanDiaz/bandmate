@@ -368,8 +368,13 @@ const PlayerHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${theme.space[3]};
   padding: ${theme.space[4]} ${theme.space[5]};
   cursor: pointer;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    padding: ${theme.space[2]} ${theme.space[3]};
+  }
   transition: background ${theme.transitions.fast} ease;
 
   &:hover {
@@ -381,6 +386,12 @@ const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[4]};
+  flex: 1;
+  min-width: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    gap: ${theme.space[3]};
+  }
 `;
 
 const PlayerIcon = styled.div<{ $hasTrack: boolean }>`
@@ -396,6 +407,13 @@ const PlayerIcon = styled.div<{ $hasTrack: boolean }>`
   color: ${(props) =>
     props.$hasTrack ? "white" : 'var(--color-text-tertiary)'};
   transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 32px;
+    height: 32px;
+    font-size: ${theme.fontSizes.body};
+  }
 
   ${(props) =>
     props.$hasTrack &&
@@ -413,12 +431,22 @@ const HeaderInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[1]};
+  min-width: 0;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    gap: 0;
+  }
 `;
 
 const HeaderTitle = styled.div`
   font-size: ${theme.fontSizes.body};
+  line-height: ${theme.lineHeights.tight};
   font-weight: ${theme.fontWeights.semibold};
   color: var(--color-text-primary);
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodySm};
+  }
 `;
 
 const HeaderFileName = styled.div`
@@ -442,12 +470,17 @@ const HeaderWarning = styled.div`
 const HeaderHint = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-tertiary);
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.bodyXs};
+  }
 `;
 
 const HeaderActions = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
+  flex-shrink: 0;
 `;
 
 const ActionButton = styled.button<{ $variant: "play" | "default" }>`
@@ -488,6 +521,11 @@ const LoadButton = styled.button`
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    padding: ${theme.space[1]} ${theme.space[3]};
+  }
 
   &:hover {
     background: ${theme.colors.brand.primaryHover};

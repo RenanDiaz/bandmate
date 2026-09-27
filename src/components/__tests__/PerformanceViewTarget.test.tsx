@@ -157,6 +157,22 @@ describe("PerformanceView, setlist target", () => {
     expect(screen.getByTestId("location").textContent).toBe("/setlists/s1");
   });
 
+  it("shows artist, key, tempo, duration and the item's notes in the song header", () => {
+    const row = setlistRow([{ type: "song", song_id: "m", position: 0, notes: "Piano intro" }]);
+    const m = { ...song("m", "Meta Song"), artist: "Meta Artist", key: "Bb", tempo: 72, duration: 354, lyrics: "la la" };
+    vi.mocked(useSetlistPerformanceData).mockReturnValue(
+      data({ target: { kind: "setlist", setlistId: "s1" }, setlist: row, items: row.songs, songsById: { m } })
+    );
+    renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, { ctx, path: "/setlists/s1/perform" });
+
+    expect(screen.getAllByText("Meta Artist").length).toBeGreaterThan(0);
+    expect(screen.getByText("Key: Bb")).toBeTruthy();
+    expect(screen.getByText("72 BPM")).toBeTruthy();
+    expect(screen.getByText("5:54")).toBeTruthy();
+    expect(screen.getByText("Notes")).toBeTruthy();
+    expect(screen.getByText("Piano intro")).toBeTruthy();
+  });
+
   it("opened from another page, X goes back to it", () => {
     const row = setlistRow();
     vi.mocked(useSetlistPerformanceData).mockReturnValue(

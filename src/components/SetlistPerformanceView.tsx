@@ -1345,37 +1345,40 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                     <SongArtistInline> — {currentSong.artist}</SongArtistInline>
                   )}
                 </SongTitleLarge>
-                {currentSong.artist && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
-
-                {/* Hide metadata and notes in sheet music mode to maximize PDF space */}
+                {/* Hide metadata and notes in sheet music mode to maximize PDF space.
+                    Artist and metadata share one wrapping row so lyrics/chords start
+                    high on the screen (mobile, large text). */}
                 {!(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
                   <>
-                    <SongMetadataBar>
-                      {currentSong.key && (
-                        <MetaBadgeLarge>
-                          <i className="bi bi-music-note-beamed"></i>
-                          Key: {currentSong.key}
-                        </MetaBadgeLarge>
-                      )}
-                      {currentSong.tempo && (
-                        <MetaBadgeLarge>
-                          <i className="bi bi-speedometer2"></i>
-                          {currentSong.tempo} BPM
-                        </MetaBadgeLarge>
-                      )}
-                      {currentSong.duration && (
-                        <MetaBadgeLarge>
-                          <i className="bi bi-clock"></i>
-                          {formatDuration(currentSong.duration)}
-                        </MetaBadgeLarge>
-                      )}
-                    </SongMetadataBar>
+                    {(currentSong.artist || currentSong.key || currentSong.tempo || currentSong.duration) && (
+                      <SongMetadataBar>
+                        {currentSong.artist && <SongArtistLarge>{currentSong.artist}</SongArtistLarge>}
+                        {currentSong.key && (
+                          <MetaBadgeLarge>
+                            <i className="bi bi-music-note-beamed" aria-hidden="true"></i>
+                            {t("performance.meta.key", { key: currentSong.key })}
+                          </MetaBadgeLarge>
+                        )}
+                        {currentSong.tempo && (
+                          <MetaBadgeLarge>
+                            <i className="bi bi-speedometer2" aria-hidden="true"></i>
+                            {t("performance.meta.bpm", { tempo: currentSong.tempo })}
+                          </MetaBadgeLarge>
+                        )}
+                        {currentSong.duration && (
+                          <MetaBadgeLarge>
+                            <i className="bi bi-clock" aria-hidden="true"></i>
+                            {formatDuration(currentSong.duration)}
+                          </MetaBadgeLarge>
+                        )}
+                      </SongMetadataBar>
+                    )}
 
                     {currentNotes && !isSong && (
                       <NotesBox>
                         <NotesLabel>
-                          <i className="bi bi-sticky"></i>
-                          Notes:
+                          <i className="bi bi-sticky" aria-hidden="true"></i>
+                          {t("performance.meta.notes")}
                         </NotesLabel>
                         <NotesText>{currentNotes}</NotesText>
                       </NotesBox>
@@ -2195,25 +2198,30 @@ const SongDisplay = styled.div<{ $isSheetMusic?: boolean }>`
   }
 
   @media (max-width: ${theme.breakpoints.md}) {
-    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[1]} ${theme.space[1]}` : `${theme.space[4]} ${theme.space[4]}`)};
+    padding: ${({ $isSheetMusic }) => ($isSheetMusic ? `${theme.space[1]} ${theme.space[1]}` : `${theme.space[3]} ${theme.space[4]}`)};
   }
 `;
 
 const SongHeader = styled.div<{ $compact?: boolean }>`
-  margin-bottom: ${({ $compact }) => ($compact ? theme.space[1] : theme.space[8])};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ $compact }) => ($compact ? "0" : theme.space[4])};
+  margin-bottom: ${({ $compact }) => ($compact ? theme.space[1] : theme.space[6])};
   flex-shrink: 0;
 
   @media (max-width: ${theme.breakpoints.md}) {
-    margin-bottom: ${({ $compact }) => ($compact ? '0' : theme.space[4])};
+    gap: ${({ $compact }) => ($compact ? "0" : theme.space[2])};
+    margin-bottom: ${({ $compact }) => ($compact ? "0" : theme.space[3])};
   }
 `;
 
 const SongTitleLarge = styled.h1<{ $compact?: boolean }>`
-  font-size: ${({ $compact }) => $compact ? theme.fontSizes.h3 : theme.fontSizes.displayLg};
+  font-size: ${({ $compact }) => $compact ? theme.fontSizes.h3 : theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
   color: var(--color-text-primary);
-  margin: 0 0 ${({ $compact }) => $compact ? '0' : theme.space[3]} 0;
+  margin: 0;
   line-height: ${theme.lineHeights.tight};
+  overflow-wrap: anywhere;
   ${({ $compact }) => $compact && `
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2221,7 +2229,7 @@ const SongTitleLarge = styled.h1<{ $compact?: boolean }>`
   `}
 
   @media (max-width: ${theme.breakpoints.md}) {
-    font-size: ${({ $compact }) => $compact ? theme.fontSizes.body : theme.fontSizes.displayMd};
+    font-size: ${({ $compact }) => $compact ? theme.fontSizes.body : theme.fontSizes.h2};
   }
 `;
 
@@ -2231,21 +2239,27 @@ const SongArtistInline = styled.span`
   font-size: ${theme.fontSizes.body};
 `;
 
-const SongArtistLarge = styled.div`
-  font-size: ${theme.fontSizes.h2};
-  color: var(--color-text-secondary);
-  margin-bottom: ${theme.space[6]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    font-size: ${theme.fontSizes.h3};
-  }
-`;
-
+// Artist + key/tempo/duration on one wrapping row: artist first, then chips.
 const SongMetadataBar = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${theme.space[3]};
-  margin-bottom: ${theme.space[6]};
+  align-items: center;
+  gap: ${theme.space[2]} ${theme.space[3]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    gap: ${theme.space[1]} ${theme.space[2]};
+  }
+`;
+
+const SongArtistLarge = styled.div`
+  font-size: ${theme.fontSizes.h3};
+  color: var(--color-text-secondary);
+  margin-right: ${theme.space[1]};
+  overflow-wrap: anywhere;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    font-size: ${theme.fontSizes.body};
+  }
 `;
 
 const MetaBadgeLarge = styled.div`
@@ -2255,14 +2269,20 @@ const MetaBadgeLarge = styled.div`
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
-  padding: ${theme.space[3]} ${theme.space[5]};
+  padding: ${theme.space[1]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
 
   i {
-    font-size: ${theme.fontSizes.h4};
     color: ${theme.colors.brand.primary};
+  }
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    gap: ${theme.space[1]};
+    padding: 0.125rem ${theme.space[2]};
+    font-size: ${theme.fontSizes.bodySm};
   }
 `;
 
@@ -2270,21 +2290,29 @@ const NotesBox = styled.div`
   background: ${theme.colors.semantic.warningBgDark};
   border: 1px solid ${theme.colors.semantic.warning};
   border-radius: ${theme.radius.base};
-  padding: ${theme.space[4]} ${theme.space[5]};
-  margin-top: ${theme.space[4]};
+  padding: ${theme.space[3]} ${theme.space[4]};
+
+  /* Mobile: label and text on one line to save a row. */
+  @media (max-width: ${theme.breakpoints.md}) {
+    display: flex;
+    align-items: baseline;
+    gap: ${theme.space[2]};
+    padding: ${theme.space[2]} ${theme.space[3]};
+  }
 `;
 
 const NotesLabel = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  font-size: ${theme.fontSizes.body};
+  font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.semantic.warning};
-  margin-bottom: ${theme.space[2]};
+  margin-bottom: ${theme.space[1]};
 
-  i {
-    font-size: ${theme.fontSizes.bodyLg};
+  @media (max-width: ${theme.breakpoints.md}) {
+    flex-shrink: 0;
+    margin-bottom: 0;
   }
 `;
 
@@ -2493,19 +2521,25 @@ const ContentSection = styled.div`
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   padding: ${theme.space[6]};
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    padding: ${theme.space[3]} ${theme.space[4]};
+  }
 `;
 
 const SectionLabel = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  font-size: ${theme.fontSizes.h3};
+  font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.semibold};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: ${theme.colors.brand.primary};
-  margin-bottom: ${theme.space[5]};
+  margin-bottom: ${theme.space[3]};
 
-  i {
-    font-size: ${theme.fontSizes.h2};
+  @media (max-width: ${theme.breakpoints.md}) {
+    margin-bottom: ${theme.space[2]};
   }
 `;
 
