@@ -58,7 +58,7 @@ src/
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
@@ -156,7 +156,10 @@ name, then name; date strings compared as strings, never through
 row is `UpcomingEventRow` (`src/components/home/`): two lines, a date block
 (weekday, day, month) and one meta line (band · type · place · time ·
 countdown, amber only within `SOON_DAYS`), the Setlist / Show chip on the
-right (under the meta line below `md`). `Home` renders the greeting first,
+right (under the meta line below `md`). In `MyUpcomingEvents` the date block
+takes the band's colour (`bandColorMap`, `src/utils/bandColors.ts`: one
+`BAND_COLORS` entry per band by ascending id, wrapping after eight); without
+`bandColor` it is purple for a show, cyan for a rehearsal. `Home` renders the greeting first,
 then, with two or more bands, `MyUpcomingEvents` (same folder), then the band
 section headed by the band's name. `MyUpcomingEvents` has its own effect keyed by
 the sorted band ids (a `refreshBands()` with the same bands doesn't refetch),
@@ -848,11 +851,11 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
-- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, manual checklist pending): perform a single song from the library (1 phase, 2 PRs)
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, manual checklist pending): perform a single song from the library (1 phase, 4 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
-- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
