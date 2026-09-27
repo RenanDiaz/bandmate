@@ -12,6 +12,7 @@ npm test         # Vitest unit tests (node + fake-indexeddb)
 npm run preview  # Preview production build locally
 npm run og       # Regenerate public/og-image.png (needs sharp)
 npm run icons    # Regenerate the PWA icons (needs sharp)
+npm run vapid-keys # Print a new VAPID key pair for push (docs/setup/push-notifications.md)
 ```
 
 Local Node: 22 (`.nvmrc`, for `nvm use`; Vercel ignores it). There is no
@@ -575,6 +576,24 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   `Soundcheck: <show>` event (`show-<id>-soundcheck@bandmate`) that ends at
   doors, else at show time, else after an hour; it follows `include_shows`, has
   no toggle of its own, and the `.ics` download of a show carries both.
+- `send-push-notifications` — sends the Web Push notifications of one
+  `notification_events` row (band push notifications, Phase 1 backend; no
+  client UI yet). Called only by the `dispatch_notification_event` trigger
+  through `pg_net`, with URL + shared secret from Vault
+  (`push_function_url`, `push_function_secret`); deploy with
+  `--no-verify-jwt` (also in `supabase/config.toml`): it answers 401 without
+  the matching `x-push-secret`, takes only `{ eventId }` and claims the event
+  (`processed_at`) so a replay sends nothing. Triggers on `shows`,
+  `rehearsals` (INSERT, not past / finished) and `setlists` (non-draft
+  INSERT, draft → published) enqueue through `enqueue_notification_event()`,
+  whose actor is `auth.uid()` (never the row's `user_id`; none → no event),
+  and never make the write fail. Texts (en/es, by the subscription's
+  `locale`) are `_shared/pushMessages.ts`, recipients
+  `_shared/pushRecipients.ts`, both dependency-free and tested from
+  `src/lib/__tests__/`. Web Push via `jsr:@negrel/webpush@0.5.0`. Secrets:
+  `VAPID_KEYS`, `VAPID_SUBJECT`, `PUSH_SECRET`. See
+  [docs/setup/push-notifications.md](docs/setup/push-notifications.md) and
+  [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md).
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 
 ### Landing Page & SEO
@@ -648,6 +667,9 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `requests`, `request_comments`, `request_votes` | Band proposals (new song, setlist proposal, etc.) |
 | `calendar_subscriptions` | One per (band, user): feed `token`, `include_shows`, `include_rehearsals`, `timezone` (IANA, from the browser) |
 | `performance_sessions` | Real-time sync sessions with `current_song_index` |
+| `push_subscriptions` | Web Push subscription per browser (`endpoint` unique, keys, `locale`); RLS own rows, no INSERT policy: created by `register_push_subscription()`, which hands the endpoint to the caller |
+| `band_notification_mutes` | `(user_id, band_id)`: that user gets no pushes for that band; no row = on |
+| `notification_events` | Push outbox written by triggers, read by `send-push-notifications`; RLS on with no policies (clients can't read or write) |
 
 > The full schema is versioned: `supabase/migrations/20260101000000_baseline.sql`
 > is a dump of production (public schema, plus the `sheet-music` bucket, its
@@ -855,5 +877,6 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (draft): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist; moved/cancelled later (2 phases, 3 PRs)
+- [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, PR 1.1 backend implemented): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist; moved/cancelled later (2 phases, 3 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

@@ -114,6 +114,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    ```bash
    supabase functions deploy send-invitation-email
    supabase functions deploy calendar-feed --no-verify-jwt
+   supabase functions deploy send-push-notifications --no-verify-jwt  # after docs/setup/push-notifications.md
    ```
 
 6. **Run it**
@@ -131,6 +132,7 @@ npm run lint     # ESLint
 npm test         # Unit tests (Vitest)
 npm run og       # Regenerate public/og-image.png
 npm run icons    # Regenerate PWA icons
+npm run vapid-keys # Print a VAPID key pair for push notifications
 ```
 
 Always build with `npm run build` — a bare `vite build` skips the landing
@@ -173,6 +175,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/guides/landing-seo.md](docs/guides/landing-seo.md) — landing prerender, SEO, robots/sitemap
 - [docs/guides/band-members.md](docs/guides/band-members.md) — roles, member security model, invitations
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation emails
+- [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function)
 - [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
@@ -187,7 +190,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (draft): band push notifications for new shows, rehearsals and setlists
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, backend done): band push notifications for new shows, rehearsals and setlists
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap

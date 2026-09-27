@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (PR 1.1 implemented) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -52,12 +52,15 @@ bodies here.
 5. **Web Push with VAPID, no Firebase.** Works on Chrome/Edge/Firefox
    (desktop and Android) and Safari (macOS, and iOS/iPadOS 16.4+ **only for
    the app added to the Home Screen**). The public key is
-   `VITE_VAPID_PUBLIC_KEY` (public by design, fine as `VITE_*`); the private
-   key is an Edge Function secret (`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`),
-   never `VITE_*`. The sender uses a Deno-native Web Push library
-   (candidate: `jsr:@negrel/webpush`); `npm:web-push` depends on Node crypto
-   APIs — PR 1.1 starts by confirming the library against a real Chrome and
-   Safari endpoint.
+   `VITE_VAPID_PUBLIC_KEY` (public by design, fine as `VITE_*`); the key pair
+   is an Edge Function secret (`VAPID_KEYS`, JWK JSON from
+   `npm run vapid-keys`, plus `VAPID_SUBJECT`), never `VITE_*`. The sender
+   uses `jsr:@negrel/webpush@0.5.0` (Web Crypto only; `npm:web-push` depends
+   on Node crypto APIs), with a fresh `ApplicationServer` (ECDH key pair) per
+   message. PR 1.1 checked it against a fake push service: the body decrypts
+   the way a browser does (RFC 8291, `http_ece`), the VAPID JWT verifies
+   (RFC 8292) and a 410 surfaces as `PushMessageError`. Real Chrome and
+   Safari endpoints are the PR 1.1 manual check.
 6. **A tap opens the entity in its band.** The payload's `url` is
    `/shows/:id?band=<bandId>` (same for rehearsals and setlists). The worker
    focuses an open app window and `navigate()`s it, else `openWindow()`.
@@ -143,7 +146,11 @@ push_subscriptions (
   created_at timestamptz default now(),
   last_success_at timestamptz
 )
--- RLS: select/insert/update/delete where user_id = auth.uid()
+-- RLS: select/update/delete where user_id = auth.uid(); no INSERT policy:
+-- rows come from register_push_subscription(endpoint, p256dh, auth, locale,
+-- user_agent) (SECURITY DEFINER, authenticated only), which upserts on
+-- endpoint and hands it to the caller — the endpoint belongs to the browser,
+-- so the account that registers it last owns it
 
 band_notification_mutes (
   user_id uuid references auth.users on delete cascade,
@@ -151,42 +158,55 @@ band_notification_mutes (
   created_at timestamptz default now(),
   primary key (user_id, band_id)
 )
--- RLS: own rows only; absence of a row = notifications on
+-- RLS: own rows only, INSERT also requires membership of the band;
+-- absence of a row = notifications on
 
 notification_events (
   id bigint generated always as identity pk,
   band_id bigint not null references bands on delete cascade,
   actor_id uuid not null,
-  type text not null,        -- 'show.created' | 'rehearsal.created' | 'setlist.published' | (Phase 2) 'show.moved' | 'show.cancelled' | 'rehearsal.moved' | 'rehearsal.cancelled'
+  type text not null,        -- CHECK: 'show.created' | 'rehearsal.created' | 'setlist.published' (Phase 2 widens it)
   entity_id text not null,
   payload jsonb not null,    -- the fields the message needs, captured at write time
   created_at timestamptz default now(),
-  sent_at timestamptz,
+  processed_at timestamptz,  -- set when the function claims the event
+  recipients integer,        -- subscriptions delivered to
   error text
 )
 -- RLS enabled, no policies: clients can't read or write it
 ```
 
-- Triggers: `notify_show_change`, `notify_rehearsal_change`,
-  `notify_setlist_change` (SECURITY DEFINER, `search_path` pinned), each
-  inserting at most one `notification_events` row.
+- Triggers: `notify_show_created`, `notify_rehearsal_created` (AFTER
+  INSERT; skipped when the date is more than a day in the past or the status
+  is completed / cancelled: that is history being entered), and
+  `notify_setlist_published` (AFTER INSERT OR UPDATE OF `is_draft`). All
+  SECURITY DEFINER with `search_path` pinned, each inserting at most one row
+  through `enqueue_notification_event()`, which reads `auth.uid()` and
+  swallows its own errors: a notification never makes the write fail.
 - Dispatch: `AFTER INSERT ON notification_events` → `net.http_post` to the
   function URL with header `x-push-secret`, both read from Vault
-  (`push_function_url`, `push_function_secret`). **Missing secrets → no-op**,
-  so `supabase db reset` and databases without push keep working.
+  (`push_function_url`, `push_function_secret`). **Missing secrets, Vault or
+  pg_net → the event is kept and nothing is sent**, so `supabase db reset`
+  and databases without push keep working. pg_net sends after commit, so a
+  rolled-back write sends nothing.
 - Checked with `supabase db reset`; the PR notes which policies were
   verified (DoD #6).
 
 ### 3.2 Edge Function `send-push-notifications`
 
-Deployed with `--no-verify-jwt`; rejects any request without the matching
-`x-push-secret` (constant-time compare). Input `{ eventId }` only — it
-re-reads the event, so the body can't inject content. Steps: load event →
-if `sent_at` set, return (idempotent) → recipients (§1 decision 3) →
+Deployed with `--no-verify-jwt` (also `supabase/config.toml`); rejects any
+request without the matching `x-push-secret` (constant-time compare, 401).
+Input `{ eventId }` only — it re-reads the event, so the body can't inject
+content. Steps: claim the event (`UPDATE … SET processed_at WHERE
+processed_at IS NULL RETURNING`; no row → return, so replays send nothing)
+→ recipients (§1 decision 3, `selectRecipients` in
+`_shared/pushRecipients.ts`) →
 `buildPushMessage(event, locale, actorName, bandName)` → send to each
 subscription (concurrency 10, TTL 24 h, `urgency: normal`) → delete
-subscriptions answering 404/410 → set `sent_at` (or `error`). Secrets:
-`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_SECRET`.
+subscriptions answering 404/410, stamp `last_success_at` on the rest → set
+`recipients` (and `error`, first five failures). A crash after the claim
+loses that event (no retry in Phase 1; §6). Secrets: `VAPID_KEYS`,
+`VAPID_SUBJECT`, `PUSH_SECRET`. Setup: [docs/setup/push-notifications.md](../setup/push-notifications.md).
 
 ### 3.3 Shared pure module
 
@@ -279,23 +299,22 @@ Phase 2:
 
 | Risk | Mitigation |
 |------|------------|
-| Deno Web Push library doesn't interoperate with Safari's endpoints | PR 1.1 starts with a spike: one hard-coded send to Chrome and to an installed iOS PWA before the rest of the function |
+| Deno Web Push library doesn't interoperate with Safari's endpoints | PR 1.1 spike (§1 decision 5) covers the RFCs; the manual check sends to a real Chrome and an installed iOS PWA |
+| Apple rejects VAPID tokens valid for more than an hour; the library signs them for exactly 3600 s | Watch for 403 `BadJwtToken` from `web.push.apple.com` in `notification_events.error`; the fix is signing the JWT ourselves with a shorter `exp` |
 | Pushes during a gig (iPad on the stand) | §1 decision 9: copy + only low-frequency events in Phase 1; Phase 2's "moved" is coalesced (AC16) |
 | Bulk creation (someone enters ten rehearsals in a row) floods members | Accepted in Phase 1 (one per entity, distinct tags); if it's real in use, Phase 2 adds per band + type coalescing in the same window as AC16 |
-| `pg_net` call lost (function down) | The outbox keeps the row with `sent_at` null; a retry cron is Phase 2 only if losses show up in `notification_events` |
+| `pg_net` call lost (function down) | The outbox keeps the row with `processed_at` null (or `error` set after a claim); a retry cron is Phase 2 only if losses show up in `notification_events` |
 | Shared device keeps the previous user's pushes | AC11 (unsubscribe on voluntary sign-out) |
 | The worker file changes but clients keep the old one | `importScripts` files are byte-checked on update; the existing prompt-to-reload flow applies |
 | Privacy | Endpoints are personal data: the Privacy page gains a "Notifications" paragraph (what's stored, how to turn it off) in PR 1.2 |
 
-## 7. Open questions (owner)
+## 7. Owner decisions (2026-09-27)
 
-1. **Requests** (`requests`: new proposals) — include "New request" in
-   Phase 1? Recommendation: Phase 2, with votes/comments decided together,
-   since comments are the chatty part.
-2. **Guests** notified by default? Recommendation: yes (they can view
-   everything notified), they can mute.
-3. Is **per band** enough, or do users want per type (e.g. rehearsals only)?
-   Recommendation: per band in Phase 1; add types only if asked.
+1. **Requests** (new proposals): not in Phase 1; decided with votes and
+   comments in a later phase, since comments are the chatty part.
+2. **Guests** are notified by default (they can view everything notified)
+   and can mute.
+3. **Per band** muting only; per type is added only if users ask.
 
 ## 8. Out of scope
 
@@ -306,16 +325,18 @@ and votes, native apps.
 
 ## 9. Files touched (expected)
 
-`supabase/migrations/<ts>_push_notifications.sql`,
+PR 1.1 (done): `supabase/migrations/20260927180000_push_notifications.sql`,
 `supabase/functions/send-push-notifications/index.ts`,
-`supabase/functions/_shared/pushMessages.ts`, `public/push-sw.js`,
+`supabase/functions/_shared/pushMessages.ts`, `_shared/pushRecipients.ts`
+(+ tests in `src/lib/__tests__/`), `scripts/generate-vapid-keys.mjs`
+(`npm run vapid-keys`), `supabase/config.toml`,
+`docs/setup/push-notifications.md`. PR 1.2: `public/push-sw.js`,
 `vite.config.ts` (`importScripts`), `src/lib/pushSupport.ts`,
 `src/lib/featureFlags.ts`, `src/services/pushSubscriptionService.ts`,
 `src/hooks/useBandFromQuery.ts`, `src/hooks/useOpenInBand.ts`,
 `src/AppMain.tsx`, `src/AuthButton.tsx`, `src/lib/authSession.ts`
 (sign-out), `src/components/notifications/*`, `src/components/Privacy*`,
-locales, `.env.example`, `docs/setup/push-notifications.md` (VAPID keys,
-Vault secrets, deploy), README, CLAUDE.md.
+locales, `.env.example`, README, CLAUDE.md.
 
 ## 10. Phases and PRs
 
@@ -330,11 +351,13 @@ Android Chrome, installed iPhone/iPad PWA. Run AC1–AC11 on each; check the
 function logs for AC8/AC12; with the flag off, confirm the offline startup
 still works.
 
-- **PR 1.1 — backend.** Migration (three tables, three triggers for the
-  Phase 1 events, outbox dispatch via Vault + `pg_net`), `pushMessages.ts` +
-  tests, `send-push-notifications`, `docs/setup/push-notifications.md`.
-  Nothing user-visible; validated by subscribing a browser by hand (devtools)
-  and inserting rows.
+- **PR 1.1 — backend** (implemented). Migration (three tables, three
+  triggers for the Phase 1 events, outbox dispatch via Vault + `pg_net`,
+  `register_push_subscription`), `pushMessages.ts` / `pushRecipients.ts` +
+  tests, `send-push-notifications`, `npm run vapid-keys`,
+  `docs/setup/push-notifications.md`. Nothing user-visible; validated by
+  subscribing a browser by hand (devtools) and inserting rows (setup guide
+  §4).
 - **PR 1.2 — client.** `push-sw.js` + `importScripts`, `pushSupport`,
   service, flag, settings modal, user-menu row, `?band=` handling, sign-out
   unsubscribe, Privacy paragraph, i18n, docs. Completes the phase.
@@ -356,3 +379,9 @@ nothing.
 ## Changelog
 
 - 2026-09-27 — draft.
+- 2026-09-27 — §7 decided (requests later, guests on, per band only).
+  PR 1.1: outbox columns `processed_at` / `recipients` (claim instead of
+  `sent_at`), `register_push_subscription` instead of an INSERT policy,
+  secrets `VAPID_KEYS` (JWK pair) + `VAPID_SUBJECT` + `PUSH_SECRET`, past /
+  finished shows and rehearsals send nothing, library pinned to
+  `@negrel/webpush@0.5.0`.
