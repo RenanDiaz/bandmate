@@ -279,10 +279,14 @@ list badges and toasts are gated too; startup resume + GC still run (harmless
 on an empty store). New offline UI goes behind the same flag.
 
 "Make available offline" (PR 2.3) lives in `src/components/offline/`:
-`OfflineDownloadAction` (variants `setlist` in `SetlistDetailView`, `show` in
-`ShowDetailView` for the linked setlist, `toolbar` in performance mode's top
-bar), `OfflineStatusRow` (setlist detail: badge, Remove, interrupted notice
-with Resume/Discard), `OfflineBadge` (also in `SetlistList`),
+`OfflineDownloadAction` (variants `setlist`, a link-style action rendered
+inside `OfflineStatusRow`, `show` in `ShowDetailView` for the linked setlist,
+`toolbar` in performance mode's top bar), `OfflineStatusRow` (setlist detail,
+under the title: the one line for the setlist's offline state — the
+`setlist` action / progress / Retry, badge, Remove, interrupted notice with
+Resume/Discard; see
+[docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) §2.5),
+`OfflineBadge` (also in `SetlistList`),
 `OfflineDownloadModal` and the presentational `OfflineDownloadBodies`. The
 plan → confirm → progress flow is `useOfflineDownloadFlow` (its own file,
 also used by the schema-wipe notice's Download buttons).
@@ -738,6 +742,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
+- [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (draft): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [migrations/README.md](migrations/README.md) - Database migration guide

@@ -175,6 +175,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) — spec: themed AI setlist generation
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) — spec: perform a single song from the library
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) — spec: setlist text export (layouts, preview, copy/share)
+- [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) — spec: setlist actions layout (detail header, reorder toolbar, list cards)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [migrations/README.md](migrations/README.md) — migrations

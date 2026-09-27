@@ -12,6 +12,14 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-27 — setlist detail header (spec `setlist-actions-layout.md`, PR 1).**
+  The `setlist` variant of `OfflineDownloadAction` is no longer a header
+  button: it renders as a link-style action inside `OfflineStatusRow`, under
+  the title, which now owns every offline state of the setlist ("Make
+  available offline" / progress / Retry, badge, Remove, interrupted notice).
+  Behaviour, flow and controller are unchanged; §12 row 2.3's "button in
+  `SetlistDetailView`" reads as that row.
+
 - **2026-09-25 — PR 2.5: offline entry point (decisions the spec did not cover).**
   - **Flag removal moves to PR 2.6.** The screens ship behind
     `isOfflineDownloadsEnabled()` like the rest; 2.6 removes the flag once the
