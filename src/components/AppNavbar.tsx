@@ -9,7 +9,10 @@ import { BandSwitcher } from "./BandSwitcher";
 import { Logo } from "./Logo";
 import { CustomOffcanvas, OffcanvasHeader, OffcanvasBody } from "./CustomOffcanvas";
 import { useBandContext } from "../context/useBandContext";
+import { NAV_LINKS, isNavLinkActive } from "./navLinks";
 import { theme } from "../theme";
+
+const DESKTOP_NAV_LINKS = NAV_LINKS.filter((link) => !link.offcanvasOnly);
 
 interface AppNavbarProps {
   mode: "light" | "dark";
@@ -28,7 +31,7 @@ export const AppNavbar: FC<AppNavbarProps> = ({ mode, onToggleMode }) => {
 
   return (
     <>
-      <StyledNavbar expand="md" $mode={mode}>
+      <StyledNavbar expand="lg" $mode={mode}>
         <NavbarContainer>
           <NavBrandContainer>
             <DesktopLogo to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
@@ -58,71 +61,18 @@ export const AppNavbar: FC<AppNavbarProps> = ({ mode, onToggleMode }) => {
           </NavBrandContainer>
 
           <DesktopNav navbar>
-            <NavItem>
-              <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode}>
-                {t('nav.home')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/songs"
-                $active={location.pathname === "/songs"}
-                $mode={mode}
-              >
-                {t('nav.songs')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/setlists"
-                $active={location.pathname.startsWith("/setlists")}
-                $mode={mode}
-              >
-                {t('nav.setlists')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/shows"
-                $active={location.pathname.startsWith("/shows")}
-                $mode={mode}
-              >
-                {t('nav.shows')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/rehearsals"
-                $active={location.pathname.startsWith("/rehearsals")}
-                $mode={mode}
-              >
-                {t('nav.rehearsals')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/requests"
-                $active={location.pathname.startsWith("/requests")}
-                $mode={mode}
-              >
-                {t('nav.requests')}
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/about"
-                $active={location.pathname === "/about"}
-                $mode={mode}
-              >
-                {t('nav.about')}
-              </StyledNavLink>
-            </NavItem>
+            {DESKTOP_NAV_LINKS.map((link) => (
+              <NavItem key={link.to}>
+                <StyledNavLink
+                  as={Link}
+                  to={link.to}
+                  $active={isNavLinkActive(link, location.pathname)}
+                  $mode={mode}
+                >
+                  {t(link.labelKey)}
+                </StyledNavLink>
+              </NavItem>
+            ))}
           </DesktopNav>
 
           <DesktopNavActions>
@@ -138,7 +88,7 @@ export const AppNavbar: FC<AppNavbarProps> = ({ mode, onToggleMode }) => {
                 <i className="bi bi-moon-fill"></i>
               )}
             </ThemeToggleButton>
-            <AuthButton />
+            <AuthButton compact />
           </DesktopNavActions>
 
           <StyledNavbarToggler onClick={toggleNavbar} aria-label="Toggle navigation">
@@ -178,84 +128,20 @@ export const AppNavbar: FC<AppNavbarProps> = ({ mode, onToggleMode }) => {
             </MobileBandInfo>
           )}
           <StyledNav navbar>
-            <NavItem>
-              <StyledNavLink as={Link} to="/" $active={location.pathname === "/"} $mode={mode} onClick={() => setIsOpen(false)}>
-                <i className="bi bi-house-door"></i>
-                <span>{t('nav.home')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/songs"
-                $active={location.pathname === "/songs"}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-music-note-list"></i>
-                <span>{t('nav.songs')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/setlists"
-                $active={location.pathname.startsWith("/setlists")}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-collection"></i>
-                <span>{t('nav.setlists')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/shows"
-                $active={location.pathname.startsWith("/shows")}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-calendar-event"></i>
-                <span>{t('nav.shows')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/rehearsals"
-                $active={location.pathname.startsWith("/rehearsals")}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-calendar-check"></i>
-                <span>{t('nav.rehearsals')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/requests"
-                $active={location.pathname.startsWith("/requests")}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-lightbulb"></i>
-                <span>{t('nav.requests')}</span>
-              </StyledNavLink>
-            </NavItem>
-            <NavItem>
-              <StyledNavLink
-                as={Link}
-                to="/about"
-                $active={location.pathname === "/about"}
-                $mode={mode}
-                onClick={() => setIsOpen(false)}
-              >
-                <i className="bi bi-info-circle"></i>
-                <span>{t('nav.about')}</span>
-              </StyledNavLink>
-            </NavItem>
+            {NAV_LINKS.map((link) => (
+              <NavItem key={link.to}>
+                <StyledNavLink
+                  as={Link}
+                  to={link.to}
+                  $active={isNavLinkActive(link, location.pathname)}
+                  $mode={mode}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <i className={`bi ${link.icon}`}></i>
+                  <span>{t(link.labelKey)}</span>
+                </StyledNavLink>
+              </NavItem>
+            ))}
           </StyledNav>
 
           <NavActions>
@@ -320,13 +206,13 @@ const NavBrandContainer = styled.div`
   min-width: 0;
   position: relative;
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     flex: 1;
   }
 `;
 
 const DesktopLogo = styled(Link)`
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: none !important;
   }
 `;
@@ -334,7 +220,7 @@ const DesktopLogo = styled(Link)`
 const MobileLogo = styled(Link)`
   display: none !important;
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: flex !important;
   }
 `;
@@ -361,7 +247,7 @@ const StyledNavbarToggler = styled.button`
     color: ${theme.colors.brand.primary};
   }
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: flex;
   }
 `;
@@ -381,7 +267,7 @@ const BandDivider = styled.div`
   opacity: 0.5;
   flex-shrink: 0;
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     height: 20px;
   }
 `;
@@ -424,7 +310,7 @@ const BandTriggerName = styled.span`
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     max-width: none;
     font-size: ${theme.fontSizes.bodyXs};
   }
@@ -436,7 +322,7 @@ const MobileBandInfo = styled.div`
   margin-bottom: ${theme.space[2]};
   border-bottom: 1px solid var(--color-border);
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -489,7 +375,7 @@ const DesktopNav = styled(Nav)`
   flex: 1;
   justify-content: center;
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: none !important;
   }
 `;
@@ -518,7 +404,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   gap: ${theme.space[3]};
 
   /* Desktop styles - no icons, smaller padding */
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.lg}) {
     font-size: ${theme.fontSizes.bodySm};
     padding: ${theme.space[2]} ${theme.space[3]} !important;
 
@@ -534,7 +420,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
   }
 
   /* Mobile offcanvas styles - with icons, larger padding */
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     font-size: ${theme.fontSizes.body};
     padding: ${theme.space[3]} ${theme.space[4]} !important;
 
@@ -603,7 +489,7 @@ const DesktopNavActions = styled.div`
   align-items: center;
   gap: ${theme.space[3]};
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: none !important;
   }
 

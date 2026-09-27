@@ -14,6 +14,10 @@ const Footer = () => {
           © {currentYear} Bandmate
         </Copyright>
         <FooterLinks>
+          <FooterLink as={Link} to="/about">
+            {t('nav.about')}
+          </FooterLink>
+          <Separator>·</Separator>
           <FooterLink as={Link} to="/privacy">
             {t('footer.privacy')}
           </FooterLink>
