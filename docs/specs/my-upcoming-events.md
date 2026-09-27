@@ -1,6 +1,6 @@
 # Spec: My upcoming events (cross-band agenda on the dashboard)
 
-> **Status:** implemented, manual validation (AC6–AC9 on device) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented, manual validation (AC6–AC9, AC12 on device) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una vista general de todas mis bandas, para ver
 > mis próximos eventos (shows y rehearsals) de todas las bandas en las que
 > estoy … que si le doy click a un show, me lleve a ese show dentro de la
@@ -8,7 +8,7 @@
 > **Scope:** a personal agenda of the upcoming shows and rehearsals of every
 > band the user belongs to, on the dashboard, with one-tap navigation into
 > the right band. No songs, no setlists lists (those are per band). One
-> phase, two PRs (§9). Do [app-header.md](app-header.md) first: this spec
+> phase, three PRs (§9). Do [app-header.md](app-header.md) first: this spec
 > adds no navigation link on purpose.
 
 This is a design, not code. Signatures are the contract; no bodies here.
@@ -41,13 +41,16 @@ first (§1 decision 3).
 
 ## 1. Decisions
 
-1. **It lives on the dashboard, above the band section.** `/` for a user
-   with **two or more** bands opens with "My upcoming events", then the
-   band dashboard as today. With one band nothing changes: the band widget
+1. **It lives on the dashboard, under the greeting and above the band
+   section.** `/` for a user with **two or more** bands opens with
+   "Welcome back!" as the page title, then "My upcoming events", then the
+   band section headed by the band's name (PR 1.3: the greeting was below
+   the agenda at first, and read as a lost title mid-page). With one band
+   the greeting is followed by the band section directly: the band widget
    already is that user's agenda. No new route and no new nav link
    (the header spec just removed two). Tradeoff: the dashboard gets longer
-   for multi-band users; the section shows six events and expands on
-   demand.
+   for multi-band users; the section is compact (two-line rows, ~60 px
+   each), shows six events and expands on demand.
 2. **Two queries, whatever the number of bands.**
    `getUpcomingShowsForBands(ids)` and `getUpcomingRehearsalsForBands(ids)`
    (`.in("band_id", ids)`), not one round-trip per band. The ids are the
@@ -85,28 +88,54 @@ band" preference.
 
 ## 2. UX
 
-Dashboard, signed in, `bands.length >= 2`, above "Welcome back":
+Dashboard, signed in, `bands.length >= 2`:
 
 ```
-My upcoming events                       Shows and rehearsals from all your bands
+Welcome back!
+
 ┌────────────────────────────────────────────────────────────────────┐
-│ 03  [Show] The Cavern gig                    [Los Rockers]         │
-│ Oct  The Cavern · Fri, Oct 3 at 9:00 PM · in 6 days     [Setlist] │
+│ My upcoming events                                                 │
+│ Shows and rehearsals from all your bands                           │
 ├────────────────────────────────────────────────────────────────────┤
-│ 05  [Rehearsal] Pre-show run                 [Jazz Trio]           │
-│ Oct  Studio B · Sun, Oct 5 at 6:00 PM · in 1 week      [Show]     │
+│ FRI  The Cavern gig                                     [Setlist] │
+│ 03   ● Los Rockers · Show · The Cavern · 9:00 PM · in 6 days      │
+│ OCT                                                                │
+├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┤
+│ SUN  Pre-show run                                          [Show] │
+│ 05   ● Jazz Trio · Rehearsal · Studio B · 6:00 PM · In 1 week     │
+│ OCT                                                                │
+├────────────────────────────────────────────────────────────────────┤
+│                          Show all 11 ▾                             │
 └────────────────────────────────────────────────────────────────────┘
-                              Show all 11 ▾
+
+👥 Los Rockers
+[323 Songs] [12 Setlists] [2 Upcoming events]
+…
 ```
 
 - Sorted by date, then time (no time last), then band name. Six rows,
   then "Show all {n}" expands in place and "Show fewer" collapses; not
   remembered.
-- Each row: the existing date block, type badge, name, venue/location, meta
-  line and countdown, plus a **band chip** (`BandAvatar` initial + name,
-  muted) on the right. Rows of the selected band show the chip too: the
-  list is "mine", not "the others'", and a chip that appears only sometimes
+- **Two-line rows** (PR 1.3), flat, separated by dividers, not cards
+  inside the card. The **date block** carries the weekday, the day and the
+  month (purple for a show, cyan for a rehearsal), so the meta line
+  repeats no date. Line 1 is the name. Line 2 is one meta line, dot
+  separated: the **band chip** (`BandAvatar` initial + name, muted) first,
+  then the type ("Show" / "Rehearsal" with its icon, in the type's colour:
+  the word stays for colour-blind users), the venue/location, the time and
+  the **countdown**. Rows of the selected band show the chip too: the list
+  is "mine", not "the others'", and a chip that appears only sometimes
   reads as a bug.
+- **The countdown is plain text**, amber and medium weight only up to
+  `SOON_DAYS` (7) days away ("Today", "Tomorrow", "In 3 days"); later ones
+  stay in the meta line's grey. A badge on every row made the colour mean
+  nothing.
+- The **Setlist / Show chip** is the row's only right-hand element,
+  vertically centred.
+- The header stacks the title and the hint as a subtitle; nothing competes
+  for the width.
+- The band widget below renders the same two-line row without the band
+  chip (decision 5: one row component).
 - Tap the row → its event, in its band (decision 3). Tap "Setlist" /
   "Show" → that page, in its band; the tap does not bubble to the row.
 - Empty: "No upcoming events in any of your bands" (no action button: which
@@ -191,9 +220,12 @@ interface UpcomingEventRowProps {
   event: UpcomingEvent;
   locale: string;                  // "es-ES" | "en-US", as Home computes it
   bandName?: string;               // renders the band chip when given
+  bandAvatarUrl?: string | null;
   onOpen: () => void;
   onOpenLink?: () => void;         // the Setlist / Show chip; omitted → no chip
 }
+/** Countdowns up to this many days away are emphasised (amber); later ones are plain. */
+export const SOON_DAYS = 7;
 
 // src/components/home/MyUpcomingEvents.tsx
 /** Renders nothing with fewer than two bands. Loads its own data. */
@@ -205,9 +237,11 @@ sorted id list (a stable string key), not the `bands` array identity, so a
 `refreshBands()` that returns the same bands does not refetch. Collapsed
 count `VISIBLE_EVENTS = 6` is a named constant.
 
-`Home.tsx`: `<MyUpcomingEvents />` rendered right after `SchemaWipeNotice`
-inside the first `Container`, before `DashboardSection`; the band widget's
-rows become `UpcomingEventRow` without `bandName`.
+`Home.tsx`: one `Container` inside `DashboardSection`: `PendingInvitations`,
+`SchemaWipeNotice`, the `WelcomeTitle` (`h1`), `<MyUpcomingEvents />`, then
+`BandHeading` (`h2`, the band's name) and the band-scoped stats, widgets
+and quick actions; the band widget's rows are `UpcomingEventRow` without
+`bandName`.
 
 ### 3.5 i18n (both locales)
 
@@ -261,6 +295,15 @@ home.setlist                 Setlist
   section: the error line shows and no toast is added by the section.
 - AC10 `npm run lint`, `npm run build`, `npm test` pass; new strings in both
   locales.
+- AC11 `[unit]` `UpcomingEventRow` (PR 1.3): the date block shows weekday,
+  day and month and the meta line no date; the meta line reads band, type,
+  place, time, countdown in that order; a countdown within `SOON_DAYS` is
+  marked soon and a later one is not; without `bandName` no chip.
+- AC12 `[UI]` (PR 1.3) Two bands, desktop and phone: the greeting is the
+  first thing on the page, six events of the agenda fit in about half a
+  laptop viewport, the band's name heads the stats, long names truncate
+  with an ellipsis and the meta line wraps on the phone without pushing
+  the chip out of the row.
 
 ## 5. Tests
 
@@ -272,7 +315,9 @@ home.setlist                 Setlist
   rendered `ToastProvider`).
 - `src/components/__tests__/MyUpcomingEvents.test.tsx` — AC4 (jsdom;
   services mocked at the module boundary like `HomeOffline.test.tsx`).
-- Manual: AC6–AC9 in the PR description, with the roles used.
+- `src/components/home/__tests__/UpcomingEventRow.test.tsx` — AC11
+  (`renderToStaticMarkup` with the test i18next instance).
+- Manual: AC6–AC9 and AC12 in the PR description, with the roles used.
 
 ## 6. Risks
 
@@ -335,9 +380,14 @@ right permissions; single-band users see no change.
   tests AC1–AC3, AC5.
 - **PR 1.2 — the section.** §3.4 `MyUpcomingEvents`, §3.5, tests AC4, the
   manual checklist AC6–AC9, docs.
+- **PR 1.3 — compact agenda, greeting first.** The two-line row, the
+  countdown emphasis rule and the header layout of §2; `Home.tsx` reordered
+  (greeting, agenda, band heading, band section); tests AC11; the manual
+  check AC12. No data or navigation change.
 
 Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
-when PR 1.2 merges with the manual checklist recorded in its description.
+when PR 1.3 merges with the manual checklists recorded in the PR
+descriptions.
 
 ## Changelog
 
@@ -372,3 +422,25 @@ when PR 1.2 merges with the manual checklist recorded in its description.
      only the section.
   3. **Stale responses.** The effect keys on the sorted id string plus a retry
      counter; its cleanup drops a response for an older key.
+
+- **PR 1.3 (compact agenda, greeting first).** PR 1.2 rendered four-line
+  card rows (type badge line, name, place, meta line with a countdown
+  badge) inside the section card, above "Welcome back!": four events
+  filled a laptop viewport, the greeting read as a lost title mid-page, the
+  band (the point of the list) was the smallest text in the row, and the
+  amber countdown on every row meant nothing. Changes:
+  1. **Row** as in §2: date block with weekday/day/month, name, one meta
+     line (band · type · place · time · countdown), the link chip centred
+     on the right; `SOON_DAYS` exported for the emphasis rule. Flat rows
+     with dividers in the section. The band widget renders the same row,
+     so AC8's "pixel-identical" held only until this PR: the single-band
+     dashboard now has the greeting, the band heading and the compact
+     widget rows.
+  2. **`Home.tsx`**: one `Container`; `WelcomeTitle` first, then the agenda,
+     then `BandHeading` (the band's name, `h2`) before the stats. The
+     `DashboardHeader` / `WelcomeText` / `BandNameText` wrappers are gone.
+  3. **Header**: title and hint stacked.
+  Not done here, on purpose: a band filter in the agenda replacing the band
+  widget for multi-band users. The duplication between the agenda and the
+  widget (decision 1, "Not doing") stays; it is the next thing to revisit
+  if the dashboard still feels long.

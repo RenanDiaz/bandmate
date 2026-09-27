@@ -153,8 +153,12 @@ Upcoming shows and rehearsals are merged and sorted by `mergeUpcomingEvents`
 (`src/utils/upcomingEvents.ts`: date, then time with no time last, then band
 name, then name; date strings compared as strings, never through
 `new Date()`), with `eventPath` / `eventLink` for their routes. The dashboard's
-row is `UpcomingEventRow` (`src/components/home/`). With two or more bands the
-dashboard opens with `MyUpcomingEvents` (same folder): its own effect keyed by
+row is `UpcomingEventRow` (`src/components/home/`): two lines, a date block
+(weekday, day, month) and one meta line (band · type · place · time ·
+countdown, amber only within `SOON_DAYS`), the Setlist / Show chip on the
+right (under the meta line below `md`). `Home` renders the greeting first,
+then, with two or more bands, `MyUpcomingEvents` (same folder), then the band
+section headed by the band's name. `MyUpcomingEvents` has its own effect keyed by
 the sorted band ids (a `refreshBands()` with the same bands doesn't refetch),
 both `ForBands` reads, six rows then "Show all", a band chip on every row, and
 row / Setlist / Show chip taps through `useOpenInBand`. Its load failure is an

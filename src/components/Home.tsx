@@ -69,23 +69,18 @@ const Home = () => {
           title={`${selectedBand.name} Dashboard`}
           description={`Manage songs, setlists, and shows for ${selectedBand.name}. View upcoming gigs, organize your repertoire, and collaborate with your band.`}
         />
-        <Container style={{ marginTop: theme.space[6] }}>
-          <PendingInvitations onInvitationAccepted={refreshBands} />
-          <SchemaWipeNotice />
-          {/* Every band's events; renders nothing with one band. */}
-          <MyUpcomingEvents />
-        </Container>
-
         <DashboardSection>
           <Container>
-            <DashboardHeader>
-              <WelcomeText>
-                <WelcomeTitle>{t('home.welcomeBack')}</WelcomeTitle>
-                <BandNameText>
-                  <i className="bi bi-people-fill"></i> {selectedBand.name}
-                </BandNameText>
-              </WelcomeText>
-            </DashboardHeader>
+            <PendingInvitations onInvitationAccepted={refreshBands} />
+            <SchemaWipeNotice />
+            {/* The greeting is the page title; the agenda (every band's
+                events, nothing with one band) sits under it, then the band
+                section headed by the band's name (spec §2). */}
+            <WelcomeTitle>{t('home.welcomeBack')}</WelcomeTitle>
+            <MyUpcomingEvents />
+            <BandHeading>
+              <i className="bi bi-people-fill" aria-hidden="true"></i> {selectedBand.name}
+            </BandHeading>
 
             {loading ? (
               <LoadingState>
@@ -302,33 +297,26 @@ const DashboardSection = styled.section`
   background: var(--color-bg-primary);
 `;
 
-const DashboardHeader = styled.div`
-  margin-bottom: ${theme.space[8]};
-`;
-
-const WelcomeText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.space[1]};
-`;
-
 const WelcomeTitle = styled.h1`
   font-size: ${theme.fontSizes.displayMd};
   font-weight: ${theme.fontWeights.bold};
   color: var(--color-text-primary);
-  margin: 0;
+  margin: 0 0 ${theme.space[4]};
 
   @media (max-width: ${theme.breakpoints.md}) {
     font-size: ${theme.fontSizes.h1};
   }
 `;
 
-const BandNameText = styled.span`
-  font-size: ${theme.fontSizes.bodyLg};
+/** Heads the band-scoped part of the dashboard (stats, widgets, quick actions). */
+const BandHeading = styled.h2`
+  font-size: ${theme.fontSizes.h3};
+  font-weight: ${theme.fontWeights.semibold};
   color: ${theme.colors.brand.primary};
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
+  margin: 0 0 ${theme.space[6]};
 
   i {
     font-size: ${theme.fontSizes.body};
