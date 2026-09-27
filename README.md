@@ -184,12 +184,19 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) — spec: setlist actions layout (detail header, reorder toolbar, list cards)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
+- [docs/specs/app-header.md](docs/specs/app-header.md) — spec: lighter app header (About out of the nav, one link list, desktop from `lg`)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec: my upcoming events across bands on the dashboard
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
 
 - Move Spotify and Groq calls behind Edge Functions (keep secrets off the client)
 - Automated tests
+
+### Backlog (2026-09-27)
+
+- **Lighter app header** — spec: [docs/specs/app-header.md](docs/specs/app-header.md)
+- **My upcoming events across bands** — spec: [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md)
 
 ## 🤝 Contributing
 
