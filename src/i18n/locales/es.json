@@ -467,7 +467,7 @@
     },
     "export": {
       "button": "Exportar",
-      "title": "Opciones de Exportación del Setlist",
+      "title": "Exportar setlist",
       "setlistInfo": "Información del Setlist",
       "includeDescription": "Incluir descripción",
       "noDescription": "(sin descripción)",
@@ -497,7 +497,31 @@
         "colBpm": "BPM",
         "colDuration": "Dur.",
         "colStart": "Inicio"
-      }
+      },
+      "layoutLabel": "Formato",
+      "layouts": {
+        "stage": {
+          "label": "Escenario",
+          "hint": "Para imprimir o leer en el escenario"
+        },
+        "technical": {
+          "label": "Técnico",
+          "hint": "Columnas para la banda y el sonido"
+        },
+        "message": {
+          "label": "Mensaje",
+          "hint": "Para pegar en un chat"
+        }
+      },
+      "preview": "Vista previa",
+      "customize": "Personalizar",
+      "resetDefaults": "Restablecer valores del formato",
+      "includeShow": "Incluir show vinculado",
+      "includeStartTime": "Incluir horas de inicio",
+      "includeSpecialItems": "Incluir secciones y pausas",
+      "download": "Descargar .txt",
+      "share": "Compartir",
+      "shareError": "No se pudo compartir el setlist"
     },
     "performTooltip": "Iniciar modo presentación",
     "editSetlistTooltip": "Editar setlist",

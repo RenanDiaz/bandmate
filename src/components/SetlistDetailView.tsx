@@ -1,7 +1,7 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
+import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Input } from "reactstrap";
 import styled from "styled-components";
 import {
   DndContext,
@@ -41,13 +41,13 @@ import { SEO } from "./SEO";
 import { NewRequestModal } from "./NewRequestModal";
 import { EditSetlistModal } from "./EditSetlistModal";
 import { EditSongModal } from "./EditSongModal";
+import { SetlistTextExportModal } from "./SetlistTextExportModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
 import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
-import { formatSetlistText, setlistFileName } from "../utils/setlistText";
 import { OfflineDownloadAction, OfflineStatusRow } from "./offline/OfflineDownloadAction";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
@@ -391,7 +391,7 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   const toast = useToast();
 
@@ -430,22 +430,11 @@ const SetlistDetailView: FC = () => {
     return allSongs.find((s) => s.id === songId);
   };
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportCopied, setExportCopied] = useState(false);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [youtubeExporting, setYoutubeExporting] = useState(false);
   const [youtubeProgress, setYoutubeProgress] = useState({ current: 0, total: 0, songTitle: "" });
   const [youtubeResult, setYoutubeResult] = useState<PlaylistCreationResult | null>(null);
   const [hasYouTubeAccess, setHasYouTubeAccess] = useState<boolean | null>(null);
-  const [exportOptions, setExportOptions] = useState({
-    includeDescription: true,
-    includeSongCount: true,
-    includeTotalDuration: true,
-    includeArtist: true,
-    includeKey: true,
-    includeTempo: true,
-    includeDuration: true,
-    includeNotes: true,
-  });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -461,6 +450,18 @@ const SetlistDetailView: FC = () => {
 
   // Get only song items for reordering
   const songItemsOnly = setlistItems.filter(isSongItem);
+
+  // Memoised so the export preview only reformats when the setlist changes.
+  const exportInput = useMemo(
+    () => ({
+      name: setlist?.name ?? "",
+      description: setlist?.description,
+      items: setlistItems,
+      songsById: new Map(allSongs.map((song) => [song.id, song])),
+      show: linkedShows[0],
+    }),
+    [setlist?.name, setlist?.description, setlistItems, allSongs, linkedShows],
+  );
   const songsForReorder = songItemsOnly
     .map((item) => getSongById(item.song_id))
     .filter((song): song is Song => song !== undefined);
@@ -755,65 +756,6 @@ const SetlistDetailView: FC = () => {
     return setlistSong?.notes;
   };
 
-  const buildExportText = (): string => {
-    if (!setlist) return "";
-    const songsById = new Map(allSongs.map((song) => [song.id, song]));
-    return formatSetlistText(
-      { name: setlist.name, description: setlist.description, items: setlistItems, songsById },
-      {
-        layout: "technical",
-        description: exportOptions.includeDescription,
-        show: false,
-        songCount: exportOptions.includeSongCount,
-        totalDuration: exportOptions.includeTotalDuration,
-        artist: exportOptions.includeArtist,
-        key: exportOptions.includeKey,
-        tempo: exportOptions.includeTempo,
-        duration: exportOptions.includeDuration,
-        startTime: false,
-        notes: exportOptions.includeNotes,
-        specialItems: true,
-      },
-      t,
-      i18n.language,
-    );
-  };
-
-  const handleExportAsText = () => {
-    if (!setlist) return;
-
-    const blob = new Blob([buildExportText()], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = setlistFileName(setlist.name);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    // Close the modal
-    setShowExportModal(false);
-  };
-
-  const handleCopyExportText = async () => {
-    if (!setlist) return;
-    try {
-      await navigator.clipboard.writeText(buildExportText());
-      setExportCopied(true);
-      setTimeout(() => setExportCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy setlist text:", error);
-      toast.error(t("setlists.export.copyError"));
-    }
-  };
-
-  const toggleExportOption = (option: keyof typeof exportOptions) => {
-    setExportOptions((prev) => ({
-      ...prev,
-      [option]: !prev[option],
-    }));
-  };
 
   if (loading) {
     return (
@@ -1165,127 +1107,11 @@ const SetlistDetailView: FC = () => {
         )}
       </StyledContainer>
 
-      {/* Export Options Modal */}
-      <Modal isOpen={showExportModal} toggle={() => setShowExportModal(false)} size="lg">
-        <ModalHeader toggle={() => setShowExportModal(false)}>
-          {t('setlists.export.title')}
-        </ModalHeader>
-        <ModalBody>
-          <ExportOptionsContainer>
-            <OptionSection>
-              <SectionTitle>{t('setlists.export.setlistInfo')}</SectionTitle>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeDescription"
-                  checked={exportOptions.includeDescription}
-                  onChange={() => toggleExportOption("includeDescription")}
-                  disabled={!setlist?.description}
-                />
-                <Label check for="includeDescription">
-                  {t('setlists.export.includeDescription')}
-                  {!setlist?.description && <DisabledNote>{t('setlists.export.noDescription')}</DisabledNote>}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeSongCount"
-                  checked={exportOptions.includeSongCount}
-                  onChange={() => toggleExportOption("includeSongCount")}
-                />
-                <Label check for="includeSongCount">
-                  {t('setlists.export.includeSongCount')}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeTotalDuration"
-                  checked={exportOptions.includeTotalDuration}
-                  onChange={() => toggleExportOption("includeTotalDuration")}
-                  disabled={calculateTotalDuration() === 0}
-                />
-                <Label check for="includeTotalDuration">
-                  {t('setlists.export.includeTotalDuration')}
-                  {calculateTotalDuration() === 0 && <DisabledNote>{t('setlists.export.noDurations')}</DisabledNote>}
-                </Label>
-              </FormGroup>
-            </OptionSection>
-
-            <OptionSection>
-              <SectionTitle>{t('setlists.export.songDetails')}</SectionTitle>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeArtist"
-                  checked={exportOptions.includeArtist}
-                  onChange={() => toggleExportOption("includeArtist")}
-                />
-                <Label check for="includeArtist">
-                  {t('setlists.export.includeArtist')}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeKey"
-                  checked={exportOptions.includeKey}
-                  onChange={() => toggleExportOption("includeKey")}
-                />
-                <Label check for="includeKey">
-                  {t('setlists.export.includeKey')}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeTempo"
-                  checked={exportOptions.includeTempo}
-                  onChange={() => toggleExportOption("includeTempo")}
-                />
-                <Label check for="includeTempo">
-                  {t('setlists.export.includeTempo')}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeDuration"
-                  checked={exportOptions.includeDuration}
-                  onChange={() => toggleExportOption("includeDuration")}
-                />
-                <Label check for="includeDuration">
-                  {t('setlists.export.includeDuration')}
-                </Label>
-              </FormGroup>
-              <FormGroup check>
-                <Input
-                  type="checkbox"
-                  id="includeNotes"
-                  checked={exportOptions.includeNotes}
-                  onChange={() => toggleExportOption("includeNotes")}
-                />
-                <Label check for="includeNotes">
-                  {t('setlists.export.includeNotes')}
-                </Label>
-              </FormGroup>
-            </OptionSection>
-          </ExportOptionsContainer>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" onClick={() => setShowExportModal(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button color="secondary" outline onClick={handleCopyExportText}>
-            <i className={`bi ${exportCopied ? "bi-check-lg" : "bi-clipboard"}`}></i>{" "}
-            {exportCopied ? t('setlists.export.copied') : t('setlists.export.copy')}
-          </Button>
-          <Button color="primary" onClick={handleExportAsText}>
-            <i className="bi bi-download"></i> {t('setlists.export.button')}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <SetlistTextExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        input={exportInput}
+      />
 
       {/* YouTube Music Export Modal */}
       <Modal isOpen={showYouTubeModal} toggle={() => !youtubeExporting && setShowYouTubeModal(false)} size="md">
@@ -1980,38 +1806,6 @@ const SongsList = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[3]};
-`;
-
-const ExportOptionsContainer = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${theme.space[6]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const OptionSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.space[3]};
-`;
-
-const SectionTitle = styled.h3`
-  font-size: ${theme.fontSizes.bodyLg};
-  font-weight: ${theme.fontWeights.semibold};
-  color: var(--color-text-primary);
-  margin: 0 0 ${theme.space[2]} 0;
-  padding-bottom: ${theme.space[2]};
-  border-bottom: 1px solid var(--color-border);
-`;
-
-const DisabledNote = styled.span`
-  font-size: ${theme.fontSizes.bodyXs};
-  color: var(--color-text-tertiary);
-  font-style: italic;
-  margin-left: ${theme.space[2]};
 `;
 
 // Special item card styles

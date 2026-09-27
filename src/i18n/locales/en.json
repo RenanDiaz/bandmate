@@ -467,7 +467,7 @@
     },
     "export": {
       "button": "Export",
-      "title": "Export Setlist Options",
+      "title": "Export setlist",
       "setlistInfo": "Setlist Information",
       "includeDescription": "Include description",
       "noDescription": "(no description)",
@@ -497,7 +497,31 @@
         "colBpm": "BPM",
         "colDuration": "Dur.",
         "colStart": "Start"
-      }
+      },
+      "layoutLabel": "Layout",
+      "layouts": {
+        "stage": {
+          "label": "Stage",
+          "hint": "To print or read on stage"
+        },
+        "technical": {
+          "label": "Technical",
+          "hint": "Columns for the band and sound"
+        },
+        "message": {
+          "label": "Message",
+          "hint": "To paste in a chat"
+        }
+      },
+      "preview": "Preview",
+      "customize": "Customize",
+      "resetDefaults": "Reset to layout defaults",
+      "includeShow": "Include linked show",
+      "includeStartTime": "Include start times",
+      "includeSpecialItems": "Include sections and breaks",
+      "download": "Download .txt",
+      "share": "Share",
+      "shareError": "Couldn't share the setlist"
     },
     "performTooltip": "Start performance mode",
     "editSetlistTooltip": "Edit setlist",

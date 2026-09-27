@@ -26,6 +26,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 **Setlists**
 - Drag-and-drop editor, drafts, printable setlists
+- Export as text (stage, technical, chat) with copy and share
 - Make available offline (behind a feature flag until offline performance ships): save a setlist's songs and sheet music PDFs on the device (from the setlist, its show or performance mode), with progress, partial-download retry and resume after interruptions
 - Offline home (same flag): with no connection the app opens on the setlists saved on the device, with a read-only setlist view and Perform; other pages say they need a connection
 - AI-assisted setlist generation and optimization (Groq, optional)
