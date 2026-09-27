@@ -27,6 +27,7 @@ vi.mock("../components/Home", () => ({ default: () => <p>online dashboard</p> })
 vi.mock("../components/SetlistsView", () => ({ default: () => <p>online setlists</p> }));
 vi.mock("../components/SetlistDetailView", () => ({ default: () => <p>online detail</p> }));
 vi.mock("../components/ShowsView", () => ({ default: () => <p>online shows</p> }));
+vi.mock("../components/SongPerformanceView", () => ({ default: () => <p>song perform view</p> }));
 vi.mock("../components/BandSelector", () => ({ BandSelector: () => <p>band selector</p> }));
 
 const BAND = testBand(7, "The Band");
@@ -67,6 +68,15 @@ describe("online ↔ offline keeps the route (§7.3)", () => {
     setContext(online);
     expect(screen.getByText("online shows")).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toBe("/shows");
+  });
+
+  it("/songs/:songId/perform is online only (song spec decision 3)", () => {
+    const { setContext } = renderApp(<AppMain />, { ctx: offlineCtx, path: "/songs/s1/perform" });
+    expect(screen.getByText("This page needs a connection")).toBeTruthy();
+    expect(screen.queryByText("song perform view")).toBeNull();
+    setContext(online);
+    expect(screen.getByText("song perform view")).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe("/songs/s1/perform");
   });
 
   it("offline-cached behaves as a normal offline session", async () => {

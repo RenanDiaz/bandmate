@@ -51,6 +51,7 @@ import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 import { useBandContext } from "../context/useBandContext";
 import { readPerformPosition, writePerformPosition } from "../lib/performPosition";
 import { usePerformItems } from "../hooks/usePerformItems";
+import { isSongTarget, performanceTargetKey, type PerformanceTarget } from "../hooks/performanceTarget";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
 interface PDFErrorBoundaryProps {
@@ -200,8 +201,23 @@ const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemI
   );
 };
 
+/** Route wrapper: `/setlists/:setlistId/perform`. */
 const SetlistPerformanceView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
+  return <PerformanceView target={setlistId ? { kind: "setlist", setlistId } : undefined} />;
+};
+
+/**
+ * Performance mode for a setlist or, with a song target, one song from the
+ * library: the same view with the setlist-only chrome hidden
+ * (docs/specs/song-performance.md §2).
+ */
+export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({ target }) => {
+  const isSong = target ? isSongTarget(target) : false;
+  // Memory keys (position, backing tracks): the setlist id, or "song:<songId>".
+  const targetKey = target ? performanceTargetKey(target) : "";
+  const setlistId = target?.kind === "setlist" ? target.setlistId : undefined;
+  const exitPath = isSong ? "/songs" : "/setlists";
   const navigate = useNavigate();
   const { t } = useTranslation();
   const toast = useToast();
@@ -209,7 +225,7 @@ const SetlistPerformanceView: FC = () => {
   const { user, isOnline } = useBandContext();
   const userId = user?.id ?? null;
 
-  const perf = useSetlistPerformanceData(setlistId ? { kind: "setlist", setlistId } : undefined);
+  const perf = useSetlistPerformanceData(target);
   const setlist = perf.setlist;
   const { capabilities } = perf;
   const onSnapshot = perf.source === "snapshot";
@@ -334,7 +350,7 @@ const SetlistPerformanceView: FC = () => {
     getTrackUrl,
     getTrackInfo,
     hadTrackPreviously,
-  } = useLocalBackingTracks(setlistId || "");
+  } = useLocalBackingTracks(targetKey);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -415,31 +431,33 @@ const SetlistPerformanceView: FC = () => {
   // A2: restore the saved position once the data is ready (clamped: the
   // setlist may have changed); a position older than 12 h is gone on read.
   useEffect(() => {
-    if (perf.status !== "ready" || positionRestoredRef.current || !setlistId) return;
+    if (perf.status !== "ready" || positionRestoredRef.current || !targetKey) return;
     positionRestoredRef.current = true;
     if (!userId) return;
-    const saved = readPerformPosition(userId, setlistId);
+    const saved = readPerformPosition(userId, targetKey);
     if (!saved || perf.items.length === 0) return;
     const index = Math.min(saved.currentIndex, perf.items.length - 1);
     setCurrentIndex(index);
     setContentView(saved.contentView);
     pendingRestoredPdfRef.current = saved.selectedSheetMusicId ? { index, sheetMusicId: saved.selectedSheetMusicId } : null;
-  }, [perf.status, perf.items, setlistId, userId, setCurrentIndex]);
+  }, [perf.status, perf.items, targetKey, userId, setCurrentIndex]);
 
   // A2: save it on every change, for every source (after the restore ran).
   useEffect(() => {
-    if (perf.status !== "ready" || !positionRestoredRef.current || !userId || !setlistId) return;
-    writePerformPosition(userId, setlistId, { currentIndex, contentView, selectedSheetMusicId });
-  }, [perf.status, userId, setlistId, currentIndex, contentView, selectedSheetMusicId]);
+    if (perf.status !== "ready" || !positionRestoredRef.current || !userId || !targetKey) return;
+    writePerformPosition(userId, targetKey, { currentIndex, contentView, selectedSheetMusicId });
+  }, [perf.status, userId, targetKey, currentIndex, contentView, selectedSheetMusicId]);
 
   // A failed load bounces back to the list, as before, except with no
   // offline copy and no connection: that renders "Not available offline"
-  // below, with no toast and no bounce (B8).
+  // below, with no toast and no bounce (B8). A song that is not found renders
+  // "Song not found" + Back instead (song spec §2).
+  const songNotFound = isSong && perf.status === "error" && perf.error === "not-found";
   useEffect(() => {
-    if (perf.status !== "error" || perf.unavailableOffline) return;
-    toast.error(t("setlists.detail.loadError"));
-    navigate("/setlists");
-  }, [perf.status, perf.unavailableOffline, navigate]);
+    if (perf.status !== "error" || perf.unavailableOffline || songNotFound) return;
+    toast.error(t(isSong ? "songs.loadError" : "setlists.detail.loadError"));
+    navigate(exitPath);
+  }, [perf.status, perf.unavailableOffline, songNotFound, isSong, exitPath, navigate]);
 
   useEffect(() => {
     // Keyboard navigation
@@ -455,12 +473,13 @@ const SetlistPerformanceView: FC = () => {
         if (isFullscreen) {
           exitFullscreen();
         } else {
-          navigate("/setlists");
+          navigate(exitPath);
         }
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         toggleFullscreen();
-      } else if (e.key === "l" || e.key === "L") {
+      } else if ((e.key === "l" || e.key === "L") && !isSong) {
+        // A song target has no list.
         e.preventDefault();
         setShowSongList((prev) => !prev);
       } else if (e.key === "t" || e.key === "T") {
@@ -488,7 +507,7 @@ const SetlistPerformanceView: FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, setlistItems.length, isFullscreen, navigate, isReorderMode, canStartReorder]);
+  }, [currentIndex, setlistItems.length, isFullscreen, navigate, exitPath, isSong, isReorderMode, canStartReorder]);
 
   // Close font size dropdown on click outside
   useEffect(() => {
@@ -868,9 +887,24 @@ const SetlistPerformanceView: FC = () => {
         </ErrorIcon>
         <ErrorTitle>{t("performance.notAvailableOffline")}</ErrorTitle>
         <ErrorText>{t("performance.notAvailableOfflineHint")}</ErrorText>
-        <BackButton onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/setlists"))}>
+        <BackButton onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(exitPath))}>
           <i className="bi bi-arrow-left"></i>
           {t("performance.back")}
+        </BackButton>
+      </ErrorContainer>
+    );
+  }
+
+  if (songNotFound) {
+    return (
+      <ErrorContainer>
+        <ErrorIcon>
+          <i className="bi bi-exclamation-triangle"></i>
+        </ErrorIcon>
+        <ErrorTitle>{t("songs.notFound")}</ErrorTitle>
+        <BackButton onClick={() => navigate("/songs")}>
+          <i className="bi bi-arrow-left"></i>
+          {t("songs.backToSongs")}
         </BackButton>
       </ErrorContainer>
     );
@@ -913,6 +947,8 @@ const SetlistPerformanceView: FC = () => {
 
   // Song count for the page description
   const songItemsOnly = setlistItems.filter(isSongItem);
+  // The song target's only song (the synthetic setlist has one item).
+  const targetSong = isSong ? currentSong : null;
 
   // Determine what content to display with smart fallback
   const getDisplayContent = (): { type: "chords" | "lyrics" | "none"; content: string } => {
@@ -964,19 +1000,24 @@ const SetlistPerformanceView: FC = () => {
     <PerformanceContainer>
       <SEO
         title={`${setlist.name} - Performance Mode`}
-        description={`Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances with ${songItemsOnly.length} songs.`}
+        description={
+          isSong
+            ? `Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances.`
+            : `Performance mode for ${setlist.name}. Fullscreen lyrics and chords view for live performances with ${songItemsOnly.length} songs.`
+        }
       />
       {/* Top Bar */}
       <TopBar>
         <TopBarRow>
           <TopBarLeft>
-            <ExitButton onClick={() => navigate("/setlists")} title={t("performance.exit")}>
+            <ExitButton onClick={() => navigate(exitPath)} title={t("performance.exit")}>
               <i className="bi bi-x-lg"></i>
             </ExitButton>
             <SetlistInfo>
               <SetlistName>{setlist.name}</SetlistName>
+              {targetSong?.artist && <SongSubtitle>{targetSong.artist}</SongSubtitle>}
             </SetlistInfo>
-            {onSnapshot && (
+            {onSnapshot && !isSong && (
               <SourceBadge $offline={!isOnline} title={isOnline ? t("performance.offlineCopyBadgeHint") : undefined}>
                 <i className={`bi ${isOnline ? "bi-cloud-check" : "bi-wifi-off"}`}></i>
                 <span>{isOnline ? t("performance.offlineCopyBadge") : t("performance.offlineBadge")}</span>
@@ -984,9 +1025,11 @@ const SetlistPerformanceView: FC = () => {
             )}
           </TopBarLeft>
 
-          <SongCounter>
-            {currentIndex + 1} / {setlistItems.length}
-          </SongCounter>
+          {!isSong && (
+            <SongCounter>
+              {currentIndex + 1} / {setlistItems.length}
+            </SongCounter>
+          )}
         </TopBarRow>
 
         <TopBarControls>
@@ -1012,6 +1055,7 @@ const SetlistPerformanceView: FC = () => {
             </ReorderActions>
           ) : (
             <>
+              {!isSong && (
               <SyncControls
                 role={syncRole}
                 isConnected={isSyncConnected}
@@ -1031,8 +1075,11 @@ const SetlistPerformanceView: FC = () => {
                 disabled={!capabilities.canSync && !isSyncConnected}
                 disabledReason={t("performanceSync.needsConnection")}
               />
+              )}
               {/* Self-contained (reads the offline service itself); no Remove here. */}
-              <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="toolbar" />
+              {!isSong && (
+                <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="toolbar" />
+              )}
               <ViewToggleGroup>
                 <ViewToggleButton
                   onClick={() => setContentView("chords")}
@@ -1116,13 +1163,15 @@ const SetlistPerformanceView: FC = () => {
                   <i className="bi bi-arrow-down-up"></i>
                 </IconButton>
               )}
-              <IconButton
-                onClick={() => setShowSongList(!showSongList)}
-                title={t("performance.songListShortcut")}
-                $active={showSongList}
-              >
-                <i className="bi bi-list-ul"></i>
-              </IconButton>
+              {!isSong && (
+                <IconButton
+                  onClick={() => setShowSongList(!showSongList)}
+                  title={t("performance.songListShortcut")}
+                  $active={showSongList}
+                >
+                  <i className="bi bi-list-ul"></i>
+                </IconButton>
+              )}
               <IconButton onClick={toggleFullscreen} title={t("performance.fullscreenShortcut")}>
                 <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
               </IconButton>
@@ -1134,7 +1183,7 @@ const SetlistPerformanceView: FC = () => {
       {/* Main Content Area */}
       <MainContent>
         {/* Song List Sidebar */}
-        {showSongList && (
+        {showSongList && !isSong && (
           <>
           <SongListBackdrop onClick={() => setShowSongList(false)} />
           <SongListSidebar>
@@ -1276,7 +1325,7 @@ const SetlistPerformanceView: FC = () => {
                       )}
                     </SongMetadataBar>
 
-                    {currentNotes && (
+                    {currentNotes && !isSong && (
                       <NotesBox>
                         <NotesLabel>
                           <i className="bi bi-sticky"></i>
@@ -1505,7 +1554,7 @@ const SetlistPerformanceView: FC = () => {
           )}
 
           {/* Up Next Indicator - hidden in sheet music mode to maximize PDF space */}
-          {nextItemInfo && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
+          {nextItemInfo && !isSong && !(contentView === "sheetMusic" && sheetMusicList.length > 0) && (
             <UpNextBar $type={nextItemInfo.type}>
               <UpNextLabel>{t("setlists.items.upNext")}:</UpNextLabel>
               <UpNextContent>
@@ -1521,7 +1570,8 @@ const SetlistPerformanceView: FC = () => {
         </SongDisplay>
       </MainContent>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation (a song target has no prev/next; arrows still turn PDF pages) */}
+      {!isSong && (
       <BottomNav>
         <NavButton
           onClick={handlePrevNav}
@@ -1550,6 +1600,7 @@ const SetlistPerformanceView: FC = () => {
           <i className="bi bi-chevron-right"></i>
         </NavButton>
       </BottomNav>
+      )}
 
       {/* Mobile Floating Toggle Button */}
       <MobileToggleButton onClick={toggleContentView} $contentType={contentView}>
@@ -1720,6 +1771,14 @@ const SetlistName = styled.div`
   @media (min-width: ${theme.breakpoints.md}) {
     font-size: ${theme.fontSizes.bodyLg};
   }
+`;
+
+const SongSubtitle = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const SongCounter = styled.div`

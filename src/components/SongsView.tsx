@@ -278,6 +278,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
                   songs={filteredSongs}
                   onEdit={handleEditSong}
                   onDelete={handleDeleteSong}
+                  onPerform={(song) => navigate(`/songs/${song.id}/perform`)}
                   onTranspose={handleTransposeSong}
                   onResetTransposition={handleResetTransposition}
                   onRequestAction={handleRequestAction}

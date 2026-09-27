@@ -1,6 +1,7 @@
 # Spec: Perform a single song from the song library
 
-> **Status:** draft · **Created:** 2026-09-26 · **Owner:** Renán Díaz
+> **Status:** Phase 1 implemented (PR 1.1, PR 1.2), manual validation
+> (AC9–AC14) pending · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una canción tipo performance desde la lista de
 > canciones".
 > **Scope:** a Perform action on every song card that opens the existing

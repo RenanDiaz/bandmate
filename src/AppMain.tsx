@@ -9,6 +9,7 @@ import SetlistsView from "./components/SetlistsView";
 import SetlistEditor from "./components/SetlistEditor";
 import SetlistDetailView from "./components/SetlistDetailView";
 import SetlistPerformanceView from "./components/SetlistPerformanceView";
+import SongPerformanceView from "./components/SongPerformanceView";
 import PrintableSetlist from "./components/PrintableSetlist";
 import PrintableSongbook from "./components/PrintableSongbook";
 import ShowsView from "./components/ShowsView";
@@ -80,6 +81,8 @@ export const AppMain: FC = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/songs" element={needsConnection(<SongsView user={user} selectedBand={selectedBand} />)} />
       <Route path="/songs/print" element={needsConnection(<PrintableSongbook />)} />
+      {/* Online only: no snapshot lookup for a single song (song spec decision 3). */}
+      <Route path="/songs/:songId/perform" element={needsConnection(<SongPerformanceView />)} />
       <Route
         path="/setlists"
         element={

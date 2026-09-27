@@ -13,14 +13,14 @@ const SW_URL = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
 const SW_TYPE = import.meta.env.DEV ? "module" : "classic";
 
 /** Routes where the page must never reload on its own: a show is running. */
-const NO_RELOAD_ROUTES = ["/setlists/:setlistId/perform"];
+const NO_RELOAD_ROUTES = ["/setlists/:setlistId/perform", "/songs/:songId/perform"];
 
 /**
  * Registers the PWA service worker and shows an in-app prompt when a new
  * version is waiting (`registerType: 'prompt'`).
  *
  * The page reloads only when the user taps Reload. Nothing here calls
- * `skipWaiting` on its own, and the prompt stays hidden on the perform route
+ * `skipWaiting` on its own, and the prompt stays hidden on the perform routes
  * until the user leaves it. Registration uses workbox-window directly rather
  * than `virtual:pwa-register`, because the latter reloads every tab when
  * *another* tab accepts the update — including one in the middle of a show.

@@ -12,6 +12,14 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-27 — Performance target (docs/specs/song-performance.md).**
+  Performance mode takes a `PerformanceTarget` (`setlist` or `song`) instead
+  of a `setlistId`; the setlist target is unchanged. `/songs/:songId/perform`
+  renders one song from the library through an online-only song source (a
+  synthetic one-item setlist, id `song:<songId>`): the controller never opens
+  the snapshot source for it and the route renders "This page needs a
+  connection" offline. Follow-up, not scheduled: read a song out of any
+  snapshot that contains it; the target type makes that additive.
 - **2026-09-25 — PR 2.5: offline entry point (decisions the spec did not cover).**
   - **Flag removal moves to PR 2.6.** The screens ship behind
     `isOfflineDownloadsEnabled()` like the rest; 2.6 removes the flag once the

@@ -363,7 +363,11 @@
     "resetTransposition": "Reset to original key",
     "originalKey": "Original key",
     "originalKeyShort": "Orig",
-    "transposeError": "Failed to transpose song. Please try again."
+    "transposeError": "Failed to transpose song. Please try again.",
+    "perform": "Perform",
+    "backToSongs": "Back to songs",
+    "notFound": "Song not found",
+    "loadError": "Could not load the song"
   },
   "setlists": {
     "title": "Setlists",
