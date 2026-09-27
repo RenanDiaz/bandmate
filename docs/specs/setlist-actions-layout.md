@@ -236,11 +236,19 @@ Unchanged, except **Link to show** renders only with `canManageEvents`. The
 ```
 ┌────────────────────────────────────────────────────────┐
 │ [♪] Summer Tour 2026                  [▶ Perform] [ ⋯ ] │
-│     [♪ 12 songs] [☁ Available offline]                 │
-│ ────────────────────────────────────────────────────── │
-│ Opening set for the July dates.                        │
+│     Opening set for the July dates.                    │
+│ [♪ 12 songs] [☁ Available offline]                     │
 └────────────────────────────────────────────────────────┘
 ```
+
+Card anatomy (shared with the song cards in `SongList`, follow-up of this
+spec): one header row `icon · name + description · actions`, then the
+badges on a row of their own that spans the card's full width. The badges
+are no longer squeezed between the icon and the actions, which on a phone
+left them stacked one per line next to a blank column. The icon is 48 px
+(40 px below `sm`), the name clamps to two lines, and the description is
+one truncated line under the name (full text in `title`) instead of a
+bordered footer.
 
 - **Perform**: outlined success, label `setlists.perform` from `sm` up,
   icon-only 40 × 40 below `sm` with `aria-label`. Always visible, no hover
@@ -253,7 +261,7 @@ Unchanged, except **Link to show** renders only with `canManageEvents`. The
   `align-self: flex-start`.
 - `SetlistName` is a `<Link to={`/setlists/${id}`}>` styled as today
   (`color: inherit; text-decoration: none`); the card `onClick` remains.
-- The grid is unchanged (`minmax(380px, 1fr)`, one column below `md`).
+- The grid is `minmax(360px, 1fr)`, one column below `md`.
 
 Shows and requests keep their current pattern; extracting a shared
 `CardActionMenu` for the four lists is a follow-up (§10).
