@@ -414,6 +414,7 @@
       "addSection": "Add Section",
       "addNote": "Add Note",
       "addSpecialItem": "Add Item",
+      "addSpecialItemShort": "Item",
       "breakLabel": "Break Label",
       "sectionLabel": "Section Label",
       "noteLabel": "Note Text",
@@ -450,6 +451,7 @@
     "picker": {
       "title": "Song Library",
       "addSongs": "Add songs",
+      "addSongsShort": "Songs",
       "filters": "Filters",
       "clearFilters": "Clear filters",
       "filter": {
