@@ -447,6 +447,59 @@
       "loadError": "Failed to load setlist. Please try again.",
       "saveError": "Failed to save setlist. Please try again."
     },
+    "picker": {
+      "title": "Song Library",
+      "addSongs": "Add songs",
+      "filters": "Filters",
+      "clearFilters": "Clear filters",
+      "filter": {
+        "tags": "Tags",
+        "key": "Key",
+        "language": "Language",
+        "energy": "Energy",
+        "played": "Played"
+      },
+      "energy": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "played": {
+        "never": "Never played",
+        "stale": "Not played in 6+ months",
+        "played": "Played in the last 6 months"
+      },
+      "sort": {
+        "label": "Sort",
+        "artist_title_asc": "Artist, title",
+        "title_asc": "Title",
+        "date_desc": "Recently added",
+        "most_played": "Most played",
+        "longest_since_played": "Longest since played"
+      },
+      "signals": {
+        "played_one": "Played {{count}}× · last: {{place}}, {{date}}",
+        "played_other": "Played {{count}}× · last: {{place}}, {{date}}",
+        "inSetlists_one": "In {{count}} setlist · never played",
+        "inSetlists_other": "In {{count}} setlists · never played",
+        "never": "Never in a setlist"
+      },
+      "addSelected_one": "Add {{count}} song",
+      "addSelected_other": "Add {{count}} songs",
+      "clearSelection": "Clear",
+      "selectSong": "Select {{title}}",
+      "noMatchFilters": "No songs match these filters",
+      "goToSongs": "Go to Songs",
+      "addSongsHintNarrow": "Tap “Add songs” to pick from the library"
+    },
+    "rowMenu": {
+      "label": "More actions for {{item}}",
+      "up": "Move up",
+      "down": "Move down",
+      "top": "Move to top",
+      "bottom": "Move to bottom",
+      "remove": "Remove"
+    },
     "detail": {
       "loading": "Loading setlist...",
       "notFound": "Setlist Not Found",
@@ -458,7 +511,7 @@
       "startPerformance": "Start Performance",
       "noSongsYet": "No Songs Yet",
       "noSongsYetText": "This setlist doesn't have any songs. Click \"Edit Setlist\" to add songs.",
-      "reorderHint": "Drag songs to reorder. Click \"Save Order\" when done.",
+      "reorderHint": "Drag songs to reorder (long-press the handle on touch), or use ⋮ to move them. Click \"Save Order\" when done.",
       "saveOrderError": "Failed to save order. Please try again.",
       "loadError": "Failed to load setlist. Please try again.",
       "linkedToShow": "Linked to show",
@@ -1033,7 +1086,7 @@
     "fullscreenShortcut": "Fullscreen (F)",
     "reorderSongs": "Reorder Songs",
     "setlist": "Setlist",
-    "dragToReorder": "Drag to reorder",
+    "dragToReorder": "Drag or use ⋮ to reorder",
     "durationMinutes": "{{count}} min",
     "noContent": "No chords or lyrics available for this song",
     "previous": "Previous",

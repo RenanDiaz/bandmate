@@ -447,6 +447,59 @@
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
       "saveError": "Error al guardar el setlist. Por favor intenta de nuevo."
     },
+    "picker": {
+      "title": "Biblioteca de Canciones",
+      "addSongs": "Agregar canciones",
+      "filters": "Filtros",
+      "clearFilters": "Limpiar filtros",
+      "filter": {
+        "tags": "Etiquetas",
+        "key": "Tonalidad",
+        "language": "Idioma",
+        "energy": "Energía",
+        "played": "Tocada"
+      },
+      "energy": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta"
+      },
+      "played": {
+        "never": "Nunca tocada",
+        "stale": "Sin tocar en 6+ meses",
+        "played": "Tocada en los últimos 6 meses"
+      },
+      "sort": {
+        "label": "Ordenar",
+        "artist_title_asc": "Artista, título",
+        "title_asc": "Título",
+        "date_desc": "Agregadas recientemente",
+        "most_played": "Más tocadas",
+        "longest_since_played": "Más tiempo sin tocar"
+      },
+      "signals": {
+        "played_one": "Tocada {{count}}× · última: {{place}}, {{date}}",
+        "played_other": "Tocada {{count}}× · última: {{place}}, {{date}}",
+        "inSetlists_one": "En {{count}} setlist · nunca tocada",
+        "inSetlists_other": "En {{count}} setlists · nunca tocada",
+        "never": "Nunca en un setlist"
+      },
+      "addSelected_one": "Agregar {{count}} canción",
+      "addSelected_other": "Agregar {{count}} canciones",
+      "clearSelection": "Limpiar",
+      "selectSong": "Seleccionar {{title}}",
+      "noMatchFilters": "Ninguna canción coincide con estos filtros",
+      "goToSongs": "Ir a Canciones",
+      "addSongsHintNarrow": "Toca “Agregar canciones” para elegir de la biblioteca"
+    },
+    "rowMenu": {
+      "label": "Más acciones para {{item}}",
+      "up": "Subir",
+      "down": "Bajar",
+      "top": "Mover al principio",
+      "bottom": "Mover al final",
+      "remove": "Quitar"
+    },
     "detail": {
       "loading": "Cargando setlist...",
       "notFound": "Setlist No Encontrado",
@@ -458,7 +511,7 @@
       "startPerformance": "Iniciar Presentación",
       "noSongsYet": "Sin Canciones Aún",
       "noSongsYetText": "Este setlist no tiene canciones. Haz clic en \"Editar Setlist\" para agregar canciones.",
-      "reorderHint": "Arrastra las canciones para reordenar. Haz clic en \"Guardar Orden\" cuando termines.",
+      "reorderHint": "Arrastra las canciones para reordenar (mantén presionado el asa en pantallas táctiles) o usa ⋮ para moverlas. Haz clic en \"Guardar Orden\" cuando termines.",
       "saveOrderError": "Error al guardar el orden. Por favor intenta de nuevo.",
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
       "linkedToShow": "Vinculado al show",
@@ -1033,7 +1086,7 @@
     "fullscreenShortcut": "Pantalla completa (F)",
     "reorderSongs": "Reordenar canciones",
     "setlist": "Setlist",
-    "dragToReorder": "Arrastra para reordenar",
+    "dragToReorder": "Arrastra o usa ⋮ para reordenar",
     "durationMinutes": "{{count}} min",
     "noContent": "No hay acordes ni letra para esta canción",
     "previous": "Anterior",
