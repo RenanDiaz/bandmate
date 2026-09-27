@@ -1046,7 +1046,12 @@
     "offlineCopyBadgeHint": "Showing the copy saved on this device; it updates in the background",
     "notAvailableOffline": "Not available offline",
     "notAvailableOfflineHint": "This setlist isn't saved on this device. Connect to open it, or make it available offline first.",
-    "back": "Back"
+    "back": "Back",
+    "meta": {
+      "key": "Key: {{key}}",
+      "bpm": "{{tempo}} BPM",
+      "notes": "Notes"
+    }
   },
   "sectionEditor": {
     "title": "Song Sections",

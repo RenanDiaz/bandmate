@@ -1046,7 +1046,12 @@
     "offlineCopyBadgeHint": "Mostrando la copia guardada en este dispositivo; se actualiza en segundo plano",
     "notAvailableOffline": "No disponible sin conexión",
     "notAvailableOfflineHint": "Este setlist no está guardado en este dispositivo. Conéctate para abrirlo, o guárdalo antes para usar sin conexión.",
-    "back": "Volver"
+    "back": "Volver",
+    "meta": {
+      "key": "Tonalidad: {{key}}",
+      "bpm": "{{tempo}} BPM",
+      "notes": "Notas"
+    }
   },
   "sectionEditor": {
     "title": "Secciones de la Canción",
