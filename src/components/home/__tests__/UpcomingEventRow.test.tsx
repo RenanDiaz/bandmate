@@ -6,6 +6,7 @@ import type { Show } from "../../../services/showsService";
 import type { Rehearsal } from "../../../services/rehearsalsService";
 import { mergeUpcomingEvents } from "../../../utils/upcomingEvents";
 import { createTestI18n } from "../../../test/i18n";
+import { BAND_COLORS } from "../../../utils/bandColors";
 import { SOON_DAYS, UpcomingEventRow } from "../UpcomingEventRow";
 
 const i18n = createTestI18n();
@@ -108,5 +109,12 @@ describe("UpcomingEventRow (my-upcoming-events AC11)", () => {
     expect(withLink.text("button")).toBe("Setlist");
     const noHandler = renderRow({ event: showEvent("2026-10-03", { setlist_id: "l1" }) });
     expect(noHandler.doc.querySelector("button")).toBeNull();
+  });
+
+  it("the date block takes the band colour when given; otherwise none is set", () => {
+    const colored = renderRow({ event: rehearsalEvent("2026-10-05"), bandColor: BAND_COLORS[2] });
+    expect(colored.doc.querySelector("[data-testid=event-date]")?.getAttribute("data-band-color")).toBe("emerald");
+    const plain = renderRow({ event: rehearsalEvent("2026-10-05") });
+    expect(plain.doc.querySelector("[data-testid=event-date]")?.hasAttribute("data-band-color")).toBe(false);
   });
 });

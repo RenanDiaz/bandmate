@@ -36,7 +36,7 @@ docs/
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
 - [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
-- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs)
+- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, four PRs)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
 - [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (implemented)
 
@@ -46,7 +46,7 @@ docs/
 
 ## Header and personal agenda (2026-09-27)
 - [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR; implemented, manual validation pending)
-- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, two PRs; implemented, manual validation of AC6–AC9 on device pending)
+- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented, manual validation of AC6–AC9 on device pending)
 
 ## Notifications (2026-09-27)
 - [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2 (two phases, three PRs; in progress, Phase 1 implemented, device validation pending)

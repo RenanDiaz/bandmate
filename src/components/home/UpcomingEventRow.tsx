@@ -4,6 +4,7 @@ import { theme } from "../../theme";
 import { BandAvatar } from "../BandAvatar";
 import { eventLink } from "../../utils/upcomingEvents";
 import type { UpcomingEvent } from "../../utils/upcomingEvents";
+import type { BandColor } from "../../utils/bandColors";
 
 interface UpcomingEventRowProps {
   event: UpcomingEvent;
@@ -12,6 +13,11 @@ interface UpcomingEventRowProps {
   /** Renders the band chip when given (My upcoming events). */
   bandName?: string;
   bandAvatarUrl?: string | null;
+  /**
+   * The date block's background for this band (`bandColorMap`, My upcoming
+   * events). Omitted → purple for a show, cyan for a rehearsal.
+   */
+  bandColor?: BandColor;
   onOpen: () => void;
   /** The Setlist / Show chip (`eventLink`); omitted → no chip. */
   onOpenLink?: () => void;
@@ -31,6 +37,7 @@ export const UpcomingEventRow = ({
   locale,
   bandName,
   bandAvatarUrl,
+  bandColor,
   onOpen,
   onOpenLink,
 }: UpcomingEventRowProps) => {
@@ -80,7 +87,13 @@ export const UpcomingEventRow = ({
 
   return (
     <Row data-testid="upcoming-event-row" onClick={onOpen}>
-      <DateBlock $isRehearsal={isRehearsal} data-testid="event-date">
+      <DateBlock
+        $background={
+          bandColor?.background ?? (isRehearsal ? theme.colors.accent.cyan : theme.gradients.brandPrimary)
+        }
+        data-testid="event-date"
+        data-band-color={bandColor?.key}
+      >
         <DateWeekday>{eventDate.toLocaleDateString(locale, { weekday: "short" })}</DateWeekday>
         <DateDay>{eventDate.getDate()}</DateDay>
         <DateMonth>{eventDate.toLocaleDateString(locale, { month: "short" })}</DateMonth>
@@ -145,10 +158,10 @@ const Row = styled.div`
   }
 `;
 
-const DateBlock = styled.div<{ $isRehearsal?: boolean }>`
+const DateBlock = styled.div<{ $background: string }>`
   width: 48px;
   height: 52px;
-  background: ${(props) => (props.$isRehearsal ? theme.colors.accent.cyan : theme.gradients.brandPrimary)};
+  background: ${(props) => props.$background};
   border-radius: ${theme.radius.md};
   display: flex;
   flex-direction: column;

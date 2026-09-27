@@ -83,6 +83,19 @@ describe("MyUpcomingEvents (AC4)", () => {
     expect(within(rowOf("Rehearsal r1")).getByText("Jazz Trio")).toBeTruthy();
   });
 
+  it("each band's rows get their own date-block colour", async () => {
+    vi.mocked(getUpcomingShowsForBands).mockResolvedValue([show("s1", 1, "2026-10-03"), show("s2", 2, "2026-10-04")]);
+    vi.mocked(getUpcomingRehearsalsForBands).mockResolvedValue([rehearsal("r1", 1, "2026-10-05")]);
+    renderApp(<MyUpcomingEvents />, { ctx: bandContext({ bands: [B, A], selectedBand: A }) });
+
+    const colorOf = (name: string) =>
+      rowOf(name).querySelector("[data-testid=event-date]")?.getAttribute("data-band-color");
+    expect(await screen.findByText("Show s1")).toBeTruthy();
+    expect(colorOf("Show s1")).toBe("violet");
+    expect(colorOf("Rehearsal r1")).toBe("violet");
+    expect(colorOf("Show s2")).toBe("cyan");
+  });
+
   it("empty: the empty line and no action button", async () => {
     renderApp(<MyUpcomingEvents />, { ctx: bandContext({ bands: [A, B], selectedBand: A }) });
     expect(await screen.findByText("No upcoming events in any of your bands")).toBeTruthy();
