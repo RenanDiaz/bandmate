@@ -1,6 +1,6 @@
 # Spec: Setlist actions layout (detail header + list cards)
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** PR 1 (detail header) implemented; PR 2 (list cards) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the setlist detail header has nine action buttons in one row,
 > and the setlist list hides its actions until the mouse hovers. Both were
 > reviewed against phone / tablet / desktop and touch / mouse / keyboard.
@@ -305,9 +305,8 @@ instead of the inline bar. `SetlistList` keeps its props (`setlists`,
 `onDelete`, `canEdit`); only `SetlistCardItem`'s markup changes.
 
 New i18n keys, both locales: `common.moreActions` ("More actions" / "Más
-acciones"), `setlists.detail.renameAndDescription` ("Rename / description" /
-"Renombrar / descripción") if we prefer it over the existing
-`setlists.renameSetlist`; otherwise none. Every other label already exists
+acciones"). The menu keeps the existing `setlists.renameSetlist` label for
+the name / description modal. Every other label already exists
 (`setlists.detail.reorder`, `setlists.editSetlist`, `setlists.print`,
 `setlists.export.button`, `youtubeMusic.exportToYouTube`,
 `requests.proposeSetlist`, `setlists.detail.startPerformance`,

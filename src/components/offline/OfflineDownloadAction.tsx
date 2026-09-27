@@ -29,7 +29,8 @@ interface ActionProps {
   setlistId: string;
   setlistName: string;
   /**
-   * "setlist": button in the setlist detail header (status and Remove are in OfflineStatusRow).
+   * "setlist": link-style action inside OfflineStatusRow, under the setlist title, next to the
+   *   badge and Remove (docs/specs/setlist-actions-layout.md §2.5). Not rendered on its own.
    * "show": the show's linked setlist ("Get this show ready offline"), with its badge;
    *   the action stays when it is saved (A3: re-plans, downloads nothing present).
    * "toolbar": compact, for performance mode's top bar. No Remove there: a mis-tap on
@@ -49,6 +50,7 @@ const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, v
   const flow = useOfflineDownloadFlow(setlistId, setlistName, variant);
   const running = active?.setlistId === setlistId ? active : null;
   const compact = variant === "toolbar";
+  const Button = variant === "setlist" ? RowActionButton : ActionButton;
 
   let button: ReactElement | null = null;
   if (running) {
@@ -57,10 +59,10 @@ const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, v
       ? t("offline.action.downloading", { done: p.filesDone, total: p.filesTotal })
       : t("offline.action.preparing");
     button = (
-      <ActionButton type="button" onClick={flow.openModal} title={label} $compact={compact}>
+      <Button type="button" onClick={flow.openModal} title={label} $compact={compact}>
         <Spinner size="sm" />
         <span>{label}</span>
-      </ActionButton>
+      </Button>
     );
   } else if (meta === undefined) {
     button = null; // still reading the store
@@ -76,7 +78,7 @@ const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, v
           ? t("offline.action.showReady")
           : t("offline.action.makeAvailable");
     button = (
-      <ActionButton
+      <Button
         type="button"
         onClick={() => void flow.begin()}
         disabled={!flow.canDownload || flow.planning}
@@ -89,7 +91,7 @@ const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, v
           <i className={`bi ${!flow.canDownload ? "bi-wifi-off" : retry ? "bi-arrow-repeat" : "bi-cloud-arrow-down"}`} />
         )}
         <span>{flow.planning ? t("offline.action.preparing") : label}</span>
-      </ActionButton>
+      </Button>
     );
   }
 
@@ -117,7 +119,9 @@ export const OfflineBadge: FC<{ meta: OfflineSnapshotMeta; compact?: boolean }> 
 };
 
 /**
- * Setlist detail, under the title: saved badge + Remove, and the
+ * Setlist detail, under the title: the one line that owns the setlist's
+ * offline state. "Make available offline" / progress / Retry (the `setlist`
+ * variant of OfflineDownloadAction), the saved badge + Remove, and the
  * interrupted-download notice with Resume / Discard.
  */
 export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = (props) =>
@@ -160,17 +164,15 @@ const OfflineStatusRowInner: FC<{ setlistId: string; setlistName: string }> = ({
   };
 
   const showMeta = meta && active?.setlistId !== setlistId;
-  if (!showMeta && !interrupted) return null;
 
   return (
-    <Row>
+    <Row data-testid="offline-status-row">
+      {showMeta && <OfflineBadge meta={meta} />}
+      <OfflineDownloadAction setlistId={setlistId} setlistName={setlistName} variant="setlist" />
       {showMeta && (
-        <>
-          <OfflineBadge meta={meta} />
-          <LinkButton type="button" onClick={() => setConfirmRemove(true)}>
-            <i className="bi bi-trash" /> {t("offline.remove.button")}
-          </LinkButton>
-        </>
+        <LinkButton type="button" onClick={() => setConfirmRemove(true)}>
+          <i className="bi bi-trash" /> {t("offline.remove.button")}
+        </LinkButton>
       )}
       {interrupted && (
         <Notice role="status">
@@ -294,6 +296,20 @@ const LinkButton = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+`;
+
+/** The `setlist` variant: a link in the status row, icon in the brand colour. */
+const RowActionButton = styled(LinkButton)<{ $compact?: boolean }>`
+  min-height: 40px;
+  font-weight: ${theme.fontWeights.medium};
+
+  i {
+    color: ${theme.colors.brand.primary};
+  }
+
+  &:disabled i {
+    color: var(--color-text-secondary);
   }
 `;
 
