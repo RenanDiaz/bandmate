@@ -8,7 +8,7 @@
 > **Scope:** a personal agenda of the upcoming shows and rehearsals of every
 > band the user belongs to, on the dashboard, with one-tap navigation into
 > the right band. No songs, no setlists lists (those are per band). One
-> phase, three PRs (§9). Do [app-header.md](app-header.md) first: this spec
+> phase, four PRs (§9). Do [app-header.md](app-header.md) first: this spec
 > adds no navigation link on purpose.
 
 This is a design, not code. Signatures are the contract; no bodies here.
@@ -118,8 +118,10 @@ Welcome back!
   remembered.
 - **Two-line rows** (PR 1.3), flat, separated by dividers, not cards
   inside the card. The **date block** carries the weekday, the day and the
-  month (purple for a show, cyan for a rehearsal), so the meta line
-  repeats no date. Line 1 is the name. Line 2 is one meta line, dot
+  month, so the meta line
+  repeats no date. In this section its colour is the **band's**
+  (`bandColorMap`, see the PR 1.4 changelog entry); in the band widget it
+  stays purple for a show, cyan for a rehearsal. Line 1 is the name. Line 2 is one meta line, dot
   separated: the **band chip** (`BandAvatar` initial + name, muted) first,
   then the type ("Show" / "Rehearsal" with its icon, in the type's colour:
   the word stays for colour-blind users), the venue/location, the time and
@@ -384,9 +386,12 @@ right permissions; single-band users see no change.
   countdown emphasis rule and the header layout of §2; `Home.tsx` reordered
   (greeting, agenda, band heading, band section); tests AC11; the manual
   check AC12. No data or navigation change.
+- **PR 1.4 — band colours.** The section's date block in the band's colour
+  (`bandColorMap`); tests in `bandColors.test.ts`, AC11 and AC4. No data
+  or navigation change.
 
 Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
-when PR 1.3 merges with the manual checklists recorded in the PR
+when PR 1.4 merges with the manual checklists recorded in the PR
 descriptions.
 
 ## Changelog
@@ -444,3 +449,17 @@ descriptions.
   widget for multi-band users. The duplication between the agenda and the
   widget (decision 1, "Not doing") stays; it is the next thing to revisit
   if the dashboard still feels long.
+
+- **PR 1.4 (band colours).** With several bands the rows only differed by
+  the small band chip. The date block now takes one colour per band from
+  `BAND_COLORS` (`src/utils/bandColors.ts`: eight entries, the brand
+  gradient first, the rest dark enough for white text), assigned by
+  `bandColorMap(ids)`: the band's position among the user's band ids
+  sorted ascending. Distinct up to eight bands, then it wraps; the same
+  set of bands always gets the same colours, but joining or leaving a band
+  with a lower id shifts the ones after it (accepted: no schema change,
+  nothing to configure). Show vs rehearsal stays readable from the type
+  word, its icon and its colour on the meta line. The single-band widget
+  passes no `bandColor` and is unchanged. Not done: a colour the band
+  chooses (a `bands.color` column in settings), the next step if the
+  automatic one is not enough.

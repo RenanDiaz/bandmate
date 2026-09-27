@@ -10,6 +10,7 @@ import type { Show } from "../../services/showsService";
 import { getUpcomingRehearsalsForBands } from "../../services/rehearsalsService";
 import type { Rehearsal } from "../../services/rehearsalsService";
 import { eventLink, eventPath, mergeUpcomingEvents } from "../../utils/upcomingEvents";
+import { bandColorMap } from "../../utils/bandColors";
 import { UpcomingEventRow } from "./UpcomingEventRow";
 
 /** Rows shown before "Show all {n}". */
@@ -73,6 +74,8 @@ export const MyUpcomingEvents: FC = () => {
     () => new Map(bands.map((band) => [band.id, band.name])),
     [bands]
   );
+  // One date-block colour per band, so rows of different bands tell apart at a glance.
+  const colorByBand = useMemo(() => bandColorMap(bandKey ? bandKey.split(",").map(Number) : []), [bandKey]);
   const events = useMemo(
     () => (load.status === "ready" ? mergeUpcomingEvents(load.shows, load.rehearsals, bandNameById) : []),
     [load, bandNameById]
@@ -119,6 +122,7 @@ export const MyUpcomingEvents: FC = () => {
                     locale={locale}
                     bandName={band?.name ?? ""}
                     bandAvatarUrl={band?.avatar_url}
+                    bandColor={colorByBand.get(event.bandId)}
                     onOpen={() => openInBand(event.bandId, eventPath(event))}
                     onOpenLink={link ? () => openInBand(event.bandId, link.path) : undefined}
                   />
