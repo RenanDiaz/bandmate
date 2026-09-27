@@ -368,6 +368,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Called by the dispatch_notification_event trigger (pg_net) with a shared
+# secret, never with a user JWT (docs/setup/push-notifications.md).
+[functions.send-push-notifications]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

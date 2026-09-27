@@ -11,6 +11,23 @@ import { useBandContext } from "./context/useBandContext";
 import { useToast } from "./context/useToast";
 import { signOutEverywhereOrLocally } from "./lib/authSession";
 import { getPwaUpdater } from "./lib/pwaUpdates";
+import { isPushNotificationsEnabled } from "./lib/featureFlags";
+import { unsubscribeThisDevice, updateThisDeviceLocale } from "./lib/pushSupport";
+import { openNotificationSettings } from "./components/notifications/notificationSettingsStore";
+
+/**
+ * What user-initiated sign-out clears before signing out: the offline copies
+ * (the only wipe of §3.5 #6a) and this device's push subscription, so the
+ * next person signing in here doesn't get the previous user's notifications
+ * (band push notifications AC11). Never on an involuntary SIGNED_OUT.
+ */
+async function clearDeviceBeforeSignOut(): Promise<void> {
+  const [wipe] = await Promise.allSettled([
+    wipeAll(),
+    unsubscribeThisDevice().catch((error) => console.warn("Push unsubscribe before sign-out failed:", error)),
+  ]);
+  if (wipe.status === "rejected") throw wipe.reason;
+}
 
 /**
  * The account menu, in two layouts:
@@ -37,7 +54,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
   const { t, i18n } = useTranslation();
   // The context's user, not a second getSession(): offline that call can take
   // ≈25 s, and the navbar must agree with the rest of the app (spec §7.1).
-  const { user, authMode, isCheckingAuth } = useBandContext();
+  const { user, authMode, isCheckingAuth, isOnline } = useBandContext();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -47,6 +64,10 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
+    // Pushes are written in the subscription's language: follow the app's.
+    if (isPushNotificationsEnabled() && authMode === "session") {
+      updateThisDeviceLocale(lng).catch((error) => console.warn("Push locale update failed:", error));
+    }
   };
 
   const redirectToLogin = useCallback(() => {
@@ -62,7 +83,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
       // recognized as user-initiated rather than a lost session.
       // signOutEverywhereOrLocally ends signed out on this device even when the
       // auth server can't be reached.
-      await performUserSignOut(wipeAll, () => signOutEverywhereOrLocally());
+      await performUserSignOut(clearDeviceBeforeSignOut, () => signOutEverywhereOrLocally());
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error(t("auth.signOutError"));
@@ -198,6 +219,20 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         <i className="bi bi-info-circle"></i>
         <span>{t('nav.about')}</span>
       </MenuItem>
+      {/* Reads and writes the server: session and online only (spec §2.1). */}
+      {isPushNotificationsEnabled() && authMode === "session" && isOnline && (
+        <MenuItem
+          $inline={inline}
+          onClick={() => {
+            setShowUserMenu(false);
+            openNotificationSettings();
+            onAction?.();
+          }}
+        >
+          <i className="bi bi-bell"></i>
+          <span>{t("notifications.menuItem")}</span>
+        </MenuItem>
+      )}
       <MenuItem $inline={inline} onClick={checkForUpdate} disabled={checkingUpdate}>
         {checkingUpdate ? (
           <>

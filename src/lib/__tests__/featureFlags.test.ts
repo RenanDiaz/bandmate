@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { OFFLINE_FLAG_STORAGE_KEY, isOfflineDownloadsEnabled } from "../featureFlags";
+import {
+  OFFLINE_FLAG_STORAGE_KEY,
+  PUSH_FLAG_STORAGE_KEY,
+  isOfflineDownloadsEnabled,
+  isPushNotificationsEnabled,
+} from "../featureFlags";
 
 const storage = (value: string | null) => ({ getItem: (key: string) => (key === OFFLINE_FLAG_STORAGE_KEY ? value : null) });
 
@@ -27,5 +32,24 @@ describe("isOfflineDownloadsEnabled", () => {
   it("storage that throws counts as off", () => {
     const throwing = { getItem: () => { throw new Error("SecurityError"); } };
     expect(isOfflineDownloadsEnabled({ storage: throwing })).toBe(false);
+  });
+});
+
+describe("isPushNotificationsEnabled", () => {
+  it("is off by default and independent of the offline flag", () => {
+    localStorage.clear();
+    expect(isPushNotificationsEnabled()).toBe(false);
+    localStorage.setItem(OFFLINE_FLAG_STORAGE_KEY, "1");
+    expect(isPushNotificationsEnabled()).toBe(false);
+    localStorage.clear();
+  });
+
+  it("turns on with VITE_PUSH_NOTIFICATIONS=true or the per-device \"1\"", () => {
+    expect(isPushNotificationsEnabled({ envValue: "true", storage: null })).toBe(true);
+    localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "1");
+    expect(isPushNotificationsEnabled()).toBe(true);
+    localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "true");
+    expect(isPushNotificationsEnabled()).toBe(false);
+    localStorage.clear();
   });
 });

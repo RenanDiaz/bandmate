@@ -103,7 +103,7 @@ function bandmateSeo(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ isSsrBuild }) => ({
+export default defineConfig(({ isSsrBuild, command }) => ({
   // Bundle the UI libraries into the SSR pass instead of leaving them as bare
   // imports: several still ship dual CJS/ESM builds whose default export Node
   // resolves to a namespace object, which blows up as `styled.div is not a
@@ -181,6 +181,13 @@ export default defineConfig(({ isSsrBuild }) => ({
               // cache-buster, which otherwise made every icon blank offline
               // (see src/lib/precacheUrlParams.ts).
               ignoreURLParametersMatching: PRECACHE_IGNORED_URL_PARAMS,
+
+              // Band push notifications: the worker's `push` and
+              // `notificationclick` handlers (public/push-sw.js; spec
+              // docs/specs/band-push-notifications.md §1 decision 4). Build
+              // only: the dev worker is an ES module, where importScripts
+              // throws, so push is tested with `npm run build && npm run preview`.
+              importScripts: command === 'build' ? ['push-sw.js'] : [],
 
               // Runtime caching strategies
               runtimeCaching: [

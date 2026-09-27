@@ -39,6 +39,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Show scheduling with venue, soundcheck and linked setlist; list and calendar views
 - Rehearsal scheduling linked to shows and setlists
 - Personal agenda across your bands on the dashboard
+- Push notifications (behind a feature flag until the device checklist passes): get notified when someone in your band adds a show, a rehearsal or a setlist; on per device, mute per band, one tap opens it in the right band (iPhone/iPad: installed app only)
 - Calendar sync: a personal iCal feed of the band's shows, soundchecks and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
 
 **Performance mode**
@@ -87,6 +88,8 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
    | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
    | `VITE_OFFLINE_DOWNLOADS` | — | `true` shows "Make available offline" (off by default until offline performance ships; per device: `localStorage.bandmate_flag_offline = "1"`) |
+   | `VITE_VAPID_PUBLIC_KEY` | — | Public VAPID key for push notifications, from `npm run vapid-keys` ([docs/setup/push-notifications.md](docs/setup/push-notifications.md)); public by design |
+   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
    > Don't put production secrets in them.
@@ -114,6 +117,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    ```bash
    supabase functions deploy send-invitation-email
    supabase functions deploy calendar-feed --no-verify-jwt
+   supabase functions deploy send-push-notifications --no-verify-jwt  # after docs/setup/push-notifications.md
    ```
 
 6. **Run it**
@@ -131,6 +135,7 @@ npm run lint     # ESLint
 npm test         # Unit tests (Vitest)
 npm run og       # Regenerate public/og-image.png
 npm run icons    # Regenerate PWA icons
+npm run vapid-keys # Print a VAPID key pair for push notifications
 ```
 
 Always build with `npm run build` — a bare `vite build` skips the landing
@@ -173,6 +178,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/guides/landing-seo.md](docs/guides/landing-seo.md) — landing prerender, SEO, robots/sitemap
 - [docs/guides/band-members.md](docs/guides/band-members.md) — roles, member security model, invitations
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation emails
+- [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function)
 - [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
@@ -187,6 +193,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 implemented, device validation pending): band push notifications for new shows, rehearsals and setlists
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap

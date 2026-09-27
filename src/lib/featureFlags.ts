@@ -33,3 +33,26 @@ export function isOfflineDownloadsEnabled(env: FlagEnv = defaultEnv()): boolean 
     return false;
   }
 }
+
+/**
+ * Band push notifications (docs/specs/band-push-notifications.md §1
+ * decision 8): the Notifications row and settings stay hidden until the
+ * Phase 1 device checklist passes; the flag is removed after it. On with
+ * `VITE_PUSH_NOTIFICATIONS=true` at build time or, per device,
+ * `localStorage.bandmate_flag_push = "1"`. It hides the UI only: the database
+ * triggers run regardless (no subscriptions → nothing is sent).
+ */
+export const PUSH_FLAG_STORAGE_KEY = "bandmate_flag_push";
+
+function pushEnv(): FlagEnv {
+  return { ...defaultEnv(), envValue: import.meta.env.VITE_PUSH_NOTIFICATIONS };
+}
+
+export function isPushNotificationsEnabled(env: FlagEnv = pushEnv()): boolean {
+  if (env.envValue === "true") return true;
+  try {
+    return env.storage?.getItem(PUSH_FLAG_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}

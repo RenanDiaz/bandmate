@@ -1353,6 +1353,10 @@
       "title": "Cookies and Local Storage",
       "text": "Bandmate uses local storage to remember your preferences (such as selected band and language settings) and to keep you logged in. We do not use tracking cookies or third-party analytics that track individual users."
     },
+    "pushNotifications": {
+      "title": "Push notifications",
+      "text": "If you turn on notifications on a device, we store that browser's push subscription (an address given by your browser's push service, its encryption keys, your language and the browser name) to send you notices about your bands. We don't send ads. Turn them off in Notifications (user menu), or sign out: signing out removes the subscription of that device."
+    },
     "rights": {
       "title": "Your Rights",
       "text": "You have the right to:",
@@ -1631,6 +1635,36 @@
       "needsConnection": "Needs a connection",
       "dismiss": "Dismiss",
       "unknownBand": "Another band"
+    }
+  },
+  "notifications": {
+    "menuItem": "Notifications",
+    "title": "Notifications",
+    "device": {
+      "label": "This device",
+      "unsupported": "This browser can't receive notifications.",
+      "needsInstall": "On iPhone and iPad, notifications only work in the installed app: tap Share → Add to Home Screen, then open Bandmate from your Home Screen.",
+      "denied": "Notifications are blocked for Bandmate. Allow them in your browser or system settings, then come back here.",
+      "off": "Get a notification when someone in your band adds a show, a rehearsal or a setlist.",
+      "on": "On for this device.",
+      "dismissed": "Notifications weren't allowed. Tap Turn on to try again.",
+      "turnOn": "Turn on",
+      "turningOn": "Turning on…",
+      "turnOff": "Turn off",
+      "turningOff": "Turning off…"
+    },
+    "bands": {
+      "label": "Bands",
+      "hint": "Applies on all your devices.",
+      "toggle": "Notify me about {{band}}"
+    },
+    "footer": "You won't be notified about your own changes. On stage, turn on Focus or Do Not Disturb.",
+    "needsConnection": "Notification settings need a connection.",
+    "errors": {
+      "subscribeFailed": "Couldn't turn on notifications. Try again.",
+      "unsubscribeFailed": "Couldn't turn off notifications. Try again.",
+      "bandsLoadFailed": "Couldn't load your band settings.",
+      "muteFailed": "Couldn't save that change. Try again."
     }
   }
 }

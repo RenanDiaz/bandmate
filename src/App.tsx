@@ -9,6 +9,7 @@ import { BandProvider } from "./context/BandContext";
 import { useBandContext } from "./context/useBandContext";
 import { ToastProvider } from "./context/ToastContext";
 import { PwaReloadPrompt } from "./components/PwaReloadPrompt";
+import { NotificationSettingsHost } from "./components/notifications/NotificationSettingsHost";
 import { useOfflineDownloadNotifier, useOfflineStartup } from "./hooks/useOfflineStartup";
 
 const AppContent: FC = () => {
@@ -60,6 +61,7 @@ const App: FC = () => (
     <ToastProvider>
       <AppContent />
       <PwaReloadPrompt />
+      <NotificationSettingsHost />
     </ToastProvider>
   </BandProvider>
 );

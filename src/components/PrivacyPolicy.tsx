@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
       <Container>
         <Header>
           <Title>{t('privacy.title')}</Title>
-          <LastUpdated>{t('privacy.lastUpdated')}: January 2025</LastUpdated>
+          <LastUpdated>{t('privacy.lastUpdated')}: September 2026</LastUpdated>
         </Header>
 
         <ContentSection>
@@ -58,6 +58,11 @@ const PrivacyPolicy = () => {
           <Card>
             <CardTitle>{t('privacy.cookies.title')}</CardTitle>
             <CardText>{t('privacy.cookies.text')}</CardText>
+          </Card>
+
+          <Card>
+            <CardTitle>{t('privacy.pushNotifications.title')}</CardTitle>
+            <CardText>{t('privacy.pushNotifications.text')}</CardText>
           </Card>
 
           <Card>
