@@ -949,7 +949,13 @@
   "pwa": {
     "newContentAvailable": "Hay una nueva versión disponible.",
     "offlineReady": "App lista para funcionar sin conexión",
-    "reload": "Recargar"
+    "reload": "Recargar",
+    "checkForUpdates": "Buscar actualizaciones",
+    "checking": "Buscando…",
+    "upToDate": "Ya tienes la última versión.",
+    "updating": "Actualizando a la nueva versión…",
+    "checkNeedsConnection": "Buscar actualizaciones necesita conexión.",
+    "checkFailed": "No se pudo buscar actualizaciones. Intenta de nuevo."
   },
   "errors": {
     "generic": "Ocurrió un error. Por favor intenta de nuevo.",

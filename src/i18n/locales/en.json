@@ -949,7 +949,13 @@
   "pwa": {
     "newContentAvailable": "A new version is available.",
     "offlineReady": "App ready to work offline",
-    "reload": "Reload"
+    "reload": "Reload",
+    "checkForUpdates": "Check for updates",
+    "checking": "Checking…",
+    "upToDate": "You're on the latest version.",
+    "updating": "Updating to the new version…",
+    "checkNeedsConnection": "Checking for updates needs a connection.",
+    "checkFailed": "Couldn't check for updates. Try again."
   },
   "errors": {
     "generic": "An error occurred. Please try again.",

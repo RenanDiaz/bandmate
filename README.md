@@ -8,6 +8,9 @@
 **Bandmate** helps bands keep their songs, setlists, shows and rehearsals in one
 place — and run the show from it. It's an installable PWA, dark-first for
 stage lighting, available in English and Spanish.
+The installed app checks for a new version whenever it comes back to the
+foreground, and the user menu has **Check for updates** (the only way to reload
+an installed iOS/iPadOS app without closing it).
 
 Live at **[www.bandmate.space](https://www.bandmate.space)**.
 

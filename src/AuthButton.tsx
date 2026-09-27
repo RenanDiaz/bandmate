@@ -9,6 +9,7 @@ import { performUserSignOut } from "./context/offlineAuthController";
 import { useBandContext } from "./context/useBandContext";
 import { useToast } from "./context/useToast";
 import { signOutEverywhereOrLocally } from "./lib/authSession";
+import { getPwaUpdater } from "./lib/pwaUpdates";
 
 export const AuthButton: FC = () => {
   const { t, i18n } = useTranslation();
@@ -18,6 +19,7 @@ export const AuthButton: FC = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -43,6 +45,37 @@ export const AuthButton: FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [toast, t]);
+
+  // An installed iOS app has no reload gesture: this is how its user asks for
+  // the new version without killing the app.
+  const checkForUpdate = useCallback(async () => {
+    setCheckingUpdate(true);
+    try {
+      const updater = getPwaUpdater();
+      const result = await updater.checkForUpdate();
+      switch (result) {
+        case "update-ready":
+          toast.info(t("pwa.updating"));
+          updater.applyUpdate();
+          return;
+        case "up-to-date":
+          toast.success(t("pwa.upToDate"));
+          break;
+        case "offline":
+          toast.warning(t("pwa.checkNeedsConnection"));
+          break;
+        case "unsupported":
+          window.location.reload();
+          return;
+        case "error":
+          toast.error(t("pwa.checkFailed"));
+          break;
+      }
+    } finally {
+      setCheckingUpdate(false);
+    }
+    setShowUserMenu(false);
   }, [toast, t]);
 
   // Nothing while auth resolves (≤ 750 ms with a last-user, A6): no "Sign in" flash.
@@ -117,6 +150,19 @@ export const AuthButton: FC = () => {
             </LanguageButtons>
           </LanguageSection>
           <DropdownDivider />
+          <DropdownItem onClick={checkForUpdate} disabled={checkingUpdate}>
+            {checkingUpdate ? (
+              <>
+                <Spinner size="sm" />
+                <span>{t('pwa.checking')}</span>
+              </>
+            ) : (
+              <>
+                <i className="bi bi-arrow-repeat"></i>
+                <span>{t('pwa.checkForUpdates')}</span>
+              </>
+            )}
+          </DropdownItem>
           <DropdownItem onClick={logout} disabled={loading}>
             {loading ? (
               <>
@@ -332,7 +378,7 @@ const DropdownItem = styled.button`
     cursor: not-allowed;
   }
 
-  &:first-of-type {
+  &:last-of-type {
     border-radius: 0 0 ${theme.radius.md} ${theme.radius.md};
   }
 `;
