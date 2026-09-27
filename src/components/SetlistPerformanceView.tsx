@@ -6,16 +6,11 @@ import styled from "styled-components";
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -56,6 +51,9 @@ import {
   writePreferredContentView,
 } from "../lib/performPosition";
 import { usePerformItems } from "../hooks/usePerformItems";
+import { useSortableSensors } from "../hooks/useSortableSensors";
+import { moveItem, type MoveTarget } from "../utils/setlistMove";
+import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
 import { isSongTarget, performanceTargetKey, type PerformanceTarget } from "../hooks/performanceTarget";
 
 // Error Boundary to prevent PDF viewer crashes from taking down the entire app
@@ -105,6 +103,8 @@ interface SortableSongListItemProps {
   index: number;
   isActive: boolean;
   onClick: () => void;
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
 }
 
 const SortableSongListItem: FC<SortableSongListItemProps> = ({
@@ -112,6 +112,8 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
   index,
   isActive,
   onClick,
+  count,
+  onMove,
 }) => {
   const {
     attributes,
@@ -128,7 +130,9 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
   };
 
   return (
+    // A div, not the list's button: it holds the row menu's button.
     <SongListItem
+      as="div"
       ref={setNodeRef}
       style={style}
       $active={isActive}
@@ -148,6 +152,7 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
           <i className="bi bi-play-fill"></i>
         </SongListIndicator>
       )}
+      <SetlistRowMenu index={index} count={count} itemLabel={song.title} onMove={(target) => onMove(index, target)} />
     </SongListItem>
   );
 };
@@ -157,9 +162,12 @@ const SortableSongListItem: FC<SortableSongListItemProps> = ({
 interface SortableSpecialListItemProps {
   item: SetlistSpecialItem;
   itemId: string;
+  index: number;
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
 }
 
-const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemId }) => {
+const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemId, index, count, onMove }) => {
   const { t } = useTranslation();
   const {
     attributes,
@@ -183,9 +191,9 @@ const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemI
 
   return (
     <SpecialListItem
+      as="div"
       ref={setNodeRef}
       style={style}
-      type="button"
       $active={false}
       $isDragging={isDragging}
       $type={item.type}
@@ -202,6 +210,7 @@ const SortableSpecialListItem: FC<SortableSpecialListItemProps> = ({ item, itemI
           <SongListArtist>{t("performance.durationMinutes", { count: item.duration })}</SongListArtist>
         )}
       </SongListInfo>
+      <SetlistRowMenu index={index} count={count} itemLabel={item.label} onMove={(target) => onMove(index, target)} />
     </SpecialListItem>
   );
 };
@@ -374,17 +383,13 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
     hadTrackPreviously,
   } = useLocalBackingTracks(targetKey);
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Mouse + long-press touch + keyboard; the row menu is the non-drag path (setlist-builder §3.5)
+  const sensors = useSortableSensors();
+
+  const handleMoveItem = (index: number, target: MoveTarget) => {
+    setSetlistItems((items) => moveItem(items, index, target));
+  };
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -1261,12 +1266,21 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                             index={index}
                             isActive={false}
                             onClick={() => {}}
+                            count={setlistItems.length}
+                            onMove={handleMoveItem}
                           />
                         );
                       }
                       const itemId = getSetlistItemKey(item);
                       return (
-                        <SortableSpecialListItem key={itemId} item={item} itemId={itemId} />
+                        <SortableSpecialListItem
+                          key={itemId}
+                          item={item}
+                          itemId={itemId}
+                          index={index}
+                          count={setlistItems.length}
+                          onMove={handleMoveItem}
+                        />
                       );
                     })}
                   </SortableContext>
@@ -2114,7 +2128,16 @@ const SongListDragHandle = styled.div`
   transition: all ${theme.transitions.fast} ease;
   flex-shrink: 0;
   font-size: ${theme.fontSizes.bodyLg};
+  /* Long-press drags on touch: no scrolling, text selection or callout. */
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  @media (pointer: coarse) {
+    width: 32px;
+    align-self: stretch;
+  }
 
   &:hover {
     color: ${theme.colors.brand.primary};

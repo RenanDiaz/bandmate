@@ -492,6 +492,14 @@
       "goToSongs": "Go to Songs",
       "addSongsHintNarrow": "Tap “Add songs” to pick from the library"
     },
+    "rowMenu": {
+      "label": "More actions for {{item}}",
+      "up": "Move up",
+      "down": "Move down",
+      "top": "Move to top",
+      "bottom": "Move to bottom",
+      "remove": "Remove"
+    },
     "detail": {
       "loading": "Loading setlist...",
       "notFound": "Setlist Not Found",
@@ -503,7 +511,7 @@
       "startPerformance": "Start Performance",
       "noSongsYet": "No Songs Yet",
       "noSongsYetText": "This setlist doesn't have any songs. Click \"Edit Setlist\" to add songs.",
-      "reorderHint": "Drag songs to reorder. Click \"Save Order\" when done.",
+      "reorderHint": "Drag songs to reorder (long-press the handle on touch), or use ⋮ to move them. Click \"Save Order\" when done.",
       "saveOrderError": "Failed to save order. Please try again.",
       "loadError": "Failed to load setlist. Please try again.",
       "linkedToShow": "Linked to show",
@@ -1078,7 +1086,7 @@
     "fullscreenShortcut": "Fullscreen (F)",
     "reorderSongs": "Reorder Songs",
     "setlist": "Setlist",
-    "dragToReorder": "Drag to reorder",
+    "dragToReorder": "Drag or use ⋮ to reorder",
     "durationMinutes": "{{count}} min",
     "noContent": "No chords or lyrics available for this song",
     "previous": "Previous",

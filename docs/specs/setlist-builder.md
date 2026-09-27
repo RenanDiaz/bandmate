@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** in progress — Phase 1: PR 1.1 done, PR 1.2 pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 implemented (PRs 1.1, 1.2), manual validation pending; Phases 2–3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a

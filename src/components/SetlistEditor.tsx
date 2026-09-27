@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { FC, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
@@ -6,10 +6,6 @@ import styled from "styled-components";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -17,7 +13,6 @@ import {
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -47,6 +42,9 @@ import { useToast } from "../context/useToast";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
 import { useInputCapabilities } from "../hooks/useInputCapabilities";
+import { useSortableSensors } from "../hooks/useSortableSensors";
+import { moveItem, type MoveTarget } from "../utils/setlistMove";
+import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
 import { computeSongSignals } from "../utils/songSignals";
 import { insertSongs } from "../utils/setlistInsert";
 import { SongPicker } from "./setlist-builder/SongPicker";
@@ -63,7 +61,23 @@ interface SortableSetlistSongCardProps {
   onUpdateNotes: (position: number, notes: string) => void;
   onRemove: (position: number) => void;
   onEditSong?: (song: Song) => void;
-  totalSongs: number;
+  /** Items in the setlist, for the row menu's limits. */
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
+}
+
+/**
+ * `Delete` on a focused setlist row removes it (wide + pointer shortcut,
+ * spec §2); never while typing in its notes.
+ */
+function removeOnDelete(onRemove: () => void) {
+  return (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Delete" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+    event.preventDefault();
+    onRemove();
+  };
 }
 
 const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
@@ -74,6 +88,8 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
   onUpdateNotes,
   onRemove,
   onEditSong,
+  count,
+  onMove,
 }) => {
   const { t } = useTranslation();
   const {
@@ -95,6 +111,7 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
       ref={setNodeRef}
       style={style}
       $isDragging={isDragging}
+      onKeyDown={removeOnDelete(() => onRemove(index))}
     >
       <DragHandle {...attributes} {...listeners}>
         <i className="bi bi-grip-vertical"></i>
@@ -131,6 +148,13 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
         >
           <i className="bi bi-trash"></i>
         </ActionButton>
+        <SetlistRowMenu
+          index={index}
+          count={count}
+          itemLabel={song.title}
+          onMove={(target) => onMove(index, target)}
+          onRemove={() => onRemove(index)}
+        />
       </SongActions>
     </SetlistSongCard>
   );
@@ -142,6 +166,9 @@ interface SortableSpecialItemCardProps {
   itemId: string;
   onEdit: () => void;
   onRemove: () => void;
+  index: number;
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
 }
 
 const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
@@ -149,6 +176,9 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
   itemId,
   onEdit,
   onRemove,
+  index,
+  count,
+  onMove,
 }) => {
   const { t } = useTranslation();
   const {
@@ -183,6 +213,7 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
       style={style}
       $isDragging={isDragging}
       $type={item.type}
+      onKeyDown={removeOnDelete(onRemove)}
     >
       <DragHandle {...attributes} {...listeners}>
         <i className="bi bi-grip-vertical"></i>
@@ -206,6 +237,13 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
         <ActionButton onClick={onRemove} title={t("common.remove")} $variant="delete">
           <i className="bi bi-trash"></i>
         </ActionButton>
+        <SetlistRowMenu
+          index={index}
+          count={count}
+          itemLabel={item.label}
+          onMove={(target) => onMove(index, target)}
+          onRemove={onRemove}
+        />
       </SongActions>
     </SpecialItemCard>
   );
@@ -250,17 +288,9 @@ const SetlistEditor: FC = () => {
   const [optimization, setOptimization] = useState<SetlistOptimization | null>(null);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Mouse + long-press touch + keyboard (spec §3.5)
+  const sensors = useSortableSensors();
+
 
   const canEditSongs = canEditContent(selectedBand?.user_role ?? null);
 
@@ -407,6 +437,10 @@ const SetlistEditor: FC = () => {
       position: i,
     }));
     setSetlistItems(reindexed);
+  };
+
+  const handleMoveItem = (index: number, target: MoveTarget) => {
+    setSetlistItems((items) => moveItem(items, index, target));
   };
 
   const handleUpdateNotes = (index: number, notes: string) => {
@@ -882,7 +916,8 @@ const SetlistEditor: FC = () => {
                                 onUpdateNotes={handleUpdateNotes}
                                 onRemove={handleRemoveItem}
                                 onEditSong={canEditSongs ? handleEditSong : undefined}
-                                totalSongs={setlistItems.length}
+                                count={setlistItems.length}
+                                onMove={handleMoveItem}
                               />
                             </Fragment>
                           );
@@ -896,6 +931,9 @@ const SetlistEditor: FC = () => {
                                 itemId={itemKey}
                                 onEdit={() => openEditSpecialItemModal(index)}
                                 onRemove={() => handleRemoveItem(index)}
+                                index={index}
+                                count={setlistItems.length}
+                                onMove={handleMoveItem}
                               />
                             </Fragment>
                           );
@@ -1437,7 +1475,16 @@ const DragHandle = styled.button`
   flex-shrink: 0;
   font-size: ${theme.fontSizes.bodyLg};
   padding: 0;
+  /* Long-press drags on touch: no scrolling, text selection or callout. */
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 44px;
+  }
 
   &:hover {
     color: ${theme.colors.brand.primary};

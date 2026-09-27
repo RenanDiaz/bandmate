@@ -1,4 +1,4 @@
-import type { FC, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
+import type { FC, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, MouseEventHandler } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -425,7 +425,9 @@ const PickerRow: FC<PickerRowProps> = ({
   return (
     <RowCard
       ref={setNodeRef}
-      {...(draggable ? listeners : {})}
+      // Mouse only: dragging in is a wide + pointer shortcut (§2). The keyboard
+      // sensor's onKeyDown would turn Enter on "+" into a drag.
+      onMouseDown={draggable ? (listeners?.onMouseDown as MouseEventHandler<HTMLDivElement> | undefined) : undefined}
       data-picker-index={index}
       $selected={selected}
       $highlighted={highlighted}
@@ -439,7 +441,7 @@ const PickerRow: FC<PickerRowProps> = ({
         checked={selected}
         readOnly
         onClick={onCheckboxClick}
-        onPointerDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
         aria-label={t("setlists.picker.selectSong", { title: song.title })}
         $touch={touch}
       />
@@ -453,7 +455,7 @@ const PickerRow: FC<PickerRowProps> = ({
         </RowMeta>
         {signalLine && <SignalLine>{signalLine}</SignalLine>}
       </RowInfo>
-      <RowActions onClick={stop} onPointerDown={(event) => event.stopPropagation()}>
+      <RowActions onClick={stop} onMouseDown={stop}>
         {onEditSong && (
           <RowButton
             type="button"

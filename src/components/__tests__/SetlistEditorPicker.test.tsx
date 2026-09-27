@@ -168,3 +168,48 @@ describe("SetlistEditor with the song picker", () => {
     expect(setlistPanelTitles()).toHaveLength(1);
   });
 });
+
+describe("SetlistEditor row menu and Delete (PR 1.2)", () => {
+  const TWO: Setlist = {
+    ...SETLIST,
+    songs: [
+      { type: "song", song_id: "a", position: 0, notes: "" },
+      { type: "section", id: "sec", label: "Set 2", position: 1 },
+      { type: "song", song_id: "b", position: 2, notes: "" },
+    ],
+  };
+
+  async function save() {
+    fireEvent.click(screen.getByRole("button", { name: /Save Setlist/ }));
+    await waitFor(() => expect(updateSetlist).toHaveBeenCalled());
+    return vi
+      .mocked(updateSetlist)
+      .mock.calls[0][1].songs?.map((item) => (item.type === "song" ? item.song_id : item.id));
+  }
+
+  it("moves a row to the top with the menu", async () => {
+    vi.mocked(getSetlist).mockResolvedValue(TWO);
+    renderEditor();
+    fireEvent.click(await screen.findByRole("button", { name: "More actions for Bravo" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move to top" }));
+    expect(await save()).toEqual(["b", "a", "sec"]);
+  });
+
+  it("removes a row with the menu", async () => {
+    vi.mocked(getSetlist).mockResolvedValue(TWO);
+    renderEditor();
+    fireEvent.click(await screen.findByRole("button", { name: "More actions for Set 2" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
+    expect(await save()).toEqual(["a", "b"]);
+  });
+
+  it("Delete on a focused row removes it, but not while typing its notes", async () => {
+    vi.mocked(getSetlist).mockResolvedValue(TWO);
+    renderEditor();
+    const notes = (await screen.findAllByPlaceholderText("Add notes for this song..."))[0];
+    fireEvent.keyDown(notes, { key: "Delete" });
+    const handle = document.querySelectorAll("[aria-roledescription='sortable']")[0];
+    fireEvent.keyDown(handle, { key: "Delete" });
+    expect(await save()).toEqual(["sec", "b"]);
+  });
+});

@@ -6,16 +6,11 @@ import styled from "styled-components";
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -53,9 +48,13 @@ import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent, canManageEvents } from "../services/bandMembersService";
 import { SetlistHeaderActions } from "./setlist/SetlistHeaderActions";
 import { ReorderToolbar } from "./setlist/ReorderToolbar";
+import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
+import { useSortableSensors } from "../hooks/useSortableSensors";
+import { moveItem, type MoveTarget } from "../utils/setlistMove";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
+  position: relative;
   background: ${(props) =>
     props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-secondary)'};
   border: 1px solid ${(props) =>
@@ -95,7 +94,16 @@ const DragHandle = styled.button`
   flex-shrink: 0;
   font-size: ${theme.fontSizes.h3};
   padding: 0;
+  /* Long-press drags on touch: no scrolling, text selection or callout. */
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 44px;
+  }
 
   &:hover {
     color: ${theme.colors.brand.primary};
@@ -104,6 +112,19 @@ const DragHandle = styled.button`
   &:active {
     cursor: grabbing;
     color: ${theme.colors.brand.primary};
+  }
+`;
+
+/** The row menu, at the row's end; top-right where the card stacks (< md). */
+const RowMenuSlot = styled.div`
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+
+  @media (max-width: ${theme.breakpoints.md}) {
+    position: absolute;
+    top: ${theme.space[3]};
+    right: ${theme.space[3]};
   }
 `;
 
@@ -261,6 +282,10 @@ interface SortableSongCardProps {
   index: number;
   notes?: string;
   formatDuration: (seconds: number) => string;
+  /** Position in the full item list (songs and special items), for the row menu. */
+  itemIndex: number;
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
 }
 
 const SortableSongCard: FC<SortableSongCardProps> = ({
@@ -268,6 +293,9 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
   index,
   notes,
   formatDuration,
+  itemIndex,
+  count,
+  onMove,
 }) => {
   const {
     attributes,
@@ -328,6 +356,14 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
           </MetaBadge>
         )}
       </SongMetadata>
+      <RowMenuSlot>
+        <SetlistRowMenu
+          index={itemIndex}
+          count={count}
+          itemLabel={song.title}
+          onMove={(target) => onMove(itemIndex, target)}
+        />
+      </RowMenuSlot>
     </SongCard>
   );
 };
@@ -336,11 +372,17 @@ const SortableSongCard: FC<SortableSongCardProps> = ({
 interface SortableSpecialItemCardProps {
   item: SetlistBreakItem | SetlistSectionItem | SetlistNoteItem;
   itemId: string;
+  itemIndex: number;
+  count: number;
+  onMove: (index: number, target: MoveTarget) => void;
 }
 
 const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
   item,
   itemId,
+  itemIndex,
+  count,
+  onMove,
 }) => {
   const { t } = useTranslation();
   const {
@@ -391,6 +433,12 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
           </SpecialItemDurationReorder>
         )}
       </SpecialItemInfoReorder>
+      <SetlistRowMenu
+        index={itemIndex}
+        count={count}
+        itemLabel={item.label}
+        onMove={(target) => onMove(itemIndex, target)}
+      />
     </SortableSpecialItemCardWrapper>
   );
 };
@@ -443,17 +491,9 @@ const SetlistDetailView: FC = () => {
   const [youtubeResult, setYoutubeResult] = useState<PlaylistCreationResult | null>(null);
   const [hasYouTubeAccess, setHasYouTubeAccess] = useState<boolean | null>(null);
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Mouse + long-press touch + keyboard; the row menu is the non-drag path (setlist-builder §3.5)
+  const sensors = useSortableSensors();
+
 
   // Get only song items for reordering
   const songItemsOnly = setlistItems.filter(isSongItem);
@@ -510,6 +550,10 @@ const SetlistDetailView: FC = () => {
         }));
       });
     }
+  };
+
+  const handleMoveItem = (index: number, target: MoveTarget) => {
+    setSetlistItems((items) => moveItem(items, index, target));
   };
 
   const handleSaveOrder = async () => {
@@ -889,7 +933,7 @@ const SetlistDetailView: FC = () => {
               >
                 {(() => {
                   let songNumber = 0;
-                  return setlistItems.map((item) => {
+                  return setlistItems.map((item, itemIndex) => {
                     if (isSongItem(item)) {
                       const song = getSongById(item.song_id);
                       if (!song) return null;
@@ -901,6 +945,9 @@ const SetlistDetailView: FC = () => {
                           index={songNumber - 1}
                           notes={getSetlistSongNotes(song.id)}
                           formatDuration={formatDuration}
+                          itemIndex={itemIndex}
+                          count={setlistItems.length}
+                          onMove={handleMoveItem}
                         />
                       );
                     } else {
@@ -911,6 +958,9 @@ const SetlistDetailView: FC = () => {
                           key={itemId}
                           item={item}
                           itemId={itemId}
+                          itemIndex={itemIndex}
+                          count={setlistItems.length}
+                          onMove={handleMoveItem}
                         />
                       );
                     }

@@ -492,6 +492,14 @@
       "goToSongs": "Ir a Canciones",
       "addSongsHintNarrow": "Toca “Agregar canciones” para elegir de la biblioteca"
     },
+    "rowMenu": {
+      "label": "Más acciones para {{item}}",
+      "up": "Subir",
+      "down": "Bajar",
+      "top": "Mover al principio",
+      "bottom": "Mover al final",
+      "remove": "Quitar"
+    },
     "detail": {
       "loading": "Cargando setlist...",
       "notFound": "Setlist No Encontrado",
@@ -503,7 +511,7 @@
       "startPerformance": "Iniciar Presentación",
       "noSongsYet": "Sin Canciones Aún",
       "noSongsYetText": "Este setlist no tiene canciones. Haz clic en \"Editar Setlist\" para agregar canciones.",
-      "reorderHint": "Arrastra las canciones para reordenar. Haz clic en \"Guardar Orden\" cuando termines.",
+      "reorderHint": "Arrastra las canciones para reordenar (mantén presionado el asa en pantallas táctiles) o usa ⋮ para moverlas. Haz clic en \"Guardar Orden\" cuando termines.",
       "saveOrderError": "Error al guardar el orden. Por favor intenta de nuevo.",
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
       "linkedToShow": "Vinculado al show",
@@ -1078,7 +1086,7 @@
     "fullscreenShortcut": "Pantalla completa (F)",
     "reorderSongs": "Reordenar canciones",
     "setlist": "Setlist",
-    "dragToReorder": "Arrastra para reordenar",
+    "dragToReorder": "Arrastra o usa ⋮ para reordenar",
     "durationMinutes": "{{count}} min",
     "noContent": "No hay acordes ni letra para esta canción",
     "previous": "Anterior",

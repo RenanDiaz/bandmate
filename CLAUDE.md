@@ -52,13 +52,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, deepEqual, performItems, setlistText)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers + navbar
@@ -447,7 +447,7 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   device-wide `bandmate_perform_content_view`, default Lyrics; not cleared by
   `wipeAll()`: it names no setlist).
 
-### Setlist builder (PR 1.1)
+### Setlist builder (Phase 1)
 
 The editor's library panel is `SongPicker` (`src/components/setlist-builder/`,
 spec [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) §3).
@@ -467,6 +467,20 @@ the user agent). Wide + pointer: `+`, checkbox + Shift range, `/`, `↑`/`↓`,
 row to select, "Add N". Narrow: the picker opens as `PickerSheet` (fixed,
 z-index 1045, below reactstrap modals) and Save moves to a sticky footer.
 Inserts go through `insertSongs` (`src/utils/setlistInsert.ts`).
+
+**Reordering (PR 1.2)** — the editor, the detail view's reorder mode and
+performance mode's reorder all use `useSortableSensors()` (Mouse after 8 px,
+Touch as a 250 ms long-press with 5 px tolerance, Keyboard); don't go back to
+a bare `PointerSensor`. Drag listeners stay on the handle, which sets
+`touch-action: none` and no callout, so scrolling a row never drags. Every
+sortable row also has `SetlistRowMenu` (⋮: Move up / down / to top / to
+bottom via `moveItem`, `src/utils/setlistMove.ts`; Remove only in the
+editor): portaled to `body`, fixed position, and its key events never reach
+performance mode's window shortcuts. In performance mode the sortable rows
+render `as="div"` (they hold a button). The editor's `Delete` removes the
+focused row, never while typing in its notes. Picker rows take only the mouse
+sensor's `onMouseDown`: the keyboard sensor's `onKeyDown` would turn Enter on
+"+" into a drag.
 
 ### Real-time Features
 
@@ -783,6 +797,6 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, manual checklist pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
-- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1: PR 1.1 done): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [migrations/README.md](migrations/README.md) - Database migration guide
