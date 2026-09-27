@@ -8,6 +8,8 @@ import type { SheetMusic } from "../services/songSheetMusicService";
 import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { networkPerformanceDataSource, type PerformanceLoadError } from "./performanceDataSource";
 import { createSnapshotPerformanceDataSource } from "./snapshotPerformanceDataSource";
+import { createSongPerformanceDataSource } from "./songPerformanceDataSource";
+import type { PerformanceTarget } from "./performanceTarget";
 import {
   PerformanceDataController,
   performanceCapabilities,
@@ -16,6 +18,8 @@ import {
 } from "./performanceDataController";
 
 export interface PerformanceData {
+  /** What is being performed; undefined until the route param is known. */
+  target: PerformanceTarget | undefined;
   status: "loading" | "ready" | "error";
   error: PerformanceLoadError | null;
   /**
@@ -59,7 +63,7 @@ export interface PerformanceData {
    * and when entering the sheet music view.
    */
   retryStaleSheetMusic: () => void;
-  source: "network" | "snapshot";
+  source: "network" | "snapshot" | "song";
   /** Sheet music ids listed in the snapshot but not on the device; always empty for the network source. */
   unavailableSheetMusicIds: ReadonlySet<string>;
   /** §8.3: enforced by the view (offline and guest gating). */
@@ -85,10 +89,21 @@ function abortError(): Error {
   return error;
 }
 
-export function useSetlistPerformanceData(setlistId: string | undefined): PerformanceData {
+export function useSetlistPerformanceData(targetInput: PerformanceTarget | undefined): PerformanceData {
   const { t } = useTranslation();
   const toast = useToast();
   const { selectedBand, isOnline, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
+
+  // Callers build the target inline: keep one object per kind + id so the
+  // session is not reopened on every render.
+  const targetKind = targetInput?.kind;
+  const targetId = targetInput ? (targetInput.kind === "song" ? targetInput.songId : targetInput.setlistId) : undefined;
+  const target = useMemo<PerformanceTarget | undefined>(() => {
+    if (!targetKind || !targetId) return undefined;
+    return targetKind === "song" ? { kind: "song", songId: targetId } : { kind: "setlist", setlistId: targetId };
+  }, [targetKind, targetId]);
+
+  const bandIdRef = useRef(selectedBand?.id);
 
   // Read at call time by the snapshot source and the controller.
   const isOnlineRef = useRef(isOnline);
@@ -96,9 +111,10 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
   const reportNetworkSuccessRef = useRef(reportNetworkSuccess);
   useEffect(() => {
     isOnlineRef.current = isOnline;
+    bandIdRef.current = selectedBand?.id;
     reportNetworkFailureRef.current = reportNetworkFailure;
     reportNetworkSuccessRef.current = reportNetworkSuccess;
-  }, [isOnline, reportNetworkFailure, reportNetworkSuccess]);
+  }, [isOnline, reportNetworkFailure, reportNetworkSuccess, selectedBand?.id]);
 
   const [state, setState] = useState<PerformanceDataState>(LOADING);
   const controllerRef = useRef<PerformanceDataController | null>(null);
@@ -107,9 +123,9 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
   const pdfReleaseRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!setlistId) return;
+    if (!target) return;
     const controller = new PerformanceDataController({
-      setlistId,
+      target,
       // The flag gates source selection (removed in PR 2.6). Read per mount.
       useSnapshots: isOfflineDownloadsEnabled(),
       isOnline: () => isOnlineRef.current,
@@ -119,6 +135,7 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
         reportNetworkFailure: () => reportNetworkFailureRef.current(),
         reportNetworkSuccess: () => reportNetworkSuccessRef.current(),
       }),
+      song: createSongPerformanceDataSource({ getBandId: () => bandIdRef.current }),
     });
     controllerRef.current = controller;
     setState(controller.getState());
@@ -133,7 +150,7 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
       pdfReleaseRef.current?.();
       pdfReleaseRef.current = null;
     };
-  }, [setlistId]);
+  }, [target]);
 
   // Back online: the snapshot source refreshes its rows (A3).
   const wasOnlineRef = useRef(isOnline);
@@ -215,9 +232,13 @@ export function useSetlistPerformanceData(setlistId: string | undefined): Perfor
   }, []);
 
   const role = selectedBand?.user_role;
-  const capabilities = useMemo(() => performanceCapabilities({ role, isOnline }), [role, isOnline]);
+  const capabilities = useMemo(
+    () => performanceCapabilities({ role, isOnline, target: target ?? { kind: "setlist", setlistId: "" } }),
+    [role, isOnline, target]
+  );
 
   return {
+    target,
     status: state.status,
     error: state.error,
     unavailableOffline: state.unavailableOffline,
