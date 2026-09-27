@@ -80,6 +80,26 @@ export async function getUpcomingRehearsals(bandId: number): Promise<Rehearsal[]
 }
 
 /**
+ * Upcoming rehearsals of several bands in one query; [] for no ids (no round-trip).
+ * Same filters as getUpcomingRehearsals. RLS returns only the bands the user is in.
+ */
+export async function getUpcomingRehearsalsForBands(bandIds: number[]): Promise<Rehearsal[]> {
+  if (bandIds.length === 0) return [];
+  const today = getLocalToday();
+
+  const { data, error } = await supabase
+    .from("rehearsals")
+    .select("*")
+    .in("band_id", bandIds)
+    .eq("status", "scheduled")
+    .gte("rehearsal_date", today)
+    .order("rehearsal_date", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Get past rehearsals for a band
  */
 export async function getPastRehearsals(bandId: number): Promise<Rehearsal[]> {

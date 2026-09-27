@@ -83,6 +83,26 @@ export async function getUpcomingShows(bandId: number): Promise<Show[]> {
 }
 
 /**
+ * Upcoming shows of several bands in one query; [] for no ids (no round-trip).
+ * Same filters as getUpcomingShows. RLS returns only the bands the user is in.
+ */
+export async function getUpcomingShowsForBands(bandIds: number[]): Promise<Show[]> {
+  if (bandIds.length === 0) return [];
+  const today = getLocalToday();
+
+  const { data, error } = await supabase
+    .from("shows")
+    .select("*")
+    .in("band_id", bandIds)
+    .eq("status", "upcoming")
+    .gte("event_date", today)
+    .order("event_date", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Get past shows for a band
  */
 export async function getPastShows(bandId: number): Promise<Show[]> {

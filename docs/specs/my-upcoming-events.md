@@ -1,6 +1,6 @@
 # Spec: My upcoming events (cross-band agenda on the dashboard)
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — PR 1.1 implemented · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una vista general de todas mis bandas, para ver
 > mis próximos eventos (shows y rehearsals) de todas las bandas en las que
 > estoy … que si le doy click a un show, me lleve a ese show dentro de la
@@ -157,11 +157,12 @@ export function mergeUpcomingEvents(
 /** Route of the event itself. */
 export function eventPath(event: UpcomingEvent): string;          // "/shows/:id" | "/rehearsals/:id"
 /** The secondary link, when the row has one. */
-export function eventLink(event: UpcomingEvent): { labelKey: "common.setlist" | "home.show"; path: string } | null;
+export function eventLink(event: UpcomingEvent): { labelKey: "home.setlist" | "home.show"; path: string } | null;
 ```
 
 `Home.tsx` replaces its inline type and sort with `mergeUpcomingEvents(shows,
-rehearsals)` (no map: one band, order by date then time, as today).
+rehearsals)` (no map: one band). Home sorted by date only before; it now
+breaks same-date ties by time (see Changelog).
 
 ### 3.3 Hook
 
@@ -337,3 +338,25 @@ right permissions; single-band users see no change.
 
 Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
 when PR 1.2 merges with the manual checklist recorded in its description.
+
+## Changelog
+
+- **PR 1.1 (data and navigation).** Implemented §3.1–§3.3 and the
+  `UpcomingEventRow` extraction (pure-move commit first). Corrections to the
+  draft:
+  1. **Field names.** Shows filter `status = "upcoming"` on `event_date`
+     (time `event_time`); rehearsals `status = "scheduled"` on
+     `rehearsal_date` (time `start_time`). The `ForBands` functions use the
+     single-band filters and ordering column with `.in("band_id", ids)`;
+     `UpcomingEvent.date` / `.time` are normalized from those fields inside
+     `mergeUpcomingEvents`.
+  2. **Label keys.** `eventLink` returns `"home.setlist"` (there is no
+     `common.setlist`) or `"home.show"`. `home.setlist` is added in PR 1.2,
+     where the chip is first rendered.
+  3. **Ordering.** Home sorted by date only; through `mergeUpcomingEvents` it
+     now orders same-date events by time (no time last). Date strings
+     (`YYYY-MM-DD`) are compared directly, not parsed with `new Date()`
+     (UTC). The one visible change of PR 1.1.
+
+  `home.switchedToBand` landed in PR 1.1 (the hook needs it); the other §3.5
+  keys land in PR 1.2.

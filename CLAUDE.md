@@ -52,13 +52,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
@@ -88,8 +88,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads |
 | `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
 | `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
-| `showsService.ts` | Show/gig scheduling |
-| `rehearsalsService.ts` | Rehearsal scheduling |
+| `showsService.ts` | Show/gig scheduling; `getUpcomingShowsForBands(ids)` loads several bands' upcoming shows in one `.in("band_id")` query (`[]` without a round-trip for no ids) |
+| `rehearsalsService.ts` | Rehearsal scheduling; `getUpcomingRehearsalsForBands(ids)`, same shape |
 | `requestsService.ts` | Band requests/proposals with comments and votes |
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | Per-user iCal feed subscriptions (served by the `calendar-feed` Edge Function): shows/rehearsals toggles, time zone, one-tap subscribe links (`webcal://`, Google, Outlook.com) |
@@ -142,6 +142,18 @@ reached from the footer and the user menu.
 2. `BandContext` loads user's bands via `band_members` table (not `bands.owner_id`)
 3. Selected band ID persists to localStorage via `BandStorage` utility
 4. Components fetch band-scoped data (songs, setlists, shows) using the selected band ID
+
+**Opening a page of another band** (`useOpenInBand()`, `src/hooks/`): the
+detail views take role and header from `selectedBand`, so a link into band B
+while A is selected must switch first. The hook calls `setSelectedBand(B)`
+(only when it differs), then `navigate(path)` in the same handler (one React
+batch; never move the navigate into an effect), then an info toast
+`home.switchedToBand`. An unknown band id navigates without switching.
+Upcoming shows and rehearsals are merged and sorted by `mergeUpcomingEvents`
+(`src/utils/upcomingEvents.ts`: date, then time with no time last, then band
+name, then name; date strings compared as strings, never through
+`new Date()`), with `eventPath` / `eventLink` for their routes. The dashboard's
+row is `UpcomingEventRow` (`src/components/home/`).
 
 ### Offline-safe auth
 
@@ -832,5 +844,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
-- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (draft): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (in progress, PR 1.1 implemented): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
