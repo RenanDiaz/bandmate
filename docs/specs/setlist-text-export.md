@@ -1,6 +1,6 @@
 # Spec: Setlist text export
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (PR 1: formatter + Copy) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** review of the current `.txt` export (two sample files: every
 > song detail on, every song detail off).
 > **Scope:** rewrite the text export of a setlist as a pure, tested

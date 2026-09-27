@@ -479,7 +479,25 @@
       "includeKey": "Include song keys",
       "includeTempo": "Include tempo (BPM)",
       "includeDuration": "Include song durations",
-      "includeNotes": "Include song notes"
+      "includeNotes": "Include notes (songs and setlist)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyError": "Couldn't copy the setlist",
+      "text": {
+        "songs_one": "{{count}} song",
+        "songs_other": "{{count}} songs",
+        "music": "{{duration}} of music",
+        "total": "{{duration}} total",
+        "break": "Break",
+        "breakMinutes": "{{minutes}} min",
+        "colNumber": "#",
+        "colSong": "Song",
+        "colArtist": "Artist",
+        "colKey": "Key",
+        "colBpm": "BPM",
+        "colDuration": "Dur.",
+        "colStart": "Start"
+      }
     },
     "performTooltip": "Start performance mode",
     "editSetlistTooltip": "Edit setlist",
