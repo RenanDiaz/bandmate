@@ -515,11 +515,16 @@ graph for the L/R volumes. Two rules keep it reliable on the iPad:
 - **Restart = fresh element.** A stop, a seek while paused or the end of the
   track makes the next play use a new `<audio>` + source node (the old one
   replays buffered samples from the previous position). Don't go back to
-  muting for a fixed time.
+  muting for a fixed time. The new element is created when the old one
+  stops (stop, end of track, stall), not inside `play()`: on iOS 17 an
+  element created and started in the same tap could stay silent.
 - **Never pretend to play.** A watchdog checks 1.5 s after each play that the
   time moved and the `AudioContext` is `running`; otherwise it pauses, warns
   (toast + header) and the next tap rebuilds the context and element. iOS
   only unlocks audio inside a user gesture, so there is no automatic retry.
+- Each play, watchdog verdict, context change and stall is logged as
+  `[backing-track] …` (`console.info`): read it in Safari's Web Inspector
+  with the iPad connected to a Mac.
 
 ### Edge Functions (`supabase/functions/`)
 

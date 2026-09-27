@@ -20,6 +20,16 @@
  *    context runs; if not, it pauses, reports `onStalled`, and the next play
  *    (a user gesture, which iOS needs) rebuilds the context and the element.
  *    Never pretend to play.
+ *
+ * The replacement element is created **when the old one stops** (stop, end
+ * of track, stall), not inside play(): iOS 17 could leave an element created
+ * and started in the same tap silent after a stop, while a track loaded
+ * earlier (switching songs and back) played. play() only connects and starts
+ * an element that has had time to load. Seeks while paused stay lazy (a drag
+ * fires many of them) and so does a context found closed at play time.
+ *
+ * Every play, verdict and stall goes to `log` (the console by default) so a
+ * failure on the iPad can be read in Safari's Web Inspector.
  */
 
 export const STALL_TIMEOUT_MS = 1500;
@@ -42,6 +52,8 @@ export interface BackingTrackEngineDeps {
   createContext(): AudioContext | null;
   setTimeout(fn: () => void, ms: number): unknown;
   clearTimeout(handle: unknown): void;
+  /** Diagnostics; console.info by default. */
+  log(event: string, details?: Record<string, unknown>): void;
 }
 
 export interface ChannelVolumes {
@@ -71,6 +83,7 @@ function defaultDeps(): BackingTrackEngineDeps {
     },
     setTimeout: (fn, ms) => window.setTimeout(fn, ms),
     clearTimeout: (handle) => window.clearTimeout(handle as number),
+    log: (event, details) => console.info(`[backing-track] ${event}`, details ?? ""),
   };
 }
 
@@ -136,9 +149,10 @@ export class BackingTrackEngine {
       this.buildGraph();
       this.rebuildNeeded = false;
     }
+    let created = false;
     if (this.freshElementNeeded || !this.audio) {
-      this.useElement(this.deps.createAudio(this.url), this.position);
-      this.freshElementNeeded = false;
+      this.replaceElement(this.position);
+      created = true;
     }
 
     const audio = this.audio!;
@@ -154,12 +168,19 @@ export class BackingTrackEngine {
     }
 
     const startedAt = audio.currentTime;
+    this.deps.log("play", {
+      createdNow: created,
+      readyState: audio.readyState,
+      networkState: audio.networkState,
+      at: startedAt,
+      context: this.graph?.ctx.state ?? "none",
+    });
     const played = audio.play();
     // Older engines return undefined instead of a promise.
     played?.catch?.((error: unknown) => {
       if (this.audio !== audio) return;
       console.error("Backing track did not start:", error);
-      this.stall();
+      this.stall("play-rejected");
     });
     this.watchStart(audio, startedAt);
   }
@@ -204,7 +225,11 @@ export class BackingTrackEngine {
     if (stopping) audio.pause();
     this.position = time;
     // A paused element still at 0 (never played) has nothing buffered.
-    if (!(audio.paused && audio.currentTime === 0 && time === 0)) this.freshElementNeeded = true;
+    if (!(audio.paused && audio.currentTime === 0 && time === 0)) {
+      // A stop gets its replacement now so it can load before the next tap.
+      if (stopping) this.replaceElement(0);
+      else this.freshElementNeeded = true;
+    }
     this.listener.onTimeUpdate(time);
     if (stopping) this.listener.onPlayingChange(false);
   }
@@ -230,8 +255,10 @@ export class BackingTrackEngine {
     // While a start is being watched, the watchdog decides (the context may
     // still be moving to "running").
     ctx.onstatechange = () => {
-      if (this.graph?.ctx !== ctx || this.stallTimer !== null) return;
-      if (ctx.state !== "running" && this.isPlaying) this.stall();
+      if (this.graph?.ctx !== ctx) return;
+      this.deps.log("context", { state: ctx.state, playing: this.isPlaying });
+      if (this.stallTimer !== null) return;
+      if (ctx.state !== "running" && this.isPlaying) this.stall("context-" + ctx.state);
     };
     this.graph = { ctx, splitter, gainL, gainR, master };
   }
@@ -245,6 +272,13 @@ export class BackingTrackEngine {
       graph.ctx.onstatechange = null;
       graph.ctx.close().catch(() => undefined);
     }
+  }
+
+  /** A new element for the current url at `startAt`, not connected yet. */
+  private replaceElement(startAt: number): void {
+    if (!this.url) return;
+    this.useElement(this.deps.createAudio(this.url), startAt);
+    this.freshElementNeeded = false;
   }
 
   private useElement(audio: HTMLAudioElement, startAt = 0): void {
@@ -278,8 +312,15 @@ export class BackingTrackEngine {
     const onEnded = () => {
       this.clearStallWatch();
       this.position = 0;
-      this.freshElementNeeded = true;
+      this.replaceElement(0);
       this.listener.onPlayingChange(false);
+    };
+    const onProblem = (event: Event) => {
+      this.deps.log(`element ${event.type}`, {
+        error: audio.error?.code,
+        readyState: audio.readyState,
+        at: audio.currentTime,
+      });
     };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("durationchange", onDuration);
@@ -287,6 +328,8 @@ export class BackingTrackEngine {
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onProblem);
+    audio.addEventListener("stalled", onProblem);
     this.detachAudio = () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("durationchange", onDuration);
@@ -294,6 +337,8 @@ export class BackingTrackEngine {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onProblem);
+      audio.removeEventListener("stalled", onProblem);
     };
   }
 
@@ -329,18 +374,29 @@ export class BackingTrackEngine {
       if (this.audio !== audio || audio.paused) return;
       const moved = audio.currentTime - startedAt >= STALL_MIN_PROGRESS_S;
       const outputOk = !this.graph || this.graph.ctx.state === "running";
-      if (!moved || !outputOk) this.stall();
+      this.deps.log("watchdog", {
+        moved: audio.currentTime - startedAt,
+        readyState: audio.readyState,
+        context: this.graph?.ctx.state ?? "none",
+        ok: moved && outputOk,
+      });
+      if (!moved || !outputOk) this.stall(moved ? "context-not-running" : "time-stuck");
     }, STALL_TIMEOUT_MS);
   }
 
-  private stall(): void {
+  private stall(reason: string): void {
     this.clearStallWatch();
-    this.rebuildNeeded = true;
+    this.deps.log("stall", { reason });
     const audio = this.audio;
     if (audio) {
       audio.pause();
       this.position = audio.currentTime;
     }
+    // Rebuild now, except the context (it needs the next tap on iOS): drop
+    // the dead graph and give the replacement element time to load.
+    this.closeGraph();
+    this.replaceElement(this.position);
+    this.rebuildNeeded = true;
     this.listener.onPlayingChange(false);
     this.listener.onStalled();
   }
