@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (PR 1.1 implemented) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (Phase 1 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -48,7 +48,9 @@ bodies here.
    on (precache, runtime caching, `ignoreURLParametersMatching`) for two
    event listeners. `push-sw.js` is a `.js` in `dist/`, so it is precached
    and `check-precache.mjs` keeps covering it. It must stay dependency-free
-   and must not call `skipWaiting` / `clientsClaim`.
+   and must not call `skipWaiting` / `clientsClaim`. Build only: the dev
+   worker is an ES module, where `importScripts` throws, so push is tried
+   with `npm run build && npm run preview` (PR 1.2).
 5. **Web Push with VAPID, no Firebase.** Works on Chrome/Edge/Firefox
    (desktop and Android) and Safari (macOS, and iOS/iPadOS 16.4+ **only for
    the app added to the Home Screen**). The public key is
@@ -90,8 +92,11 @@ bodies here.
 ### 2.1 Entry point
 
 User menu (`AuthButton`, both variants) → **Notifications** row (only with
-the flag, only in `authMode: "session"`, hidden offline) → opens
-`NotificationSettingsModal`.
+the flag, only in `authMode: "session"`, hidden offline; between About and
+Check for updates) → opens `NotificationSettingsModal`. The modal is
+rendered once by `NotificationSettingsHost` in `App` and opened through
+`notificationSettingsStore`: the mobile drawer unmounts the menu when a row is
+tapped, so the modal can't live in it.
 
 ### 2.2 Settings modal
 
@@ -224,18 +229,23 @@ export function buildPushMessage(input: {
 
 | File | Contract |
 |------|----------|
-| `src/services/pushSubscriptionService.ts` | `savePushSubscription(sub: PushSubscriptionJSON, locale)`, `deletePushSubscription(endpoint)`, `updateSubscriptionLocale(endpoint, locale)`, `getBandMutes(): Promise<number[]>`, `setBandMuted(bandId, muted)` |
-| `src/lib/pushSupport.ts` (plain TS, unit-tested) | `getPushStatus(): Promise<"unsupported" \| "needs-install" \| "denied" \| "off" \| "on">`, `subscribeThisDevice(vapidKey)`, `unsubscribeThisDevice()`; uses the registration from `getPwaUpdater()`, never registers a second worker |
-| `src/lib/featureFlags.ts` | `isPushNotificationsEnabled()` |
-| `src/hooks/useBandFromQuery.ts` | handles `?band=` (§1 decision 6); shares its switch rule with `useOpenInBand` |
-| `src/components/notifications/NotificationSettingsModal.tsx` | §2.2 |
-| `public/push-sw.js` | `push` → `showNotification(title, { body, tag, icon, data: { url } })`; `notificationclick` → focus + navigate / `openWindow` |
+| `src/services/pushSubscriptionService.ts` | `savePushSubscription({ endpoint, p256dh, auth }, locale)` (the RPC), `deletePushSubscription(endpoint)`, `hasPushSubscription(endpoint)`, `updatePushSubscriptionLocale(endpoint, locale)`, `getMutedBandIds(): Promise<number[]>`, `setBandMuted(bandId, muted)` |
+| `src/lib/pushSupport.ts` (plain TS, injectable `PushEnv`, unit-tested) | `getPushStatus(): Promise<"unsupported" \| "needs-install" \| "denied" \| "off" \| "on">`, `subscribeThisDevice(locale)` (permission prompt first: iOS needs the gesture; replaces a subscription made with other VAPID keys; unsubscribes again if the row can't be saved), `syncThisDevice(locale)` (settings open only, never on app start), `updateThisDeviceLocale(locale)`, `unsubscribeThisDevice()` (row delete bounded to 3 s, then the browser unsubscribe, which works offline). Uses the existing registration (`getRegistration("/")`, waiting for `ready` only when subscribing); never registers a worker |
+| `src/lib/featureFlags.ts` | `isPushNotificationsEnabled()` (`VITE_PUSH_NOTIFICATIONS` / `bandmate_flag_push`) |
+| `src/utils/bandSwitch.ts` | `bandToSwitchTo(bands, selectedId, bandId)`: the rule `useOpenInBand` and `useBandFromQuery` share |
+| `src/hooks/useBandFromQuery.ts` | handles `?band=` (§1 decision 6): once auth and bands resolved, switch (only when it differs) + `replace` without the param + the `home.switchedToBand` toast; returns `pending` so `AppMain` shows its spinner instead of a frame in the old band |
+| `src/components/notifications/` | `NotificationSettingsBody` (presentational), `NotificationSettingsModal` (state), `NotificationSettingsHost` + `notificationSettingsStore` (§2.1) |
+| `public/push-sw.js` | `push` → `showNotification(title, { body, tag, icon, badge, data: { url } })`, a notification even for an unreadable payload; `notificationclick` → same-origin URLs only, focus an open window and `navigate()` it (a full load, so `?band=` runs at start), else `openWindow` |
 
 Sign-out (user-initiated, `performUserSignOut`) unsubscribes this device
 and deletes its row **before** signing out; otherwise the next person
 signing in on a shared iPad receives the previous user's pushes. Not on an
 involuntary `SIGNED_OUT` (same rule as the offline wipe: don't add a third
-wipe trigger, this is part of the first).
+wipe trigger, this is part of the first). `AuthButton` passes
+`clearDeviceBeforeSignOut` as the wipe step: `wipeAll()` and
+`unsubscribeThisDevice()` in parallel; a failed unsubscribe is only logged
+(the sender drops the dead endpoint), a failed wipe keeps its old handling.
+Language changes in the user menu call `updateThisDeviceLocale`.
 
 ### 3.5 i18n (both locales)
 
@@ -330,13 +340,14 @@ PR 1.1 (done): `supabase/migrations/20260927180000_push_notifications.sql`,
 `supabase/functions/_shared/pushMessages.ts`, `_shared/pushRecipients.ts`
 (+ tests in `src/lib/__tests__/`), `scripts/generate-vapid-keys.mjs`
 (`npm run vapid-keys`), `supabase/config.toml`,
-`docs/setup/push-notifications.md`. PR 1.2: `public/push-sw.js`,
+`docs/setup/push-notifications.md`. PR 1.2 (done): `public/push-sw.js`,
 `vite.config.ts` (`importScripts`), `src/lib/pushSupport.ts`,
 `src/lib/featureFlags.ts`, `src/services/pushSubscriptionService.ts`,
-`src/hooks/useBandFromQuery.ts`, `src/hooks/useOpenInBand.ts`,
-`src/AppMain.tsx`, `src/AuthButton.tsx`, `src/lib/authSession.ts`
-(sign-out), `src/components/notifications/*`, `src/components/Privacy*`,
-locales, `.env.example`, README, CLAUDE.md.
+`src/utils/bandSwitch.ts`, `src/hooks/useBandFromQuery.ts`,
+`src/hooks/useOpenInBand.ts`, `src/AppMain.tsx`, `src/App.tsx`,
+`src/AuthButton.tsx` (sign-out, language), `src/components/notifications/*`,
+`src/components/PrivacyPolicy.tsx`, `src/vite-env.d.ts`, locales,
+`.env.example`, tests, README, CLAUDE.md.
 
 ## 10. Phases and PRs
 
@@ -358,9 +369,13 @@ still works.
   `docs/setup/push-notifications.md`. Nothing user-visible; validated by
   subscribing a browser by hand (devtools) and inserting rows (setup guide
   §4).
-- **PR 1.2 — client.** `push-sw.js` + `importScripts`, `pushSupport`,
-  service, flag, settings modal, user-menu row, `?band=` handling, sign-out
-  unsubscribe, Privacy paragraph, i18n, docs. Completes the phase.
+- **PR 1.2 — client** (implemented). `push-sw.js` + `importScripts`,
+  `pushSupport`, service, flag, settings modal, user-menu row, `?band=`
+  handling, sign-out unsubscribe, Privacy paragraph, i18n, docs. Completes
+  the phase. Checked without devices: unit and DOM tests, and a push
+  delivered through the DevTools protocol to the built worker in Chromium
+  (notification shown with title, body, tag and url). Subscribing against a
+  real push service and AC1–AC11 are the device checklist.
 
 ### Phase 2 — moved and cancelled events
 
@@ -385,3 +400,9 @@ nothing.
   secrets `VAPID_KEYS` (JWK pair) + `VAPID_SUBJECT` + `PUSH_SECRET`, past /
   finished shows and rehearsals send nothing, library pinned to
   `@negrel/webpush@0.5.0`.
+- 2026-09-27 — PR 1.2: the modal lives in `NotificationSettingsHost`
+  (the drawer unmounts the menu), `syncThisDevice` re-registers only when
+  the settings open, `importScripts` is build-only (module dev worker), a
+  tap does a full navigation (`client.navigate`) rather than an in-app
+  message, the band rule moved to `src/utils/bandSwitch.ts`, Privacy page
+  paragraph + "last updated" date.

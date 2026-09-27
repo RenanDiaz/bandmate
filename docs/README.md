@@ -49,7 +49,7 @@ docs/
 - [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, two PRs; implemented, manual validation of AC6–AC9 on device pending)
 
 ## Notifications (2026-09-27)
-- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2 (two phases, three PRs; in progress, PR 1.1 backend implemented)
+- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2 (two phases, three PRs; in progress, Phase 1 implemented, device validation pending)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

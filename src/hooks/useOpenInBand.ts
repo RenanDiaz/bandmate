@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
+import { bandToSwitchTo } from "../utils/bandSwitch";
 
 /**
  * Navigate to a band-scoped page, selecting that band first when it is not
@@ -23,11 +24,10 @@ export function useOpenInBand(): (bandId: number, path: string) => void {
 
   return useCallback(
     (bandId: number, path: string) => {
-      const band = bands.find((b) => b.id === bandId);
-      const switching = !!band && band.id !== selectedBand?.id;
-      if (switching) setSelectedBand(band);
+      const band = bandToSwitchTo(bands, selectedBand?.id, bandId);
+      if (band) setSelectedBand(band);
       navigate(path);
-      if (switching) toast.info(t("home.switchedToBand", { band: band.name }));
+      if (band) toast.info(t("home.switchedToBand", { band: band.name }));
     },
     [bands, selectedBand, setSelectedBand, navigate, toast, t]
   );

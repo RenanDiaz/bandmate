@@ -2,9 +2,9 @@
 
 Band push notifications (spec:
 [docs/specs/band-push-notifications.md](../specs/band-push-notifications.md))
-need four things configured once per Supabase project. Until they are, the
-database still records `notification_events` and nothing is sent: the app and
-every write keep working.
+need steps 1–3 once per Supabase project and step 4 on the app's build. Until
+they are done, the database still records `notification_events` and nothing is
+sent: the app and every write keep working.
 
 ```
 shows / rehearsals / setlists INSERT
@@ -67,9 +67,29 @@ To change one later: `select vault.update_secret(id, '<new value>') from
 vault.secrets where name = 'push_function_secret';` — and `supabase secrets
 set PUSH_SECRET=…` with the same value.
 
-## 4. Check it end to end (before the app UI exists)
+## 4. The app
 
-1. In Chrome, open the deployed app signed in as member **B**, then in DevTools:
+Set on the Vercel project (and in `.env` locally), then redeploy:
+
+| Variable | Value |
+|----------|-------|
+| `VITE_VAPID_PUBLIC_KEY` | the public key from step 1 (must match `VAPID_KEYS`) |
+| `VITE_PUSH_NOTIFICATIONS` | `true` to show the settings to everyone; leave it unset and use `localStorage.bandmate_flag_push = "1"` per device while testing against production |
+
+The Notifications row appears in the user menu (signed in, online). Push
+needs the **built** worker: locally, `npm run build && npm run preview`
+(the `npm run dev` worker doesn't load `push-sw.js`).
+
+## 5. Check it end to end
+
+1. As member **B**: user menu → Notifications → **Turn on**, allow the prompt.
+   On iPhone / iPad do it in the app opened from the Home Screen (in a Safari
+   tab the modal says to install first). `push_subscriptions` now has B's row.
+2. As member **A** (another browser or account), add a show to a band B
+   belongs to. Within seconds B gets "<band> · New show"; tapping it opens the
+   show with that band selected.
+3. Without the app UI (e.g. debugging the backend alone), subscribe from
+   DevTools instead and insert the row by hand:
 
    ```js
    const reg = await navigator.serviceWorker.ready;
@@ -80,17 +100,10 @@ set PUSH_SECRET=…` with the same value.
    copy(JSON.stringify(sub)); // endpoint + keys.p256dh + keys.auth
    ```
 
-2. In the SQL editor, register it for B:
-
    ```sql
    insert into push_subscriptions (user_id, endpoint, p256dh, auth, locale)
    values ('<B user id>', '<endpoint>', '<p256dh>', '<auth>', 'es');
    ```
-
-3. As member **A** (another browser or account), add a show to a band B
-   belongs to. Within seconds B's browser shows a notification (until PR 1.2
-   adds the worker's push handler, Chrome shows its generic "This site has
-   been updated in the background" text: delivery is what is being checked).
 
 4. Inspect:
 
@@ -127,3 +140,7 @@ band (`band_notification_mutes`).
 | `error` = `failed: 403 …` | VAPID keys don't match the key the browser subscribed with (keys regenerated?) |
 | `error` = `VAPID_KEYS is not set` | step 2 |
 | Subscriptions disappear | the push service answered 404/410 (the browser dropped them); expected |
+| No Notifications row in the user menu | the flag (step 4), signed in with a live session, online |
+| The modal says "can't receive notifications" on iPhone / iPad | it's a Safari tab: open the app from the Home Screen (iOS 16.4+) |
+| Turn on fails right away | `VITE_VAPID_PUBLIC_KEY` missing from the build, or `npm run dev` (no push handler in the dev worker) |
+| `error` = `failed: 403 web.push.apple.com` (`BadJwtToken`) | Apple's one-hour VAPID limit (spec §6) |

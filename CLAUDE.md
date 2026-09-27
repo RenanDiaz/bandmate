@@ -53,13 +53,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandSwitch)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
@@ -95,6 +95,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `reportsService.ts` | Band reports/statistics |
 | `calendarSubscriptionService.ts` | Per-user iCal feed subscriptions (served by the `calendar-feed` Edge Function): shows/rehearsals toggles, time zone, one-tap subscribe links (`webcal://`, Google, Outlook.com) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
+| `pushSubscriptionService.ts` | Push notifications: this browser's subscription row (`savePushSubscription` → `register_push_subscription` RPC, `deletePushSubscription`, `hasPushSubscription`, `updatePushSubscriptionLocale`) and per-band mutes (`getMutedBandIds`, `setBandMuted`). Browser side: `src/lib/pushSupport.ts`, see "Push notifications" |
 | `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
@@ -165,6 +166,14 @@ both `ForBands` reads, six rows then "Show all", a band chip on every row, and
 row / Setlist / Show chip taps through `useOpenInBand`. Its load failure is an
 inline line + Retry: no toast and no `reportNetworkFailure()` (the band
 dashboard is the only reporter). Not rendered offline or in `session-lost`.
+
+**`?band=<id>` on any route** (`useBandFromQuery()`, called in `AppMain`; a
+tapped push notification opens `/shows/:id?band=7`): once auth and bands have
+resolved it selects that band with the same rule as `useOpenInBand`
+(`bandToSwitchTo`, `src/utils/bandSwitch.ts`: only when it differs, unknown
+id → no switch), drops the param with a `replace` (path and other params
+kept) and toasts `home.switchedToBand`. While it is pending `AppMain` renders
+its spinner, so no frame of the page shows the old band.
 
 ### Offline-safe auth
 
@@ -405,8 +414,11 @@ desktop bar it is `variant="dropdown"` with `compact`: a trigger with the avatar
 (no email; the open menu shows it) opens a floating menu (closed by Escape, a
 click outside or the trigger). In the mobile drawer (`CustomOffcanvas`) it is
 `variant="inline"`: the same content as flat rows of the drawer (account
-header, Language, About, Check for updates, Sign out) with `onAction` closing
-the drawer. About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
+header, Language, About, Notifications, Check for updates, Sign out) with
+`onAction` closing the drawer. Notifications shows only with
+`isPushNotificationsEnabled()`, in `session` and online; it opens the modal
+through `notificationSettingsStore`, rendered by `NotificationSettingsHost`
+in `App` (a modal inside the drawer would unmount with it). About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
 anchored to its last row it opens below the viewport. Tests:
 `src/__tests__/AuthButton.test.tsx`, header: `src/components/__tests__/AppNavbar.test.tsx`.
 
@@ -426,6 +438,45 @@ brand font (Space Grotesk 700) is self-hosted via `@fontsource/space-grotesk`
 and precached with the other `woff2` files. `bootstrap-icons.css` requests its
 font with a `?<32-hex>` cache-busting key, which `ignoreURLParametersMatching`
 strips so the precache matches offline (without it every icon is blank).
+
+### Push notifications
+
+Band push notifications ([docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md),
+setup: [docs/setup/push-notifications.md](docs/setup/push-notifications.md)).
+Server side: triggers → `notification_events` → `send-push-notifications`
+(see "Edge Functions"). Client side, behind `isPushNotificationsEnabled()`
+(`VITE_PUSH_NOTIFICATIONS=true` or `localStorage.bandmate_flag_push = "1"`;
+the flag hides UI only):
+
+- **Worker:** `public/push-sw.js` (`push` → always a notification, even for
+  an unreadable payload — browsers require it; `notificationclick` →
+  same-origin URLs only, focus + `navigate()` an open window, else
+  `openWindow`). The Workbox worker loads it with `workbox.importScripts`,
+  **build only** (the dev worker is an ES module, where `importScripts`
+  throws): try push with `npm run build && npm run preview`. Keep it a
+  dependency-free classic script, with no fetch handling and no
+  `skipWaiting` / `clientsClaim`. Tested from
+  `src/lib/__tests__/pushServiceWorker.test.ts` against a fake `self`.
+- **This device:** `src/lib/pushSupport.ts` (plain TS, injectable `PushEnv`):
+  `getPushStatus` (`needs-install` for iOS in a browser tab: Web Push is
+  installed-app only), `subscribeThisDevice(locale)` — call it straight from
+  the tap, the permission prompt is its first await (iOS needs the gesture) —,
+  `syncThisDevice` (only when the settings open, **never on app start**: it
+  would subscribe whoever signed in next on a shared browser),
+  `updateThisDeviceLocale` (language change in the user menu) and
+  `unsubscribeThisDevice`. It uses the registration PwaUpdater made and never
+  registers a worker.
+- **Sign-out** (user-initiated only) clears the device first:
+  `AuthButton`'s `clearDeviceBeforeSignOut` runs `wipeAll()` and
+  `unsubscribeThisDevice()` as `performUserSignOut`'s wipe step. It is the
+  same trigger as the offline wipe, not a new one.
+- **UI:** `src/components/notifications/` — `NotificationSettingsBody`
+  (presentational, static render tests), `NotificationSettingsModal`
+  (this device on/off, one switch per band = `band_notification_mutes`),
+  `NotificationSettingsHost` (in `App`; closes when the session or the
+  connection goes) and `notificationSettingsStore`.
+- The push texts are server-side (`_shared/pushMessages.ts`, by the
+  subscription's `locale`), not in `en.json` / `es.json`.
 
 ### Performance data
 
@@ -577,8 +628,8 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   doors, else at show time, else after an hour; it follows `include_shows`, has
   no toggle of its own, and the `.ics` download of a show carries both.
 - `send-push-notifications` — sends the Web Push notifications of one
-  `notification_events` row (band push notifications, Phase 1 backend; no
-  client UI yet). Called only by the `dispatch_notification_event` trigger
+  `notification_events` row (band push notifications, Phase 1; client side
+  under "Push notifications"). Called only by the `dispatch_notification_event` trigger
   through `pg_net`, with URL + shared secret from Vault
   (`push_function_url`, `push_function_secret`); deploy with
   `--no-verify-jwt` (also in `supabase/config.toml`): it answers 401 without
@@ -720,6 +771,8 @@ VITE_SPOTIFY_CLIENT_ID=<spotify_client_id>          # metadata enrichment
 VITE_SPOTIFY_CLIENT_SECRET=<spotify_client_secret>  # see warning below
 VITE_GROQ_API_KEY=<groq_api_key>                    # AI setlist generation (https://console.groq.com)
 VITE_OFFLINE_DOWNLOADS=true                         # feature flag: offline download UI (not a secret; see "Offline download UI")
+VITE_VAPID_PUBLIC_KEY=<public key>                  # Web Push application server key from `npm run vapid-keys` (public by design)
+VITE_PUSH_NOTIFICATIONS=true                        # feature flag: Notifications settings (not a secret; see "Push notifications")
 ```
 
 > ⚠️ **Every `VITE_*` variable is inlined into the public client bundle.**
@@ -878,5 +931,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, PR 1.1 backend implemented): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist; moved/cancelled later (2 phases, 3 PRs)
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 implemented, device validation pending): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist; moved/cancelled later (2 phases, 3 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

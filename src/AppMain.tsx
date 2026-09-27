@@ -31,6 +31,7 @@ import { NeedsConnection, OfflineEmptyState } from "./components/offline/Offline
 import { OfflineSetlistDetail } from "./components/offline/OfflineSetlistDetail";
 import { useOfflineUi } from "./components/offline/useOfflineUi";
 import { useBandContext } from "./context/useBandContext";
+import { useBandFromQuery } from "./hooks/useBandFromQuery";
 
 /**
  * The page area under the navbar: auth/band gates, then the routes.
@@ -46,9 +47,11 @@ export const AppMain: FC = () => {
   const { selectedBand, setSelectedBand, user, bands, setShowBandSelector, showBandSelector, isResolvingBand, isCheckingAuth } =
     useBandContext();
   const offlineUi = useOfflineUi();
+  // A tapped notification opens `/shows/:id?band=<id>`: select the band first.
+  const bandFromQueryPending = useBandFromQuery();
   const needsConnection = (element: ReactNode) => <OfflineAware offline={<NeedsConnection />}>{element}</OfflineAware>;
 
-  if (isCheckingAuth || (user && isResolvingBand)) {
+  if (isCheckingAuth || (user && isResolvingBand) || bandFromQueryPending) {
     return (
       <LoadingContainer>
         <Spinner color="light" />

@@ -1353,6 +1353,10 @@
       "title": "Cookies y Almacenamiento Local",
       "text": "Bandmate usa almacenamiento local para recordar tus preferencias (como la banda seleccionada y configuración de idioma) y para mantener tu sesión iniciada. No usamos cookies de seguimiento ni análisis de terceros que rastreen usuarios individuales."
     },
+    "pushNotifications": {
+      "title": "Notificaciones push",
+      "text": "Si activas las notificaciones en un dispositivo, guardamos la suscripción push de ese navegador (una dirección que da el servicio de push del navegador, sus claves de cifrado, tu idioma y el nombre del navegador) para enviarte avisos de tus bandas. No enviamos publicidad. Desactívalas en Notificaciones (menú de usuario) o cierra sesión: al cerrar sesión se elimina la suscripción de ese dispositivo."
+    },
     "rights": {
       "title": "Tus Derechos",
       "text": "Tienes derecho a:",
@@ -1631,6 +1635,36 @@
       "needsConnection": "Necesita conexión",
       "dismiss": "Descartar",
       "unknownBand": "Otra banda"
+    }
+  },
+  "notifications": {
+    "menuItem": "Notificaciones",
+    "title": "Notificaciones",
+    "device": {
+      "label": "Este dispositivo",
+      "unsupported": "Este navegador no puede recibir notificaciones.",
+      "needsInstall": "En iPhone y iPad, las notificaciones solo funcionan en la app instalada: toca Compartir → Agregar a inicio y abre Bandmate desde tu pantalla de inicio.",
+      "denied": "Las notificaciones de Bandmate están bloqueadas. Permítelas en la configuración del navegador o del sistema y vuelve aquí.",
+      "off": "Recibe una notificación cuando alguien de tu banda agregue un show, un ensayo o un setlist.",
+      "on": "Activadas en este dispositivo.",
+      "dismissed": "No se permitieron las notificaciones. Toca Activar para intentarlo de nuevo.",
+      "turnOn": "Activar",
+      "turningOn": "Activando…",
+      "turnOff": "Desactivar",
+      "turningOff": "Desactivando…"
+    },
+    "bands": {
+      "label": "Bandas",
+      "hint": "Se aplica en todos tus dispositivos.",
+      "toggle": "Notificarme sobre {{band}}"
+    },
+    "footer": "No recibirás notificaciones de tus propios cambios. En el escenario, activa Concentración o No molestar.",
+    "needsConnection": "La configuración de notificaciones necesita conexión.",
+    "errors": {
+      "subscribeFailed": "No se pudieron activar las notificaciones. Inténtalo de nuevo.",
+      "unsubscribeFailed": "No se pudieron desactivar las notificaciones. Inténtalo de nuevo.",
+      "bandsLoadFailed": "No se pudo cargar la configuración de tus bandas.",
+      "muteFailed": "No se pudo guardar el cambio. Inténtalo de nuevo."
     }
   }
 }
