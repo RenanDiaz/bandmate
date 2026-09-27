@@ -45,4 +45,13 @@ describe("perform position (A2, §9.4)", () => {
     clearAllPerformPositions();
     expect(readPerformPosition("u1", "s1")).toBeNull();
   });
+
+  it("a song target's pseudo id (song:<id>) round-trips and is cleared too", () => {
+    const now = new Date("2026-09-25T20:00:00Z");
+    writePerformPosition("u1", "song:x", position, now);
+    expect(readPerformPosition("u1", "song:x", now.getTime())).toEqual({ ...position, savedAt: now.toISOString() });
+    expect(readPerformPosition("u1", "x", now.getTime())).toBeNull();
+    clearAllPerformPositions();
+    expect(readPerformPosition("u1", "song:x", now.getTime())).toBeNull();
+  });
 });

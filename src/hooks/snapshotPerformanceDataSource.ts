@@ -20,7 +20,7 @@ import {
 import type { OfflineSnapshot, OfflineSnapshotMeta } from "../services/offlineSetlistService";
 import { isNetworkError } from "../lib/networkErrors";
 import { deepEqual, shareRecord } from "../utils/deepEqual";
-import { NoSnapshotError, PdfUnavailableError } from "./performanceDataSource";
+import { NoSnapshotError, PdfUnavailableError, wrongTargetSession } from "./performanceDataSource";
 import type { PerformanceDataSource, PerformanceRows, PerformanceSession } from "./performanceDataSource";
 
 /**
@@ -296,6 +296,6 @@ function openSnapshotSession(setlistId: string, deps: SnapshotSourceDeps): Perfo
 export function createSnapshotPerformanceDataSource(deps: SnapshotSourceDeps): PerformanceDataSource {
   return {
     kind: "snapshot",
-    open: (setlistId) => openSnapshotSession(setlistId, deps),
+    open: (target) => (target.kind === "setlist" ? openSnapshotSession(target.setlistId, deps) : wrongTargetSession()),
   };
 }

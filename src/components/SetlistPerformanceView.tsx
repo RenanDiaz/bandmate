@@ -209,7 +209,7 @@ const SetlistPerformanceView: FC = () => {
   const { user, isOnline } = useBandContext();
   const userId = user?.id ?? null;
 
-  const perf = useSetlistPerformanceData(setlistId);
+  const perf = useSetlistPerformanceData(setlistId ? { kind: "setlist", setlistId } : undefined);
   const setlist = perf.setlist;
   const { capabilities } = perf;
   const onSnapshot = perf.source === "snapshot";

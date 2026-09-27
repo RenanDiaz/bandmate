@@ -52,7 +52,7 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms)
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceDataSource, snapshotPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -386,7 +386,11 @@ successful writes) and keeps reference identity for the parts that did not
 change; the view never reseeds its items in reorder mode, and a replacement
 keeps the current item by identity (`indexAfterItemsChange`,
 `src/utils/performItems.ts`). Don't add service calls to the view; add them to
-the source. See §8 of
+the source. The hook takes a `PerformanceTarget` (`performanceTarget.ts`): a
+setlist, or one song (`songPerformanceDataSource`, online only, a synthetic
+one-item setlist with id `song:<songId>`; no reorder, notes or sync). The song
+route and view gating land in PR 2 of
+[docs/specs/song-performance.md](docs/specs/song-performance.md). See §8 of
 [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md).
 
 - **Source selection** (§8.2) lives in `PerformanceDataController`
