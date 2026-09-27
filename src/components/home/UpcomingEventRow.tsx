@@ -1,22 +1,33 @@
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../../theme";
+import { BandAvatar } from "../BandAvatar";
+import { eventLink } from "../../utils/upcomingEvents";
 import type { UpcomingEvent } from "../../utils/upcomingEvents";
 
 interface UpcomingEventRowProps {
   event: UpcomingEvent;
   /** "es-ES" | "en-US", as Home computes it. */
   locale: string;
-  /** Renders the band chip when given (My upcoming events, PR 1.2). */
+  /** Renders the band chip when given (My upcoming events). */
   bandName?: string;
+  bandAvatarUrl?: string | null;
   onOpen: () => void;
-  /** The Setlist / Show chip (PR 1.2); omitted → no chip. */
+  /** The Setlist / Show chip (`eventLink`); omitted → no chip. */
   onOpenLink?: () => void;
 }
 
 /** One upcoming show or rehearsal: date block, type badge, name, place, date/time and countdown. */
-export const UpcomingEventRow = ({ event, locale, onOpen }: UpcomingEventRowProps) => {
+export const UpcomingEventRow = ({
+  event,
+  locale,
+  bandName,
+  bandAvatarUrl,
+  onOpen,
+  onOpenLink,
+}: UpcomingEventRowProps) => {
   const { t } = useTranslation();
+  const link = onOpenLink ? eventLink(event) : null;
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString + "T00:00:00");
@@ -64,7 +75,7 @@ export const UpcomingEventRow = ({ event, locale, onOpen }: UpcomingEventRowProp
   };
 
   return (
-    <ShowItem onClick={onOpen}>
+    <ShowItem data-testid="upcoming-event-row" onClick={onOpen}>
       <ShowDate $isRehearsal={event.type === 'rehearsal'}>
         <ShowDay>
           {new Date(event.date + "T00:00:00").getDate()}
@@ -97,6 +108,30 @@ export const UpcomingEventRow = ({ event, locale, onOpen }: UpcomingEventRowProp
           <CountdownBadge>{getDaysUntil(event.date)}</CountdownBadge>
         </ShowMeta>
       </ShowDetails>
+      {(bandName || link) && (
+        <RowAside>
+          {bandName && (
+            <BandChip title={bandName}>
+              <BandAvatar name={bandName} avatarUrl={bandAvatarUrl} size={18} initialFallback />
+              <BandChipName>{bandName}</BandChipName>
+            </BandChip>
+          )}
+          {link && onOpenLink && (
+            <LinkChip
+              type="button"
+              onClick={(e) => {
+                // A real button inside the clickable row: its click (mouse,
+                // Enter or Space) must not also open the event.
+                e.stopPropagation();
+                onOpenLink();
+              }}
+            >
+              <i className={link.labelKey === "home.setlist" ? "bi bi-list-ul" : "bi bi-mic"} aria-hidden="true"></i>
+              {t(link.labelKey)}
+            </LinkChip>
+          )}
+        </RowAside>
+      )}
     </ShowItem>
   );
 };
@@ -204,4 +239,60 @@ const CountdownBadge = styled.span`
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.medium};
+`;
+
+const RowAside = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  align-self: stretch;
+  gap: ${theme.space[2]};
+  flex-shrink: 0;
+  max-width: 40%;
+`;
+
+const BandChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  max-width: 100%;
+  font-size: ${theme.fontSizes.bodyXs};
+  color: var(--color-text-secondary);
+
+  > div {
+    border-radius: ${theme.radius.sm};
+    font-size: 10px;
+  }
+`;
+
+const BandChipName = styled.span`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const LinkChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[1]};
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.space[1]} ${theme.space[2]};
+  font-size: ${theme.fontSizes.bodyXs};
+  font-weight: ${theme.fontWeights.medium};
+  color: ${theme.colors.brand.primary};
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${theme.colors.brand.primary};
+    outline-offset: 2px;
+  }
 `;

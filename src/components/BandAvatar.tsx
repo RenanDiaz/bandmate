@@ -10,6 +10,8 @@ interface Props {
   size?: number;
   /** Highlight styling (e.g. for the selected band). */
   active?: boolean;
+  /** Without an avatar, show the band's initial instead of the music-note icon (small chips). */
+  initialFallback?: boolean;
   className?: string;
 }
 
@@ -21,7 +23,14 @@ interface Props {
  * image: offline, `/storage/v1/` is never cached and snapshots keep only the
  * URL (spec §7.3). A new URL tries the image again.
  */
-export const BandAvatar: FC<Props> = ({ name, avatarUrl, size = 48, active = false, className }) => {
+export const BandAvatar: FC<Props> = ({
+  name,
+  avatarUrl,
+  size = 48,
+  active = false,
+  initialFallback = false,
+  className,
+}) => {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const failed = !!avatarUrl && failedUrl === avatarUrl;
   const initial = name.trim().charAt(0).toUpperCase();
@@ -29,7 +38,7 @@ export const BandAvatar: FC<Props> = ({ name, avatarUrl, size = 48, active = fal
     <Wrapper $size={size} $active={active} $hasImage={!!avatarUrl && !failed} className={className}>
       {avatarUrl && !failed ? (
         <Image src={avatarUrl} alt={name} loading="lazy" onError={() => setFailedUrl(avatarUrl)} />
-      ) : failed && initial ? (
+      ) : (failed || (initialFallback && !avatarUrl)) && initial ? (
         <Initial role="img" aria-label={name}>
           {initial}
         </Initial>

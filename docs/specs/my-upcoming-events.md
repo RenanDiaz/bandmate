@@ -1,6 +1,6 @@
 # Spec: My upcoming events (cross-band agenda on the dashboard)
 
-> **Status:** in progress — PR 1.1 implemented · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented, manual validation (AC6–AC9 on device) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una vista general de todas mis bandas, para ver
 > mis próximos eventos (shows y rehearsals) de todas las bandas en las que
 > estoy … que si le doy click a un show, me lleve a ese show dentro de la
@@ -360,3 +360,15 @@ when PR 1.2 merges with the manual checklist recorded in its description.
 
   `home.switchedToBand` landed in PR 1.1 (the hook needs it); the other §3.5
   keys land in PR 1.2.
+
+- **PR 1.2 (the section).** Implemented §3.4 (`MyUpcomingEvents`) and §3.5,
+  tests AC4. Additions to the contract:
+  1. **Band chip avatar.** `UpcomingEventRowProps` gains `bandAvatarUrl?`,
+     and `BandAvatar` an opt-in `initialFallback` prop: without an avatar the
+     18 px chip shows the band's initial instead of the music-note icon (the
+     icon would look the same for every band). Default rendering unchanged.
+  2. **No `reportNetworkFailure()` from the section**, success or failure
+     (decision 6): the band dashboard stays the only reporter. Retry refetches
+     only the section.
+  3. **Stale responses.** The effect keys on the sorted id string plus a retry
+     counter; its cleanup drops a response for an older key.

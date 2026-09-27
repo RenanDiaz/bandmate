@@ -19,6 +19,7 @@ import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { OfflineLockedHome } from "./offline/OfflineMessage";
 import { SchemaWipeNotice } from "./offline/SchemaWipeNotice";
 import { UpcomingEventRow } from "./home/UpcomingEventRow";
+import { MyUpcomingEvents } from "./home/MyUpcomingEvents";
 import { eventPath, mergeUpcomingEvents } from "../utils/upcomingEvents";
 import type { UpcomingEvent } from "../utils/upcomingEvents";
 
@@ -71,6 +72,8 @@ const Home = () => {
         <Container style={{ marginTop: theme.space[6] }}>
           <PendingInvitations onInvitationAccepted={refreshBands} />
           <SchemaWipeNotice />
+          {/* Every band's events; renders nothing with one band. */}
+          <MyUpcomingEvents />
         </Container>
 
         <DashboardSection>
