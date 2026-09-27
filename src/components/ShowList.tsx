@@ -105,7 +105,11 @@ const ShowCardItem: FC<{
       return t('shows.inWeeks', { count: weeks });
     }
 
-    return t('shows.inWeeksDays', { weeks, days: remainingDays });
+    if (weeks === 1) {
+      return t('shows.inWeekAndDays', { days: remainingDays, count: remainingDays });
+    }
+
+    return t('shows.inWeeksAndDays', { weeks, days: remainingDays, count: remainingDays });
   };
 
   return (

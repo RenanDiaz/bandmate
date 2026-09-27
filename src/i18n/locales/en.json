@@ -368,7 +368,9 @@
     "perform": "Perform",
     "backToSongs": "Back to songs",
     "notFound": "Song not found",
-    "loadError": "Could not load the song"
+    "loadError": "Could not load the song",
+    "showDetails": "Details",
+    "hideDetails": "Hide details"
   },
   "setlists": {
     "title": "Setlists",
@@ -532,8 +534,8 @@
     "editSetlistTooltip": "Edit setlist",
     "deleteSetlistTooltip": "Delete setlist",
     "perform": "Perform",
-    "songCount": "{{count}} song",
-    "songCount_plural": "{{count}} songs"
+    "songCount_one": "{{count}} song",
+    "songCount_other": "{{count}} songs"
   },
   "shows": {
     "title": "Shows",
@@ -606,10 +608,12 @@
     "tomorrow": "Tomorrow",
     "daysAgo": "{{count}} days ago",
     "inDays": "In {{count}} days",
-    "inWeeks": "In {{count}} week",
-    "inWeeks_plural": "In {{count}} weeks",
-    "inWeeksDays": "In {{weeks}} week and {{days}} day",
-    "inWeeksDays_plural": "In {{weeks}} weeks and {{days}} days",
+    "inWeeks_one": "In {{count}} week",
+    "inWeeks_other": "In {{count}} weeks",
+    "inWeekAndDays_one": "In 1 week and {{days}} day",
+    "inWeekAndDays_other": "In 1 week and {{days}} days",
+    "inWeeksAndDays_one": "In {{weeks}} weeks and {{days}} day",
+    "inWeeksAndDays_other": "In {{weeks}} weeks and {{days}} days",
     "happeningNow": "Happening Now",
     "viewShow": "View Show",
     "todayCount": "Today",
@@ -727,8 +731,8 @@
     "genre": "Genre",
     "members": "Members",
     "bandMembers": "Band Members",
-    "memberCount": "{{count}} member",
-    "memberCount_plural": "{{count}} members",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
     "settings": "Band Settings",
     "noBandSelected": "No Band Selected",
     "selectBandPrompt": "Please select a band to view and manage your content",

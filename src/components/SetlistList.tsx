@@ -55,13 +55,9 @@ const SetlistCardItem: FC<{
               {setlist.name}
             </SetlistNameLink>
           </SetlistName>
-          <MetadataRow>
-            <MetadataBadge>
-              <i className="bi bi-music-note-beamed"></i>
-              {t('setlists.songCount', { count: songCount })}
-            </MetadataBadge>
-            {offlineMeta && <OfflineBadge meta={offlineMeta} />}
-          </MetadataRow>
+          {setlist.description && (
+            <SetlistDescription title={setlist.description}>{setlist.description}</SetlistDescription>
+          )}
         </SetlistInfo>
 
         <CardActions onClick={(e) => e.stopPropagation()}>
@@ -100,9 +96,13 @@ const SetlistCardItem: FC<{
         </CardActions>
       </SetlistHeader>
 
-      {setlist.description && (
-        <SetlistDescription>{setlist.description}</SetlistDescription>
-      )}
+      <MetadataRow>
+        <MetadataBadge>
+          <i className="bi bi-music-note-beamed"></i>
+          {t('setlists.songCount', { count: songCount })}
+        </MetadataBadge>
+        {offlineMeta && <OfflineBadge meta={offlineMeta} />}
+      </MetadataRow>
     </SetlistCard>
   );
 };
@@ -145,12 +145,13 @@ export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit }) => {
 
 const SetlistsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: ${theme.space[4]};
   margin-top: ${theme.space[6]};
 
   @media (max-width: ${theme.breakpoints.md}) {
     grid-template-columns: 1fr;
+    gap: ${theme.space[3]};
   }
 `;
 
@@ -159,8 +160,10 @@ const SetlistCard = styled.div<{ $clickable?: boolean }>`
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.lg};
   overflow: hidden;
-  transition: all ${theme.transitions.base} ease;
+  transition: border-color ${theme.transitions.base} ease, box-shadow ${theme.transitions.base} ease;
   cursor: ${(props) => (props.$clickable ? "pointer" : "default")};
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     border-color: ${theme.colors.brand.primary};
@@ -168,55 +171,95 @@ const SetlistCard = styled.div<{ $clickable?: boolean }>`
   }
 `;
 
+// Same anatomy as the song cards: icon · name + description · actions on
+// one row, then the badges on the card's full width.
 const SetlistHeader = styled.div`
   display: flex;
   align-items: flex-start;
   gap: ${theme.space[3]};
   padding: ${theme.space[4]};
-  transition: all ${theme.transitions.fast} ease;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    padding: ${theme.space[3]};
+  }
 `;
 
 const SetlistIcon = styled.div`
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   background: ${theme.gradients.brandPrimary};
   border-radius: ${theme.radius.md};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: ${theme.fontSizes.h2};
+  font-size: ${theme.fontSizes.h3};
   color: white;
   flex-shrink: 0;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 40px;
+    height: 40px;
+    font-size: ${theme.fontSizes.h4};
+  }
 `;
 
 const SetlistInfo = styled.div`
   flex: 1;
   min-width: 0;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    min-height: 40px;
+  }
 `;
 
 const SetlistName = styled.h3`
-  font-size: ${theme.fontSizes.bodyLg};
+  font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.semibold};
   color: var(--color-text-primary);
-  margin: 0 0 ${theme.space[2]} 0;
+  margin: 0;
   line-height: ${theme.lineHeights.snug};
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+`;
+
+const SetlistDescription = styled.p`
+  margin: 2px 0 0;
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  line-height: ${theme.lineHeights.snug};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const MetadataRow = styled.div`
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: ${theme.space[2]};
-  margin-top: ${theme.space[2]};
+  padding: 0 ${theme.space[4]} ${theme.space[4]};
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    padding: 0 ${theme.space[3]} ${theme.space[3]};
+  }
 `;
 
 const MetadataBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
+  height: 28px;
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  padding: ${theme.space[1]} ${theme.space[2]};
+  padding: 0 ${theme.space[2]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.medium};
@@ -278,14 +321,4 @@ const MoreMenu = styled(Dropdown)`
   .setlist-card-more {
     ${iconButtonCss}
   }
-`;
-
-const SetlistDescription = styled.p`
-  padding: 0 ${theme.space[4]} ${theme.space[4]} ${theme.space[4]};
-  margin: 0;
-  font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
-  line-height: ${theme.lineHeights.relaxed};
-  border-top: 1px solid var(--color-border);
-  padding-top: ${theme.space[3]};
 `;

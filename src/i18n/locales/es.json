@@ -368,7 +368,9 @@
     "perform": "Presentar",
     "backToSongs": "Volver a canciones",
     "notFound": "Canción no encontrada",
-    "loadError": "No se pudo cargar la canción"
+    "loadError": "No se pudo cargar la canción",
+    "showDetails": "Detalles",
+    "hideDetails": "Ocultar detalles"
   },
   "setlists": {
     "title": "Setlists",
@@ -532,8 +534,8 @@
     "editSetlistTooltip": "Editar setlist",
     "deleteSetlistTooltip": "Eliminar setlist",
     "perform": "Presentar",
-    "songCount": "{{count}} canción",
-    "songCount_plural": "{{count}} canciones"
+    "songCount_one": "{{count}} canción",
+    "songCount_other": "{{count}} canciones"
   },
   "shows": {
     "title": "Shows",
@@ -606,10 +608,12 @@
     "tomorrow": "Mañana",
     "daysAgo": "Hace {{count}} días",
     "inDays": "En {{count}} días",
-    "inWeeks": "En {{count}} semana",
-    "inWeeks_plural": "En {{count}} semanas",
-    "inWeeksDays": "En {{weeks}} semana y {{days}} día",
-    "inWeeksDays_plural": "En {{weeks}} semanas y {{days}} días",
+    "inWeeks_one": "En {{count}} semana",
+    "inWeeks_other": "En {{count}} semanas",
+    "inWeekAndDays_one": "En 1 semana y {{days}} día",
+    "inWeekAndDays_other": "En 1 semana y {{days}} días",
+    "inWeeksAndDays_one": "En {{weeks}} semanas y {{days}} día",
+    "inWeeksAndDays_other": "En {{weeks}} semanas y {{days}} días",
     "happeningNow": "En vivo ahora",
     "viewShow": "Ver show",
     "todayCount": "Hoy",
@@ -727,8 +731,8 @@
     "genre": "Género",
     "members": "Miembros",
     "bandMembers": "Miembros de la Banda",
-    "memberCount": "{{count}} miembro",
-    "memberCount_plural": "{{count}} miembros",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
     "settings": "Configuración de Banda",
     "noBandSelected": "Ninguna Banda Seleccionada",
     "selectBandPrompt": "Por favor selecciona una banda para ver y gestionar tu contenido",
