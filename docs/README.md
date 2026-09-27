@@ -37,6 +37,7 @@ docs/
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
 - [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, two PRs)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
+- [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (draft)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
