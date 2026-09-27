@@ -49,7 +49,12 @@ import { resolveInitialSheetMusic } from "../services/sheetMusicPreferencesServi
 import { useSetlistPerformanceData } from "../hooks/useSetlistPerformanceData";
 import { OfflineDownloadAction } from "./offline/OfflineDownloadAction";
 import { useBandContext } from "../context/useBandContext";
-import { readPerformPosition, writePerformPosition } from "../lib/performPosition";
+import {
+  readPerformPosition,
+  readPreferredContentView,
+  writePerformPosition,
+  writePreferredContentView,
+} from "../lib/performPosition";
 import { usePerformItems } from "../hooks/usePerformItems";
 import { isSongTarget, performanceTargetKey, type PerformanceTarget } from "../hooks/performanceTarget";
 
@@ -236,7 +241,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   const { setlistItems, setSetlistItems, currentIndex, setCurrentIndex } = usePerformItems(perf.items, isReorderMode);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
-  const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">("chords");
+  const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">(readPreferredContentView);
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
   const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
   // Refs mirror the preferences so the list loader can read them without
@@ -822,12 +827,19 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
     setIsFullscreen(false);
   };
 
+  // A user's pick becomes the default for the next setlist or song (the
+  // saved position still wins where there is one).
+  const chooseContentView = useCallback((view: "chords" | "lyrics" | "sheetMusic") => {
+    setContentView(view);
+    writePreferredContentView(view);
+  }, []);
+
+  // Same order as the toolbar: Lyrics → Chords → Sheet music.
   const toggleContentView = useCallback(() => {
     setContentView((prev) => {
-      if (prev === "chords") return "lyrics";
-      // Will check for sheet music in the toggle - if no sheet music, go back to chords
-      if (prev === "lyrics") return "sheetMusic";
-      return "chords";
+      const next = prev === "lyrics" ? "chords" : prev === "chords" ? "sheetMusic" : "lyrics";
+      writePreferredContentView(next);
+      return next;
     });
   }, []);
 
@@ -1082,24 +1094,24 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
               )}
               <ViewToggleGroup>
                 <ViewToggleButton
-                  onClick={() => setContentView("chords")}
-                  $active={contentView === "chords"}
-                  title={t("performance.showChords", "Show Chords")}
-                >
-                  <i className="bi bi-music-note"></i>
-                  {t("performance.chords", "Chords")}
-                </ViewToggleButton>
-                <ViewToggleButton
-                  onClick={() => setContentView("lyrics")}
+                  onClick={() => chooseContentView("lyrics")}
                   $active={contentView === "lyrics"}
                   title={t("performance.showLyrics", "Show Lyrics")}
                 >
                   <i className="bi bi-mic"></i>
                   {t("performance.lyrics", "Lyrics")}
                 </ViewToggleButton>
+                <ViewToggleButton
+                  onClick={() => chooseContentView("chords")}
+                  $active={contentView === "chords"}
+                  title={t("performance.showChords", "Show Chords")}
+                >
+                  <i className="bi bi-music-note"></i>
+                  {t("performance.chords", "Chords")}
+                </ViewToggleButton>
                 {isCurrentItemSong && (
                   <ViewToggleButton
-                    onClick={() => setContentView("sheetMusic")}
+                    onClick={() => chooseContentView("sheetMusic")}
                     $active={contentView === "sheetMusic"}
                     title={t("performance.showSheetMusic", "Show Sheet Music")}
                   >

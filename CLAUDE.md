@@ -433,6 +433,11 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   (`src/lib/performPosition.ts`) persist `{ currentIndex, contentView,
   selectedSheetMusicId }` per user and setlist in `localStorage`, 12 h expiry,
   restored on mount for every source; `wipeAll()` clears them.
+- **Content view:** the toolbar order is Lyrics · Chords · Sheet (the `T`
+  shortcut and mobile toggle cycle the same way). Without a saved position the
+  view opens on the user's last pick (`readPreferredContentView`,
+  device-wide `bandmate_perform_content_view`, default Lyrics; not cleared by
+  `wipeAll()`: it names no setlist).
 
 ### Real-time Features
 
