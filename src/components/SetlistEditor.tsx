@@ -849,15 +849,19 @@ const SetlistEditor: FC = () => {
               {/* Add songs (narrow), add special item and AI optimize */}
               <AddItemBar>
                 {!capabilities.wide && (
-                  <AddSongsButton onClick={() => setIsPickerSheetOpen(true)}>
+                  <AddSongsButton onClick={() => setIsPickerSheetOpen(true)} aria-label={t("setlists.picker.addSongs")}>
                     <i className="bi bi-plus-lg"></i>
-                    {t("setlists.picker.addSongs")}
+                    <ButtonLabel>{t("setlists.picker.addSongsShort")}</ButtonLabel>
                   </AddSongsButton>
                 )}
                 <AddItemDropdownWrapper>
-                  <AddItemButton onClick={() => setShowAddMenu(!showAddMenu)}>
+                  <AddItemButton
+                    onClick={() => setShowAddMenu(!showAddMenu)}
+                    aria-label={capabilities.wide ? undefined : t("setlists.items.addSpecialItem")}
+                    aria-expanded={showAddMenu}
+                  >
                     <i className="bi bi-plus-lg"></i>
-                    {t("setlists.items.addSpecialItem")}
+                    {capabilities.wide ? t("setlists.items.addSpecialItem") : t("setlists.items.addSpecialItemShort")}
                     <i className={`bi bi-chevron-${showAddMenu ? "up" : "down"}`}></i>
                   </AddItemButton>
                   {showAddMenu && (
@@ -878,9 +882,14 @@ const SetlistEditor: FC = () => {
                   )}
                 </AddItemDropdownWrapper>
                 {groqService.isConfigured() && songItemsInSetlist.length >= 3 && (
-                  <OptimizeButton onClick={handleOptimizeOrder} disabled={optimizing}>
+                  <OptimizeButton
+                    onClick={handleOptimizeOrder}
+                    disabled={optimizing}
+                    title={t("ai.optimizeOrder")}
+                    aria-label={capabilities.wide ? undefined : t("ai.optimizeOrder")}
+                  >
                     <i className="bi bi-magic"></i>
-                    {t("ai.optimizeOrder")}
+                    {capabilities.wide && t("ai.optimizeOrder")}
                   </OptimizeButton>
                 )}
               </AddItemBar>
@@ -1329,10 +1338,16 @@ const SetlistPanel = styled.div`
 
 const PanelHeader = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: ${theme.space[1]} ${theme.space[3]};
   padding: ${theme.space[5]};
   border-bottom: 1px solid var(--color-border);
+
+  @media ${narrow} {
+    padding: ${theme.space[4]};
+  }
 `;
 
 const PanelTitle = styled.h2`
@@ -1353,6 +1368,7 @@ const PanelStats = styled.div`
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-secondary);
   font-weight: ${theme.fontWeights.medium};
+  white-space: nowrap;
 `;
 
 
@@ -1847,6 +1863,13 @@ const SpecialItemDuration = styled.div`
   }
 `;
 
+/* Shrinks with an ellipsis instead of overflowing a narrow button. */
+const ButtonLabel = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
 const AddItemBar = styled.div`
   padding: ${theme.space[3]} ${theme.space[4]};
   border-bottom: 1px solid var(--color-border);
@@ -1854,12 +1877,35 @@ const AddItemBar = styled.div`
   flex-wrap: wrap;
   gap: ${theme.space[3]};
   align-items: center;
+
+  /*
+   * Narrow: one row. Add songs takes the room; Add item shows a short label
+   * and Optimize only its icon (both keep the full name as aria-label).
+   */
+  @media ${narrow} {
+    flex-wrap: nowrap;
+    gap: ${theme.space[2]};
+    padding: ${theme.space[3]};
+
+    > ${AddSongsButton} {
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+      overflow: hidden;
+      padding: ${theme.space[2]} ${theme.space[3]};
+    }
+  }
 `;
 
 const AddItemDropdownWrapper = styled.div`
   position: relative;
   flex: 1;
   min-width: 160px;
+
+  @media ${narrow} {
+    flex: none;
+    min-width: 0;
+  }
 `;
 
 const AddItemButton = styled.button`
@@ -1892,6 +1938,19 @@ const AddItemButton = styled.button`
     font-size: ${theme.fontSizes.bodyXs};
     margin-left: auto;
   }
+
+  @media ${narrow} {
+    min-height: 44px;
+    padding: ${theme.space[2]} ${theme.space[3]};
+    white-space: nowrap;
+  }
+
+  /* 320px phones: the chevron is the first thing to go. */
+  @media (max-width: 359.98px) {
+    i:last-child {
+      display: none;
+    }
+  }
 `;
 
 const AddItemMenu = styled.div`
@@ -1906,6 +1965,12 @@ const AddItemMenu = styled.div`
   overflow: hidden;
   z-index: 100;
   box-shadow: var(--shadow-lg);
+
+  /* Narrow: the trigger is compact; open leftwards at a readable width. */
+  @media ${narrow} {
+    left: auto;
+    min-width: 200px;
+  }
 `;
 
 const AddItemMenuItem = styled.button`
@@ -1961,6 +2026,14 @@ const OptimizeButton = styled.button`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  @media ${narrow} {
+    flex-shrink: 0;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 `;
 

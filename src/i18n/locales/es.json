@@ -414,6 +414,7 @@
       "addSection": "Agregar Sección",
       "addNote": "Agregar Nota",
       "addSpecialItem": "Agregar Item",
+      "addSpecialItemShort": "Item",
       "breakLabel": "Etiqueta de Pausa",
       "sectionLabel": "Etiqueta de Sección",
       "noteLabel": "Texto de Nota",
@@ -450,6 +451,7 @@
     "picker": {
       "title": "Biblioteca de Canciones",
       "addSongs": "Agregar canciones",
+      "addSongsShort": "Canciones",
       "filters": "Filtros",
       "clearFilters": "Limpiar filtros",
       "filter": {
