@@ -173,6 +173,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) — spec: song country/language as ISO codes with localised dropdowns
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) — spec: themed AI setlist generation
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) — spec: perform a single song from the library
+- [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) — spec: setlist text export (layouts, preview, copy/share)
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
