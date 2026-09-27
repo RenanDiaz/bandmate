@@ -196,6 +196,9 @@ export const theme = {
     sm: '576px',
     md: '768px',
     lg: '992px',
+    // Upper bound of "below lg" for max-width queries: Bootstrap's lg starts
+    // at min-width 992px, so max-width 992px would overlap it at exactly 992.
+    lgDown: '991.98px',
     xl: '1200px',
     xxl: '1400px',
   },

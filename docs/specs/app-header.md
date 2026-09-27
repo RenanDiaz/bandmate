@@ -1,6 +1,7 @@
 # Spec: Lighter app header
 
-> **Status:** draft · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented, manual validation (AC5–AC8 on device) pending ·
+> **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Mejorar header de la app, mover About a otra pantalla, no
 > es necesario mostrarlo en el navbar, sobre todo en desktop, porque ya ocupa
 > mucho espacio".
@@ -11,6 +12,27 @@
 > tempt a new nav link.
 
 This is a design, not code. Signatures are the contract; no bodies here.
+
+## Changelog
+
+- **2026-09-27 — PR 1.1, corrections found while implementing.**
+  1. *Breakpoint boundary.* Bootstrap's `expand="lg"` is `min-width: 992px`,
+     so the header's `max-width` queries use `theme.breakpoints.lgDown`
+     (`991.98px`, new) instead of `lg` (§3.4); with `lg` both layouts applied
+     at exactly 992 px. The offcanvas-side queries (`MobileBandInfo`,
+     `BandDivider`, `StyledNavLink`) moved with the others; `md` queries
+     outside the header and `BandSwitcher`'s `useIsMobile()` are unchanged.
+  2. *User menu order.* The menu gained "Check for updates" after this spec
+     was written. Final order (both placements): Signed in as / offline hint ·
+     Language · About · Check for updates · Sign out. The label is
+     `t("nav.about")` ("About"), not "About Bandmate" (§3.5: no new keys).
+  3. *`DropdownItem` is AuthButton's local `MenuItem` (`styled.button`), not
+     reactstrap.* Rendered `as={Link}` it gets `text-decoration: none` and
+     otherwise the button rows' styles (colour, hover, full width); it is
+     keyboard-focusable and closes the menu (drawer: `onAction`).
+  4. `NAV_LINKS` and `isNavLinkActive` live in `src/components/navLinks.ts`
+     (§3.1 put them in `AppNavbar.tsx`): exporting them from a component file
+     adds two `react-refresh/only-export-components` lint warnings.
 
 ## 0. Where we are
 

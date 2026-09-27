@@ -50,7 +50,7 @@ app would not start offline). If it fires, look at `globPatterns`,
 
 ```
 src/
-├── components/        # React components (views, modals, forms)
+├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors)
 ├── i18n/              # i18next setup + locales/{en,es}.json
@@ -61,7 +61,7 @@ src/
 ├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
-├── App.tsx            # Root component: providers + navbar (desktop bar + mobile drawer; see "Account menu")
+├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
 ├── AppMain.tsx        # Auth/band gates and <Routes> (offline screens, §7.3)
 └── main.tsx           # Entry point
 supabase/
@@ -126,6 +126,15 @@ migrations/            # Legacy SQL, applied manually — historical reference
 
 Unknown paths redirect to `/`. The source of truth is the `<Routes>` block in `src/AppMain.tsx`. Offline, most
 routes render a fallback instead (see "Offline screens").
+
+**Header** (`src/components/AppNavbar.tsx`,
+[docs/specs/app-header.md](docs/specs/app-header.md)). Desktop and offcanvas
+render from one `NAV_LINKS` array (`src/components/navLinks.ts`); the active
+rule lives only in `isNavLinkActive`. The desktop layout starts at `lg`
+(992 px): its `max-width` queries use `theme.breakpoints.lgDown` (991.98 px),
+never `lg`, or both layouts apply at exactly 992 px. Home is offcanvas-only
+(the logo is the home link on desktop). About is not a nav link: it is
+reached from the footer and the user menu.
 
 ### Data Flow
 
@@ -312,8 +321,8 @@ also used by the schema-wipe notice's Download buttons).
 
 ### Offline screens (PR 2.5)
 
-Routing lives in `src/AppMain.tsx` (extracted from `App.tsx`, which keeps the
-navbar). **"Offline" is `useOfflineUi()`**: flag on, a user known (`session`
+Routing lives in `src/AppMain.tsx` (extracted from `App.tsx`; the navbar is
+`src/components/AppNavbar.tsx`). **"Offline" is `useOfflineUi()`**: flag on, a user known (`session`
 or `offline-cached`) and the context's `isOnline` false, which includes
 `reportNetworkFailure()`'s forced-offline window. `<OfflineAware offline={…}>` renders
 the offline screen *instead of* the online view (the online view is not
@@ -369,13 +378,14 @@ successes, and always ends band
 resolution so a failed load renders the no-band UI instead of a spinner.
 
 **Account menu** (`src/AuthButton.tsx`, one component, two layouts). In the
-desktop bar it is `variant="dropdown"`: a trigger with avatar + email opens a
-floating menu (closed by Escape, a click outside or the trigger). In the mobile
-drawer (`CustomOffcanvas`) it is `variant="inline"`: the same content as flat
-rows of the drawer (account header, Language, Check for updates, Sign out) with
-`onAction` closing the drawer. Never render a floating menu inside the drawer:
+desktop bar it is `variant="dropdown"` with `compact`: a trigger with the avatar
+(no email; the open menu shows it) opens a floating menu (closed by Escape, a
+click outside or the trigger). In the mobile drawer (`CustomOffcanvas`) it is
+`variant="inline"`: the same content as flat rows of the drawer (account
+header, Language, About, Check for updates, Sign out) with `onAction` closing
+the drawer. About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
 anchored to its last row it opens below the viewport. Tests:
-`src/__tests__/AuthButton.test.tsx`.
+`src/__tests__/AuthButton.test.tsx`, header: `src/components/__tests__/AppNavbar.test.tsx`.
 
 **Service worker updates** use `registerType: 'prompt'`. `PwaUpdater`
 (`src/lib/pwaUpdates.ts`, plain TS, unit-tested; one instance via
@@ -792,7 +802,7 @@ needed") so reviewers know it was checked, not skipped.
 1. Add route in `src/AppMain.tsx` within the `<Routes>` block (wrap it in
    `OfflineAware` with `NeedsConnection` unless it works offline)
 2. Create component in `src/components/`
-3. Add navigation link if needed in navbar
+3. Add a navigation link if needed: one entry in `NAV_LINKS` (`src/components/navLinks.ts`)
 4. If the route should be indexable, add it to `src/lib/siteConfig.ts`
 5. Add it to the route table above
 
@@ -821,6 +831,6 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
-- [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (draft): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
+- [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (draft): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

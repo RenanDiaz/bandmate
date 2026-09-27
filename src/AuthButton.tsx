@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled, { css } from "styled-components";
 import { theme } from "./theme";
@@ -14,23 +15,25 @@ import { getPwaUpdater } from "./lib/pwaUpdates";
 /**
  * The account menu, in two layouts:
  *
- * - `dropdown` (default): the desktop navbar. A trigger with the avatar and
- *   email opens a floating menu below it, closed by Escape, a click outside
- *   or the trigger.
+ * - `dropdown` (default): the desktop navbar. A trigger with the avatar (and
+ *   the email, unless `compact`) opens a floating menu below it, closed by
+ *   Escape, a click outside or the trigger.
  * - `inline`: the mobile navigation drawer. The same content rendered flat
- *   (account header, language, Check for updates, Sign out) as rows of the
- *   drawer itself: a floating menu anchored to the drawer's last row opened
+ *   (account header, language, About, Check for updates, Sign out) as rows of
+ *   the drawer itself: a floating menu anchored to the drawer's last row opened
  *   below the viewport and had to be scrolled into view.
  *
  * `onAction` fires when an action finished (sign-out done, update check
- * answered) so the drawer can close.
+ * answered, About opened) so the drawer can close.
  */
 interface AuthButtonProps {
   variant?: "dropdown" | "inline";
   onAction?: () => void;
+  /** Desktop header: avatar + chevron only; the email stays in the open menu. */
+  compact?: boolean;
 }
 
-export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction }) => {
+export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction, compact = false }) => {
   const { t, i18n } = useTranslation();
   // The context's user, not a second getSession(): offline that call can take
   // ≈25 s, and the navbar must agree with the rest of the app (spec §7.1).
@@ -182,6 +185,19 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         </LanguageButtons>
       </LanguageSection>
       {!inline && <MenuDivider />}
+      {/* /about needs no connection: shown in session and offline-cached. */}
+      <MenuItem
+        as={Link}
+        to="/about"
+        $inline={inline}
+        onClick={() => {
+          setShowUserMenu(false);
+          onAction?.();
+        }}
+      >
+        <i className="bi bi-info-circle"></i>
+        <span>{t('nav.about')}</span>
+      </MenuItem>
       <MenuItem $inline={inline} onClick={checkForUpdate} disabled={checkingUpdate}>
         {checkingUpdate ? (
           <>
@@ -226,6 +242,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
   return (
     <UserMenuContainer ref={menuRef}>
       <UserButton
+        $compact={compact}
         onClick={() => setShowUserMenu(!showUserMenu)}
         disabled={loading}
         aria-label={t('auth.userMenu')}
@@ -233,7 +250,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         aria-expanded={showUserMenu}
       >
         {avatar}
-        <UserEmail>{userLabel}</UserEmail>
+        {!compact && <UserEmail>{userLabel}</UserEmail>}
         <i className={`bi bi-chevron-${showUserMenu ? 'up' : 'down'}`}></i>
       </UserButton>
 
@@ -317,7 +334,7 @@ const UserMenuContainer = styled.div`
   position: relative;
 `;
 
-const UserButton = styled.button`
+const UserButton = styled.button<{ $compact: boolean }>`
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
@@ -329,7 +346,7 @@ const UserButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
-  min-width: 120px;
+  min-width: ${(props) => (props.$compact ? "0" : "120px")};
 
   &:hover:not(:disabled) {
     border-color: ${theme.colors.brand.primary};
@@ -376,10 +393,6 @@ const UserEmail = styled.span`
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    display: none;
-  }
 `;
 
 const UserDropdown = styled.div`
@@ -489,6 +502,8 @@ const MenuItem = styled.button<{ $inline: boolean }>`
   background: transparent;
   border: none;
   text-align: left;
+  /* Also rendered as a Link (About): look like the button rows. */
+  text-decoration: none;
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
 

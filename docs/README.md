@@ -44,7 +44,7 @@ docs/
 - [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one phase, one PR; fragments are v2)
 
 ## Header and personal agenda (2026-09-27)
-- [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR)
+- [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR; implemented, manual validation pending)
 - [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, two PRs)
 
 ## Research

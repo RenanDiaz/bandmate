@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthButton } from "../AuthButton";
 import { performUserSignOut } from "../context/offlineAuthController";
@@ -40,6 +40,21 @@ describe("AuthButton inline (mobile drawer)", () => {
 
     await waitFor(() => expect(onAction).toHaveBeenCalledTimes(1));
     expect(performUserSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists About between Language and Check for updates, and closes the drawer on it", async () => {
+    const onAction = vi.fn();
+    renderApp(<AuthButton variant="inline" onAction={onAction} />, { ctx: signedIn });
+
+    const about = screen.getByRole("link", { name: "About" });
+    expect(about.getAttribute("href")).toBe("/about");
+    const panel = screen.getByTestId("account-panel");
+    const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
+    expect(labels).toEqual(["EN", "ES", "About", "Check for updates", "Sign out"]);
+
+    await userEvent.click(about);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("location").textContent).toBe("/about");
   });
 
   it("shows the offline hint instead of an email in offline-cached", () => {
@@ -84,6 +99,39 @@ describe("AuthButton dropdown (desktop navbar)", () => {
     expect(screen.getByRole("menu")).toBeTruthy();
     fireEvent.mouseDown(screen.getByText("outside"));
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("the About item navigates to /about and closes the menu (AC3)", async () => {
+    renderApp(<AuthButton />, { ctx: signedIn });
+    await userEvent.click(screen.getByRole("button", { name: "User menu" }));
+
+    const menu = screen.getByRole("menu");
+    const labels = Array.from(menu.querySelectorAll("button, a"), (el) => el.textContent?.trim());
+    expect(labels).toEqual(["EN", "ES", "About", "Check for updates", "Sign out"]);
+
+    const about = within(menu).getByRole("link", { name: "About" });
+    expect(about.getAttribute("href")).toBe("/about");
+    await userEvent.click(about);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.getByTestId("location").textContent).toBe("/about");
+  });
+
+  it("offers About in offline-cached too", async () => {
+    renderApp(<AuthButton />, {
+      ctx: bandContext({ user: { id: "user-a", offlineCached: true }, authMode: "offline-cached" }),
+    });
+    await userEvent.click(screen.getByRole("button", { name: "User menu" }));
+
+    expect(within(screen.getByRole("menu")).getByRole("link", { name: "About" })).toBeTruthy();
+  });
+
+  it("compact shows no email in the trigger; the default trigger does", () => {
+    const { unmount } = renderApp(<AuthButton compact />, { ctx: signedIn });
+    expect(screen.getByRole("button", { name: "User menu" }).textContent).not.toContain("ana@example.com");
+    unmount();
+
+    renderApp(<AuthButton />, { ctx: signedIn });
+    expect(screen.getByRole("button", { name: "User menu" }).textContent).toContain("ana@example.com");
   });
 
   it("stays open on a click inside the menu", async () => {
