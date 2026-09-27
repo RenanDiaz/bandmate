@@ -108,6 +108,7 @@
     "scheduleShow": "Schedule a show",
     "show": "Show",
     "rehearsal": "Rehearsal",
+    "switchedToBand": "Switched to {{band}}",
     "noSongsYet": "No songs in your library yet",
     "addFirstSong": "Add your first song",
     "quickActions": "Quick Actions",

@@ -1,13 +1,7 @@
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../../theme";
-import type { Show } from "../../services/showsService";
-import type { Rehearsal } from "../../services/rehearsalsService";
-
-// Unified event type for shows and rehearsals
-export type UpcomingEvent =
-  | { type: 'show'; data: Show; date: string }
-  | { type: 'rehearsal'; data: Rehearsal; date: string };
+import type { UpcomingEvent } from "../../utils/upcomingEvents";
 
 interface UpcomingEventRowProps {
   event: UpcomingEvent;
@@ -89,19 +83,16 @@ export const UpcomingEventRow = ({ event, locale, onOpen }: UpcomingEventRowProp
           </EventTypeBadge>
         </EventTypeRow>
         <ShowName>{event.data.name}</ShowName>
-        {event.type === 'show' && (event.data as Show).venue && (
-          <ShowVenue>{(event.data as Show).venue}</ShowVenue>
+        {event.type === 'show' && event.data.venue && (
+          <ShowVenue>{event.data.venue}</ShowVenue>
         )}
-        {event.type === 'rehearsal' && (event.data as Rehearsal).location && (
-          <ShowVenue>{(event.data as Rehearsal).location}</ShowVenue>
+        {event.type === 'rehearsal' && event.data.location && (
+          <ShowVenue>{event.data.location}</ShowVenue>
         )}
         <ShowMeta>
           <span>{formatDate(event.date)}</span>
-          {event.type === 'show' && (event.data as Show).event_time && (
-            <span> {t('home.at')} {formatTime((event.data as Show).event_time!)}</span>
-          )}
-          {event.type === 'rehearsal' && (event.data as Rehearsal).start_time && (
-            <span> {t('home.at')} {formatTime((event.data as Rehearsal).start_time!)}</span>
+          {event.time && (
+            <span> {t('home.at')} {formatTime(event.time)}</span>
           )}
           <CountdownBadge>{getDaysUntil(event.date)}</CountdownBadge>
         </ShowMeta>

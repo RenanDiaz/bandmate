@@ -108,6 +108,7 @@
     "scheduleShow": "Programar un show",
     "show": "Show",
     "rehearsal": "Ensayo",
+    "switchedToBand": "Cambiaste a {{band}}",
     "noSongsYet": "Aún no hay canciones en tu biblioteca",
     "addFirstSong": "Agrega tu primera canción",
     "quickActions": "Acciones Rápidas",

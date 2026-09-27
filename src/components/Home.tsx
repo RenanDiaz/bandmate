@@ -19,7 +19,8 @@ import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { OfflineLockedHome } from "./offline/OfflineMessage";
 import { SchemaWipeNotice } from "./offline/SchemaWipeNotice";
 import { UpcomingEventRow } from "./home/UpcomingEventRow";
-import type { UpcomingEvent } from "./home/UpcomingEventRow";
+import { eventPath, mergeUpcomingEvents } from "../utils/upcomingEvents";
+import type { UpcomingEvent } from "../utils/upcomingEvents";
 
 const Home = () => {
   const { t, i18n } = useTranslation();
@@ -47,21 +48,7 @@ const Home = () => {
           setSongs(songsData);
           setSetlists(setlistsData);
 
-          // Combine and sort shows and rehearsals by date
-          const events: UpcomingEvent[] = [
-            ...showsData.map((show): UpcomingEvent => ({
-              type: 'show',
-              data: show,
-              date: show.event_date,
-            })),
-            ...rehearsalsData.map((rehearsal): UpcomingEvent => ({
-              type: 'rehearsal',
-              data: rehearsal,
-              date: rehearsal.rehearsal_date,
-            })),
-          ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-          setUpcomingEvents(events);
+          setUpcomingEvents(mergeUpcomingEvents(showsData, rehearsalsData));
         })
         .catch((error) => {
           console.error(error);
@@ -163,10 +150,10 @@ const Home = () => {
                         <ShowsList>
                           {upcomingEvents.slice(0, 4).map((event) => (
                             <UpcomingEventRow
-                              key={`${event.type}-${event.data.id}`}
+                              key={`${event.type}-${event.id}`}
                               event={event}
                               locale={currentLocale}
-                              onOpen={() => navigate(event.type === 'show' ? `/shows/${event.data.id}` : `/rehearsals/${event.data.id}`)}
+                              onOpen={() => navigate(eventPath(event))}
                             />
                           ))}
                         </ShowsList>
