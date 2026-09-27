@@ -712,4 +712,6 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (in progress, PR 1 done): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (draft): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 PR; fragments are v2)
 - [migrations/README.md](migrations/README.md) - Database migration guide

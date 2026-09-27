@@ -38,6 +38,10 @@ docs/
 - [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, two PRs)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (two PRs)
 
+## Setlist creation (2026-09-27)
+- [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three PRs, no AI; §11 records the AI follow-up)
+- [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one PR; fragments are v2)
+
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 
