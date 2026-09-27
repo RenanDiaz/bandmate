@@ -181,6 +181,8 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) — spec: setlist actions layout (detail header, reorder toolbar, list cards)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
+- [docs/specs/app-header.md](docs/specs/app-header.md) — spec: lighter app header (About out of the nav, one link list, desktop from `lg`)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec: my upcoming events across bands on the dashboard
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
@@ -188,22 +190,10 @@ Architecture, conventions, routes and the data model are documented in
 - Move Spotify and Groq calls behind Edge Functions (keep secrets off the client)
 - Automated tests
 
-### Backlog (2026-09-27, no spec yet)
+### Backlog (2026-09-27)
 
-- **Lighter app header.** The navbar is crowded, above all on desktop. Take
-  "About" out of the main links: it is a marketing page, not a band tool, and
-  it stays reachable from the landing, the footer and the user menu. Review
-  the remaining links and actions (band name, settings, theme, auth) so the
-  header fits without wrapping.
-- **Cross-band dashboard ("my" view).** A personal overview of the upcoming
-  events (shows and rehearsals) of *every* band the user belongs to, sorted by
-  date and labelled with the band. No songs or setlists: those belong to one
-  band. Tapping an event opens it inside its band, i.e. it selects that band
-  first and then navigates to `/shows/:id` or `/rehearsals/:id` (same for a
-  show's linked setlist). Open questions for the spec: where it lives (the
-  dashboard at `/` when the user has several bands, a tab on it, or a new
-  route), how it behaves with one band, and how the band switch is shown so
-  the user is not surprised by the header changing.
+- **Lighter app header** — spec: [docs/specs/app-header.md](docs/specs/app-header.md)
+- **My upcoming events across bands** — spec: [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md)
 
 ## 🤝 Contributing
 

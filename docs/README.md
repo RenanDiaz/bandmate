@@ -43,6 +43,10 @@ docs/
 - [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three phases, four PRs, no AI; §11 records the AI follow-up)
 - [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one phase, one PR; fragments are v2)
 
+## Header and personal agenda (2026-09-27)
+- [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR)
+- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, two PRs)
+
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 
