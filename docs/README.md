@@ -10,7 +10,7 @@ docs/
 ├── guides/     # how a part of the app works
 ├── design/     # design system
 ├── intents/    # why a feature exists and what "done" means
-├── specs/      # technical specs, with the PR breakdown
+├── specs/      # technical specs, with the phase and PR breakdown
 └── research/   # evaluations; not a description of the app
 ```
 
@@ -35,12 +35,12 @@ docs/
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
 - [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
-- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, two PRs)
+- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
 
 ## Setlist creation (2026-09-27)
-- [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three PRs, no AI; §11 records the AI follow-up)
-- [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one PR; fragments are v2)
+- [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three phases, four PRs, no AI; §11 records the AI follow-up)
+- [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one phase, one PR; fragments are v2)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

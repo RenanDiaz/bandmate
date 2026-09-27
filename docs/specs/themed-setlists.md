@@ -3,7 +3,7 @@
 > **Status:** draft · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** TODO "Generar playlists temáticos".
 > **Scope:** a *theme* input on the existing AI setlist generator, the song
-> facts the prompt needs to honour it, and response validation. One PR.
+> facts the prompt needs to honour it, and response validation. One phase, one PR (§9).
 > **Depends on:** nothing. Pairs well with
 > [content-permissions.md](content-permissions.md) (hides the generator from
 > guests) and [song-country-language.md](song-country-language.md) (ISO codes
@@ -310,5 +310,17 @@ docs/guides/song-metadata.md                "themes use these fields"
 README.md                                   Features: "themed generation"
 CLAUDE.md                                   services table: setlistThemes, aiSetlistValidation
 ```
+
+## 9. Phases and PRs
+
+### Phase 1 — themed generation
+
+**Goal:** the AI generator takes a theme (preset or free text), treats it as
+a hard filter, reports shortfalls, and never returns an invented song.
+**Closes:** AC1–AC14. **Validate (manual):** AC10–AC12 per §6, with the
+model used.
+
+- **PR 1.1 — theme input, catalog facts, validation.** Everything in §3,
+  §4 and §8.
 
 Definition of done: the `CLAUDE.md` checklist, plus the manual notes in §6.

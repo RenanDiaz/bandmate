@@ -5,7 +5,8 @@
 > una sola, pudiéndose nombrar o no".
 > **Scope:** group consecutive songs of a setlist into a named or unnamed
 > medley that reads as one entry everywhere the setlist is shown, without
-> changing how anything counts, navigates or stores songs. One PR (§8).
+> changing how anything counts, navigates or stores songs. One phase,
+> one PR (§8).
 > Song *fragments* ("only the chorus of B") are v2 and excluded (§9).
 > **Depends on:** nothing. [setlist-builder.md](setlist-builder.md) §3.4
 > reserves the picker's "Add as medley" button for it.
@@ -288,9 +289,17 @@ DOM: editor bracket card render (group, rename, ungroup call the utils);
 performance badge and "Up next" for a member (render test with the test
 i18next instance).
 
-## 8. PR breakdown
+## 8. Phases and PRs
 
-One PR, in this order inside it:
+### Phase 1 — medleys
+
+**Goal:** a band groups consecutive songs into a named or unnamed medley
+that reads as one entry in the editor, detail, print, text export and
+performance mode, with counting, navigation and sync unchanged.
+**Closes:** AC1–AC10. **Validate (manual):** AC1–AC6 and AC8 in the dev
+server, AC9 with an offline snapshot made before the change.
+
+**PR 1.1 — medleys**, in this order inside it:
 
 1. Data + utils + tests (§2, §4, §7).
 2. Editor: selection → Group as medley, bracket card, nested sortable,
@@ -301,9 +310,10 @@ One PR, in this order inside it:
    named entry"; CLAUDE.md schema table (`setlists` row: song items may
    carry `medley { id, label? }`).
 
-If the PR grows past review size, split after step 3 (editor + views) and
-ship performance mode as PR 2; the data model is complete after step 1
-either way.
+If the PR grows past review size, split after step 3: PR 1.1 is steps 1–3
+(data, editor, views) and PR 1.2 is performance mode (step 4) plus step 5.
+Both stay in Phase 1; the data model is complete after step 1 either way,
+and the phase is validated once both merge.
 
 ## 9. Out of scope (v2 candidates)
 
