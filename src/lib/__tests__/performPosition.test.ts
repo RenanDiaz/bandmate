@@ -3,8 +3,11 @@ import {
   PERFORM_POSITION_MAX_AGE_MS,
   clearAllPerformPositions,
   performPositionKey,
+  PREFERRED_CONTENT_VIEW_KEY,
   readPerformPosition,
+  readPreferredContentView,
   writePerformPosition,
+  writePreferredContentView,
 } from "../performPosition";
 
 const position = { currentIndex: 4, contentView: "sheetMusic" as const, selectedSheetMusicId: "sm-2" };
@@ -53,5 +56,24 @@ describe("perform position (A2, §9.4)", () => {
     expect(readPerformPosition("u1", "x", now.getTime())).toBeNull();
     clearAllPerformPositions();
     expect(readPerformPosition("u1", "song:x", now.getTime())).toBeNull();
+  });
+});
+
+describe("preferred content view", () => {
+  it("defaults to lyrics, then returns the last pick", () => {
+    expect(readPreferredContentView()).toBe("lyrics");
+    writePreferredContentView("sheetMusic");
+    expect(readPreferredContentView()).toBe("sheetMusic");
+  });
+
+  it("ignores an unknown stored value", () => {
+    localStorage.setItem(PREFERRED_CONTENT_VIEW_KEY, "tabs");
+    expect(readPreferredContentView()).toBe("lyrics");
+  });
+
+  it("survives clearing the positions", () => {
+    writePreferredContentView("chords");
+    clearAllPerformPositions();
+    expect(readPreferredContentView()).toBe("chords");
   });
 });

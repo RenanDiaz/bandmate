@@ -90,3 +90,28 @@ export function writePerformPosition(
     console.warn("Could not save the performance position:", error);
   }
 }
+
+/**
+ * The content view the user last picked in performance mode, device-wide
+ * (like the font size and PDF inversion): the default when a setlist or song
+ * has no saved position. Not per setlist, so `wipeAll()` leaves it.
+ */
+export const PREFERRED_CONTENT_VIEW_KEY = "bandmate_perform_content_view";
+
+export function readPreferredContentView(): PerformPosition["contentView"] {
+  try {
+    const value = localStorage.getItem(PREFERRED_CONTENT_VIEW_KEY);
+    if (CONTENT_VIEWS.includes(value as PerformPosition["contentView"])) return value as PerformPosition["contentView"];
+  } catch {
+    // Blocked storage: fall back to the default.
+  }
+  return "lyrics";
+}
+
+export function writePreferredContentView(view: PerformPosition["contentView"]): void {
+  try {
+    localStorage.setItem(PREFERRED_CONTENT_VIEW_KEY, view);
+  } catch (error) {
+    console.warn("Could not save the preferred content view:", error);
+  }
+}
