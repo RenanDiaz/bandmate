@@ -61,7 +61,7 @@ src/
 ├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
-├── App.tsx            # Root component: providers + navbar
+├── App.tsx            # Root component: providers + navbar (desktop bar + mobile drawer; see "Account menu")
 ├── AppMain.tsx        # Auth/band gates and <Routes> (offline screens, §7.3)
 └── main.tsx           # Entry point
 supabase/
@@ -367,6 +367,15 @@ so the whole tree shares one value; don't call the hook again elsewhere.
 `BandContext` reports `getMyBands()` network failures (not HTTP errors) and
 successes, and always ends band
 resolution so a failed load renders the no-band UI instead of a spinner.
+
+**Account menu** (`src/AuthButton.tsx`, one component, two layouts). In the
+desktop bar it is `variant="dropdown"`: a trigger with avatar + email opens a
+floating menu (closed by Escape, a click outside or the trigger). In the mobile
+drawer (`CustomOffcanvas`) it is `variant="inline"`: the same content as flat
+rows of the drawer (account header, Language, Check for updates, Sign out) with
+`onAction` closing the drawer. Never render a floating menu inside the drawer:
+anchored to its last row it opens below the viewport. Tests:
+`src/__tests__/AuthButton.test.tsx`.
 
 **Service worker updates** use `registerType: 'prompt'`. `PwaUpdater`
 (`src/lib/pwaUpdates.ts`, plain TS, unit-tested; one instance via

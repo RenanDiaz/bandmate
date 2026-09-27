@@ -298,7 +298,9 @@ const AppContent: FC = () => {
                 {mode === "dark" ? t('nav.lightMode') : t('nav.darkMode')}
               </span>
             </ThemeToggleButton>
-            <AuthButton />
+            {/* Flat account rows, not a nested dropdown: a floating menu at the
+                drawer's bottom opened below the viewport. */}
+            <AuthButton variant="inline" onAction={() => setIsOpen(false)} />
           </NavActions>
         </OffcanvasBody>
       </CustomOffcanvas>
@@ -609,7 +611,7 @@ const StyledNavLink = styled.a<{ $active: boolean; $mode: "light" | "dark" }>`
 const NavActions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${theme.space[2]};
+  gap: ${theme.space[3]};
   width: 100%;
   margin-top: auto;
   padding-top: ${theme.space[4]};
