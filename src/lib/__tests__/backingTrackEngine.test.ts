@@ -11,6 +11,9 @@ class FakeAudio {
   paused = true;
   currentTime = 0;
   duration = 120;
+  readyState = 4;
+  networkState = 1;
+  error = null;
   released = false;
   playResult: Promise<void> = Promise.resolve();
   private listeners = new Map<string, Set<() => void>>();
@@ -129,6 +132,7 @@ beforeEach(() => {
     clearTimeout: (handle) => {
       (handle as { cleared: boolean }).cleared = true;
     },
+    log: vi.fn(),
   };
   engine = new BackingTrackEngine(listener as unknown as BackingTrackEngineListener, deps);
   engine.setSource("blob:track");
@@ -151,10 +155,13 @@ describe("BackingTrackEngine", () => {
     engine.stop();
     expect(engine.isPlaying).toBe(false);
     expect(listener.onTimeUpdate).toHaveBeenLastCalledWith(0);
+    // Created at the stop, not in the next tap: it loads in the meantime.
+    expect(audios).toHaveLength(2);
+    expect(audios[0].released).toBe(true);
+    expect(audios[1].paused).toBe(true);
 
     engine.play();
     expect(audios).toHaveLength(2);
-    expect(audios[0].released).toBe(true);
     expect(current().currentTime).toBe(0);
     expect(current().paused).toBe(false);
     expect(contexts).toHaveLength(1);
@@ -201,6 +208,7 @@ describe("BackingTrackEngine", () => {
     current().currentTime = 120;
     current().paused = true;
     current().emit("ended");
+    expect(audios).toHaveLength(2);
     engine.play();
     expect(audios).toHaveLength(2);
     expect(current().currentTime).toBe(0);
@@ -242,6 +250,10 @@ describe("BackingTrackEngine", () => {
       current().currentTime = 0.01;
       runTimers();
       const [firstContext] = contexts;
+      // The dead graph goes and the replacement element loads before the tap.
+      expect(firstContext.closed).toBe(true);
+      expect(audios).toHaveLength(2);
+      expect(audios[1].paused).toBe(true);
 
       engine.play();
       expect(firstContext.closed).toBe(true);
@@ -297,6 +309,15 @@ describe("BackingTrackEngine", () => {
       expect(contexts).toHaveLength(2);
       expect(audios).toHaveLength(2);
     });
+  });
+
+  it("logs each play, the watchdog's verdict and a stall's reason", () => {
+    const log = (engine as unknown as { deps: BackingTrackEngineDeps }).deps.log;
+    engine.play();
+    expect(log).toHaveBeenCalledWith("play", expect.objectContaining({ createdNow: false }));
+    runTimers();
+    expect(log).toHaveBeenCalledWith("watchdog", expect.objectContaining({ ok: false }));
+    expect(log).toHaveBeenCalledWith("stall", { reason: "time-stuck" });
   });
 
   it("setSource stops the old track and releases its element", () => {
