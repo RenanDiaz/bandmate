@@ -54,7 +54,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -368,10 +368,18 @@ so the whole tree shares one value; don't call the hook again elsewhere.
 successes, and always ends band
 resolution so a failed load renders the no-band UI instead of a spinner.
 
-**Service worker updates** use `registerType: 'prompt'`. `PwaReloadPrompt`
-registers the worker with `workbox-window` and reloads only when the user taps
-Reload; the prompt is hidden on `/setlists/:setlistId/perform` until the user
-leaves. Never add `skipWaiting`, `clientsClaim` or an automatic reload. The
+**Service worker updates** use `registerType: 'prompt'`. `PwaUpdater`
+(`src/lib/pwaUpdates.ts`, plain TS, unit-tested; one instance via
+`getPwaUpdater()`) registers the worker with `workbox-window` and owns the
+"new version waiting" state; `PwaReloadPrompt` renders it and reloads only when
+the user taps Reload; the prompt is hidden on the perform routes until the user
+leaves. An installed iOS app resuming from the background doesn't navigate, so
+the browser never looks for a new worker: `checkOnResume()` calls
+`registration.update()` on `visibilitychange` → visible and on `online`, at
+most once a minute. The user menu's **Check for updates** (`AuthButton`) calls
+`checkForUpdate()` and, when a version is ready, `applyUpdate()` (a user
+gesture, so it reloads right away). Never add `skipWaiting`, `clientsClaim` or
+an automatic reload. The
 brand font (Space Grotesk 700) is self-hosted via `@fontsource/space-grotesk`
 and precached with the other `woff2` files. `bootstrap-icons.css` requests its
 font with a `?<32-hex>` cache-busting key, which `ignoreURLParametersMatching`
