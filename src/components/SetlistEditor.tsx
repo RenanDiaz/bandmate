@@ -117,20 +117,23 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
         <i className="bi bi-grip-vertical"></i>
       </DragHandle>
       <SongPosition>{index + 1}</SongPosition>
-      <SongDetails>
+      <SongHeading>
         <SongTitle>{song.title}</SongTitle>
         {song.artist && <SongArtist>{song.artist}</SongArtist>}
+      </SongHeading>
+      {(song.key || song.tempo || song.duration) && (
         <SongMetadata>
           {song.key && <MetaBadge>{song.key}</MetaBadge>}
           {song.tempo && <MetaBadge>{song.tempo} BPM</MetaBadge>}
           {song.duration && <MetaBadge>{formatDuration(song.duration)}</MetaBadge>}
         </SongMetadata>
-        <NotesInput
-          placeholder={t('setlists.editor.addNotesPlaceholder')}
-          value={setlistSong.notes || ""}
-          onChange={(e) => onUpdateNotes(index, e.target.value)}
-        />
-      </SongDetails>
+      )}
+      <NotesInput
+        placeholder={t('setlists.editor.addNotesPlaceholder')}
+        aria-label={t('setlists.editor.addNotesPlaceholder')}
+        value={setlistSong.notes || ""}
+        onChange={(e) => onUpdateNotes(index, e.target.value)}
+      />
       <SongActions>
         {onEditSong && (
           <ActionButton
@@ -144,7 +147,9 @@ const SortableSetlistSongCard: FC<SortableSetlistSongCardProps> = ({
         <ActionButton
           onClick={() => onRemove(index)}
           title={t('setlists.editor.removeFromSetlist')}
+          aria-label={t('setlists.editor.removeFromSetlist')}
           $variant="delete"
+          $wideOnly
         >
           <i className="bi bi-trash"></i>
         </ActionButton>
@@ -234,7 +239,7 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
         <ActionButton onClick={onEdit} title={t("common.edit")}>
           <i className="bi bi-pencil"></i>
         </ActionButton>
-        <ActionButton onClick={onRemove} title={t("common.remove")} $variant="delete">
+        <ActionButton onClick={onRemove} title={t("common.remove")} aria-label={t("common.remove")} $variant="delete" $wideOnly>
           <i className="bi bi-trash"></i>
         </ActionButton>
         <SetlistRowMenu
@@ -1160,6 +1165,9 @@ const SetlistEditor: FC = () => {
 
 // Styled Components
 
+/* Narrow widths (below lg, where the editor is one column). */
+const narrow = `(max-width: calc(${theme.breakpoints.lg} - 0.02px))`;
+
 const PageWrapper = styled.div`
   min-height: calc(100vh - 80px);
   background: var(--color-bg-primary);
@@ -1354,12 +1362,18 @@ const SetlistSongsList = styled.div<{ $dropTarget?: boolean }>`
   flex: 1;
   overflow-y: auto;
   padding: ${theme.space[4]};
+
   display: flex;
   flex-direction: column;
   gap: ${theme.space[3]};
   outline: ${(props) => (props.$dropTarget ? `2px dashed rgba(139, 92, 246, 0.5)` : "none")};
   outline-offset: -6px;
   border-radius: ${theme.radius.lg};
+
+  @media ${narrow} {
+    padding: ${theme.space[3]};
+    gap: ${theme.space[2]};
+  }
 `;
 
 const DropIndicator = styled.div`
@@ -1441,6 +1455,11 @@ const AddSongsButton = styled.button`
 `;
 
 
+/*
+ * Grid so that on narrow screens the badges and notes take the full row under
+ * the heading instead of a thin column squeezed between the number and the
+ * action buttons.
+ */
 const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
   background: ${(props) =>
     props.$isDragging ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)'};
@@ -1448,9 +1467,15 @@ const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
     props.$isDragging ? theme.colors.brand.primary : 'var(--color-border)'};
   border-radius: ${theme.radius.base};
   padding: ${theme.space[4]};
-  display: flex;
-  align-items: flex-start;
-  gap: ${theme.space[3]};
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "handle pos heading actions"
+    ". . meta ."
+    ". . notes .";
+  align-items: start;
+  column-gap: ${theme.space[3]};
+  row-gap: ${theme.space[2]};
   transition: all ${theme.transitions.fast} ease;
   opacity: ${(props) => (props.$isDragging ? 0.9 : 1)};
   box-shadow: ${(props) => (props.$isDragging ? theme.shadows.lg : "none")};
@@ -1459,9 +1484,20 @@ const SetlistSongCard = styled.div<{ $isDragging?: boolean }>`
   &:hover {
     border-color: ${theme.colors.brand.primary};
   }
+
+  @media ${narrow} {
+    padding: ${theme.space[3]};
+    column-gap: ${theme.space[2]};
+    grid-template-areas:
+      "handle pos heading actions"
+      "handle meta meta meta"
+      "handle notes notes notes";
+    align-items: center;
+  }
 `;
 
 const DragHandle = styled.button`
+  grid-area: handle;
   background: transparent;
   border: none;
   color: var(--color-text-tertiary);
@@ -1497,6 +1533,7 @@ const DragHandle = styled.button`
 `;
 
 const SongPosition = styled.div`
+  grid-area: pos;
   background: ${theme.gradients.brandPrimary};
   color: white;
   width: 32px;
@@ -1511,12 +1548,13 @@ const SongPosition = styled.div`
 `;
 
 
-const SongDetails = styled.div`
-  flex: 1;
+const SongHeading = styled.div`
+  grid-area: heading;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: ${theme.space[2]};
+  gap: ${theme.space[1]};
+  align-self: center;
 `;
 
 const SongTitle = styled.div`
@@ -1526,6 +1564,16 @@ const SongTitle = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  /* Narrow: up to two lines rather than "Pies D…". */
+  @media ${narrow} {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+    line-height: ${theme.lineHeights.tight};
+  }
 `;
 
 const SongArtist = styled.div`
@@ -1537,6 +1585,7 @@ const SongArtist = styled.div`
 `;
 
 const SongMetadata = styled.div`
+  grid-area: meta;
   display: flex;
   flex-wrap: wrap;
   gap: ${theme.space[2]};
@@ -1556,6 +1605,9 @@ const MetaBadge = styled.span`
 `;
 
 const NotesInput = styled.input`
+  grid-area: notes;
+  width: 100%;
+  min-width: 0;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
@@ -1577,13 +1629,14 @@ const NotesInput = styled.input`
 `;
 
 const SongActions = styled.div`
+  grid-area: actions;
   display: flex;
   gap: ${theme.space[2]};
   flex-shrink: 0;
 `;
 
 
-const ActionButton = styled.button<{ $variant?: "delete" }>`
+const ActionButton = styled.button<{ $variant?: "delete"; $wideOnly?: boolean }>`
   background: transparent;
   border: 1px solid var(--color-border);
   color: ${(props) =>
@@ -1612,6 +1665,17 @@ const ActionButton = styled.button<{ $variant?: "delete" }>`
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  /* Same tap target as the ⋮ trigger (SetlistRowMenu). */
+  @media (pointer: coarse) {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Narrow: Remove stays in the ⋮ menu; the row keeps room for the title. */
+  @media ${narrow} {
+    ${(props) => (props.$wideOnly ? "display: none;" : "")}
   }
 `;
 
