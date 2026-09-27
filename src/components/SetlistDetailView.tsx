@@ -250,6 +250,11 @@ const EditSongButton = styled.button`
   }
 `;
 
+// Opens performance mode on this song (`?song=`).
+const PerformFromHereButton = styled(EditSongButton)`
+  font-size: 1.1rem;
+`;
+
 // Sortable song card component for reorder mode
 interface SortableSongCardProps {
   song: Song;
@@ -966,8 +971,17 @@ const SetlistDetailView: FC = () => {
                           </MetaBadge>
                         )}
                       </SongMetadata>
-                      {canEdit && (
-                        <SongActions>
+                      <SongActions>
+                        <PerformFromHereButton
+                          onClick={() =>
+                            navigate(`/setlists/${setlistId}/perform?song=${encodeURIComponent(song.id)}`)
+                          }
+                          title={t("setlists.detail.performFromHere")}
+                          aria-label={t("setlists.detail.performFromHere")}
+                        >
+                          <i className="bi bi-play-fill"></i>
+                        </PerformFromHereButton>
+                        {canEdit && (
                           <EditSongButton
                             onClick={() => handleEditSong(song)}
                             title={t("songs.editSongTooltip")}
@@ -975,8 +989,8 @@ const SetlistDetailView: FC = () => {
                           >
                             <i className="bi bi-pencil"></i>
                           </EditSongButton>
-                        </SongActions>
-                      )}
+                        )}
+                      </SongActions>
                     </SongCard>
                   );
                 } else {

@@ -452,6 +452,7 @@
       "notFound": "Setlist Not Found",
       "notFoundText": "The setlist you're looking for doesn't exist or has been deleted.",
       "backToSetlists": "Back to Setlists",
+      "performFromHere": "Start performance here",
       "reorder": "Reorder",
       "saveOrder": "Save Order",
       "startPerformance": "Start Performance",

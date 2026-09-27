@@ -43,12 +43,16 @@ export function testBand(id = 7, name = `Band ${id}`): Band {
 
 const i18n = createTestI18n();
 
-export function renderApp(ui: ReactElement, { ctx, path = "/" }: { ctx: BandContextValue; path?: string }) {
+export function renderApp(
+  ui: ReactElement,
+  // `history`: in-app entries before `path` (back navigation).
+  { ctx, path = "/", history = [] }: { ctx: BandContextValue; path?: string; history?: string[] }
+) {
   const wrap = (value: BandContextValue) => (
     <I18nextProvider i18n={i18n}>
       <BandContext.Provider value={value}>
         <ToastProvider>
-          <MemoryRouter initialEntries={[path]}>
+          <MemoryRouter initialEntries={[...history, path]} initialIndex={history.length}>
             {ui}
             <LocationProbe />
           </MemoryRouter>
