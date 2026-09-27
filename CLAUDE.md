@@ -433,6 +433,14 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   (`src/lib/performPosition.ts`) persist `{ currentIndex, contentView,
   selectedSheetMusicId }` per user and setlist in `localStorage`, 12 h expiry,
   restored on mount for every source; `wipeAll()` clears them.
+  `?song=<songId>` (the per-song "Start performance here" button in the
+  setlist detail, online and offline) wins over it: the view opens on that
+  song, then drops the param with a `replace`; a song no longer in the
+  setlist falls back to the saved position.
+- **Exit** (X, Escape): back one history entry when an in-app page opened
+  performance mode (`location.key !== "default"` at mount), else the
+  setlist's detail (`/setlists/:id`) or `/songs`. Load errors still bounce
+  to `/setlists` / `/songs`.
 - **Content view:** the toolbar order is Lyrics · Chords · Sheet (the `T`
   shortcut and mobile toggle cycle the same way). Without a saved position the
   view opens on the user's last pick (`readPreferredContentView`,

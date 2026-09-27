@@ -6,6 +6,7 @@ import type { PerformanceData } from "../../hooks/useSetlistPerformanceData";
 import type { Setlist } from "../../services/setlistsService";
 import { setlistRow, song } from "../../test/performFixtures";
 import { bandContext, renderApp, testBand } from "../../test/renderApp";
+import { writePerformPosition } from "../../lib/performPosition";
 import { PerformanceView } from "../SetlistPerformanceView";
 import { useSetlistPerformanceData } from "../../hooks/useSetlistPerformanceData";
 
@@ -68,6 +69,7 @@ const ctx = bandContext({ selectedBand: BAND, bands: [BAND] });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 describe("PerformanceView, song target (song spec §2)", () => {
@@ -137,8 +139,8 @@ describe("PerformanceView, song target (song spec §2)", () => {
   });
 });
 
-describe("PerformanceView, setlist target (unchanged)", () => {
-  it("keeps the counter, list, sync, offline toolbar and Prev/Next; Escape goes to /setlists", () => {
+describe("PerformanceView, setlist target", () => {
+  it("keeps the counter, list, sync, offline toolbar and Prev/Next; opened directly, Escape goes to the detail", () => {
     const row = setlistRow();
     vi.mocked(useSetlistPerformanceData).mockReturnValue(
       data({ target: { kind: "setlist", setlistId: "s1" }, setlist: row, items: row.songs, songsById: { a, b } })
@@ -152,6 +154,60 @@ describe("PerformanceView, setlist target (unchanged)", () => {
     expect(screen.getByText("Previous")).toBeTruthy();
 
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.getByTestId("location").textContent).toBe("/setlists");
+    expect(screen.getByTestId("location").textContent).toBe("/setlists/s1");
+  });
+
+  it("opened from another page, X goes back to it", () => {
+    const row = setlistRow();
+    vi.mocked(useSetlistPerformanceData).mockReturnValue(
+      data({ target: { kind: "setlist", setlistId: "s1" }, setlist: row, items: row.songs, songsById: { a, b } })
+    );
+    renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, {
+      ctx,
+      path: "/setlists/s1/perform",
+      history: ["/shows/9"],
+    });
+
+    fireEvent.click(screen.getByTitle("Exit (ESC)"));
+    expect(screen.getByTestId("location").textContent).toBe("/shows/9");
+  });
+});
+
+describe("PerformanceView, ?song= start (Start performance here)", () => {
+  const setlistData = () => {
+    const row = setlistRow();
+    return data({ target: { kind: "setlist", setlistId: "s1" }, setlist: row, items: row.songs, songsById: { a, b } });
+  };
+
+  it("opens on that song over the saved position and drops the param", () => {
+    writePerformPosition("user-a", "s1", { currentIndex: 1, contentView: "lyrics", selectedSheetMusicId: null });
+    vi.mocked(useSetlistPerformanceData).mockReturnValue(setlistData());
+    renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, { ctx, path: "/setlists/s1/perform?song=b" });
+
+    expect(screen.getByText("3 / 3")).toBeTruthy();
+    const location = screen.getByTestId("location");
+    expect(location.textContent).toBe("/setlists/s1/perform");
+    expect(location.getAttribute("data-search")).toBe("");
+  });
+
+  it("from the detail, Escape after the start goes back to the detail, not out of the app", () => {
+    vi.mocked(useSetlistPerformanceData).mockReturnValue(setlistData());
+    renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, {
+      ctx,
+      path: "/setlists/s1/perform?song=b",
+      history: ["/setlists", "/setlists/s1"],
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("location").textContent).toBe("/setlists/s1");
+  });
+
+  it("a song not in the setlist falls back to the saved position", () => {
+    writePerformPosition("user-a", "s1", { currentIndex: 1, contentView: "lyrics", selectedSheetMusicId: null });
+    vi.mocked(useSetlistPerformanceData).mockReturnValue(setlistData());
+    renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, { ctx, path: "/setlists/s1/perform?song=gone" });
+
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(screen.getByTestId("location").getAttribute("data-search")).toBe("");
   });
 });

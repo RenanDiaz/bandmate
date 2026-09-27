@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../../theme";
@@ -114,6 +114,13 @@ const ItemRow: FC<{
           {sheets.length > 0 ? t("offline.detail.pdfs", { count: sheets.length }) : t("offline.detail.noPdfs")}
           {notDownloaded > 0 && ` · ${t("offline.detail.notDownloaded", { count: notDownloaded })}`}
         </Muted>
+        <PerformFromHereLink
+          to={`/setlists/${snapshot.setlistId}/perform?song=${encodeURIComponent(item.song_id)}`}
+          title={t("setlists.detail.performFromHere")}
+          aria-label={t("setlists.detail.performFromHere")}
+        >
+          <i className="bi bi-play-fill" aria-hidden="true" />
+        </PerformFromHereLink>
       </SongRow>
     );
   }
@@ -167,6 +174,24 @@ const SongRow = styled.li`
   border: 1px solid var(--color-border);
   border-radius: ${theme.radius.base};
   padding: ${theme.space[3]};
+`;
+
+const PerformFromHereLink = styled(Link)`
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
 `;
 
 const Number = styled.span`

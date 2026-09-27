@@ -1,6 +1,6 @@
 import { Component, type FC, type ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import {
@@ -222,8 +222,20 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   // Memory keys (position, backing tracks): the setlist id, or "song:<songId>".
   const targetKey = target ? performanceTargetKey(target) : "";
   const setlistId = target?.kind === "setlist" ? target.setlistId : undefined;
+  // Load errors bounce to the list; Exit and Escape go back to the page that
+  // opened performance mode, else (opened directly: reload, PWA relaunch) to
+  // the setlist's detail or /songs.
   const exitPath = isSong ? "/songs" : "/setlists";
+  const exitFallbackPath = setlistId ? `/setlists/${setlistId}` : exitPath;
   const navigate = useNavigate();
+  // The router's first entry has key "default"; read at mount, since dropping
+  // `?song=` replaces the entry (new key) without adding one.
+  const location = useLocation();
+  const openedInAppRef = useRef(location.key !== "default");
+  const exitPerformance = useCallback(() => {
+    if (openedInAppRef.current) navigate(-1);
+    else navigate(exitFallbackPath);
+  }, [navigate, exitFallbackPath]);
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -260,6 +272,11 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   // A2: the saved position is applied once, when the data is ready; its PDF
   // only for the restored song.
   const positionRestoredRef = useRef(false);
+  // `?song=<songId>` ("Start here" in the setlist detail) opens on that song
+  // instead of the saved position; read once, then dropped from the URL so a
+  // reload restores the saved position.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const startSongIdRef = useRef<string | null>(isSong ? null : searchParams.get("song"));
   const pendingRestoredPdfRef = useRef<{ index: number; sheetMusicId: string } | null>(null);
   // The song the current PDF selection belongs to (a row refresh keeps it).
   const selectionSongIdRef = useRef<string | null>(null);
@@ -438,6 +455,23 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   useEffect(() => {
     if (perf.status !== "ready" || positionRestoredRef.current || !targetKey) return;
     positionRestoredRef.current = true;
+    const startSongId = startSongIdRef.current;
+    if (startSongId) {
+      startSongIdRef.current = null;
+      setSearchParams(
+        (params) => {
+          params.delete("song");
+          return params;
+        },
+        { replace: true }
+      );
+      const startIndex = perf.items.findIndex((item) => isSongItem(item) && item.song_id === startSongId);
+      // A song no longer in the setlist falls back to the saved position.
+      if (startIndex >= 0) {
+        setCurrentIndex(startIndex);
+        return;
+      }
+    }
     if (!userId) return;
     const saved = readPerformPosition(userId, targetKey);
     if (!saved || perf.items.length === 0) return;
@@ -445,7 +479,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
     setCurrentIndex(index);
     setContentView(saved.contentView);
     pendingRestoredPdfRef.current = saved.selectedSheetMusicId ? { index, sheetMusicId: saved.selectedSheetMusicId } : null;
-  }, [perf.status, perf.items, targetKey, userId, setCurrentIndex]);
+  }, [perf.status, perf.items, targetKey, userId, setCurrentIndex, setSearchParams]);
 
   // A2: save it on every change, for every source (after the restore ran).
   useEffect(() => {
@@ -478,7 +512,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
         if (isFullscreen) {
           exitFullscreen();
         } else {
-          navigate(exitPath);
+          exitPerformance();
         }
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
@@ -512,7 +546,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, setlistItems.length, isFullscreen, navigate, exitPath, isSong, isReorderMode, canStartReorder]);
+  }, [currentIndex, setlistItems.length, isFullscreen, exitPerformance, isSong, isReorderMode, canStartReorder]);
 
   // Close font size dropdown on click outside
   useEffect(() => {
@@ -1022,7 +1056,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
       <TopBar>
         <TopBarRow>
           <TopBarLeft>
-            <ExitButton onClick={() => navigate(exitPath)} title={t("performance.exit")}>
+            <ExitButton onClick={exitPerformance} title={t("performance.exit")}>
               <i className="bi bi-x-lg"></i>
             </ExitButton>
             <SetlistInfo>
