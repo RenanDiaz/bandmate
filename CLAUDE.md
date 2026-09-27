@@ -106,6 +106,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `/login` | Login |
 | `/songs` | Song library (requires auth + band) |
 | `/songs/print` | Printable songbook |
+| `/songs/:songId/perform` | Performance mode for one song (online only) |
 | `/setlists` | Setlist management |
 | `/setlists/:setlistId` | Setlist detail view |
 | `/setlists/:setlistId/edit` | Setlist editor with drag-drop |
@@ -378,8 +379,10 @@ strips so the precache matches offline (without it every icon is blank).
 
 ### Performance data
 
-`SetlistPerformanceView` loads nothing itself: all its reads and writes go
-through `useSetlistPerformanceData(setlistId)` (`src/hooks/`), which returns
+`PerformanceView` (in `SetlistPerformanceView.tsx`, behind two thin route
+wrappers: `SetlistPerformanceView` and `SongPerformanceView`) loads nothing
+itself: all its reads and writes go through
+`useSetlistPerformanceData(target)` (`src/hooks/`), which returns
 the setlist, the referenced songs (`songsById`), every referenced song's sheet
 music prefetched at load (`sheetMusicBySongId`), preferences, the write
 actions (`selectSheetMusic`, `saveOrder`, `onSheetMusicUploaded`), `source`,
@@ -392,9 +395,12 @@ keeps the current item by identity (`indexAfterItemsChange`,
 `src/utils/performItems.ts`). Don't add service calls to the view; add them to
 the source. The hook takes a `PerformanceTarget` (`performanceTarget.ts`): a
 setlist, or one song (`songPerformanceDataSource`, online only, a synthetic
-one-item setlist with id `song:<songId>`; no reorder, notes or sync). The song
-route and view gating land in PR 2 of
-[docs/specs/song-performance.md](docs/specs/song-performance.md). See §8 of
+one-item setlist with id `song:<songId>`; no reorder, notes or sync). The view
+derives `isSong` once and hides the setlist chrome for it (sidebar and `L`,
+"Up next", counter, progress bar, Prev/Next, reorder, notes, `SyncControls`,
+the offline toolbar and snapshot badge); exit, Escape and load errors go to
+`/songs`, and a missing song renders "Song not found"
+([docs/specs/song-performance.md](docs/specs/song-performance.md) §2). See §8 of
 [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md).
 
 - **Source selection** (§8.2) lives in `PerformanceDataController`
@@ -740,7 +746,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
-- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (draft): perform a single song from the library (1 phase, 2 PRs)
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, manual checklist pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (draft): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import type { BandRole } from "../../services/bandMembersService";
 import type { Song } from "../../services/songsService";
 import type { Setlist } from "../../services/setlistsService";
@@ -78,6 +78,13 @@ describe.each([
     expectPresence(container.querySelector(".actions-toggle"));
     expectPresence(screen.queryByTestId("new-song-form"));
     expectPresence(screen.queryByText("Import CSV"));
+  });
+
+  it("SongsView: Perform is shown to every role and opens the song's perform route", async () => {
+    renderView(SongsView, role);
+    await screen.findByText("Song A");
+    fireEvent.click(screen.getByRole("button", { name: "Perform" }));
+    expect(screen.getByTestId("location").textContent).toBe("/songs/s1/perform");
   });
 
   it("SetlistsView: edit/delete, new-setlist form and AI generator", async () => {

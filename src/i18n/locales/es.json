@@ -364,7 +364,11 @@
     "resetTransposition": "Volver a tonalidad original",
     "originalKey": "Tonalidad original",
     "originalKeyShort": "Orig",
-    "transposeError": "Error al transponer la canción. Por favor intenta de nuevo."
+    "transposeError": "Error al transponer la canción. Por favor intenta de nuevo.",
+    "perform": "Presentar",
+    "backToSongs": "Volver a canciones",
+    "notFound": "Canción no encontrada",
+    "loadError": "No se pudo cargar la canción"
   },
   "setlists": {
     "title": "Setlists",

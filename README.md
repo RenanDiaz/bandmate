@@ -38,6 +38,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 
 **Performance mode**
 - Full-screen lyrics view with keyboard navigation and reorder on the fly
+- Perform a single song straight from the song library (chords, lyrics, sheet music, backing track)
 - Real-time sync: one host drives the song position, every bandmate follows
 - Local backing tracks (audio stays on the device)
 

@@ -16,6 +16,8 @@ interface Props {
   songs: Song[];
   onEdit: (song: Song) => void;
   onDelete: (song: Song) => void;
+  /** Opens the song in performance mode (every role). */
+  onPerform: (song: Song) => void;
   onTranspose?: (songId: string, semitones: number) => void;
   onResetTransposition?: (songId: string) => void;
   onRequestAction?: (song: Song, requestType: RequestType) => void;
@@ -33,11 +35,13 @@ const SongCardItem: FC<{
   song: Song;
   onEdit: (song: Song) => void;
   onDelete: (song: Song) => void;
+  /** Opens the song in performance mode (every role). */
+  onPerform: (song: Song) => void;
   onTranspose?: (songId: string, semitones: number) => void;
   onResetTransposition?: (songId: string) => void;
   onRequestAction?: (song: Song, requestType: RequestType) => void;
   canEdit: boolean;
-}> = ({ song, onEdit, onDelete, onTranspose, onResetTransposition, onRequestAction, canEdit }) => {
+}> = ({ song, onEdit, onDelete, onPerform, onTranspose, onResetTransposition, onRequestAction, canEdit }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [transposing, setTransposing] = useState(false);
@@ -119,6 +123,19 @@ const SongCardItem: FC<{
             </ExpandButton>
           )}
         </SongClickArea>
+
+        {/* Every role, guests included: not part of the canEdit menu. */}
+        <PerformButton
+          type="button"
+          title={t("songs.perform")}
+          aria-label={t("songs.perform")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPerform(song);
+          }}
+        >
+          <i className="bi bi-play-circle"></i>
+        </PerformButton>
 
         {/* Dropdown menu for actions */}
         {canEdit && (
@@ -253,6 +270,7 @@ export const SongList: FC<Props> = ({
   songs,
   onEdit,
   onDelete,
+  onPerform,
   onTranspose,
   onResetTransposition,
   onRequestAction,
@@ -266,6 +284,7 @@ export const SongList: FC<Props> = ({
           song={song}
           onEdit={onEdit}
           onDelete={onDelete}
+          onPerform={onPerform}
           onTranspose={onTranspose}
           onResetTransposition={onResetTransposition}
           onRequestAction={onRequestAction}
@@ -365,6 +384,36 @@ const DropdownWrapper = styled.div`
       height: 40px;
       font-size: ${theme.fontSizes.bodyLg};
     }
+  }
+`;
+
+const PerformButton = styled.button`
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  font-size: ${theme.fontSizes.body};
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-bg-elevated);
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
+
+  /* Larger touch targets on mobile */
+  @media (max-width: ${theme.breakpoints.md}) {
+    width: 40px;
+    height: 40px;
+    font-size: ${theme.fontSizes.bodyLg};
   }
 `;
 
