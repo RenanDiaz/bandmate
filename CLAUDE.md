@@ -102,7 +102,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 
 | Route | Description |
 |-------|-------------|
-| `/` | Landing (logged out) / dashboard (logged in) |
+| `/` | Landing (logged out) / dashboard (logged in), plus My upcoming events across bands when in 2+ bands |
 | `/login` | Login |
 | `/songs` | Song library (requires auth + band) |
 | `/songs/print` | Printable songbook |
@@ -153,7 +153,13 @@ Upcoming shows and rehearsals are merged and sorted by `mergeUpcomingEvents`
 (`src/utils/upcomingEvents.ts`: date, then time with no time last, then band
 name, then name; date strings compared as strings, never through
 `new Date()`), with `eventPath` / `eventLink` for their routes. The dashboard's
-row is `UpcomingEventRow` (`src/components/home/`).
+row is `UpcomingEventRow` (`src/components/home/`). With two or more bands the
+dashboard opens with `MyUpcomingEvents` (same folder): its own effect keyed by
+the sorted band ids (a `refreshBands()` with the same bands doesn't refetch),
+both `ForBands` reads, six rows then "Show all", a band chip on every row, and
+row / Setlist / Show chip taps through `useOpenInBand`. Its load failure is an
+inline line + Retry: no toast and no `reportNetworkFailure()` (the band
+dashboard is the only reporter). Not rendered offline or in `session-lost`.
 
 ### Offline-safe auth
 
@@ -844,5 +850,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
-- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (in progress, PR 1.1 implemented): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 2 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
