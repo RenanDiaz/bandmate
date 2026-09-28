@@ -29,14 +29,14 @@ docs/
 - [design/implementation-examples.md](design/implementation-examples.md) — component examples for the style guide
 
 ## Offline performance
-- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress)
-- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3
+- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress: Phase 1 done, Phase 2 behind a flag with PR 2.6 pending, Phase 3 not started)
+- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3 (in progress: PRs 2.0–2.5 merged, 2.6 and Phase 3 pending)
 
 ## Backlog specs (from the 2026-09 TODO review)
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
 - [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
-- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, four PRs)
+- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs; implemented, manual validation of AC9–AC14 pending)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
 - [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (implemented)
 
@@ -46,10 +46,10 @@ docs/
 
 ## Header and personal agenda (2026-09-27)
 - [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR; implemented, manual validation pending)
-- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented, manual validation of AC6–AC9 on device pending)
+- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented, manual validation of AC6–AC9 and AC12 on device pending)
 
 ## Notifications (2026-09-27)
-- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2 (two phases, three PRs; in progress, Phase 1 implemented, device validation pending)
+- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2 (two phases, three PRs; in progress, Phase 1 validated, Phase 2 implemented, device validation pending)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

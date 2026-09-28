@@ -1,6 +1,6 @@
 # Intent: Offline performance mode
 
-> **Status:** in progress — Phase 1 done (2026-09-25) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 done (2026-09-25); Phase 2 implemented behind a flag, PR 2.6 pending; Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 >
 > An *intent* states a problem, the outcome we want and the boundaries of a
 > change **before** it is designed in detail. It is the thing a PR points back
