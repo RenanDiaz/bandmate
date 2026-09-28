@@ -1645,7 +1645,7 @@
       "unsupported": "This browser can't receive notifications.",
       "needsInstall": "On iPhone and iPad, notifications only work in the installed app: tap Share → Add to Home Screen, then open Bandmate from your Home Screen.",
       "denied": "Notifications are blocked for Bandmate. Allow them in your browser or system settings, then come back here.",
-      "off": "Get a notification when someone in your band adds a show, a rehearsal or a setlist.",
+      "off": "Get a notification when someone in your band adds a show, a rehearsal or a setlist, or moves or cancels a show or rehearsal.",
       "on": "On for this device.",
       "dismissed": "Notifications weren't allowed. Tap Turn on to try again.",
       "turnOn": "Turn on",

@@ -479,7 +479,8 @@ the flag hides UI only):
   `NotificationSettingsHost` (in `App`; closes when the session or the
   connection goes) and `notificationSettingsStore`.
 - The push texts are server-side (`_shared/pushMessages.ts`, by the
-  subscription's `locale`), not in `en.json` / `es.json`.
+  subscription's `locale`: created, moved, cancelled), not in `en.json` /
+  `es.json`.
 
 ### Performance data
 
@@ -641,13 +642,26 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   `rehearsals` (INSERT, not past / finished) and `setlists` (non-draft
   INSERT, draft → published) enqueue through `enqueue_notification_event()`,
   whose actor is `auth.uid()` (never the row's `user_id`; none → no event),
-  and never make the write fail. Texts (en/es, by the subscription's
+  and never make the write fail. Phase 2 (moved / cancelled,
+  `20260928120000_push_notifications_changes.sql`): UPDATE triggers on
+  `shows` / `rehearsals` (date, time, place, status → cancelled) go through
+  `enqueue_change_event()`, which keeps **one pending row per entity** with
+  `send_after` 2 min ahead and re-decides it from its `payload.before` on
+  every edit (moved back → row deleted, cancel replaces moved, last editor is
+  the actor). Rows with `send_after` are posted by the `pg_cron` job
+  `dispatch-notification-events` (`dispatch_due_notification_events()`,
+  every minute), which also re-posts any row dispatched > 10 min ago and
+  never claimed (`dispatch_attempts` < 3, within a day); the function refuses
+  a row still in its window (`{ deferred: true }`). Created events keep
+  `send_after` null and go out at once. Tags are per entity (`show:<id>`), so
+  a change replaces the creation in the tray. Texts (en/es, by the subscription's
   `locale`) are `_shared/pushMessages.ts`, recipients
   `_shared/pushRecipients.ts`, both dependency-free and tested from
   `src/lib/__tests__/`. Web Push via `jsr:@negrel/webpush@0.5.0`. Secrets:
   `VAPID_KEYS`, `VAPID_SUBJECT`, `PUSH_SECRET`. See
   [docs/setup/push-notifications.md](docs/setup/push-notifications.md) and
   [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md).
+  Needs `pg_cron` for the moved / cancelled events.
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 
 ### Landing Page & SEO
@@ -723,7 +737,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `performance_sessions` | Real-time sync sessions with `current_song_index` |
 | `push_subscriptions` | Web Push subscription per browser (`endpoint` unique, keys, `locale`); RLS own rows, no INSERT policy: created by `register_push_subscription()`, which hands the endpoint to the caller |
 | `band_notification_mutes` | `(user_id, band_id)`: that user gets no pushes for that band; no row = on |
-| `notification_events` | Push outbox written by triggers, read by `send-push-notifications`; RLS on with no policies (clients can't read or write) |
+| `notification_events` | Push outbox written by triggers, read by `send-push-notifications`; RLS on with no policies (clients can't read or write). `send_after` (null = now; changes wait 2 min), `dispatched_at` / `dispatch_attempts` (cron retry), `entity_kind` (generated from `type`) |
 
 > The full schema is versioned: `supabase/migrations/20260101000000_baseline.sql`
 > is a dump of production (public schema, plus the `sheet-music` bucket, its
@@ -934,5 +948,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 implemented, device validation pending): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist; moved/cancelled later (2 phases, 3 PRs)
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phase 2 implemented, device validation pending): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`) (2 phases, 3 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

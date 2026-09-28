@@ -1645,7 +1645,7 @@
       "unsupported": "Este navegador no puede recibir notificaciones.",
       "needsInstall": "En iPhone y iPad, las notificaciones solo funcionan en la app instalada: toca Compartir → Agregar a inicio y abre Bandmate desde tu pantalla de inicio.",
       "denied": "Las notificaciones de Bandmate están bloqueadas. Permítelas en la configuración del navegador o del sistema y vuelve aquí.",
-      "off": "Recibe una notificación cuando alguien de tu banda agregue un show, un ensayo o un setlist.",
+      "off": "Recibe una notificación cuando alguien de tu banda agregue un show, un ensayo o un setlist, o cambie o cancele un show o un ensayo.",
       "on": "Activadas en este dispositivo.",
       "dismissed": "No se permitieron las notificaciones. Toca Activar para intentarlo de nuevo.",
       "turnOn": "Activar",

@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (Phase 1 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (Phase 1 validated on devices; Phase 2 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -126,11 +126,16 @@ may be offered.
 | show created | `<band> · New show` | `<actor> added "<name>" · <weekday, date> <time?>` | `/shows/:id?band=` |
 | rehearsal created | `<band> · New rehearsal` | `<actor> added a rehearsal · <date> <time?> · <location?>` | `/rehearsals/:id?band=` |
 | setlist published | `<band> · New setlist` | `<actor> added "<name>" · <n> songs` | `/setlists/:id?band=` |
-| show/rehearsal moved (Phase 2) | `<band> · Show moved` | `"<name>" is now <date> <time?>` | same |
-| show/rehearsal cancelled (Phase 2) | `<band> · Rehearsal cancelled` | `<date> <time?>` | same |
+| show moved (Phase 2) | `<band> · Show moved` / `Cambio de show` | `"<name>" is now <date> <time?> · <venue?>` / `"<name>" ahora es el …` | same |
+| show cancelled (Phase 2) | `<band> · Show cancelled` / `Show cancelado` | `"<name>" · <date> <time?>` | same |
+| rehearsal moved (Phase 2) | `<band> · Rehearsal moved` / `Cambio de ensayo` | `"<name>" is now …`, unnamed `The rehearsal is now <date> <time?> · <location?>` / `El ensayo ahora es el …` | same |
+| rehearsal cancelled (Phase 2) | `<band> · Rehearsal cancelled` / `Ensayo cancelado` | `"<name>" · <date> <time?>`, unnamed `<date> <time?>` | same |
 
-`tag` = `<type>:<entityId>` so a later event about the same entity replaces
-the earlier one instead of stacking; `icon` = `/icon-192.png`. Dates are
+`tag` = `<kind>:<entityId>` (`show:`, `rehearsal:`, `setlist:`; Phase 1
+used `<type>:<entityId>`) so a later event about the same entity — a
+"moved" after its "new show" — replaces the earlier one instead of stacking;
+the "moved" body always carries date and time, also when only the place
+changed; `icon` = `/icon-192.png`. Dates are
 formatted in the sender from the stored strings (floating, no zone, same as
 `ics.ts`) — never through `new Date()` on a date-only string. Actor name:
 `full_name` → `name` → email local part → "Someone".
@@ -247,7 +252,75 @@ wipe trigger, this is part of the first). `AuthButton` passes
 (the sender drops the dead endpoint), a failed wipe keeps its old handling.
 Language changes in the user menu call `updateThisDeviceLocale`.
 
-### 3.5 i18n (both locales)
+### 3.5 Moved and cancelled (Phase 2)
+
+**What is an event.** `AFTER UPDATE` triggers `notify_show_changed` /
+`notify_rehearsal_changed`, `WHEN` one of the watched columns is distinct:
+
+| Table | Watched → `<kind>.moved` | `status` → `cancelled` |
+|-------|--------------------------|-------------------------|
+| `shows` | `event_date`, `event_time`, `venue` | `show.cancelled` |
+| `rehearsals` | `rehearsal_date`, `start_time`, `location` | `rehearsal.cancelled` |
+
+Not events: notes, name, setlist, soundcheck / doors / end time, address;
+status → `completed`; un-cancelling; any edit of an already cancelled event;
+edits where the old **and** the new date are more than a day in the past
+(Phase 1's slack); deleting a row (§8). Actor = `auth.uid()`, none → nothing;
+every error is swallowed (the UPDATE never fails).
+
+**Coalescing: one pending row per entity, re-decided on every edit.**
+`enqueue_change_event(band, kind, entityId, name, old, new)` works on
+`state = { date, time, place, status }` snapshots:
+
+1. Lock the entity's *pending change* row: `entity_kind = kind`,
+   `entity_id`, `send_after` not null, `processed_at` **and** `dispatched_at`
+   null (a dispatched row belongs to the sender; a later edit opens a new
+   window). A unique partial index guarantees at most one.
+2. `before` = the pending row's `payload.before`, else `old`; `after` = `new`.
+3. Decide from `before` → `after` only (so edits in between don't matter):
+   `before.status` cancelled or `after.status` completed → nothing; both
+   dates past → nothing; `after.status` cancelled → `cancelled`; date, time
+   or place differ → `moved`; else nothing (AC17: moved and moved back).
+4. Nothing → delete the pending row, if any. Otherwise upsert it: `type`,
+   `payload = { name, before, after }`, `actor_id` = this editor (the last
+   editor is the one not notified), `send_after = now() + 2 min`.
+
+So `cancelled` replaces a pending `moved` (AC18), and cancelling then
+un-cancelling inside the window sends nothing. Editing right after creating
+still sends "moved": the "new show" went out immediately and members saw the
+old date.
+
+**Schema** (migration `<ts>_push_notifications_changes.sql`):
+`notification_events` gains `send_after timestamptz` (null = send now, the
+Phase 1 behaviour), `dispatched_at timestamptz`, `dispatch_attempts smallint
+default 0` and `entity_kind text generated always as (split_part(type, '.',
+1)) stored` — the kind is derived from the type rather than written by
+callers, so it can't disagree with it. The `type` CHECK gains the four types.
+Indexes: unique `(entity_kind, entity_id)` where pending change (step 1),
+and `(send_after)` where `processed_at` is null (the cron scan).
+
+**Dispatch.** `dispatch_notification_event` (AFTER INSERT) posts only rows
+with `send_after` null, and now stamps `dispatched_at` / `dispatch_attempts`
+through `post_notification_event(id)` (shared with the cron). New
+`dispatch_due_notification_events()`, run every minute by `pg_cron`
+(job `dispatch-notification-events`), posts up to 100 rows with
+`processed_at` null, `dispatch_attempts < 3`, created in the last day, and
+either due (`send_after <= now()`, never dispatched) or dispatched more than
+10 minutes ago (a lost `pg_net` call, Phase 1 events included; §6). Rows
+never dispatched with `send_after` null (Vault was missing) are left alone.
+Latency of a change: 2–3 minutes after the last edit. No `pg_cron` → a
+`NOTICE`, changes are recorded and never sent; the setup guide has the
+statement that schedules the job later.
+
+**Sender.** The claim also requires `send_after` null or `<= now()`; a call
+for a row still in its window answers `{ deferred: true }` and sends nothing.
+Retries and replays stay safe: whoever claims first sends, the rest get
+`{ skipped: true }`. A crash *after* the claim still loses the event (§6).
+
+**Messages.** `buildPushMessage` reads `payload.name` and `payload.after`
+for the four new types (§2.3). `pushMessagePath` / `tag` go by kind.
+
+### 3.6 i18n (both locales)
 
 `notifications.menuItem`, `notifications.title`, `notifications.device.*`
 (one per status + `turnOn`, `turnOff`), `notifications.bands.title`,
@@ -282,11 +355,21 @@ Phase 1:
 
 Phase 2:
 
-- **AC14** Changing a show's / rehearsal's date, time or location notifies
-  "moved"; changing only notes, setlist or other fields doesn't.
+- **AC14** Changing a show's / rehearsal's date, time or place notifies
+  "moved", 2–3 min after the edit; changing only notes, name, setlist or
+  soundcheck doesn't.
 - **AC15** Status → cancelled notifies "cancelled" (and not "moved").
 - **AC16** Several edits to the same entity within 2 min produce one
-  notification with the final values.
+  notification with the final values, and it replaces that entity's earlier
+  notification in the tray (tag by entity).
+- **AC17** Changing the date and changing it back within the window sends
+  nothing.
+- **AC18** Moving then cancelling within the window sends only "cancelled".
+- **AC19** Editing a past event (old and new date more than a day ago), a
+  cancelled one, or marking one completed sends nothing. Phase 1 events still
+  arrive immediately.
+- **AC20** A dispatched event with no `processed_at` after 10 min is posted
+  again (at most 3 posts); replays and retries never send twice.
 
 ## 5. Tests
 
@@ -313,7 +396,8 @@ Phase 2:
 | Apple rejects VAPID tokens valid for more than an hour; the library signs them for exactly 3600 s | Watch for 403 `BadJwtToken` from `web.push.apple.com` in `notification_events.error`; the fix is signing the JWT ourselves with a shorter `exp` |
 | Pushes during a gig (iPad on the stand) | §1 decision 9: copy + only low-frequency events in Phase 1; Phase 2's "moved" is coalesced (AC16) |
 | Bulk creation (someone enters ten rehearsals in a row) floods members | Accepted in Phase 1 (one per entity, distinct tags); if it's real in use, Phase 2 adds per band + type coalescing in the same window as AC16 |
-| `pg_net` call lost (function down) | The outbox keeps the row with `processed_at` null (or `error` set after a claim); a retry cron is Phase 2 only if losses show up in `notification_events` |
+| `pg_net` call lost (function down) | Phase 2: the cron re-posts rows dispatched > 10 min ago and still unclaimed, 3 posts at most, for a day (AC20). A crash after the claim still loses the event (`error` set) |
+| `pg_cron` not enabled in a project | Changes are recorded and never sent; the setup guide's check (`select * from cron.job`) and troubleshooting row |
 | Shared device keeps the previous user's pushes | AC11 (unsubscribe on voluntary sign-out) |
 | The worker file changes but clients keep the old one | `importScripts` files are byte-checked on update; the existing prompt-to-reload flow applies |
 | Privacy | Endpoints are personal data: the Privacy page gains a "Notifications" paragraph (what's stored, how to turn it off) in PR 1.2 |
@@ -328,7 +412,9 @@ Phase 2:
 
 ## 8. Out of scope
 
-In-app notification inbox / bell (the outbox makes it possible later),
+Deleting a future show or rehearsal (it is usually a duplicate being
+cleaned up, not a cancellation), soundcheck / doors / end time changes,
+"back on" after an un-cancel, in-app notification inbox / bell (the outbox makes it possible later),
 email digests, reminders before a show or rehearsal (scheduled, a different
 mechanism: cron over upcoming events), notifications for songs, comments
 and votes, native apps.
@@ -386,10 +472,13 @@ or is cancelled — the notification that matters most on the day.
 "moved" with the final date; cancel it → "cancelled"; edit only notes →
 nothing.
 
-- **PR 2.1** — UPDATE branches of the show/rehearsal triggers (compare
-  `date`, `time`, `location`/`venue`, `status`), coalescing (the dispatch
-  waits for a 2-minute quiet window per `tag`, via `pg_cron` or a delayed
-  outbox pick-up — decided in the PR), `pushMessages` types + tests.
+- **PR 2.1** (implemented) — §3.5: migration
+  `20260928120000_push_notifications_changes.sql` (UPDATE triggers,
+  `enqueue_change_event`, outbox columns, `pg_cron` dispatch + retry),
+  sender's `send_after` rule, `pushMessages` types + tag by entity + tests,
+  `notifications.device.off` copy, setup guide §6 (production steps,
+  deferred-event troubleshooting). SQL checked on a local Postgres 16 with
+  stubbed `auth`, Vault, `pg_net` and `pg_cron` (the PR lists the cases).
 
 ## Changelog
 
@@ -406,3 +495,10 @@ nothing.
   tap does a full navigation (`client.navigate`) rather than an in-app
   message, the band rule moved to `src/utils/bandSwitch.ts`, Privacy page
   paragraph + "last updated" date.
+- 2026-09-28 — Phase 2 contract (§3.5) and PR 2.1. Decided: coalescing is
+  a pending outbox row per entity with `send_after` (2 min) picked up by
+  `pg_cron`, re-decided from its `before` snapshot on every edit (so moved +
+  moved back sends nothing and cancel replaces moved); last editor is the
+  actor; the same cron re-posts lost dispatches, capped at 3 posts within a
+  day; `entity_kind` is a generated column; tag by entity (`show:<id>`) for
+  every type, Phase 1 included. Out of scope: deletes, soundcheck, un-cancel.

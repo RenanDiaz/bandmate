@@ -39,7 +39,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Show scheduling with venue, soundcheck and linked setlist; list and calendar views
 - Rehearsal scheduling linked to shows and setlists
 - Personal agenda across your bands on the dashboard
-- Push notifications (behind a feature flag until the device checklist passes): get notified when someone in your band adds a show, a rehearsal or a setlist; on per device, mute per band, one tap opens it in the right band (iPhone/iPad: installed app only)
+- Push notifications (behind a feature flag until the device checklist passes): get notified when someone in your band adds a show, a rehearsal or a setlist, or moves or cancels a show or rehearsal (several edits in a row send one notice); on per device, mute per band, one tap opens it in the right band (iPhone/iPad: installed app only)
 - Calendar sync: a personal iCal feed of the band's shows, soundchecks and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
 
 **Performance mode**
@@ -178,7 +178,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/guides/landing-seo.md](docs/guides/landing-seo.md) — landing prerender, SEO, robots/sitemap
 - [docs/guides/band-members.md](docs/guides/band-members.md) — roles, member security model, invitations
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation emails
-- [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function)
+- [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function, pg_cron)
 - [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress)
@@ -193,7 +193,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 implemented, device validation pending): band push notifications for new shows, rehearsals and setlists
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phase 2 implemented, device validation pending): band push notifications for new shows, rehearsals and setlists, and moved / cancelled shows and rehearsals
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap

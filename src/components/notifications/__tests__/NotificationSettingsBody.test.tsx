@@ -36,6 +36,7 @@ describe("NotificationSettingsBody (spec §2.2)", () => {
   it("off: explains and offers Turn on", () => {
     const text = render(<NotificationSettingsBody {...props()} />);
     expect(text).toContain("adds a show, a rehearsal or a setlist");
+    expect(text).toContain("moves or cancels a show or rehearsal");
     expect(text).toContain("Turn on");
     expect(text).not.toContain("Turn off");
   });
