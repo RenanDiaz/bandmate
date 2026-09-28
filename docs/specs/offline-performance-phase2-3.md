@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** draft · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 implemented behind the offline flag (PRs 2.0–2.5), PR 2.6 (§11 device checklist + flag removal) pending; Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
