@@ -26,7 +26,7 @@ import {
  */
 
 const SEND_CONCURRENCY = 10;
-// A notification about a new show is stale after a day.
+// A notification about a new or moved show is stale after a day.
 const TTL_SECONDS = 24 * 60 * 60;
 
 type EventRow = {
@@ -104,12 +104,16 @@ Deno.serve(async (req) => {
   );
 
   // Claim the event: only the first call for an id gets the row back, so a
-  // replay (or a pg_net retry) sends nothing twice.
+  // replay (or the cron's re-post of a lost call) sends nothing twice. A
+  // change still inside its coalescing window (send_after ahead) isn't
+  // claimed: later edits may rewrite or delete it.
+  const now = new Date().toISOString();
   const { data: event, error: claimError } = await supabase
     .from("notification_events")
-    .update({ processed_at: new Date().toISOString() })
+    .update({ processed_at: now })
     .eq("id", eventId)
     .is("processed_at", null)
+    .or(`send_after.is.null,send_after.lte.${now}`)
     .select("id, band_id, actor_id, type, entity_id, payload")
     .maybeSingle<EventRow>();
 
@@ -117,7 +121,16 @@ Deno.serve(async (req) => {
     console.error("[push] claim failed", eventId, claimError.message);
     return json({ error: "claim failed" }, 500);
   }
-  if (!event) return json({ skipped: true });
+  if (!event) {
+    const { data: waiting } = await supabase
+      .from("notification_events")
+      .select("id")
+      .eq("id", eventId)
+      .is("processed_at", null)
+      .gt("send_after", now)
+      .maybeSingle();
+    return json(waiting ? { deferred: true } : { skipped: true });
+  }
 
   const finish = async (recipients: number, error: string | null) => {
     const { error: updateError } = await supabase
@@ -225,11 +238,11 @@ Deno.serve(async (req) => {
       }
     });
 
-    const now = new Date().toISOString();
+    const sentAt = new Date().toISOString();
     const followUps = [];
     if (delivered.length > 0) {
       followUps.push(
-        supabase.from("push_subscriptions").update({ last_success_at: now }).in("id", delivered)
+        supabase.from("push_subscriptions").update({ last_success_at: sentAt }).in("id", delivered)
       );
     }
     if (gone.length > 0) {

@@ -15,7 +15,14 @@
 export type PushEventType =
   | "show.created"
   | "rehearsal.created"
-  | "setlist.published";
+  | "setlist.published"
+  | "show.moved"
+  | "show.cancelled"
+  | "rehearsal.moved"
+  | "rehearsal.cancelled";
+
+/** The entity an event is about: its path and its notification tag. */
+export type PushEntityKind = "show" | "rehearsal" | "setlist";
 
 export type PushLocale = "en" | "es";
 
@@ -35,7 +42,11 @@ export interface PushMessageInput {
   bandName: string;
   actorName: string;
   entityId: string;
-  /** notification_events.payload, as written by the triggers */
+  /**
+   * notification_events.payload, as written by the triggers. Created events:
+   * the row's fields. Moved / cancelled: `{ name, before, after }`, each a
+   * `{ date, time, place, status }` snapshot; the message shows `after`.
+   */
   payload: Record<string, unknown>;
   locale: PushLocale;
 }
@@ -62,6 +73,12 @@ const TEXT = {
     added: (actor: string, name: string) => `${actor} added "${name}"`,
     addedRehearsal: (actor: string) => `${actor} added a rehearsal`,
     songs: (n: number) => (n === 1 ? "1 song" : `${n} songs`),
+    showMovedTitle: "Show moved",
+    showCancelledTitle: "Show cancelled",
+    rehearsalMovedTitle: "Rehearsal moved",
+    rehearsalCancelledTitle: "Rehearsal cancelled",
+    isNow: (name: string, when: string) => `"${name}" is now ${when}`,
+    rehearsalIsNow: (when: string) => `The rehearsal is now ${when}`,
   },
   es: {
     someone: "Alguien",
@@ -72,6 +89,12 @@ const TEXT = {
     added: (actor: string, name: string) => `${actor} agregó "${name}"`,
     addedRehearsal: (actor: string) => `${actor} agregó un ensayo`,
     songs: (n: number) => (n === 1 ? "1 canción" : `${n} canciones`),
+    showMovedTitle: "Cambio de show",
+    showCancelledTitle: "Show cancelado",
+    rehearsalMovedTitle: "Cambio de ensayo",
+    rehearsalCancelledTitle: "Ensayo cancelado",
+    isNow: (name: string, when: string) => `"${name}" ahora es el ${when}`,
+    rehearsalIsNow: (when: string) => `El ensayo ahora es el ${when}`,
   },
 } as const;
 
@@ -133,10 +156,10 @@ export function formatPushTime(value: unknown, locale: PushLocale): string | nul
   return `${h12}:${minutes} ${suffix}`;
 }
 
-function when(payload: Record<string, unknown>, locale: PushLocale): string | null {
-  const date = formatPushDate(payload.date, locale);
+function when(fields: Record<string, unknown>, locale: PushLocale): string | null {
+  const date = formatPushDate(fields.date, locale);
   if (!date) return null;
-  const time = formatPushTime(payload.time, locale);
+  const time = formatPushTime(fields.time, locale);
   return time ? `${date} ${time}` : date;
 }
 
@@ -144,18 +167,28 @@ function joinParts(parts: (string | null)[]): string {
   return parts.filter((part): part is string => !!part).join(" · ");
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+export function pushEntityKind(type: PushEventType): PushEntityKind {
+  return type.startsWith("show.") ? "show" : type.startsWith("rehearsal.") ? "rehearsal" : "setlist";
+}
+
+const PATHS: Record<PushEntityKind, string> = {
+  show: "/shows/",
+  rehearsal: "/rehearsals/",
+  setlist: "/setlists/",
+};
+
 export function pushMessagePath(
   type: PushEventType,
   entityId: string,
   bandId: number
 ): string {
-  const base =
-    type === "show.created"
-      ? "/shows/"
-      : type === "rehearsal.created"
-        ? "/rehearsals/"
-        : "/setlists/";
-  return `${base}${encodeURIComponent(entityId)}?band=${bandId}`;
+  return `${PATHS[pushEntityKind(type)]}${encodeURIComponent(entityId)}?band=${bandId}`;
 }
 
 export function buildPushMessage(input: PushMessageInput): PushMessage {
@@ -193,12 +226,35 @@ export function buildPushMessage(input: PushMessageInput): PushMessage {
       ]);
       break;
     }
+    case "show.moved":
+    case "rehearsal.moved": {
+      const after = record(payload.after);
+      const isShow = type === "show.moved";
+      title = `${band} · ${isShow ? t.showMovedTitle : t.rehearsalMovedTitle}`;
+      // Date and time always, also when only the place changed.
+      const at = when(after, locale) ?? "";
+      const lead = isShow || name ? t.isNow(name ?? t.untitled, at) : t.rehearsalIsNow(at);
+      body = joinParts([lead, text(after.place)]);
+      break;
+    }
+    case "show.cancelled":
+    case "rehearsal.cancelled": {
+      const after = record(payload.after);
+      const isShow = type === "show.cancelled";
+      title = `${band} · ${isShow ? t.showCancelledTitle : t.rehearsalCancelledTitle}`;
+      body = joinParts([
+        isShow || name ? `"${name ?? t.untitled}"` : null,
+        when(after, locale),
+      ]);
+      break;
+    }
   }
 
   return {
     title,
     body,
     url: pushMessagePath(type, entityId, bandId),
-    tag: `${type}:${entityId}`,
+    // By entity: a "moved" replaces that show's "new show" in the tray.
+    tag: `${pushEntityKind(type)}:${entityId}`,
   };
 }

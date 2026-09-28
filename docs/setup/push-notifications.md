@@ -2,7 +2,8 @@
 
 Band push notifications (spec:
 [docs/specs/band-push-notifications.md](../specs/band-push-notifications.md))
-need steps 1–3 once per Supabase project and step 4 on the app's build. Until
+need steps 1–3 once per Supabase project and step 4 on the app's build;
+Phase 2 (moved / cancelled) adds step 6 (`pg_cron`). Until
 they are done, the database still records `notification_events` and nothing is
 sent: the app and every write keep working.
 
@@ -108,7 +109,8 @@ needs the **built** worker: locally, `npm run build && npm run preview`
 4. Inspect:
 
    ```sql
-   select id, type, processed_at, recipients, error
+   select id, type, send_after, dispatched_at, dispatch_attempts,
+          processed_at, recipients, error
    from notification_events order by id desc limit 10;
 
    select id, status_code, content::text
@@ -118,13 +120,57 @@ needs the **built** worker: locally, `npm run build && npm run preview`
    Function logs: Dashboard → Edge Functions → send-push-notifications → Logs
    (`[push] event … sent N, gone N, failed N`).
 
-## What sends a notification (Phase 1)
+## 6. Moved and cancelled (Phase 2): pg_cron
+
+Changes wait two minutes for more edits, then a `pg_cron` job posts them
+(the same job re-posts calls the function never received). Once per project:
+
+1. Dashboard → Database → Extensions → enable **pg_cron**.
+2. `supabase db push` (migration `20260928120000_push_notifications_changes.sql`
+   schedules the job when `pg_cron` is there).
+3. `supabase functions deploy send-push-notifications --no-verify-jwt`
+   (new texts, and it refuses rows still inside their window).
+4. Check:
+
+   ```sql
+   select jobid, jobname, schedule, command from cron.job;
+   -- one row: dispatch-notification-events, '* * * * *'
+
+   select start_time, status, return_message
+   from cron.job_run_details order by start_time desc limit 5;
+   ```
+
+If `pg_cron` was enabled **after** the migration ran, schedule the job by hand
+(safe to repeat):
+
+```sql
+select cron.unschedule(jobid) from cron.job where jobname = 'dispatch-notification-events';
+select cron.schedule('dispatch-notification-events', '* * * * *',
+  'select public.dispatch_due_notification_events()');
+```
+
+End to end: as A, change the date of a future show B can see. Right away
+`notification_events` has a `show.moved` row with `send_after` two minutes
+ahead and `dispatched_at` null; edit it again and the same row changes (new
+`payload.after`, later `send_after`). About a minute after `send_after`,
+`dispatched_at` is set, then `processed_at`, and B gets "X · Show moved",
+replacing that show's earlier notification.
+
+## What sends a notification
 
 | Write | Event | Notes |
 |-------|-------|-------|
-| INSERT `shows` | `show.created` | not when the date is in the past or the status is completed / cancelled |
+| INSERT `shows` | `show.created` | not when the date is in the past or the status is completed / cancelled; sent at once |
 | INSERT `rehearsals` | `rehearsal.created` | same rule |
 | INSERT `setlists` with `is_draft = false`, or UPDATE `is_draft` true → false | `setlist.published` | drafts send nothing |
+| UPDATE `shows` `event_date` / `event_time` / `venue` | `show.moved` | Phase 2: sent 2–3 min after the **last** edit, one per show; moved back → nothing |
+| UPDATE `shows` `status` → `cancelled` | `show.cancelled` | replaces a pending `show.moved` |
+| UPDATE `rehearsals` `rehearsal_date` / `start_time` / `location`, `status` → `cancelled` | `rehearsal.moved` / `rehearsal.cancelled` | same rules |
+
+Changes never notify for: notes, name, setlist, soundcheck / doors / end
+time; status → completed; an event already cancelled (un-cancelling
+included); an event whose old and new dates are both more than a day past;
+deleting a row. The actor of a coalesced change is its last editor.
 
 The actor is `auth.uid()` of the request. Writes from the SQL editor or the
 service role have none and send nothing. Recipients: every band member except
@@ -135,6 +181,10 @@ band (`band_notification_mutes`).
 
 | Symptom | Look at |
 |---------|---------|
+| `show.moved` / `rehearsal.moved` rows keep `dispatched_at` null after `send_after` | the cron job: `select * from cron.job` (step 6), `cron.job_run_details` for errors; Vault secrets |
+| A change row vanished before it was sent | expected: moved back to the original values, or marked completed, inside the window |
+| `dispatch_attempts` = 3, `processed_at` null | three posts never reached the function: `net._http_response`, function logs. The cron stops retrying (also after a day) |
+| The function answers `{ "deferred": true }` | a call for a row still inside its window; the cron posts it when it's due |
 | `notification_events` gets rows, `processed_at` stays null | Vault secrets missing or misspelled; `net._http_response` for 401 (secret mismatch) / 404 (URL) |
 | `processed_at` set, `recipients = 0`, no `error` | no other member has a subscription, or they muted the band |
 | `error` = `failed: 403 …` | VAPID keys don't match the key the browser subscribed with (keys regenerated?) |
