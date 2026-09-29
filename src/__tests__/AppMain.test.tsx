@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { offlineKeys } from "../lib/offlineStore";
-import { OFFLINE_FLAG_STORAGE_KEY } from "../lib/featureFlags";
 import type { OfflineSnapshot, OfflineSnapshotMeta } from "../services/offlineSetlistService";
 import * as offline from "../services/offlineSetlistService";
 import { performSnapshotRecords } from "../test/performFixtures";
@@ -35,7 +34,6 @@ const online = bandContext({ selectedBand: BAND, bands: [BAND] });
 const offlineCtx = { ...online, isOnline: false };
 
 beforeEach(() => {
-  localStorage.setItem(OFFLINE_FLAG_STORAGE_KEY, "1");
   const records = performSnapshotRecords();
   vi.mocked(offline.listSnapshots).mockResolvedValue([records[offlineKeys.snapshotMeta("s1")] as OfflineSnapshotMeta]);
   vi.mocked(offline.getSnapshot).mockResolvedValue(records[offlineKeys.snapshot("s1")] as OfflineSnapshot);
@@ -86,14 +84,6 @@ describe("online ↔ offline keeps the route (§7.3)", () => {
     expect(await screen.findByTestId("offline-home")).toBeTruthy();
   });
 
-  it("with the flag off, offline changes nothing (today's views, BandSelector included)", () => {
-    localStorage.removeItem(OFFLINE_FLAG_STORAGE_KEY);
-    renderApp(<AppMain />, { ctx: offlineCtx, path: "/setlists/s1" });
-    expect(screen.getByText("online detail")).toBeTruthy();
-
-    renderApp(<AppMain />, { ctx: { ...offlineCtx, selectedBand: null, bands: [] } });
-    expect(screen.getByText("band selector")).toBeTruthy();
-  });
 
   it("no user (signed out / session-lost) keeps the online routes offline", () => {
     renderApp(<AppMain />, { ctx: { ...offlineCtx, user: null, authMode: "signed-out", selectedBand: null } });

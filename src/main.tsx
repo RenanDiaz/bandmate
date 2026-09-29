@@ -14,7 +14,7 @@ import theme from "./theme";
 import './i18n';
 import { applyFlagParams } from "./lib/featureFlags";
 
-// `?flag=offline` / `?flag=-offline` toggles a per-device feature flag on
+// `?flag=push` / `?flag=-push` toggles a per-device feature flag on
 // devices without a console; drop the param before the router reads the URL.
 const withoutFlagParams = applyFlagParams(window.location.href);
 if (withoutFlagParams !== null) window.history.replaceState(window.history.state, "", withoutFlagParams);

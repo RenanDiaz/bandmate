@@ -13,16 +13,15 @@ import type {
  * useSetlistPerformanceData is the React wrapper. One controller per mounted
  * setlist.
  *
- * With snapshots enabled (the offline-downloads flag, removed in PR 2.5):
+ * Setlist target:
  * 1. a snapshot of this setlist for the current user → snapshot source, even
  *    online (it refreshes its rows in the background itself);
  * 2. none and online → network source;
  * 3. none and offline → error "network" with `unavailableOffline`, which the
  *    view renders as "Not available offline" (no toast, no bounce, B8).
- * With them disabled, the network source only, as before PR 2.4.
  *
  * A song target (docs/specs/song-performance.md §3.3) opens the song source
- * only, flag on or off, online or offline: never the snapshot, never
+ * only, online or offline: never the snapshot, never
  * `unavailableOffline` (the route is gated by NeedsConnection; reached offline
  * anyway, the load fails with "network").
  */
@@ -38,8 +37,6 @@ export interface PerformanceDataState {
 
 export interface PerformanceDataControllerOptions {
   target: PerformanceTarget;
-  /** isOfflineDownloadsEnabled(), read once per mount. */
-  useSnapshots: boolean;
   isOnline: () => boolean;
   network: PerformanceDataSource;
   snapshot: PerformanceDataSource;
@@ -129,28 +126,27 @@ export class PerformanceDataController {
 
   private async start(): Promise<void> {
     const { signal } = this.abort;
-    const { target, useSnapshots, isOnline, network, snapshot, song } = this.options;
+    const { target, isOnline, network, snapshot, song } = this.options;
 
     if (target.kind === "song") {
       await this.loadFrom(song);
       return;
     }
 
-    if (useSnapshots) {
-      const { session, latest } = this.attach(snapshot);
-      try {
-        const rows = await session.load(signal);
-        if (signal.aborted) return;
-        this.setState({ status: "ready", error: null, rows: latest() ?? rows, source: "snapshot", unavailableOffline: false });
+    // A snapshot for this user wins, even online (§8.2).
+    const { session, latest } = this.attach(snapshot);
+    try {
+      const rows = await session.load(signal);
+      if (signal.aborted) return;
+      this.setState({ status: "ready", error: null, rows: latest() ?? rows, source: "snapshot", unavailableOffline: false });
+      return;
+    } catch (error) {
+      if (signal.aborted || isAbortError(error)) return;
+      this.detach();
+      if (!(error instanceof NoSnapshotError)) console.error("Could not open the offline copy:", error);
+      if (!isOnline()) {
+        this.setState({ status: "error", error: "network", rows: null, source: "network", unavailableOffline: true });
         return;
-      } catch (error) {
-        if (signal.aborted || isAbortError(error)) return;
-        this.detach();
-        if (!(error instanceof NoSnapshotError)) console.error("Could not open the offline copy:", error);
-        if (!isOnline()) {
-          this.setState({ status: "error", error: "network", rows: null, source: "network", unavailableOffline: true });
-          return;
-        }
       }
     }
 
@@ -184,8 +180,7 @@ export interface PerformanceCapabilities {
 
 /**
  * §8.3. Offline: nothing that writes or needs Realtime. Guests: no reorder,
- * upload or note editing, online too (closes the guest gap found in PR 2.1;
- * not behind the offline flag). A song target has no setlist row, so no
+ * upload or note editing, online too (closes the guest gap found in PR 2.1). A song target has no setlist row, so no
  * reorder, notes or sync for any role; upload as for a setlist.
  */
 export function performanceCapabilities({

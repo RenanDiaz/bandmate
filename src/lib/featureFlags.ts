@@ -1,16 +1,12 @@
 /**
- * Feature flags. Each one names the PR that removes it.
+ * Feature flags. Each one names the PR that removes it. A flag is on with its
+ * `VITE_*` variable at build time (e.g. Vercel Preview) or, per device, its
+ * localStorage key set to "1" (testing against production), which devices
+ * without a console set with `?flag=<name>` (`applyFlagParams`). Read on every
+ * call, so the override needs only a reload.
  *
- * Offline downloads (PR 2.3), performance mode's snapshot source (PR 2.4) and
- * the offline screens (PR 2.5) stay hidden until the §11 device checklist
- * passes; the flag is removed in PR 2.6. On with `VITE_OFFLINE_DOWNLOADS=true` at build time (e.g. Vercel
- * Preview) or, per device, `localStorage.bandmate_flag_offline = "1"` (testing
- * against production). Read on every call, so the override needs only a reload.
- * Devices without a console (no developer mode) set it with `?flag=offline`
- * (`applyFlagParams`).
+ * (The offline-downloads flag was removed in PR 2.6 of the offline spec.)
  */
-
-export const OFFLINE_FLAG_STORAGE_KEY = "bandmate_flag_offline";
 
 export interface FlagEnv {
   envValue?: string;
@@ -25,19 +21,6 @@ function deviceStorage(): Storage | null {
   }
 }
 
-function defaultEnv(): FlagEnv {
-  return { envValue: import.meta.env.VITE_OFFLINE_DOWNLOADS, storage: deviceStorage() };
-}
-
-export function isOfflineDownloadsEnabled(env: FlagEnv = defaultEnv()): boolean {
-  if (env.envValue === "true") return true;
-  try {
-    return env.storage?.getItem(OFFLINE_FLAG_STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Band push notifications (docs/specs/band-push-notifications.md §1
  * decision 8): the Notifications row and settings stay hidden until the
@@ -49,7 +32,7 @@ export function isOfflineDownloadsEnabled(env: FlagEnv = defaultEnv()): boolean 
 export const PUSH_FLAG_STORAGE_KEY = "bandmate_flag_push";
 
 function pushEnv(): FlagEnv {
-  return { ...defaultEnv(), envValue: import.meta.env.VITE_PUSH_NOTIFICATIONS };
+  return { envValue: import.meta.env.VITE_PUSH_NOTIFICATIONS, storage: deviceStorage() };
 }
 
 export function isPushNotificationsEnabled(env: FlagEnv = pushEnv()): boolean {
@@ -63,13 +46,12 @@ export function isPushNotificationsEnabled(env: FlagEnv = pushEnv()): boolean {
 
 /** URL names accepted by `?flag=`, mapped to their per-device storage keys. */
 const FLAG_PARAM_KEYS: Record<string, string> = {
-  offline: OFFLINE_FLAG_STORAGE_KEY,
   push: PUSH_FLAG_STORAGE_KEY,
 };
 
 /**
- * `?flag=offline` sets the per-device override and `?flag=-offline` removes
- * it (also `push`; several with commas or repeated params), for devices where
+ * `?flag=push` sets the per-device override and `?flag=-push` removes it
+ * (several with commas or repeated params), for devices where
  * the console can't be opened. Called once from `main.tsx` before the first
  * render. Returns the URL without the `flag` params when there were any
  * (the caller `replaceState`s it), else null. Unknown names are ignored but

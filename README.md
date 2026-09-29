@@ -31,8 +31,8 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Drag-and-drop editor, drafts, printable setlists
 - Song picker with play history, filters and multi-select; touch-friendly reordering (long-press drag and a Move up / down / to top / to bottom menu)
 - Export as text (stage, technical, chat) with copy and share
-- Make available offline (behind a feature flag until offline performance ships): save a setlist's songs and sheet music PDFs on the device (from the setlist, its show or performance mode), with progress, partial-download retry and resume after interruptions
-- Offline home (same flag): with no connection the app opens on the setlists saved on the device, with a read-only setlist view and Perform; other pages say they need a connection
+- Perform a setlist offline: "Make available offline" (from the setlist, its show or performance mode) saves its songs and sheet music PDFs on the device, with progress, partial-download retry and resume after interruptions; performance mode then works end to end with no connection
+- Offline home: with no connection the app opens on the setlists saved on the device, with a read-only setlist view and Perform; other pages say they need a connection
 - AI-assisted setlist generation and optimization (Groq, optional)
 
 **Shows & rehearsals**
@@ -87,9 +87,8 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
    | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
    | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
-   | `VITE_OFFLINE_DOWNLOADS` | — | `true` shows "Make available offline" (off by default until offline performance ships; per device: `localStorage.bandmate_flag_offline = "1"`, or open any page with `?flag=offline` / `?flag=-offline`) |
    | `VITE_VAPID_PUBLIC_KEY` | — | Public VAPID key for push notifications, from `npm run vapid-keys` ([docs/setup/push-notifications.md](docs/setup/push-notifications.md)); public by design |
-   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"` or `?flag=push`) |
+   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"`, or open any page with `?flag=push` / `?flag=-push`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
    > Don't put production secrets in them.
@@ -181,8 +180,9 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function, pg_cron)
 - [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
-- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress: Phase 2 behind a flag, Phase 3 not started)
-- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec (in progress, PR 2.6 and Phase 3 pending): offline performance, Phases 2–3
+- [docs/OFFLINE.md](docs/OFFLINE.md) — offline performance in one page: what works offline, rules, where the code is
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress: Phases 1–2 shipped, Phase 3 not started)
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec (in progress, Phase 2 shipped, Phase 3 pending): offline performance, Phases 2–3
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) — spec: content permissions (RLS, services and UI aligned with the role matrix)
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) — spec: song country/language as ISO codes with localised dropdowns
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) — spec: themed AI setlist generation

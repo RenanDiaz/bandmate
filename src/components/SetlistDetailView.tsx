@@ -40,7 +40,6 @@ import { SetlistTextExportModal } from "./SetlistTextExportModal";
 import { useTranslation } from "react-i18next";
 import { youtubeService, type PlaylistCreationResult } from "../services/youtubeService";
 import { useBandContext } from "../context/useBandContext";
-import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
 import { OfflineStatusRow } from "./offline/OfflineDownloadAction";
@@ -675,9 +674,9 @@ const SetlistDetailView: FC = () => {
         setAvailableShows(availableShowsData);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        // Weak signal with offline copies on: the route switches to the
+        // Weak signal: the route switches to the
         // offline detail once isOnline drops, so no toast and no bounce (§7.3).
-        if (isOfflineDownloadsEnabled() && isNetworkError(error)) {
+        if (isNetworkError(error)) {
           reportNetworkFailure();
         } else {
           toast.error(t("setlists.detail.loadError"));

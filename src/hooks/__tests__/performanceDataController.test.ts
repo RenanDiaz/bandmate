@@ -59,7 +59,6 @@ const SONG: PerformanceTarget = { kind: "song", songId: "x" };
 function setup(opts: {
   hasSnapshot: boolean;
   online: boolean;
-  flag: boolean;
   target?: PerformanceTarget;
   songLoad?: () => Promise<PerformanceRows>;
 }) {
@@ -74,7 +73,6 @@ function setup(opts: {
   const song = fakeSource("song", opts.songLoad ?? (async () => songRows));
   const controller = new PerformanceDataController({
     target: opts.target ?? SETLIST,
-    useSnapshots: opts.flag,
     isOnline: () => opts.online,
     network,
     snapshot,
@@ -85,60 +83,44 @@ function setup(opts: {
 
 describe("source selection (§8.2)", () => {
   it("snapshot + online → snapshot (no network load)", async () => {
-    const { controller, network } = setup({ hasSnapshot: true, online: true, flag: true });
+    const { controller, network } = setup({ hasSnapshot: true, online: true });
     await flush();
     expect(controller.getState()).toMatchObject({ status: "ready", source: "snapshot", rows: snapshotRows });
     expect(network.opened).toBe(0);
   });
 
   it("snapshot + offline → snapshot", async () => {
-    const { controller } = setup({ hasSnapshot: true, online: false, flag: true });
+    const { controller } = setup({ hasSnapshot: true, online: false });
     await flush();
     expect(controller.getState()).toMatchObject({ status: "ready", source: "snapshot" });
   });
 
   it("no snapshot + online → network", async () => {
-    const { controller, snapshot } = setup({ hasSnapshot: false, online: true, flag: true });
+    const { controller, snapshot } = setup({ hasSnapshot: false, online: true });
     await flush();
     expect(controller.getState()).toMatchObject({ status: "ready", source: "network", rows: networkRows });
     expect(snapshot.sessions[0].close).toHaveBeenCalled();
   });
 
   it("no snapshot + offline → 'Not available offline', no network attempt (B8)", async () => {
-    const { controller, network } = setup({ hasSnapshot: false, online: false, flag: true });
+    const { controller, network } = setup({ hasSnapshot: false, online: false });
     await flush();
     expect(controller.getState()).toMatchObject({ status: "error", error: "network", unavailableOffline: true });
     expect(network.opened).toBe(0);
   });
 
-  it("flag off → network only, as before PR 2.4 (the snapshot is never opened)", async () => {
-    const { controller, snapshot } = setup({ hasSnapshot: true, online: true, flag: false });
-    await flush();
-    expect(controller.getState()).toMatchObject({ status: "ready", source: "network" });
-    expect(snapshot.opened).toBe(0);
-  });
 
-  it("flag off and offline → the network error, not 'Not available offline'", async () => {
-    const { controller } = setup({ hasSnapshot: true, online: false, flag: false });
-    await flush();
-    expect(controller.getState()).toMatchObject({ status: "error", error: "network", unavailableOffline: false });
-  });
 
   it("a setlist target never opens the song source", async () => {
-    const { song } = setup({ hasSnapshot: false, online: true, flag: true });
+    const { song } = setup({ hasSnapshot: false, online: true });
     await flush();
     expect(song.opened).toBe(0);
   });
 });
 
 describe("song target (song-performance §3.3)", () => {
-  it.each([
-    { flag: true, online: true },
-    { flag: true, online: false },
-    { flag: false, online: true },
-    { flag: false, online: false },
-  ])("flag=$flag, online=$online → the song source only", async ({ flag, online }) => {
-    const { controller, snapshot, network, song } = setup({ hasSnapshot: true, online, flag, target: SONG });
+  it.each([{ online: true }, { online: false }])("online=$online → the song source only", async ({ online }) => {
+    const { controller, snapshot, network, song } = setup({ hasSnapshot: true, online, target: SONG });
     await flush();
     expect(controller.getState()).toMatchObject({ status: "ready", source: "song", rows: songRows, unavailableOffline: false });
     expect(song.opened).toBe(1);
@@ -150,7 +132,6 @@ describe("song target (song-performance §3.3)", () => {
     const { controller, song } = setup({
       hasSnapshot: true,
       online: false,
-      flag: true,
       target: SONG,
       songLoad: async () => {
         throw new PerformanceDataError("network");
@@ -165,7 +146,6 @@ describe("song target (song-performance §3.3)", () => {
     const { controller } = setup({
       hasSnapshot: false,
       online: true,
-      flag: false,
       target: SONG,
       songLoad: async () => {
         throw new PerformanceDataError("not-found");
@@ -176,7 +156,7 @@ describe("song target (song-performance §3.3)", () => {
   });
 
   it("onOnline does not refresh a song session (only the snapshot source refreshes on reconnect)", async () => {
-    const { controller, song } = setup({ hasSnapshot: false, online: true, flag: true, target: SONG });
+    const { controller, song } = setup({ hasSnapshot: false, online: true, target: SONG });
     await flush();
     controller.onOnline();
     expect(song.sessions[0].refresh).not.toHaveBeenCalled();
@@ -185,7 +165,7 @@ describe("song target (song-performance §3.3)", () => {
 
 describe("controller: emits and lifecycle", () => {
   it("emits after ready replace the rows", async () => {
-    const { controller, snapshot } = setup({ hasSnapshot: true, online: true, flag: true });
+    const { controller, snapshot } = setup({ hasSnapshot: true, online: true });
     await flush();
     const next = rows("Refreshed");
     snapshot.sessions[0].emit(next);
@@ -197,7 +177,6 @@ describe("controller: emits and lifecycle", () => {
     const snapshot = fakeSource("snapshot", () => new Promise((r) => (resolve = r)));
     const controller = new PerformanceDataController({
       target: SETLIST,
-      useSnapshots: true,
       isOnline: () => true,
       network: fakeSource("network", async () => networkRows),
       snapshot,
@@ -211,7 +190,7 @@ describe("controller: emits and lifecycle", () => {
   });
 
   it("onOnline refreshes the snapshot session; dispose closes it", async () => {
-    const { controller, snapshot } = setup({ hasSnapshot: true, online: false, flag: true });
+    const { controller, snapshot } = setup({ hasSnapshot: true, online: false });
     await flush();
     controller.onOnline();
     expect(snapshot.sessions[0].refresh).toHaveBeenCalledTimes(1);

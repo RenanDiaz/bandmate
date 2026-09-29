@@ -5,7 +5,6 @@ import { useToast } from "../context/useToast";
 import type { Setlist, SetlistItem } from "../services/setlistsService";
 import type { Song } from "../services/songsService";
 import type { SheetMusic } from "../services/songSheetMusicService";
-import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { networkPerformanceDataSource, type PerformanceLoadError } from "./performanceDataSource";
 import { createSnapshotPerformanceDataSource } from "./snapshotPerformanceDataSource";
 import { createSongPerformanceDataSource } from "./songPerformanceDataSource";
@@ -126,8 +125,6 @@ export function useSetlistPerformanceData(targetInput: PerformanceTarget | undef
     if (!target) return;
     const controller = new PerformanceDataController({
       target,
-      // The flag gates source selection (removed in PR 2.6). Read per mount.
-      useSnapshots: isOfflineDownloadsEnabled(),
       isOnline: () => isOnlineRef.current,
       network: networkPerformanceDataSource,
       snapshot: createSnapshotPerformanceDataSource({

@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 implemented behind the offline flag (PRs 2.0–2.5), PR 2.6 (§11 device checklist + flag removal) pending; Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29); Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -12,11 +12,22 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-29 — PR 2.6: flag removed.** The owner ran the §11 checklist on
+  Android and reported every Phase 2 item passing except I3 (relaunch offline
+  after > 1 h), which runs after merge; a failure there is a separate bug,
+  not a revert of this PR. Not run and accepted: the captive portal (I5),
+  full storage (D4) and the schema bump on a device (D7; covered by unit
+  tests). The Phase 3 rows of §11 run in PR 3.5. `isOfflineDownloadsEnabled()`,
+  `VITE_OFFLINE_DOWNLOADS` and `bandmate_flag_offline` are gone; a device
+  that still has the key ignores it, and `?flag=offline` is dropped from the
+  URL like any unknown flag. `docs/OFFLINE.md` is the short entry point. The
+  intent is amended for C5, C6 and C11.
+
 - **2026-09-29 — Flag by URL for the §11 checklist.** Devices without a
   console (no developer mode, e.g. a phone under parental controls) turn the
   offline flag on by opening any page with `?flag=offline` (`?flag=-offline`
   clears it). It writes the same `bandmate_flag_offline` key, so it goes away
-  with the flag in PR 2.6. On Android the installed app shares Chrome's
+  with the flag in PR 2.6 (`?flag=` stays for `push`). On Android the installed app shares Chrome's
   storage, so opening the link in Chrome is enough; an installed iOS app has
   its own storage and no address bar, so iOS still needs the Web Inspector.
 
