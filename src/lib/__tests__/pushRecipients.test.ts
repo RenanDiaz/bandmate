@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSubscriptionGone,
   secretsMatch,
+  selectInvitee,
   selectRecipients,
 } from "../../../supabase/functions/_shared/pushRecipients";
 
@@ -32,6 +33,18 @@ describe("push recipients", () => {
       { user_id: "b", expires_at: null },
     ];
     expect(selectRecipients(members, new Set<string>(), "actor", NOW)).toEqual(["b"]);
+  });
+
+  it("sends an invitation to the invitee alone", () => {
+    expect(selectInvitee("invitee", ["owner", "b"], [], "owner")).toEqual(["invitee"]);
+  });
+
+  it("skips an invitee who is the actor, already a member, muted or missing", () => {
+    expect(selectInvitee("owner", [], [], "owner")).toEqual([]);
+    expect(selectInvitee("b", ["b"], [], "owner")).toEqual([]);
+    expect(selectInvitee("c", [], ["c"], "owner")).toEqual([]);
+    expect(selectInvitee(undefined, [], [], "owner")).toEqual([]);
+    expect(selectInvitee("", [], [], "owner")).toEqual([]);
   });
 
   it("treats 404 and 410 as a dead subscription", () => {

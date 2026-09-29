@@ -9,6 +9,7 @@ import type { PushEventType, PushLocale, PushMessage } from "../_shared/pushMess
 import {
   isSubscriptionGone,
   secretsMatch,
+  selectInvitee,
   selectRecipients,
 } from "../_shared/pushRecipients.ts";
 
@@ -158,12 +159,29 @@ Deno.serve(async (req) => {
       return json({ sent: 0 });
     }
 
-    const recipientIds = selectRecipients(
-      membersResult.data ?? [],
-      (mutesResult.data ?? []).map((row) => row.user_id),
-      event.actor_id,
-      new Date()
-    );
+    const mutedIds = (mutesResult.data ?? []).map((row) => row.user_id);
+    let recipientIds: string[];
+    if (event.type === "invitation.created") {
+      // Revoked, answered or expired since the insert → nothing to act on.
+      const { data: invitation, error: invitationError } = await supabase
+        .from("band_invitations")
+        .select("id")
+        .eq("id", event.entity_id)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (invitationError) throw new Error(`invitation: ${invitationError.message}`);
+      recipientIds = invitation
+        ? selectInvitee(
+            event.payload?.inviteeId,
+            (membersResult.data ?? []).map((row) => row.user_id),
+            mutedIds,
+            event.actor_id
+          )
+        : [];
+    } else {
+      recipientIds = selectRecipients(membersResult.data ?? [], mutedIds, event.actor_id, new Date());
+    }
     if (recipientIds.length === 0) {
       await finish(0, null);
       return json({ sent: 0 });

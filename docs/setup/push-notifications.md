@@ -166,6 +166,7 @@ replacing that show's earlier notification.
 | UPDATE `shows` `event_date` / `event_time` / `venue` | `show.moved` | Phase 2: sent 2–3 min after the **last** edit, one per show; moved back → nothing |
 | UPDATE `shows` `status` → `cancelled` | `show.cancelled` | replaces a pending `show.moved` |
 | UPDATE `rehearsals` `rehearsal_date` / `start_time` / `location`, `status` → `cancelled` | `rehearsal.moved` / `rehearsal.cancelled` | same rules |
+| INSERT `band_invitations` (pending, not expired) | `invitation.created` | Phase 3: to the **invitee** only, when an account with that email exists and isn't in the band yet; opens `/`. Needs migration `20260929120000_push_notifications_invitations.sql` and a redeploy of the function |
 
 Changes never notify for: notes, name, setlist, soundcheck / doors / end
 time; status → completed; an event already cancelled (un-cancelling
@@ -175,7 +176,9 @@ deleting a row. The actor of a coalesced change is its last editor.
 The actor is `auth.uid()` of the request. Writes from the SQL editor or the
 service role have none and send nothing. Recipients: every band member except
 the actor (guests included, expired guests not), minus those who muted the
-band (`band_notification_mutes`).
+band (`band_notification_mutes`). An invitation goes to the invitee alone
+(not the band), unless they muted the band in an earlier membership, and not
+once it is revoked, answered or expired.
 
 ## Troubleshooting
 
@@ -186,7 +189,8 @@ band (`band_notification_mutes`).
 | `dispatch_attempts` = 3, `processed_at` null | three posts never reached the function: `net._http_response`, function logs. The cron stops retrying (also after a day) |
 | The function answers `{ "deferred": true }` | a call for a row still inside its window; the cron posts it when it's due |
 | `notification_events` gets rows, `processed_at` stays null | Vault secrets missing or misspelled; `net._http_response` for 401 (secret mismatch) / 404 (URL) |
-| `processed_at` set, `recipients = 0`, no `error` | no other member has a subscription, or they muted the band |
+| `processed_at` set, `recipients = 0`, no `error` | no other member has a subscription, or they muted the band; for `invitation.created`: the invitee has no subscription, or the invitation was revoked / accepted first |
+| Invited someone, no `invitation.created` row | no account uses that email yet (they only get the email), or they are already a member |
 | `error` = `failed: 403 …` | VAPID keys don't match the key the browser subscribed with (keys regenerated?) |
 | `error` = `VAPID_KEYS is not set` | step 2 |
 | Subscriptions disappear | the push service answered 404/410 (the browser dropped them); expected |

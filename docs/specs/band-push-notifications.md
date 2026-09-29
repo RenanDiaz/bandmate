@@ -1,12 +1,13 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (Phase 1 validated on devices; Phase 2 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (Phase 1 validated on devices; Phases 2 and 3 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
 > rehearsal or a (published) setlist; later, when a show or rehearsal is
-> moved or cancelled. Opt-in per device, mute per band. No email, no in-app
-> inbox (§8). Two phases, three PRs (§10).
+> moved or cancelled; and to the invitee when they are invited to a band
+> (Phase 3). Opt-in per device, mute per band. No email, no in-app
+> inbox (§8). Three phases, four PRs (§10).
 
 This is a design, not code. Signatures and schemas are the contract; no
 bodies here.
@@ -130,6 +131,7 @@ may be offered.
 | show cancelled (Phase 2) | `<band> · Show cancelled` / `Show cancelado` | `"<name>" · <date> <time?>` | same |
 | rehearsal moved (Phase 2) | `<band> · Rehearsal moved` / `Cambio de ensayo` | `"<name>" is now …`, unnamed `The rehearsal is now <date> <time?> · <location?>` / `El ensayo ahora es el …` | same |
 | rehearsal cancelled (Phase 2) | `<band> · Rehearsal cancelled` / `Ensayo cancelado` | `"<name>" · <date> <time?>`, unnamed `<date> <time?>` | same |
+| invitation (Phase 3) | `<band> · Invitation` / `Invitación` | `<actor> invited you to join as a member` / `<actor> te invitó a unirte como miembro` (role unknown → `… to join the band`) | `/` (dashboard, pending invitations) |
 
 `tag` = `<kind>:<entityId>` (`show:`, `rehearsal:`, `setlist:`; Phase 1
 used `<type>:<entityId>`) so a later event about the same entity — a
@@ -328,6 +330,36 @@ for the four new types (§2.3). `pushMessagePath` / `tag` go by kind.
 `notifications.errors.subscribeFailed`. The push texts themselves are in
 `pushMessages.ts`, not in `en.json` / `es.json`.
 
+### 3.7 Invitations (Phase 3)
+
+Origin: "No hay notificaciones si me invitan a una banda". An invitation is
+the one event addressed to a person who is **not** a band member, so it
+doesn't use §1 decision 3.
+
+- **Trigger** `notify_invitation_created`, `AFTER INSERT ON
+  band_invitations` (migration `20260929120000_push_notifications_invitations.sql`).
+  It resolves the invitee as the `auth.users` row whose email matches
+  (case-insensitive) and enqueues `invitation.created` through
+  `enqueue_notification_event` (actor = `auth.uid()`, the inviter), with
+  `entity_id` = invitation id and `payload = { inviteeId, role }`. No
+  account with that email, the invitee already a member, status not
+  `pending` or already expired → no event (the email is the channel for
+  people without an account). Errors are swallowed.
+- **The token is never copied into the outbox.** The tap opens `/`: the
+  dashboard lists the signed-in user's pending invitations
+  (`PendingInvitations`, with or without a selected band). No `?band=`: the
+  invitee can't select a band they don't belong to.
+- **Recipient** (`selectInvitee`, `_shared/pushRecipients.ts`): the invitee
+  alone, unless they are the actor, already a member at send time, or have a
+  `band_notification_mutes` row for the band (left over from an earlier
+  membership). The sender also re-checks that the invitation is still
+  `pending` and not expired, so a revoked one sends nothing.
+- `entity_kind` = `invitation`, tag `invitation:<id>`, sent at once
+  (`send_after` null). No coalescing: a re-invite is a new row.
+
+Not in scope: notifying the inviter when an invitation is accepted or
+declined, re-sending a push for an existing invitation.
+
 ## 4. Acceptance criteria
 
 Phase 1:
@@ -370,6 +402,16 @@ Phase 2:
   arrive immediately.
 - **AC20** A dispatched event with no `processed_at` after 10 min is posted
   again (at most 3 posts); replays and retries never send twice.
+
+Phase 3:
+
+- **AC21** The owner invites the email of an existing account B (subscribed);
+  B gets "<band> · Invitation" within ~10 s, in B's device language, and
+  tapping it opens the dashboard with the invitation listed.
+- **AC22** Inviting an email with no account, or someone already in the band,
+  sends nothing; the invitation and its email still work.
+- **AC23** An invitation revoked before the send, or expired, sends nothing;
+  the inviter gets nothing.
 
 ## 5. Tests
 
@@ -480,6 +522,22 @@ nothing.
   deferred-event troubleshooting). SQL checked on a local Postgres 16 with
   stubbed `auth`, Vault, `pg_net` and `pg_cron` (the PR lists the cases).
 
+### Phase 3 — invitations
+
+**Goal:** someone invited to a band hears about it on their devices, not only
+by email.
+**Closes:** AC21–AC23.
+**Validate (manual):** as the owner, invite the email of a second account
+with notifications on → the push arrives, tap → dashboard with the
+invitation; invite an unknown email → no `notification_events` row.
+
+- **PR 3.1** (implemented) — §3.7: migration
+  `20260929120000_push_notifications_invitations.sql` (type CHECK widened,
+  `notify_invitation_created`), `selectInvitee` + the sender's invitation
+  branch, `invitation.created` texts + tests. Redeploy
+  `send-push-notifications`. SQL checked on a local Postgres 16 with stubbed
+  `auth` (the PR lists the cases).
+
 ## Changelog
 
 - 2026-09-27 — draft.
@@ -502,3 +560,6 @@ nothing.
   actor; the same cron re-posts lost dispatches, capped at 3 posts within a
   day; `entity_kind` is a generated column; tag by entity (`show:<id>`) for
   every type, Phase 1 included. Out of scope: deletes, soundcheck, un-cancel.
+- 2026-09-29 — Phase 3 (§3.7, PR 3.1): invitations notify the invitee
+  (existing account only), open `/`, never carry the token; a mute of the
+  band still applies; revoked / expired invitations send nothing.

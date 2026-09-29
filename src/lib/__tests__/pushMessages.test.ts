@@ -236,4 +236,32 @@ describe("push messages", () => {
       expect(message.body).toBe('"Bar X"');
     });
   });
+
+  describe("invitations", () => {
+    it("builds the invitation in both languages, with the role", () => {
+      const en = buildPushMessage(
+        input({ type: "invitation.created", payload: { inviteeId: "u1", role: "member" } })
+      );
+      expect(en.title).toBe("Los Tigres · Invitation");
+      expect(en.body).toBe("Ana invited you to join as a member");
+      const es = buildPushMessage(
+        input({ type: "invitation.created", payload: { role: "guest" }, locale: "es" })
+      );
+      expect(es.title).toBe("Los Tigres · Invitación");
+      expect(es.body).toBe("Ana te invitó a unirte como invitado");
+    });
+
+    it("leaves the role out when it is unknown", () => {
+      const message = buildPushMessage(
+        input({ type: "invitation.created", payload: { role: "owner" }, actorName: "" })
+      );
+      expect(message.body).toBe("Someone invited you to join the band");
+    });
+
+    it("opens the dashboard, never a band path, and tags by invitation", () => {
+      const message = buildPushMessage(input({ type: "invitation.created", entityId: "inv-9" }));
+      expect(message.url).toBe("/");
+      expect(message.tag).toBe("invitation:inv-9");
+    });
+  });
 });

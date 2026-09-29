@@ -646,7 +646,13 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   never claimed (`dispatch_attempts` < 3, within a day); the function refuses
   a row still in its window (`{ deferred: true }`). Created events keep
   `send_after` null and go out at once. Tags are per entity (`show:<id>`), so
-  a change replaces the creation in the tray. Texts (en/es, by the subscription's
+  a change replaces the creation in the tray. Phase 3
+  (`20260929120000_push_notifications_invitations.sql`): an INSERT on
+  `band_invitations` enqueues `invitation.created` for the **invitee** (the
+  `auth.users` row with that email, `payload.inviteeId`; no account or
+  already a member → no event), never the band; the sender re-checks it is
+  still pending (`selectInvitee`) and the tap opens `/`. The token is never
+  in the outbox. Texts (en/es, by the subscription's
   `locale`) are `_shared/pushMessages.ts`, recipients
   `_shared/pushRecipients.ts`, both dependency-free and tested from
   `src/lib/__tests__/`. Web Push via `jsr:@negrel/webpush@0.5.0`. Secrets:
@@ -939,5 +945,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9, AC12 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phase 2 implemented, device validation pending): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`) (2 phases, 3 PRs)
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band (3 phases, 4 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
