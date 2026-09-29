@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.3) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.4) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,31 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-29 — PR 3.4: Offline setlists management (decisions the spec did not cover).**
+  - **A route, not a BandSettings section.** §6.6 put it in `BandSettings`
+    "visible to every role", but `/bands/:bandId/settings` is band-scoped,
+    online only (`NeedsConnection`) and for owners and admins; the copies
+    are device-local, span bands and matter most offline. So it is
+    **`/offline`** ("Offline setlists"), reached from the user menu (the
+    other half of §6.6), rendered the same online and offline, for every
+    role, skipping the band gate like `/invite/accept`. No link from
+    BandSettings.
+  - **"Refresh" = one "Check for updates" for the page** (`checkForUpdates()`,
+    session + online) plus, per row, Update (outdated) or Retry (partial) —
+    the same flow as the detail (`OfflineDownloadAction` variant `manage`).
+    A per-row check would issue the same three queries per setlist.
+  - **Persistence:** the line says protected / not protected / unknown; when
+    not protected and the browser has `persist()`, "Ask to protect them"
+    calls `requestPersistence()`. §11's "`persist()` answer shown in
+    management" now reads here.
+  - Rows are sorted by band name, then setlist name; each shows band, saved
+    date, size (`meta.bytes`), "Updated {date}" when a row refresh landed on
+    a later day, and "Verified {date}". A deleted copy is listed like any
+    other (badge "Deleted on server", only Verify and Remove): this is the
+    one place online that shows it.
+  - Verify reports by toast (ok, or how many PDFs are missing); the row's
+    badge turns Partial and offers Retry.
 
 - **2026-09-29 — PR 3.3: incremental update = tests only (owner's call).**
   `planDownload({ incremental: true })` is **not** implemented: the full plan

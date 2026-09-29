@@ -206,6 +206,19 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         </LanguageButtons>
       </LanguageSection>
       {!inline && <MenuDivider />}
+      {/* Offline setlists (/offline, PR 3.4): device-local, session and offline-cached. */}
+      <MenuItem
+        as={Link}
+        to="/offline"
+        $inline={inline}
+        onClick={() => {
+          setShowUserMenu(false);
+          onAction?.();
+        }}
+      >
+        <i className="bi bi-cloud-check"></i>
+        <span>{t("offline.manage.menuItem")}</span>
+      </MenuItem>
       {/* /about needs no connection: shown in session and offline-cached. */}
       <MenuItem
         as={Link}

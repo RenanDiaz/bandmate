@@ -1654,6 +1654,30 @@
     },
     "deleted": {
       "notice": "This setlist was deleted on the server, or you no longer have access. The copy on this device still performs until you remove it."
+    },
+    "manage": {
+      "menuItem": "Offline setlists",
+      "title": "Offline setlists",
+      "subtitle": "Saved on this device, for every band. They work without a connection.",
+      "listTitle_one": "{{count}} setlist on this device",
+      "listTitle_other": "{{count}} setlists on this device",
+      "checkNow": "Check for updates",
+      "checked": "Offline setlists checked",
+      "checkFailed": "Couldn’t check for updates",
+      "empty": "Nothing is saved on this device yet. Open a setlist and choose “Make available offline”.",
+      "copiesUse": "Offline copies use {{size}}",
+      "deviceUsage": "this app uses {{used}} of {{quota}} available",
+      "persisted": "Protected: the browser won’t delete these copies to free up space.",
+      "notPersisted": "Not protected: the browser may delete these copies when the device runs low on space.",
+      "persistedUnknown": "This browser doesn’t say whether it may delete these copies when space runs low.",
+      "askPersist": "Ask to protect them",
+      "saved": "Saved {{date}}",
+      "updated": "Updated {{date}}",
+      "verified": "Verified {{date}}",
+      "verify": "Verify",
+      "verifyOk": "Every PDF of “{{setlist}}” reads back fine",
+      "verifyMissing_one": "{{count}} PDF of “{{setlist}}” is missing or damaged: Retry downloads it again",
+      "verifyMissing_other": "{{count}} PDFs of “{{setlist}}” are missing or damaged: Retry downloads them again"
     }
   },
   "notifications": {

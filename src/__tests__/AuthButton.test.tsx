@@ -56,7 +56,7 @@ describe("AuthButton notifications (band push notifications §2.1)", () => {
 
     const panel = screen.getByTestId("account-panel");
     const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "About", "Notifications", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
 
     await userEvent.click(screen.getByRole("button", { name: "Notifications" }));
     expect(screen.getByTestId("settings-open").textContent).toBe("true");
@@ -140,7 +140,7 @@ describe("AuthButton inline (mobile drawer)", () => {
     expect(about.getAttribute("href")).toBe("/about");
     const panel = screen.getByTestId("account-panel");
     const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "About", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Check for updates", "Sign out"]);
 
     await userEvent.click(about);
     expect(onAction).toHaveBeenCalledTimes(1);
@@ -197,7 +197,7 @@ describe("AuthButton dropdown (desktop navbar)", () => {
 
     const menu = screen.getByRole("menu");
     const labels = Array.from(menu.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "About", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Check for updates", "Sign out"]);
 
     const about = within(menu).getByRole("link", { name: "About" });
     expect(about.getAttribute("href")).toBe("/about");

@@ -29,6 +29,7 @@ import { OfflineBandPicker } from "./components/offline/OfflineBandPicker";
 import { OfflineHome, OfflineSetlistsPage } from "./components/offline/OfflineHome";
 import { NeedsConnection, OfflineEmptyState } from "./components/offline/OfflineMessage";
 import { OfflineSetlistDetail } from "./components/offline/OfflineSetlistDetail";
+import { OfflineSetlistsManager } from "./components/offline/OfflineSetlistsManager";
 import { useOfflineUi } from "./components/offline/useOfflineUi";
 import { useBandContext } from "./context/useBandContext";
 import { useBandFromQuery } from "./hooks/useBandFromQuery";
@@ -40,7 +41,9 @@ import { useBandFromQuery } from "./hooks/useBandFromQuery";
  * `/setlists/:setlistId` render their offline screens, performance mode reads
  * its snapshot, static pages stay, and every other route renders "This page
  * needs a connection". The switch is a render, not a navigation, so coming back
- * online shows the online view of the same route.
+ * online shows the online view of the same route. `/offline` (Offline
+ * setlists, PR 3.4) is device-local: the same page online and offline, and
+ * like `/invite/accept` it skips the band gate (it spans every band).
  */
 export const AppMain: FC = () => {
   const location = useLocation();
@@ -59,7 +62,8 @@ export const AppMain: FC = () => {
     );
   }
 
-  if (user && (!selectedBand || showBandSelector) && location.pathname !== "/invite/accept") {
+  const skipsBandGate = location.pathname === "/invite/accept" || location.pathname === "/offline";
+  if (user && (!selectedBand || showBandSelector) && !skipsBandGate) {
     if (!offlineUi) {
       return (
         <BandSelector
@@ -114,6 +118,8 @@ export const AppMain: FC = () => {
       <Route path="/requests/:requestId" element={needsConnection(<RequestDetailView />)} />
       <Route path="/bands/:bandId/settings" element={needsConnection(<BandSettings user={user} />)} />
       <Route path="/invite/accept" element={needsConnection(<AcceptInvitation />)} />
+      {/* Device-local: works offline, no band needed (§6.6). */}
+      <Route path="/offline" element={<OfflineSetlistsManager />} />
       <Route path="/about" element={<About />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
