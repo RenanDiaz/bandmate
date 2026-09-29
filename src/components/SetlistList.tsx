@@ -5,7 +5,6 @@ import type { Setlist } from "../services/setlistsService";
 import type { OfflineSnapshotMeta } from "../services/offlineSetlistService";
 import { useOfflineSnapshotMetas } from "../hooks/useOfflineDownload";
 import { OfflineBadge } from "./offline/OfflineDownloadAction";
-import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { isSongItem } from "../services/setlistsService";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -109,7 +108,7 @@ const SetlistCardItem: FC<{
 
 export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit }) => {
   const navigate = useNavigate();
-  const offlineMetas = useOfflineSnapshotMetas(isOfflineDownloadsEnabled());
+  const offlineMetas = useOfflineSnapshotMetas();
 
   const handleViewSetlist = (setlistId: string) => {
     navigate(`/setlists/${setlistId}`);

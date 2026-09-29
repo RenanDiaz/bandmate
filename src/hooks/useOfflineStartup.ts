@@ -5,15 +5,13 @@ import { useToast } from "../context/useToast";
 import { getOfflineDownloadController } from "../context/offlineDownloadController";
 import { collectGarbage } from "../services/offlineSetlistService";
 import { failureMessageKey } from "../lib/offlineDownloadUi";
-import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 
 /**
  * App start (§4.4, §4.6): resume interrupted downloads, then collect garbage.
  * Runs once the user is known — with a valid session (journals with files left
  * to fetch resume) or in "offline-cached" (only journals whose files are all
  * stored commit; the service enforces it) — and again when the connection
- * comes back with a session. Call once, from AppContent. Runs even with the
- * offline-downloads flag off (harmless on an empty store); only its toast is gated.
+ * comes back with a session. Call once, from AppContent.
  */
 export function useOfflineStartup(): void {
   const { user, authMode, isCheckingAuth, isOnline } = useBandContext();
@@ -31,7 +29,7 @@ export function useOfflineStartup(): void {
       .then(async ({ staleDiscarded }) => {
         await collectGarbage();
         // Resumed results are announced by useOfflineDownloadNotifier (or shown by an open page).
-        if (!cancelled && staleDiscarded > 0 && isOfflineDownloadsEnabled()) toast.info(t("offline.startup.stale", { count: staleDiscarded }));
+        if (!cancelled && staleDiscarded > 0) toast.info(t("offline.startup.stale", { count: staleDiscarded }));
       });
     return () => {
       cancelled = true;
@@ -58,7 +56,6 @@ export function useOfflineDownloadNotifier(): void {
         // Clearing re-enters check(); skip what that already handled.
         if (!controller.getState().results[result.setlistId] || controller.isViewed(result.setlistId)) continue;
         controller.clearResult(result.setlistId);
-        if (!isOfflineDownloadsEnabled()) continue; // flag off (PR 2.5 removes it): nothing to announce
         const setlist = result.meta?.setlistName ?? "";
         if (result.state === "done") toast.success(t("offline.startup.resumed", { setlist }));
         else if (result.state === "done-with-errors") toast.warning(t("offline.startup.resumedPartial", { setlist }));

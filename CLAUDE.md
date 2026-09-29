@@ -312,16 +312,8 @@ after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 
 ### Offline download UI
 
-**Feature flag.** Every offline entry point is hidden unless
-`isOfflineDownloadsEnabled()` (`src/lib/featureFlags.ts`) is true:
-`VITE_OFFLINE_DOWNLOADS=true` at build time (Vercel Preview), or per device
-`localStorage.bandmate_flag_offline = "1"` (testing against production). Off
-by default; it also gates performance mode's snapshot source (PR 2.4) and the
-offline screens (PR 2.5, below), and the flag is removed in PR 2.6 once the
-§11 device checklist passes. The check runs before
-any hook (`OfflineDownloadAction` / `OfflineStatusRow` are thin wrappers), and
-list badges and toasts are gated too; startup resume + GC still run (harmless
-on an empty store). New offline UI goes behind the same flag.
+No feature flag: the offline UI shipped to everyone in PR 2.6 (after the §11
+device checklist). Short entry point: [docs/OFFLINE.md](docs/OFFLINE.md).
 
 "Make available offline" (PR 2.3) lives in `src/components/offline/`:
 `OfflineDownloadAction` (variants `setlist`, a link-style action rendered
@@ -357,7 +349,7 @@ also used by the schema-wipe notice's Download buttons).
 ### Offline screens (PR 2.5)
 
 Routing lives in `src/AppMain.tsx` (extracted from `App.tsx`; the navbar is
-`src/components/AppNavbar.tsx`). **"Offline" is `useOfflineUi()`**: flag on, a user known (`session`
+`src/components/AppNavbar.tsx`). **"Offline" is `useOfflineUi()`**: a user known (`session`
 or `offline-cached`) and the context's `isOnline` false, which includes
 `reportNetworkFailure()`'s forced-offline window. `<OfflineAware offline={…}>` renders
 the offline screen *instead of* the online view (the online view is not
@@ -384,9 +376,9 @@ its online view again. Nothing navigates. Spec §7.3.
 - **Weak signal:** `Home`, `SetlistsView` and `SetlistDetailView` call
   `reportNetworkFailure()` when their load fails with `isNetworkError`; the
   gate then shows the offline screen. HTTP errors keep the old behaviour.
-  Detail skips its toast + bounce only in that case, with the flag on.
-- `BandAvatar` shows the band initial when the image fails to load (not
-  flag-gated: offline `/storage/v1/` is never cached).
+  Detail skips its toast + bounce only in that case.
+- `BandAvatar` shows the band initial when the image fails to load
+  (offline `/storage/v1/` is never cached).
 - Offline screen data hooks: `useOfflineSnapshotList`, `useOfflineSnapshot`,
   `useInterruptedDownloads`, `useSchemaWipeNotice` (`src/hooks/useOfflineDownload.ts`).
 
@@ -448,8 +440,10 @@ Band push notifications ([docs/specs/band-push-notifications.md](docs/specs/band
 setup: [docs/setup/push-notifications.md](docs/setup/push-notifications.md)).
 Server side: triggers → `notification_events` → `send-push-notifications`
 (see "Edge Functions"). Client side, behind `isPushNotificationsEnabled()`
-(`VITE_PUSH_NOTIFICATIONS=true` or `localStorage.bandmate_flag_push = "1"`;
-the flag hides UI only):
+(`VITE_PUSH_NOTIFICATIONS=true` or `localStorage.bandmate_flag_push = "1"`,
+which devices without a console set by opening any page with `?flag=push`
+(`?flag=-push` clears it; `applyFlagParams`, called in `main.tsx`, drops the
+param before the first render); the flag hides UI only):
 
 - **Worker:** `public/push-sw.js` (`push` → always a notification, even for
   an unreadable payload — browsers require it; `notificationclick` →
@@ -510,10 +504,9 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
 
 - **Source selection** (§8.2) lives in `PerformanceDataController`
   (`performanceDataController.ts`, plain TS, unit-tested); the hook wraps it.
-  With `isOfflineDownloadsEnabled()`: a snapshot for this user → the snapshot
-  source, **even online**; none and online → network; none and offline →
-  `unavailableOffline` ("Not available offline" + Back, no toast, no bounce).
-  Flag off: network only.
+  A snapshot for this user → the snapshot source, **even online**; none and
+  online → network; none and offline → `unavailableOffline` ("Not available
+  offline" + Back, no toast, no bounce).
 - **`snapshotPerformanceDataSource`** renders from `getSnapshot`. Online it
   runs `flushLocalPreferences` then `refreshSnapshotRows` in the background
   (again when the connection returns): rows only, never a PDF; new PDFs show as
@@ -529,8 +522,7 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   error on a readable blob is a view error with "Try again" (fresh blob URL,
   viewer remounted) and never touches the store.
 - **Capabilities** (`performanceCapabilities`, §8.3): offline → no reorder,
-  upload, notes or sync; guests → no reorder/upload/notes, online too (not
-  behind the flag). `usePerformanceSync({ enabled: canSync })` makes no
+  upload, notes or sync; guests → no reorder/upload/notes, online too. `usePerformanceSync({ enabled: canSync })` makes no
   queries and opens no Realtime channel when disabled; `SyncControls` shows
   "Sync sessions need a connection". The **R** shortcut toggles reorder only
   when allowed.
@@ -787,7 +779,6 @@ Optional:
 VITE_SPOTIFY_CLIENT_ID=<spotify_client_id>          # metadata enrichment
 VITE_SPOTIFY_CLIENT_SECRET=<spotify_client_secret>  # see warning below
 VITE_GROQ_API_KEY=<groq_api_key>                    # AI setlist generation (https://console.groq.com)
-VITE_OFFLINE_DOWNLOADS=true                         # feature flag: offline download UI (not a secret; see "Offline download UI")
 VITE_VAPID_PUBLIC_KEY=<public key>                  # Web Push application server key from `npm run vapid-keys` (public by design)
 VITE_PUSH_NOTIFICATIONS=true                        # feature flag: Notifications settings (not a secret; see "Push notifications")
 ```
@@ -935,8 +926,8 @@ Index: [docs/README.md](docs/README.md).
 - [docs/guides/band-members.md](docs/guides/band-members.md) - Roles, why `band_members` has no RLS, invitation flow
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) - Invitation emails (Edge Function + Resend)
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
-- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phase 1 done, Phase 2 implemented behind a flag with PR 2.6 pending, Phase 3 not started): offline performance mode
-- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (in progress, PRs 2.0–2.5 merged, 2.6 and Phase 3 pending): offline performance Phases 2–3 (PR breakdown in §12)
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phases 1–2 shipped, Phase 3 not started): offline performance mode
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (in progress, Phase 2 shipped (PRs 2.0–2.6), Phase 3 pending): offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)

@@ -29,8 +29,9 @@ docs/
 - [design/implementation-examples.md](design/implementation-examples.md) — component examples for the style guide
 
 ## Offline performance
-- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress: Phase 1 done, Phase 2 behind a flag with PR 2.6 pending, Phase 3 not started)
-- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3 (in progress: PRs 2.0–2.5 merged, 2.6 and Phase 3 pending)
+- [OFFLINE.md](OFFLINE.md) — entry point: what works offline, the rules that keep it correct, where the code is
+- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress: Phases 1–2 shipped, Phase 3 not started)
+- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3 (in progress: Phase 2 shipped with PRs 2.0–2.6, Phase 3 pending)
 
 ## Backlog specs (from the 2026-09 TODO review)
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)

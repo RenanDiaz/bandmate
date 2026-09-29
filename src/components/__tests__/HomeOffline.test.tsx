@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import { OFFLINE_FLAG_STORAGE_KEY } from "../../lib/featureFlags";
 import { getBandSongs } from "../../services/songsService";
 import { getBandSetlists } from "../../services/setlistsService";
 import type { BandContextValue } from "../../test/renderApp";
@@ -59,7 +58,6 @@ function renderWithRealisticContext(path: string) {
 }
 
 beforeEach(() => {
-  localStorage.setItem(OFFLINE_FLAG_STORAGE_KEY, "1");
   vi.mocked(getBandSongs).mockResolvedValue([]);
   vi.mocked(getBandSetlists).mockResolvedValue([]);
 });
@@ -131,9 +129,4 @@ describe("session-lost on Home (§7.1, C5)", () => {
     expect(screen.queryByText("Sign in again to use your offline setlists")).toBeNull();
   });
 
-  it("flag off → the landing as before", () => {
-    localStorage.removeItem(OFFLINE_FLAG_STORAGE_KEY);
-    renderApp(<AppMain />, { ctx: bandContext({ user: null, authMode: "session-lost", hiddenOfflineCount: 2 }) });
-    expect(screen.queryByText("Sign in again to use your offline setlists")).toBeNull();
-  });
 });

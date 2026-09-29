@@ -11,7 +11,6 @@ import { useInterruptedDownload, useOfflineDownloadState, useOfflineSnapshotMeta
 import type { OfflineSnapshotMeta } from "../../services/offlineSetlistService";
 import { removeSnapshot } from "../../services/offlineSetlistService";
 import { formatSavedDate } from "../../lib/offlineDownloadUi";
-import { isOfflineDownloadsEnabled } from "../../lib/featureFlags";
 import { ConfirmModal } from "../ConfirmModal";
 import type { OfflineDownloadVariant } from "./useOfflineDownloadFlow";
 import { useOfflineDownloadFlow } from "./useOfflineDownloadFlow";
@@ -39,11 +38,7 @@ interface ActionProps {
   variant: Variant;
 }
 
-/** Hidden until the feature flag is on (removed in PR 2.6). Checked before any hook: no providers needed when off. */
-export const OfflineDownloadAction: FC<ActionProps> = (props) =>
-  isOfflineDownloadsEnabled() ? <OfflineDownloadActionInner {...props} /> : null;
-
-const OfflineDownloadActionInner: FC<ActionProps> = ({ setlistId, setlistName, variant }) => {
+export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName, variant }) => {
   const { t } = useTranslation();
   const meta = useOfflineSnapshotMeta(setlistId);
   const { active } = useOfflineDownloadState();
@@ -124,10 +119,7 @@ export const OfflineBadge: FC<{ meta: OfflineSnapshotMeta; compact?: boolean }> 
  * variant of OfflineDownloadAction), the saved badge + Remove, and the
  * interrupted-download notice with Resume / Discard.
  */
-export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = (props) =>
-  isOfflineDownloadsEnabled() ? <OfflineStatusRowInner {...props} /> : null;
-
-const OfflineStatusRowInner: FC<{ setlistId: string; setlistName: string }> = ({ setlistId, setlistName }) => {
+export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = ({ setlistId, setlistName }) => {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const { isOnline } = useBandContext();

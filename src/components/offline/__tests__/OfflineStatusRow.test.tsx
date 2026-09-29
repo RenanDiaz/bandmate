@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import { OFFLINE_FLAG_STORAGE_KEY } from "../../../lib/featureFlags";
 import { offlineKeys } from "../../../lib/offlineStore";
 import type { OfflineSnapshotMeta } from "../../../services/offlineSetlistService";
 import * as offline from "../../../services/offlineSetlistService";
@@ -28,13 +27,11 @@ const renderRow = (ctx = bandContext()) =>
   renderApp(<OfflineStatusRow setlistId="s1" setlistName="Friday" />, { ctx });
 
 beforeEach(() => {
-  localStorage.setItem(OFFLINE_FLAG_STORAGE_KEY, "1");
   vi.mocked(offline.getSnapshotMeta).mockResolvedValue(null);
   vi.mocked(offline.listInterruptedDownloads).mockResolvedValue([]);
 });
 afterEach(() => {
   cleanup();
-  localStorage.removeItem(OFFLINE_FLAG_STORAGE_KEY);
 });
 
 describe("OfflineStatusRow owns the setlist's offline state (spec §2.5)", () => {

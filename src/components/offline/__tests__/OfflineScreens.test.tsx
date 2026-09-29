@@ -4,7 +4,6 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { offlineKeys } from "../../../lib/offlineStore";
-import { OFFLINE_FLAG_STORAGE_KEY } from "../../../lib/featureFlags";
 import type { OfflineSnapshot, OfflineSnapshotMeta } from "../../../services/offlineSetlistService";
 import * as offline from "../../../services/offlineSetlistService";
 import { items, performSnapshotRecords, serverRows, setlistRow } from "../../../test/performFixtures";
@@ -57,7 +56,6 @@ const offlineCtx = (extra = {}) =>
   bandContext({ isOnline: false, selectedBand: BAND, bands: [BAND], ...extra });
 
 beforeEach(() => {
-  localStorage.setItem(OFFLINE_FLAG_STORAGE_KEY, "1");
   vi.mocked(offline.listSnapshots).mockResolvedValue([]);
   vi.mocked(offline.getSnapshot).mockResolvedValue(null);
   vi.mocked(offline.getSnapshotMeta).mockResolvedValue(null);
@@ -171,14 +169,6 @@ describe("schema-wipe notice (A4/A9)", () => {
     expect(offline.planDownload).toHaveBeenCalledWith("s2");
   });
 
-  it("is hidden with the flag off", async () => {
-    localStorage.removeItem(OFFLINE_FLAG_STORAGE_KEY);
-    vi.mocked(offline.getSchemaWipeNotice).mockResolvedValue(entries);
-    const { SchemaWipeNotice } = await import("../SchemaWipeNotice");
-    renderApp(<SchemaWipeNotice />, { ctx: bandContext() });
-    expect(screen.queryByTestId("schema-wipe-notice")).toBeNull();
-    expect(offline.getSchemaWipeNotice).not.toHaveBeenCalled();
-  });
 });
 
 describe("OfflineSetlistDetail (§7.3)", () => {

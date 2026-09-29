@@ -1,6 +1,6 @@
 # Intent: Offline performance mode
 
-> **Status:** in progress — Phase 1 done (2026-09-25); Phase 2 implemented behind a flag, PR 2.6 pending; Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 done (2026-09-25); Phase 2 shipped (2026-09-29); Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 >
 > An *intent* states a problem, the outcome we want and the boundaries of a
 > change **before** it is designed in detail. It is the thing a PR points back
@@ -38,6 +38,10 @@ general offline sync engine.
 4. The user can see when the offline copy was saved, whether it is stale
    ("changes since you downloaded"), refresh it, and remove it.
 5. Signing out deletes all offline data on the device.
+   > Amended 2026-09-29 (spec C11): only a sign-out the user chooses, or a
+   > different user signing in, deletes it. A session the app loses on its
+   > own (failed token refresh, captive portal, reconnecting YouTube) only
+   > **hides** the copies until the same user signs in again.
 6. Works on an installed PWA on iOS Safari and Android Chrome (the two stage
    devices that matter), not only on desktop.
 
@@ -140,6 +144,9 @@ Needed regardless of the feature, and cheap:
 - Selecting a different PDF offline works locally (only among downloaded
   ones); the preference is saved to the server next time we are online, best
   effort.
+  > Amended 2026-09-29 (spec C5): that choice is the one bounded offline
+  > write. It is kept on the device and sent when online, never with an error
+  > toast; nothing else is queued.
 
 ### 5. Managing offline setlists
 
@@ -148,13 +155,17 @@ Needed regardless of the feature, and cheap:
   snapshots, size, *Refresh* and *Remove*.
 - Sign-out wipes all snapshots and offline PDFs.
 
+> Amended 2026-09-29 (spec C6): offline, the app needs a way to *reach* a
+> snapshot, so Phase 2 ships an offline home (the saved setlists, a read-only
+> setlist view, Perform). The management section above stays in Phase 3.
+
 ## Phases
 
 1. **Foundations (no new UI):** local pdf.js worker, offline-safe auth,
    network timeout. Worth shipping on its own. ✅ Done (2026-09-25).
 2. **Snapshot + performance mode offline:** download action, data source,
    offline UX, sign-out wipe. This is the phase that makes it possible to do a
-   show with no connection.
+   show with no connection. ✅ Shipped (2026-09-29, PR 2.6 removed the flag).
 3. **Update check and management:** fingerprint check, "outdated" notice,
    incremental update, offline setlists list.
 4. **Follow-ups (separate intents):** persist backing tracks in

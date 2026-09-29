@@ -12,6 +12,12 @@ import "@fontsource/space-grotesk/700.css";
 import "./styles/design-tokens.css";
 import theme from "./theme";
 import './i18n';
+import { applyFlagParams } from "./lib/featureFlags";
+
+// `?flag=push` / `?flag=-push` toggles a per-device feature flag on
+// devices without a console; drop the param before the router reads the URL.
+const withoutFlagParams = applyFlagParams(window.location.href);
+if (withoutFlagParams !== null) window.history.replaceState(window.history.state, "", withoutFlagParams);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

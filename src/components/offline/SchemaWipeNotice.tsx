@@ -8,7 +8,6 @@ import { useBandContext } from "../../context/useBandContext";
 import type { SchemaWipeEntry } from "../../hooks/useOfflineDownload";
 import { useOfflineDownloadState, useSchemaWipeNotice } from "../../hooks/useOfflineDownload";
 import { dismissSchemaWipeNotice } from "../../services/offlineSetlistService";
-import { isOfflineDownloadsEnabled } from "../../lib/featureFlags";
 import { SecondaryButton } from "./offlineStyles";
 import { useOfflineDownloadFlow } from "./useOfflineDownloadFlow";
 
@@ -17,9 +16,7 @@ import { useOfflineDownloadFlow } from "./useOfflineDownloadFlow";
  * on the dashboard, the offline home and the offline list. The service only
  * returns the current user's entries, so another user never sees these names.
  */
-export const SchemaWipeNotice: FC = () => (isOfflineDownloadsEnabled() ? <SchemaWipeNoticeInner /> : null);
-
-const SchemaWipeNoticeInner: FC = () => {
+export const SchemaWipeNotice: FC = () => {
   const { t } = useTranslation();
   const { selectedBand, bands } = useBandContext();
   const { entries, dismiss } = useSchemaWipeNotice();

@@ -15,7 +15,6 @@ import { SEO } from "./SEO";
 import { LandingPage } from "./LandingPage";
 import { useTranslation } from "react-i18next";
 import { isNetworkError } from "../lib/networkErrors";
-import { isOfflineDownloadsEnabled } from "../lib/featureFlags";
 import { OfflineLockedHome } from "./offline/OfflineMessage";
 import { SchemaWipeNotice } from "./offline/SchemaWipeNotice";
 import { UpcomingEventRow } from "./home/UpcomingEventRow";
@@ -246,7 +245,7 @@ const Home = () => {
 
   // Session lost with offline copies on the device: they are hidden, not
   // deleted, until the same user signs in again (§7.1).
-  if (!user && authMode === "session-lost" && hiddenOfflineCount > 0 && isOfflineDownloadsEnabled()) {
+  if (!user && authMode === "session-lost" && hiddenOfflineCount > 0) {
     return (
       <HomeWrapper>
         <OfflineLockedHome count={hiddenOfflineCount} />
