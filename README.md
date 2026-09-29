@@ -193,7 +193,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap
