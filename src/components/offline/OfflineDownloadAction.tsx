@@ -36,9 +36,14 @@ interface ActionProps {
    * stage must not delete the copy performance mode renders from.
    */
   variant: Variant;
+  /**
+   * Toolbar: false when performance mode already renders from the snapshot, whose
+   * source badge says the same thing. A partial badge still shows (it explains Retry).
+   */
+  showSavedBadge?: boolean;
 }
 
-export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName, variant }) => {
+export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName, variant, showSavedBadge = true }) => {
   const { t } = useTranslation();
   const meta = useOfflineSnapshotMeta(setlistId);
   const { active } = useOfflineDownloadState();
@@ -90,7 +95,8 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
     );
   }
 
-  const showBadge = variant !== "setlist" && !running && meta;
+  const showBadge =
+    variant !== "setlist" && !running && meta && (showSavedBadge || meta.completeness === "partial");
   return (
     <>
       {showBadge && <OfflineBadge meta={meta} compact={compact} />}

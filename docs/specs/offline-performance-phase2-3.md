@@ -1631,7 +1631,13 @@ offline these actions are disabled (above).
 
 - Offline badge in `TopBarLeft` when `source === "snapshot"` and offline
   (icon + "Offline"); when `source === "snapshot"` and online, a subtle
-  "Offline copy" badge instead.
+  "Offline copy" badge instead. On the snapshot, the toolbar's offline
+  action does not repeat it with its own "Offline" saved badge (a partial
+  copy still shows "Partial" + Retry).
+- Below `md` the top bar's controls must fit one row: the `SyncControls`
+  trigger is icon-only (label in `aria-label` / `title`, disabled reason
+  included), and the fullscreen button is hidden where
+  `document.fullscreenEnabled` is false (iPhone, where it did nothing).
 - `SyncControls` receives `disabled` + `disabledReason`
   (`t("performanceSync.needsConnection")`) and renders its trigger inert.
   `usePerformanceSync({ enabled: capabilities.canSync })` skips its mount
