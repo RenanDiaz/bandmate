@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29); Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PR 3.0) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,28 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-29 — PR 3.0: `songs.updated_at` migration.** The owner ran I3
+  (airplane mode > 1 h, relaunch offline) on iOS after 2.6 merged: passed.
+  Decisions the spec did not cover:
+  - **Backfill keeps `created_at`.** The column is added without a default,
+    backfilled with `COALESCE(created_at, NOW())` *before* the trigger
+    exists, then gets `DEFAULT NOW()` and `NOT NULL`. `ADD COLUMN … DEFAULT
+    NOW()` (as §6.2 wrote it) fills every existing row with the migration
+    time, so the backfill it describes would never run.
+  - **`setlists` gets the same trigger.** `setlists.updated_at` had none: only
+    `setlistsService` wrote it, from the client clock. §6.1 relies on it for
+    every setlist edit, so the database now sets it on every UPDATE (the
+    service's own value is overwritten, harmless).
+  - **`Song.updated_at` is optional in the type** (`updated_at?: string`,
+    not `string` as §6.2 says): snapshots saved before the migration hold
+    song rows without it. 3.1 reads a missing value as `""` (§6.2's rule)
+    until the next row refresh fills it.
+  - Policies checked: the `songs` and `setlists` SELECT/UPDATE policies
+    (baseline + `20260927120000_align_content_rls_with_roles.sql`) are
+    row-level with no column list, so they cover the new column; no RLS
+    change. The migration must be applied to production (`supabase db push`)
+    before 3.1 ships.
 
 - **2026-09-29 — PR 2.6: flag removed.** The owner ran the §11 checklist on
   Android and reported every Phase 2 item passing except I3 (relaunch offline
@@ -1216,14 +1238,18 @@ export interface OfflineDiff {
 
 `supabase/migrations/<timestamp>_songs_updated_at.sql`, idempotent:
 
-- `ALTER TABLE songs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
-- Backfill `updated_at = created_at WHERE updated_at IS NULL` (one-off; the
-  default covers new rows).
+- `ALTER TABLE songs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;` (no
+  default yet: a default would fill existing rows with the migration time).
+- Backfill `updated_at = COALESCE(created_at, NOW()) WHERE updated_at IS NULL`
+  **before** creating the trigger, then `SET DEFAULT NOW()` and `SET NOT NULL`.
 - `DROP TRIGGER IF EXISTS … ; CREATE TRIGGER update_songs_updated_at BEFORE UPDATE ON songs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`
   (function already exists from `SHEET_MUSIC_MIGRATION.sql`; recreate with
   `CREATE OR REPLACE` for safety, as the preferences migration does).
-- Add `updated_at: string` to `Song`. No RLS change: the column is covered by
-  the existing row policies. Note which policies were checked in the PR.
+- The same trigger on `setlists` (`update_setlists_updated_at`): its
+  `updated_at` was only written by the client.
+- Add `updated_at?: string` to `Song` (optional: older snapshots lack it). No
+  RLS change: the column is covered by the existing row policies. Note which
+  policies were checked in the PR.
 
 Until this migration is applied, the fingerprint stores `""` for song
 timestamps and the check treats song content as unchanged; the PR that adds

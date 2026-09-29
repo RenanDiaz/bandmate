@@ -58,6 +58,11 @@ export interface Song {
   language?: string;
   country?: string;
   created_at: string;
+  /**
+   * Set by the database on every update (trigger). Optional in the type only
+   * because offline snapshots saved before the column existed lack it.
+   */
+  updated_at?: string;
   has_backing_tracks?: boolean;
   timing_data?: TimingData;
   sheet_music_url?: string;

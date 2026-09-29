@@ -182,7 +182,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
 - [docs/OFFLINE.md](docs/OFFLINE.md) — offline performance in one page: what works offline, rules, where the code is
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) — intent: offline performance mode (in progress: Phases 1–2 shipped, Phase 3 not started)
-- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec (in progress, Phase 2 shipped, Phase 3 pending): offline performance, Phases 2–3
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) — spec (in progress, Phase 2 shipped, Phase 3 in progress): offline performance, Phases 2–3
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) — spec: content permissions (RLS, services and UI aligned with the role matrix)
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) — spec: song country/language as ISO codes with localised dropdowns
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) — spec: themed AI setlist generation
