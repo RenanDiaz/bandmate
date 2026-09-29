@@ -1,13 +1,13 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (Phase 1 validated on devices; Phases 2 and 3 implemented, device validation pending) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (Phase 1 validated on devices; Phases 2 and 3 implemented, device validation pending; Phase 4 not started) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
 > rehearsal or a (published) setlist; later, when a show or rehearsal is
 > moved or cancelled; and to the invitee when they are invited to a band
 > (Phase 3). Opt-in per device, mute per band. No email, no in-app
-> inbox (§8). Three phases, four PRs (§10).
+> inbox (§8). Four phases, five PRs (§10).
 
 This is a design, not code. Signatures and schemas are the contract; no
 bodies here.
@@ -81,7 +81,10 @@ bodies here.
 8. **Behind a flag until the device checklist passes.**
    `isPushNotificationsEnabled()`: `VITE_PUSH_NOTIFICATIONS=true` or
    `localStorage.bandmate_flag_push = "1"`. The flag hides the UI only; the
-   triggers run regardless (no subscriptions → nothing is sent).
+   triggers run regardless (no subscriptions → nothing is sent). Phase 4
+   (PR 4.1) removes it once every deployed phase has passed its Validate:
+   with the UI open to everyone, any subscriber gets every deployed event
+   type, so an unvalidated phase must not be live when it ships.
 9. **Every push shows a notification.** Browsers require
    `userVisibleOnly`, and Safari revokes subscriptions that receive silent
    pushes, so the worker can't skip one — not even while performance mode is
@@ -413,6 +416,14 @@ Phase 3:
 - **AC23** An invitation revoked before the send, or expired, sends nothing;
   the inviter gets nothing.
 
+Phase 4 (supersedes AC13 once shipped):
+
+- **AC24** A build without `VITE_PUSH_NOTIFICATIONS`, on a device that never
+  set `bandmate_flag_push`, shows the Notifications row in `session` and
+  online (still hidden offline and in `offline-cached`). `?flag=push` in a URL
+  changes nothing and doesn't break the page. The app still starts offline
+  (`check-precache` passes).
+
 ## 5. Tests
 
 - `src/lib/__tests__/pushMessages.test.ts`: every type × locale, missing
@@ -538,6 +549,30 @@ invitation; invite an unknown email → no `notification_events` row.
   `send-push-notifications`. SQL checked on a local Postgres 16 with stubbed
   `auth` (the PR lists the cases).
 
+### Phase 4 — rollout
+
+**Goal:** notifications are available to every user, with no flag left in
+the code.
+**Closes:** AC24.
+**Starts when:** Phases 2 and 3 have passed their Validate on devices — or a
+phase that hasn't is not deployed in production (its migration not pushed).
+Phase 1 already has.
+**Validate (manual):** production build, a browser profile that never had
+the flag → Notifications row in the user menu (desktop and drawer), turn on,
+AC1 works; offline, the app starts and the row is hidden.
+
+- **PR 4.1 — remove the flag.** Delete `isPushNotificationsEnabled()` and
+  its call sites (`AuthButton` ×2, `NotificationSettingsHost`), then the rest
+  of `src/lib/featureFlags.ts`: push is the only flag, so `applyFlagParams`,
+  `FLAG_PARAM_KEYS` and the `?flag=` handling in `main.tsx` go too (the
+  module and its test are deleted; git history keeps the pattern for the next
+  flag). Remove `VITE_PUSH_NOTIFICATIONS` from `src/vite-env.d.ts`,
+  `.env.example`, README setup, `docs/setup/push-notifications.md` and
+  CLAUDE.md ("Push notifications", "Account menu", env vars). A stale
+  `bandmate_flag_push` in localStorage is left alone (inert). Manual step
+  outside the diff: delete the variable in Vercel (Preview and Production).
+  Update the spec status to implemented.
+
 ## Changelog
 
 - 2026-09-27 — draft.
@@ -563,3 +598,6 @@ invitation; invite an unknown email → no `notification_events` row.
 - 2026-09-29 — Phase 3 (§3.7, PR 3.1): invitations notify the invitee
   (existing account only), open `/`, never carry the token; a mute of the
   band still applies; revoked / expired invitations send nothing.
+- 2026-09-29 — Phase 4 (PR 4.1): the flag from §1 decision 8 had no PR
+  removing it; added, gated on every deployed phase passing its Validate.
+  Removes the whole `featureFlags.ts` module (push was its only flag).
