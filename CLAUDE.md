@@ -724,7 +724,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `bands` | Band info, `owner_id` references creator, `avatar_url` |
 | `band_members` | Join table with `role` enum (owner/admin/member/guest) - **RLS disabled**, enforced at app level |
 | `band_invitations` | Token-based invites with expiration |
-| `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity |
+| `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity; `updated_at` set by trigger (offline update check) |
 | `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
 | `user_sheet_music_preferences` | Which PDF each user opens first per song, PK `(user_id, song_id)`; RLS restricts rows to `auth.uid()` |
 | `setlists` | Setlists with JSONB `songs` array of items: songs `{type:'song', song_id, position, notes?}` and special items `{type:'break'|'section'|'note', id, label, position, duration?}`; `id` is a client-generated stable key assigned on read (`normalizeSetlistItem`) and used for React keys / drag-and-drop. Draft flag |
@@ -933,7 +933,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) - Invitation emails (Edge Function + Resend)
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phases 1–2 shipped, Phase 3 not started): offline performance mode
-- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (in progress, Phase 2 shipped (PRs 2.0–2.6), Phase 3 pending): offline performance Phases 2–3 (PR breakdown in §12)
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (in progress, Phase 2 shipped (PRs 2.0–2.6), Phase 3 in progress): offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
