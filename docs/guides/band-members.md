@@ -56,6 +56,10 @@ Band Settings → Members → **Invite Member**: email + role. `createBandInvita
 2. calls the `send-invitation-email` Edge Function (Resend). A failed email does
    **not** fail the invitation: the result reports `emailSent` / `emailError` and
    the UI tells the owner to share the link by hand.
+3. the insert itself (a database trigger) sends a push notification to the
+   invitee when an account with that email already exists and has
+   notifications on; the tap opens the dashboard with the invitation
+   ([band push notifications §3.7](../specs/band-push-notifications.md)).
 
 Email setup: [../setup/email-sending.md](../setup/email-sending.md).
 

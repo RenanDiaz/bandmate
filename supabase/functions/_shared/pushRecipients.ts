@@ -29,6 +29,22 @@ export function selectRecipients(
   return [...recipients];
 }
 
+/**
+ * The recipient of an invitation event: the invitee alone, unless they are
+ * the actor, already a member, or muted the band (a mute left over from an
+ * earlier membership still means "nothing about this band").
+ */
+export function selectInvitee(
+  inviteeId: unknown,
+  memberUserIds: Iterable<string>,
+  mutedUserIds: Iterable<string>,
+  actorId: string
+): string[] {
+  if (typeof inviteeId !== "string" || !inviteeId || inviteeId === actorId) return [];
+  if (new Set(memberUserIds).has(inviteeId) || new Set(mutedUserIds).has(inviteeId)) return [];
+  return [inviteeId];
+}
+
 /** A push service answer that means the subscription is gone for good. */
 export function isSubscriptionGone(status: number): boolean {
   return status === 404 || status === 410;

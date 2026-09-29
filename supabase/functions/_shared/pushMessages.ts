@@ -19,10 +19,11 @@ export type PushEventType =
   | "show.moved"
   | "show.cancelled"
   | "rehearsal.moved"
-  | "rehearsal.cancelled";
+  | "rehearsal.cancelled"
+  | "invitation.created";
 
 /** The entity an event is about: its path and its notification tag. */
-export type PushEntityKind = "show" | "rehearsal" | "setlist";
+export type PushEntityKind = "show" | "rehearsal" | "setlist" | "invitation";
 
 export type PushLocale = "en" | "es";
 
@@ -30,7 +31,11 @@ export type PushLocale = "en" | "es";
 export interface PushMessage {
   title: string;
   body: string;
-  /** App path to open on tap, with `?band=<id>` so the app selects the band */
+  /**
+   * App path to open on tap, with `?band=<id>` so the app selects the band.
+   * An invitation opens `/`: the invitee isn't a member yet, and the
+   * dashboard lists their pending invitations.
+   */
   url: string;
   /** Replaces an earlier notification about the same entity */
   tag: string;
@@ -46,6 +51,7 @@ export interface PushMessageInput {
    * notification_events.payload, as written by the triggers. Created events:
    * the row's fields. Moved / cancelled: `{ name, before, after }`, each a
    * `{ date, time, place, status }` snapshot; the message shows `after`.
+   * Invitation: `{ inviteeId, role }`.
    */
   payload: Record<string, unknown>;
   locale: PushLocale;
@@ -79,6 +85,10 @@ const TEXT = {
     rehearsalCancelledTitle: "Rehearsal cancelled",
     isNow: (name: string, when: string) => `"${name}" is now ${when}`,
     rehearsalIsNow: (when: string) => `The rehearsal is now ${when}`,
+    invitationTitle: "Invitation",
+    invited: (actor: string, role: string | null) =>
+      role ? `${actor} invited you to join as ${role}` : `${actor} invited you to join the band`,
+    roles: { admin: "an admin", member: "a member", guest: "a guest" } as Record<string, string>,
   },
   es: {
     someone: "Alguien",
@@ -95,6 +105,10 @@ const TEXT = {
     rehearsalCancelledTitle: "Ensayo cancelado",
     isNow: (name: string, when: string) => `"${name}" ahora es el ${when}`,
     rehearsalIsNow: (when: string) => `El ensayo ahora es el ${when}`,
+    invitationTitle: "Invitación",
+    invited: (actor: string, role: string | null) =>
+      role ? `${actor} te invitó a unirte como ${role}` : `${actor} te invitó a unirte a la banda`,
+    roles: { admin: "administrador", member: "miembro", guest: "invitado" } as Record<string, string>,
   },
 } as const;
 
@@ -174,10 +188,13 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 export function pushEntityKind(type: PushEventType): PushEntityKind {
-  return type.startsWith("show.") ? "show" : type.startsWith("rehearsal.") ? "rehearsal" : "setlist";
+  if (type.startsWith("show.")) return "show";
+  if (type.startsWith("rehearsal.")) return "rehearsal";
+  if (type.startsWith("invitation.")) return "invitation";
+  return "setlist";
 }
 
-const PATHS: Record<PushEntityKind, string> = {
+const PATHS: Record<Exclude<PushEntityKind, "invitation">, string> = {
   show: "/shows/",
   rehearsal: "/rehearsals/",
   setlist: "/setlists/",
@@ -188,7 +205,9 @@ export function pushMessagePath(
   entityId: string,
   bandId: number
 ): string {
-  return `${PATHS[pushEntityKind(type)]}${encodeURIComponent(entityId)}?band=${bandId}`;
+  const kind = pushEntityKind(type);
+  if (kind === "invitation") return "/";
+  return `${PATHS[kind]}${encodeURIComponent(entityId)}?band=${bandId}`;
 }
 
 export function buildPushMessage(input: PushMessageInput): PushMessage {
@@ -246,6 +265,12 @@ export function buildPushMessage(input: PushMessageInput): PushMessage {
         isShow || name ? `"${name ?? t.untitled}"` : null,
         when(after, locale),
       ]);
+      break;
+    }
+    case "invitation.created": {
+      title = `${band} · ${t.invitationTitle}`;
+      const role = typeof payload.role === "string" ? t.roles[payload.role] ?? null : null;
+      body = t.invited(actor, role);
       break;
     }
   }
