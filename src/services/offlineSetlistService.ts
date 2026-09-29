@@ -25,9 +25,9 @@ import { FileFetchError, classifyHttpStatus, fetchFileWithStallTimeout, mapWithC
 import { isNetworkError } from "../lib/networkErrors";
 import { clearAllPerformPositions } from "../lib/performPosition";
 import { deepEqual } from "../utils/deepEqual";
-import { getSetlist, isSongItem, normalizeSetlistItems } from "./setlistsService";
-import { getSongsByIds } from "./songsService";
-import { getSheetMusicForSongs } from "./songSheetMusicService";
+import { getSetlist, getSetlistFingerprintRows, isSongItem, normalizeSetlistItems } from "./setlistsService";
+import { getSongTimestamps, getSongsByIds } from "./songsService";
+import { getSheetMusicFingerprintRows, getSheetMusicForSongs } from "./songSheetMusicService";
 import { getMySheetMusicPreferences, getPreferredInstrument, setMySheetMusicPreference } from "./sheetMusicPreferencesService";
 import { getMyBands } from "./bandsService";
 import { createSheetMusicDownloadUrl, listSheetMusicFolderSizes } from "./sheetMusicStorageService";
@@ -37,7 +37,8 @@ import { createSheetMusicDownloadUrl, listSheetMusicFolderSizes } from "./sheetM
  * §3 and §5). PR 2.2a: the store, reads, owner filter, auth hooks and wipe.
  * PR 2.2b: the download engine (plan, download, journal/resume, quota, GC,
  * persistence). PR 2.4: row refresh, the perform-mode patches and the
- * offline preference overrides, for the snapshot performance source.
+ * offline preference overrides, for the snapshot performance source. PR 3.1:
+ * the update check (`checkForUpdates`, §6.3) and `verifySnapshot` (§6.5).
  *
  * Every read filters by the current user set through setOfflineCurrentUser();
  * with no current user (signed out or session-lost) they return empty/null
@@ -1252,17 +1253,29 @@ async function commit(
   };
 }
 
-/** §6.1. Song timestamps are "" until `songs.updated_at` exists (§6.2, PR 3.0). */
-async function fingerprintOf(snapshot: OfflineDownloadJournal["pendingSnapshot"]): Promise<OfflineFingerprint> {
+/**
+ * §6.1. Song timestamps are "" for rows saved before `songs.updated_at` existed
+ * (§6.2, PR 3.0). `current`, when its fields are the same, is returned as is
+ * (no hash to recompute).
+ */
+async function fingerprintOf(
+  snapshot: OfflineDownloadJournal["pendingSnapshot"],
+  current?: OfflineFingerprint
+): Promise<OfflineFingerprint> {
   const songs = Object.values(snapshot.songsById)
-    .map((song): [string, string] => [song.id, (song as { updated_at?: string }).updated_at ?? ""])
+    .map((song): [string, string] => [song.id, song.updated_at ?? ""])
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const sheetMusic = Object.values(snapshot.sheetMusicBySongId)
     .flat()
     .map((sm): [string, string, string, string] => [sm.id, sm.song_id, sm.updated_at ?? "", sm.file_url])
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const base = { setlistUpdatedAt: snapshot.setlist.updated_at ?? "", songs, sheetMusic };
+  if (current && deepEqual(base, fingerprintFields(current))) return current;
   return { ...base, hash: await hashOf(base) };
+}
+
+function fingerprintFields(fingerprint: OfflineFingerprint): Omit<OfflineFingerprint, "hash"> {
+  return { setlistUpdatedAt: fingerprint.setlistUpdatedAt, songs: fingerprint.songs, sheetMusic: fingerprint.sheetMusic };
 }
 
 async function hashOf(base: Omit<OfflineFingerprint, "hash">): Promise<string> {
@@ -1644,7 +1657,10 @@ export async function refreshSnapshotRows(setlistId: string): Promise<RowRefresh
     !deepEqual(rows.files, old.files);
   const newPaths = new Set(files.map((f) => f.storagePath));
   const filesReleased = old.files.filter((f) => !newPaths.has(f.storagePath));
-  const fingerprint = rowsChanged ? await fingerprintOf({ ...old, ...rows }) : before.meta.fingerprint;
+  // Always from the rows just fetched: a stale stored fingerprint (e.g. from before
+  // songs.updated_at existed) would otherwise make every check refresh again.
+  const fingerprint = await fingerprintOf({ ...old, ...rows }, before.meta.fingerprint);
+  const applied = rowsChanged ? appliedDiff(old, rows) : null;
 
   let committed: { status: "updated" | "unchanged" | "skipped"; filesNotDownloaded: OfflineFileRef[] };
   try {
@@ -1681,6 +1697,13 @@ export async function refreshSnapshotRows(setlistId: string): Promise<RowRefresh
           }
         }
         const now = new Date().toISOString();
+        // §6.1: `applied` and `filesReleased` describe the last refresh that changed
+        // rows; `filesToDownload` always tracks what the rows still lack.
+        const lastDiff: OfflineDiff = {
+          applied: applied ?? meta.lastDiff?.applied ?? emptyApplied(),
+          filesToDownload: filesNotDownloaded.map((ref) => ({ ...ref, bytes: null })),
+          filesReleased: applied ? filesReleased : (meta.lastDiff?.filesReleased ?? []),
+        };
         const nextMeta: OfflineSnapshotMeta = {
           ...meta,
           setlistName: rows.setlist.name,
@@ -1693,6 +1716,7 @@ export async function refreshSnapshotRows(setlistId: string): Promise<RowRefresh
           freshness: filesNotDownloaded.length > 0 ? "outdated" : "fresh",
           lastCheckedAt: now,
           rowsUpdatedAt: rowsChanged ? now : meta.rowsUpdatedAt,
+          lastDiff,
         };
         tx.put(offlineKeys.snapshotMeta(setlistId), nextMeta);
         if (rowsChanged) {
@@ -1718,6 +1742,44 @@ export async function refreshSnapshotRows(setlistId: string): Promise<RowRefresh
   const released = committed.status === "updated" ? filesReleased : [];
   if (released.length > 0) await collectGarbage();
   return { status: committed.status, filesNotDownloaded: committed.filesNotDownloaded, filesReleased: released };
+}
+
+const emptyApplied = (): OfflineDiff["applied"] => ({
+  setlistChanged: false,
+  songsChanged: [],
+  songsAdded: [],
+  songsRemoved: [],
+  sheetMusicChanged: [],
+  sheetMusicAdded: [],
+  sheetMusicRemoved: [],
+});
+
+/** Ids of rows added, removed or changed between two sets keyed by id. */
+function diffById<T>(before: Map<string, T>, after: Map<string, T>) {
+  const added = [...after.keys()].filter((id) => !before.has(id)).sort();
+  const removed = [...before.keys()].filter((id) => !after.has(id)).sort();
+  const changed = [...after.keys()].filter((id) => before.has(id) && !deepEqual(before.get(id), after.get(id))).sort();
+  return { added, removed, changed };
+}
+
+/** §6.1 `lastDiff.applied`: what a row refresh changed in the snapshot. */
+function appliedDiff(
+  old: Pick<OfflineSnapshot, "setlist" | "songsById" | "sheetMusicBySongId">,
+  next: Pick<OfflineSnapshot, "setlist" | "songsById" | "sheetMusicBySongId">
+): OfflineDiff["applied"] {
+  const songs = diffById(new Map(Object.entries(old.songsById)), new Map(Object.entries(next.songsById)));
+  const sheetMap = (bySong: Record<string, SheetMusic[]>) =>
+    new Map(Object.values(bySong).flat().map((sm) => [sm.id, sm] as const));
+  const sheets = diffById(sheetMap(old.sheetMusicBySongId), sheetMap(next.sheetMusicBySongId));
+  return {
+    setlistChanged: !deepEqual(old.setlist, next.setlist),
+    songsChanged: songs.changed,
+    songsAdded: songs.added,
+    songsRemoved: songs.removed,
+    sheetMusicChanged: sheets.changed,
+    sheetMusicAdded: sheets.added,
+    sheetMusicRemoved: sheets.removed,
+  };
 }
 
 async function markSnapshotDeleted(
@@ -1923,6 +1985,251 @@ export async function flushLocalPreferences(setlistId: string): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Update check and verify (§5.3, §6.3, §6.5; PR 3.1)
+// ---------------------------------------------------------------------------
+
+export type FreshnessResult =
+  | { status: "fresh"; checkedAt: string }
+  | { status: "outdated"; checkedAt: string; diff: OfflineDiff }
+  | { status: "deleted"; checkedAt: string }
+  | { status: "unknown"; checkedAt: string; reason: "offline" | "error" };
+
+type FingerprintFields = Omit<OfflineFingerprint, "hash">;
+
+const byFirst = <T extends [string, ...string[]]>(a: T, b: T) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+
+/** A snapshot is outdated exactly when its rows reference files the store lacks (A3). */
+function freshnessFromFiles(meta: OfflineSnapshotMeta): "fresh" | "outdated" {
+  return meta.missingFiles.some((m) => m.reason === "not-downloaded") ? "outdated" : "fresh";
+}
+
+function resultFromMeta(meta: OfflineSnapshotMeta | null, checkedAt: string): FreshnessResult {
+  if (!meta) return { status: "unknown", checkedAt, reason: "error" };
+  if (meta.freshness === "deleted") return { status: "deleted", checkedAt };
+  if (meta.freshness === "outdated") {
+    const filesToDownload = meta.missingFiles
+      .filter((m) => m.reason === "not-downloaded")
+      .map((m) => {
+        const known = meta.lastDiff?.filesToDownload.find((f) => f.storagePath === m.storagePath);
+        return known ?? { storagePath: m.storagePath, sheetMusicId: m.sheetMusicId, songId: m.songId, rowUpdatedAt: "", bytes: m.bytes };
+      });
+    const diff: OfflineDiff = {
+      applied: meta.lastDiff?.applied ?? emptyApplied(),
+      filesToDownload,
+      filesReleased: meta.lastDiff?.filesReleased ?? [],
+    };
+    return { status: "outdated", checkedAt, diff };
+  }
+  if (meta.freshness === "fresh") return { status: "fresh", checkedAt };
+  return { status: "unknown", checkedAt, reason: "error" };
+}
+
+/**
+ * The fingerprint matched: rows are current. Record the check and derive
+ * freshness from the files alone ("deleted" clears: the row is back).
+ */
+async function markSnapshotChecked(setlistId: string, userId: string, epoch: string | null): Promise<OfflineSnapshotMeta | null> {
+  try {
+    const meta = await transact(
+      "readwrite",
+      async (tx) => {
+        const current = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+        if (currentUserId !== userId || !current || current.userId !== userId) return null;
+        const next: OfflineSnapshotMeta = {
+          ...current,
+          freshness: freshnessFromFiles(current),
+          lastCheckedAt: new Date().toISOString(),
+        };
+        tx.put(offlineKeys.snapshotMeta(setlistId), next);
+        return next;
+      },
+      { epoch }
+    );
+    if (meta) emit({ type: "snapshot-changed", setlistId });
+    return meta;
+  } catch (error) {
+    if (!(error instanceof StoreEpochChangedError)) console.error("Offline check: could not record the check:", error);
+    return null;
+  }
+}
+
+// One check at a time per set of ids: app start, `online` and a detail open can overlap.
+const checksInFlight = new Map<string, Promise<Record<string, FreshnessResult>>>();
+
+/**
+ * §5.3, §6.3: for every snapshot of the current user (or the given ids), three
+ * cheap queries for all of them at once — setlists (`id, updated_at, songs`),
+ * their songs' `id, updated_at`, their sheet music's `id, song_id, updated_at,
+ * file_url` — compared field by field with the stored fingerprint. A match
+ * only records the check; a mismatch runs `refreshSnapshotRows`, which commits
+ * the rows (A3); a setlist the server no longer returns is "deleted". Freshness
+ * comes from the files alone. Never fetches a PDF or touches `/storage/`.
+ * Offline (or a network error) → every result `unknown/offline`, nothing
+ * written. Rejects only with OfflineError("not-authenticated").
+ */
+export function checkForUpdates(setlistIds?: string[]): Promise<Record<string, FreshnessResult>> {
+  const key = setlistIds ? [...new Set(setlistIds)].sort().join(",") : "*";
+  // A full check already covers any subset of snapshots.
+  const running = checksInFlight.get(key) ?? checksInFlight.get("*");
+  if (running) return running;
+  const check = runCheck(setlistIds).finally(() => checksInFlight.delete(key));
+  checksInFlight.set(key, check);
+  return check;
+}
+
+async function runCheck(setlistIds?: string[]): Promise<Record<string, FreshnessResult>> {
+  const userId = authenticatedUserId();
+  if (!userId) throw new OfflineError("not-authenticated");
+  const startedAt = new Date().toISOString();
+  let metas = await safeRead<OfflineSnapshotMeta[]>([], () => readOwnedMetas(userId));
+  if (setlistIds) {
+    const wanted = new Set(setlistIds);
+    metas = metas.filter((m) => wanted.has(m.setlistId));
+  }
+  if (metas.length === 0) return {};
+  const allUnknown = (reason: "offline" | "error") =>
+    Object.fromEntries(metas.map((m) => [m.setlistId, { status: "unknown", checkedAt: startedAt, reason } as const]));
+  if (isBrowserOffline()) return allUnknown("offline");
+
+  let epoch: string | null;
+  let server: {
+    setlists: Map<string, { updated_at: string; songIds: string[] }>;
+    songs: Map<string, string>;
+    sheetMusicBySong: Map<string, Array<[string, string, string, string]>>;
+  };
+  try {
+    epoch = await readEpoch();
+    const setlistRows = await getSetlistFingerprintRows(metas.map((m) => m.setlistId));
+    const setlists = new Map(
+      setlistRows.map((row) => [row.id, { updated_at: row.updated_at ?? "", songIds: referencedSongIds(row as Setlist) }] as const)
+    );
+    const songIds = [...new Set([...setlists.values()].flatMap((s) => s.songIds))];
+    const [songRows, sheetRows] = await Promise.all([getSongTimestamps(songIds), getSheetMusicFingerprintRows(songIds)]);
+    const sheetMusicBySong = new Map<string, Array<[string, string, string, string]>>();
+    for (const sm of sheetRows) {
+      const list = sheetMusicBySong.get(sm.song_id) ?? [];
+      list.push([sm.id, sm.song_id, sm.updated_at ?? "", sm.file_url]);
+      sheetMusicBySong.set(sm.song_id, list);
+    }
+    server = { setlists, songs: new Map(songRows.map((r) => [r.id, r.updated_at ?? ""] as const)), sheetMusicBySong };
+  } catch (error) {
+    console.warn("Offline update check failed:", error);
+    return allUnknown(isNetworkError(error) ? "offline" : "error");
+  }
+
+  const results: Record<string, FreshnessResult> = {};
+  for (const meta of metas) {
+    const setlistId = meta.setlistId;
+    const row = server.setlists.get(setlistId);
+    if (!row) {
+      const marked = await markSnapshotDeleted(setlistId, userId, meta.rowsUpdatedAt, epoch);
+      results[setlistId] =
+        marked.status === "deleted" ? { status: "deleted", checkedAt: new Date().toISOString() } : resultFromMeta(await getSnapshotMeta(setlistId), startedAt);
+      continue;
+    }
+    const expected: FingerprintFields = {
+      setlistUpdatedAt: row.updated_at,
+      songs: row.songIds
+        .filter((id) => server.songs.has(id))
+        .map((id): [string, string] => [id, server.songs.get(id) ?? ""])
+        .sort(byFirst),
+      sheetMusic: row.songIds.flatMap((id) => server.sheetMusicBySong.get(id) ?? []).sort(byFirst),
+    };
+    if (deepEqual(expected, fingerprintFields(meta.fingerprint))) {
+      const checked = await markSnapshotChecked(setlistId, userId, epoch);
+      results[setlistId] = resultFromMeta(checked ?? (await getSnapshotMeta(setlistId)), checked?.lastCheckedAt ?? startedAt);
+      continue;
+    }
+    let refreshed: RowRefreshResult;
+    try {
+      refreshed = await refreshSnapshotRows(setlistId);
+    } catch (error) {
+      if (error instanceof OfflineError && error.code === "not-authenticated") throw error;
+      console.warn("Offline update check: row refresh failed:", error);
+      refreshed = refreshResult("failed");
+    }
+    if (refreshed.status === "failed") {
+      results[setlistId] = { status: "unknown", checkedAt: startedAt, reason: isBrowserOffline() ? "offline" : "error" };
+      continue;
+    }
+    const after = await getSnapshotMeta(setlistId);
+    results[setlistId] = resultFromMeta(after, after?.lastCheckedAt ?? startedAt);
+  }
+  return results;
+}
+
+/** A stored file reads back whole: the recorded size, and a first byte (Safari has returned empty blobs after eviction). */
+async function isReadableFile(record: OfflineFileRecord | undefined): Promise<boolean> {
+  if (!record || !(record.blob instanceof Blob) || record.bytes <= 0 || record.blob.size !== record.bytes) return false;
+  try {
+    return (await record.blob.slice(0, 1).arrayBuffer()).byteLength === 1;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * §6.5: reads back every file of the current user's snapshot. All readable →
+ * `verifiedAt` = now. Otherwise the bad ones join `missingFiles` (reason
+ * "unknown"), completeness becomes "partial" and — online only, as in §9.3 —
+ * their `file:` records are deleted so Retry fetches them again. Works
+ * offline. `ok` is false while any referenced file is missing for a reason
+ * other than "not-downloaded" (freshness, not integrity). Never rejects.
+ */
+export async function verifySnapshot(setlistId: string): Promise<{ ok: boolean; missing: OfflineMissingFile[] }> {
+  const failedOnly = (meta: OfflineSnapshotMeta) => meta.missingFiles.filter((m) => m.reason !== "not-downloaded");
+  const userId = currentUserId;
+  if (!userId || !(await storeReady())) return { ok: false, missing: [] };
+  try {
+    const pair = await readOwnedPair(setlistId, userId);
+    if (!pair) return { ok: false, missing: [] };
+    const epoch = await readEpoch();
+    const known = new Set(pair.meta.missingFiles.map((m) => m.storagePath));
+    const toCheck = pair.snapshot.files.filter((f) => !known.has(f.storagePath));
+    const records = await readMany<OfflineFileRecord>(toCheck.map((f) => offlineKeys.file(f.storagePath)));
+    const bad: Array<{ ref: OfflineFileRef; bytes: number }> = [];
+    for (let i = 0; i < toCheck.length; i++) {
+      if (!(await isReadableFile(records[i]))) bad.push({ ref: toCheck[i], bytes: records[i]?.bytes ?? 0 });
+    }
+    const deleteFiles = !isBrowserOffline();
+
+    const meta = await transact(
+      "readwrite",
+      async (tx) => {
+        const current = await tx.get<OfflineSnapshotMeta>(offlineKeys.snapshotMeta(setlistId));
+        const snapshot = await tx.get<OfflineSnapshot>(offlineKeys.snapshot(setlistId));
+        if (currentUserId !== userId || !current || !snapshot || current.userId !== userId) return null;
+        // Only files the snapshot still references and doesn't already list (a refresh may have run).
+        const referenced = new Set(snapshot.files.map((f) => f.storagePath));
+        const listed = new Set(current.missingFiles.map((m) => m.storagePath));
+        const newlyBad = bad.filter(({ ref }) => referenced.has(ref.storagePath) && !listed.has(ref.storagePath));
+        const missingFiles = [...current.missingFiles, ...newlyBad.map(({ ref }) => missingFrom(ref, "unknown", null))];
+        const failed = missingFiles.some((m) => m.reason !== "not-downloaded");
+        const next: OfflineSnapshotMeta = {
+          ...current,
+          missingFiles,
+          completeness: failed ? "partial" : "complete",
+          fileCount: Math.max(0, current.fileCount - newlyBad.length),
+          bytes: Math.max(0, current.bytes - newlyBad.reduce((sum, b) => sum + b.bytes, 0)),
+          verifiedAt: failed ? current.verifiedAt : new Date().toISOString(),
+        };
+        tx.put(offlineKeys.snapshotMeta(setlistId), next);
+        if (deleteFiles) for (const { ref } of newlyBad) tx.delete(offlineKeys.file(ref.storagePath));
+        return next;
+      },
+      { epoch }
+    );
+    if (!meta) return { ok: false, missing: [] };
+    emit({ type: "snapshot-changed", setlistId });
+    const missing = failedOnly(meta);
+    return { ok: missing.length === 0, missing };
+  } catch (error) {
+    if (!(error instanceof StoreEpochChangedError)) console.error("Offline verify failed:", error);
+    return { ok: false, missing: [] };
+  }
+}
+
 /** Test-only: reset module state between tests. */
 export function __resetOfflineServiceForTests(): void {
   currentUserId = null;
@@ -1932,4 +2239,5 @@ export function __resetOfflineServiceForTests(): void {
   schemaWipeAnnounced = false;
   authQueue = Promise.resolve();
   listeners.clear();
+  checksInFlight.clear();
 }

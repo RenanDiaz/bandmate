@@ -49,6 +49,7 @@ import { SetlistHeaderActions } from "./setlist/SetlistHeaderActions";
 import { ReorderToolbar } from "./setlist/ReorderToolbar";
 import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
 import { useSortableSensors } from "../hooks/useSortableSensors";
+import { useOfflineUpdateCheckOnOpen } from "../hooks/useOfflineUpdateCheck";
 import { moveItem, type MoveTarget } from "../utils/setlistMove";
 
 // Forward declare styled components used in SortableSongCard
@@ -447,6 +448,7 @@ const SetlistDetailView: FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
+  useOfflineUpdateCheckOnOpen(setlistId);
   const toast = useToast();
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);

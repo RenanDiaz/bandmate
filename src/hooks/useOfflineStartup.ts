@@ -1,17 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
 import { getOfflineDownloadController } from "../context/offlineDownloadController";
 import { collectGarbage } from "../services/offlineSetlistService";
 import { failureMessageKey } from "../lib/offlineDownloadUi";
+import { ONLINE_CHECK_DEBOUNCE_MS, runUpdateCheck } from "./useOfflineUpdateCheck";
 
 /**
  * App start (§4.4, §4.6): resume interrupted downloads, then collect garbage.
  * Runs once the user is known — with a valid session (journals with files left
  * to fetch resume) or in "offline-cached" (only journals whose files are all
  * stored commit; the service enforces it) — and again when the connection
- * comes back with a session. Call once, from AppContent.
+ * comes back with a session. With a session and a connection it then runs the
+ * update check (§6.3, PR 3.1): at once on app start, 5 s after the connection
+ * returns. Call once, from AppContent.
  */
 export function useOfflineStartup(): void {
   const { user, authMode, isCheckingAuth, isOnline } = useBandContext();
@@ -19,20 +22,31 @@ export function useOfflineStartup(): void {
   const { t } = useTranslation();
   const userId = user?.id ?? null;
   const eligible = !isCheckingAuth && !!userId && (authMode === "session" || authMode === "offline-cached");
-  const trigger = eligible ? `${userId}:${authMode}:${authMode === "session" && isOnline}` : null;
+  const canCheck = authMode === "session" && isOnline;
+  const trigger = eligible ? `${userId}:${authMode}:${canCheck}` : null;
+  // The first check of a user runs at once; later ones follow a reconnect.
+  const checkedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!trigger) return;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     void getOfflineDownloadController()
       .resume()
       .then(async ({ staleDiscarded }) => {
         await collectGarbage();
         // Resumed results are announced by useOfflineDownloadNotifier (or shown by an open page).
         if (!cancelled && staleDiscarded > 0) toast.info(t("offline.startup.stale", { count: staleDiscarded }));
+        if (cancelled || !canCheck) return;
+        const delay = checkedFor.current === userId ? ONLINE_CHECK_DEBOUNCE_MS : 0;
+        checkedFor.current = userId;
+        timer = setTimeout(() => {
+          if (!cancelled) void runUpdateCheck();
+        }, delay);
       });
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
     // toast/t are stable enough; re-running on them would resume twice.
     // eslint-disable-next-line react-hooks/exhaustive-deps

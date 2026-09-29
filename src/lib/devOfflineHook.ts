@@ -1,14 +1,17 @@
 import {
   cancelDownload,
+  checkForUpdates,
   collectGarbage,
   downloadSetlist,
   getFile,
+  getSnapshotMeta,
   getStorageUsage,
   listInterruptedDownloads,
   listSnapshots,
   planDownload,
   removeSnapshot,
   resumeInterruptedDownloads,
+  verifySnapshot,
 } from "../services/offlineSetlistService";
 import type { DownloadPlan } from "../services/offlineSetlistService";
 
@@ -22,6 +25,8 @@ import type { DownloadPlan } from "../services/offlineSetlistService";
  *   const plan = await o.planDownload("<setlist id>")
  *   await o.downloadSetlist(plan)              // or: await o.download("<setlist id>")
  *   await o.listSnapshots(); await o.getStorageUsage()
+ *   await o.checkForUpdates(); (await o.getSnapshotMeta("<id>")).lastDiff   // PR 3.1
+ *   await o.verifySnapshot("<setlist id>")
  */
 const hook = {
   planDownload,
@@ -43,6 +48,9 @@ const hook = {
   removeSnapshot,
   collectGarbage,
   getFile,
+  getSnapshotMeta,
+  checkForUpdates,
+  verifySnapshot,
 };
 
 declare global {

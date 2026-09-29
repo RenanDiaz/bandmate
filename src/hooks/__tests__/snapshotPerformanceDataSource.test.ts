@@ -318,6 +318,8 @@ describe("snapshot source: reorder write-through (B12)", () => {
     const session = open();
     const emitted: PerformanceRows[] = [];
     await session.load(new AbortController().signal);
+    // Let the background row refresh finish first: its re-read would land after the write.
+    await vi.waitFor(async () => expect((await getSnapshotMeta("s1"))?.lastCheckedAt).toBeTruthy());
     await flush(60);
     session.subscribe((rows) => emitted.push(rows));
     const next: SetlistItem[] = [
