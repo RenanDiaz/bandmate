@@ -42,7 +42,9 @@ import {
   listInterruptedDownloads,
   listSnapshots,
   openOfflineStore,
+  getSnapshotMeta,
   planDownload,
+  refreshSnapshotRows,
   removeSnapshot,
   requestPersistence,
   resumeInterruptedDownloads,
@@ -1047,5 +1049,152 @@ describe("re-download keeps offline preference overrides (§5.6)", () => {
     const result: DownloadResult = await downloadSetlist(await planDownload("s1"));
     expect(result.state).toBe("done");
     expect((await getSnapshot("s1"))?.localPreferenceOverrides).toEqual({ b: "b2" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3 update of an outdated copy (§6.4, PR 3.3; ACs E1–E4). "Update
+// offline copy" is planDownload + downloadSetlist (PR 3.2): the plan only
+// fetches files the store lacks. The rows go outdated through
+// refreshSnapshotRows, which is what the update check runs on a mismatch.
+// ---------------------------------------------------------------------------
+
+describe("updating an outdated copy (§6.4, E1–E4)", () => {
+  const B3 = path("b3", "b");
+  const B4 = path("b4", "b");
+
+  /** s1 downloaded, then a bandmate adds PDFs to song b and the check refreshes the rows. */
+  async function outdatedS1(added: Array<[id: string, bytes: number]>): Promise<void> {
+    await downloadSetlist(await planDownload("s1"));
+    added.forEach(([id, bytes], i) => {
+      server.sheetMusic.push(sheet(id, "b", 2 + i));
+      server.files[path(id, "b")] = { bytes };
+    });
+    server.fetched = [];
+    const refreshed = await refreshSnapshotRows("s1");
+    expect(refreshed.status).toBe("updated");
+    expect((await getSnapshotMeta("s1"))?.freshness).toBe("outdated");
+  }
+
+  const downloadedAt = async (paths: string[]) => {
+    const entries = await rawEntries();
+    return paths.map((p) => (entries[offlineKeys.file(p)] as { downloadedAt: string } | undefined)?.downloadedAt);
+  };
+
+  it("E1: the plan holds exactly the new PDF and its size; only it downloads; then fresh", async () => {
+    await outdatedS1([["b3", 70]]);
+    const before = await downloadedAt([A1, A2, B1, B2]);
+
+    const plan = await planDownload("s1");
+    expect(plan.filesToDownload.map((f) => [f.storagePath, f.bytes])).toEqual([[B3, 70]]);
+    expect(plan.bytesToDownload).toBe(70);
+    expect(plan.filesAlreadyPresent.map((f) => f.storagePath)).toEqual([A1, A2, B1, B2]);
+
+    const result = await downloadSetlist(plan);
+    expect(result.state).toBe("done");
+    expect(server.fetched).toEqual([B3]);
+    expect(result.meta).toMatchObject({ freshness: "fresh", completeness: "complete", missingFiles: [], fileCount: 5 });
+    expect((await getSnapshotMeta("s1"))?.lastDiff?.filesToDownload).toEqual([]);
+    expect((await getFile(B3))?.size).toBe(70);
+    expect(await downloadedAt([A1, A2, B1, B2])).toEqual(before);
+  });
+
+  it("E2: a replaced PDF (delete + add) leaves the selector and the store; the update fetches one file", async () => {
+    await downloadSetlist(await planDownload("s1"));
+    const before = await downloadedAt([A1, B1, B2]);
+    // Replace a2 with a3: there is no replace-in-place, only delete + add (§0).
+    server.sheetMusic = server.sheetMusic.filter((sm) => sm.id !== "a2");
+    delete server.files[A2];
+    server.sheetMusic.push(sheet("a3", "a", 1));
+    const A3 = path("a3", "a");
+    server.files[A3] = { bytes: 25 };
+    server.fetched = [];
+
+    const refreshed = await refreshSnapshotRows("s1");
+    expect(refreshed.filesReleased.map((f) => f.storagePath)).toEqual([A2]);
+    expect((await getSnapshot("s1"))?.sheetMusicBySongId.a.map((sm) => sm.id)).toEqual(["a1", "a3"]);
+    expect(await fileKeys()).not.toContain(offlineKeys.file(A2));
+    expect((await getSnapshotMeta("s1"))?.freshness).toBe("outdated");
+    expect((await getSnapshotMeta("s1"))?.lastDiff?.applied).toMatchObject({ sheetMusicAdded: ["a3"], sheetMusicRemoved: ["a2"] });
+
+    const result = await downloadSetlist(await planDownload("s1"));
+    expect(result.state).toBe("done");
+    expect(server.fetched).toEqual([A3]);
+    expect(result.meta?.freshness).toBe("fresh");
+    expect(await downloadedAt([A1, B1, B2])).toEqual(before);
+  });
+
+  it("E3: removing a setlist that shares a song keeps the shared PDFs; the other still performs from them", async () => {
+    await downloadSetlist(await planDownload("s1"));
+    await downloadSetlist(await planDownload("s2")); // shares song a (a1, a2)
+    await removeSnapshot("s2");
+    expect(await fileKeys()).toContain(offlineKeys.file(A1));
+    expect(await fileKeys()).toContain(offlineKeys.file(A2));
+    expect(await fileKeys()).not.toContain(offlineKeys.file(D1));
+    vi.stubGlobal("navigator", { onLine: false, locks: navigator.locks });
+    setOfflineCurrentUser(USER_A, { authenticated: false });
+    expect((await getSnapshot("s1"))?.files.map((f) => f.storagePath)).toEqual([A1, A2, B1, B2]);
+    expect((await getFile(A1))?.size).toBe(100);
+    expect((await getFile(A2))?.size).toBe(20);
+  });
+
+  it("E4: connection lost mid-update → the old copy still performs offline, stays outdated, and the journal resumes", async () => {
+    await outdatedS1([
+      ["b3", 70],
+      ["b4", 80],
+    ]);
+    const oldRows = await getSnapshot("s1");
+    server.files[B3] = { bytes: 70, hangAfter: 10 };
+    const started = fetchStarted(B3);
+    const done = downloadSetlist(await planDownload("s1"));
+    await started;
+    await flush();
+    // Airplane mode while b3 downloads: b3 finishes, b4 is never fetched.
+    const realLocks = navigator.locks;
+    vi.stubGlobal("navigator", { onLine: false, locks: realLocks });
+    server.release.get(B3)!();
+    const result = await done;
+
+    expect(server.fetched).toEqual([B3]);
+    expect(result.missingFiles.map((m) => [m.storagePath, m.reason])).toEqual([[B4, "network"]]);
+    expect(await journalOf("s1")).toBeTruthy();
+    // Nothing committed: same rows, same meta state.
+    expect(await getSnapshot("s1")).toEqual(oldRows);
+    const meta = await getSnapshotMeta("s1");
+    expect(meta?.freshness).toBe("outdated");
+    expect(meta?.missingFiles.map((m) => [m.sheetMusicId, m.reason])).toEqual([
+      ["b3", "not-downloaded"],
+      ["b4", "not-downloaded"],
+    ]);
+    // It still performs offline from the stored files.
+    setOfflineCurrentUser(USER_A, { authenticated: false });
+    expect((await getFile(B1))?.size).toBe(300);
+
+    // Back online with a session: the journal resumes, fetches only b4, and the copy is fresh.
+    vi.stubGlobal("navigator", { onLine: true, locks: realLocks });
+    signIn();
+    server.fetched = [];
+    const [resumed] = await resumeInterruptedDownloads();
+    expect(resumed.state).toBe("done");
+    expect(server.fetched).toEqual([B4]);
+    expect(await journalOf("s1")).toBeUndefined();
+    expect(resumed.meta).toMatchObject({ freshness: "fresh", completeness: "complete", fileCount: 6 });
+  });
+
+  it("E4: one new PDF that fails on its own commits as partial (badge Partial + Retry)", async () => {
+    await outdatedS1([["b3", 70]]);
+    server.files[B3] = { bytes: 70, status: 503 };
+    const result = await downloadSetlist(await planDownload("s1"));
+    expect(result.state).toBe("done-with-errors");
+    // The update committed: the file is a failed download now, not a "not-downloaded" one,
+    // so freshness is "fresh" and the badge says Partial (offlineBadgeState), offering Retry.
+    expect(result.meta).toMatchObject({ completeness: "partial", freshness: "fresh" });
+    expect(result.missingFiles).toEqual([{ storagePath: B3, sheetMusicId: "b3", songId: "b", reason: "network", bytes: 70 }]);
+    // Retry (a normal re-plan) fetches only that file.
+    server.files[B3] = { bytes: 70 };
+    server.fetched = [];
+    const retried = await downloadSetlist(await planDownload("s1"));
+    expect(server.fetched).toEqual([B3]);
+    expect(retried.meta).toMatchObject({ completeness: "complete", freshness: "fresh" });
   });
 });

@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.2) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.3) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,33 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-29 — PR 3.3: incremental update = tests only (owner's call).**
+  `planDownload({ incremental: true })` is **not** implemented: the full plan
+  already puts only files the store lacks in `filesToDownload` (sized, by
+  storage path), and the commit replaces the snapshot in one transaction
+  and runs GC, so a separate incremental plan would change nothing the user
+  sees. The unused `incremental` option is removed from `planDownload` and
+  `DownloadOptions` (§5.2's signatures read without it); §6.4 reads as
+  "Update offline copy = the normal plan". What 3.3 adds are the tests
+  (`offlineDownload.test.ts`, "updating an outdated copy"):
+  - **E1** the plan holds exactly the new PDF and its size, only it is
+    fetched, the copy is `fresh` afterwards and the other files keep their
+    `downloadedAt`.
+  - **E2** a replaced PDF (delete + add): the old one leaves the selector
+    and the store at the row refresh, `outdated`, and the update fetches one
+    file.
+  - **E3** removing a setlist that shares a song keeps the shared PDFs; the
+    other still reads them offline.
+  - **E4** airplane mode mid-update: nothing commits, the old rows and the
+    `outdated` meta are untouched, stored files still read, and the journal
+    resumes online fetching only what is left.
+  - **E4, clarified:** a new PDF that fails **on its own** (e.g. a 5xx)
+    while the connection holds does commit, as `partial` with that file as a
+    failed download (`network`), so freshness becomes `fresh` and the badge
+    reads "Partial" with Retry (`offlineBadgeState` puts partial before
+    outdated). "Outdated until the update commits" holds; this update did
+    commit, and Retry is the right next action.
 
 - **2026-09-29 — PR 3.2: outdated / deleted UX (decisions the spec did not cover).**
   - **One badge state, by urgency:** deleted > partial > outdated >
@@ -2093,7 +2120,7 @@ verified by unit tests (fake-indexeddb) in `npm test`.
 | 3.0 | `songs.updated_at` migration | Migration + trigger + `Song.updated_at`; note policies checked; apply to prod before 3.1 ships. | — |
 | 3.1 | Fingerprint and update check | `OfflineFingerprint` computed at download; `checkForUpdates` with batching, **calling `refreshSnapshotRows` on mismatch**; freshness from files only + `lastDiff` (`applied` / `filesToDownload` / `filesReleased`) in meta; triggers (start, online, open detail); `verifySnapshot`. | 2.6, 3.0 |
 | 3.2 | Outdated / deleted UX | Badge states in list and detail; banners in detail and performance mode with "Update offline copy" (**files only**); "Deleted on server" state. | 3.1 |
-| 3.3 | Incremental update | `planDownload({ incremental })` over `lastDiff.filesToDownload`, refcounted GC after commit, old snapshot readable until commit. | 3.2 |
+| 3.3 | Incremental update | ~~`planDownload({ incremental })` over `lastDiff.filesToDownload`~~ (not needed: the normal plan is already file-incremental, changelog PR 3.3); tests for E1–E4: refcounted GC after commit, old snapshot readable until commit. | 3.2 |
 | 3.4 | Offline setlists management | Section in `BandSettings` + user-menu entry; usage/quota/persisted; per-snapshot Verify/Refresh/Remove; interrupted downloads Resume/Discard; schema-wipe notice also shown here; iOS install hint. | 3.3 |
 | 3.5 | Docs | CLAUDE.md/README updates; intent status → "shipped (phases 1–3)"; device checklist results recorded in `docs/OFFLINE.md`. | 3.4 |
 
