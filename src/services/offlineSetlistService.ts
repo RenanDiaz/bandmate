@@ -592,8 +592,6 @@ export function dismissSchemaWipeNotice(setlistId?: string): Promise<void> {
 export interface DownloadOptions {
   onProgress?: (p: DownloadProgress) => void;
   signal?: AbortSignal;
-  /** Phase 3: only fetch what the diff says changed. Default false = full plan. */
-  incremental?: boolean;
 }
 
 export interface DownloadResult {
@@ -707,11 +705,10 @@ async function requireStoreForDownload(): Promise<void> {
  * path only). No writes. Rejects with OfflineError `not-authenticated`,
  * `offline`, `setlist-not-found` or `storage-unavailable`.
  *
- * `incremental` is accepted for the Phase 3 signature and ignored: every plan
- * is a full plan, which already downloads only the files the store lacks.
+ * It is also "Update offline copy" (§6.4): only files the store lacks go in
+ * `filesToDownload`, so there is no separate incremental plan (PR 3.3).
  */
-export async function planDownload(setlistId: string, opts: { incremental?: boolean } = {}): Promise<DownloadPlan> {
-  void opts.incremental; // Phase 3 (PR 3.3)
+export async function planDownload(setlistId: string): Promise<DownloadPlan> {
   const userId = authenticatedUserId();
   if (!userId) throw new OfflineError("not-authenticated");
   if (isBrowserOffline()) throw new OfflineError("offline");
