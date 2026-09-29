@@ -16,7 +16,9 @@ export type OfflineDownloadVariant = "setlist" | "show" | "toolbar";
 /**
  * Plan, confirm and the progress/result modal for one setlist: used by the
  * action button and by the schema-wipe notice's Download buttons (PR 2.5).
- * Render `elements` next to whatever calls `begin()`.
+ * Render `elements` next to whatever calls `begin()`. `begin({ update: true })`
+ * (PR 3.2, an outdated copy) is the same plan and download — the plan only
+ * fetches files the device lacks — with "Update offline copy" wording.
  */
 export function useOfflineDownloadFlow(setlistId: string, setlistName: string, variant: OfflineDownloadVariant) {
   const { t } = useTranslation();
@@ -26,6 +28,7 @@ export function useOfflineDownloadFlow(setlistId: string, setlistName: string, v
   const canDownload = isOnline && authMode === "session";
   const [planning, setPlanning] = useState(false);
   const [plan, setPlan] = useState<DownloadPlan | null>(null);
+  const [updating, setUpdating] = useState(false);
   const [modalFor, setModalFor] = useState<string | null>(null);
   const platform = useMemo(() => ({ ios: isIOS(), standalone: isStandalone() }), []);
   // The page variants show their setlist's progress and results themselves
@@ -55,7 +58,8 @@ export function useOfflineDownloadFlow(setlistId: string, setlistName: string, v
     if (runningHere || (result && result.state !== "cancelled")) setModalFor((current) => current ?? setlistId);
   }, [ownsResults, runningHere, result, setlistId]);
 
-  const begin = useCallback(async () => {
+  const begin = useCallback(async (opts: { update?: boolean } = {}) => {
+    setUpdating(!!opts.update);
     // Invisible until there is progress or a result; claims a plan failure.
     showModal(setlistId);
     setPlanning(true);
@@ -80,9 +84,9 @@ export function useOfflineDownloadFlow(setlistId: string, setlistName: string, v
       <ConfirmModal
         isOpen={plan !== null}
         tone="primary"
-        title={t(variant === "show" ? "offline.confirm.titleShow" : "offline.confirm.title")}
-        message={t("offline.confirm.message", { setlist: setlistName })}
-        confirmLabel={t("offline.confirm.confirm")}
+        title={t(updating ? "offline.update.title" : variant === "show" ? "offline.confirm.titleShow" : "offline.confirm.title")}
+        message={t(updating ? "offline.update.message" : "offline.confirm.message", { setlist: setlistName })}
+        confirmLabel={t(updating ? "offline.update.confirm" : "offline.confirm.confirm")}
         onConfirm={confirm}
         // Cancel stores nothing: the plan is only dropped (A1).
         onClose={() => {

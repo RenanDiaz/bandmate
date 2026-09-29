@@ -32,6 +32,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Song picker with play history, filters and multi-select; touch-friendly reordering (long-press drag and a Move up / down / to top / to bottom menu)
 - Export as text (stage, technical, chat) with copy and share
 - Perform a setlist offline: "Make available offline" (from the setlist, its show or performance mode) saves its songs and sheet music PDFs on the device, with progress, partial-download retry and resume after interruptions; performance mode then works end to end with no connection
+- Offline copies stay current: with a connection the app checks saved setlists in the background (no PDFs downloaded), applies order, lyrics and PDF-detail changes on its own, marks a copy "Outdated" when new sheet music is waiting ("Update offline copy" downloads only the new PDFs) and "Deleted on server" when the setlist is gone (it still performs until removed)
 - Offline home: with no connection the app opens on the setlists saved on the device, with a read-only setlist view and Perform; other pages say they need a connection
 - AI-assisted setlist generation and optimization (Groq, optional)
 

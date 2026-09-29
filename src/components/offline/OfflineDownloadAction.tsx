@@ -10,7 +10,8 @@ import { getOfflineDownloadController } from "../../context/offlineDownloadContr
 import { useInterruptedDownload, useOfflineDownloadState, useOfflineSnapshotMeta } from "../../hooks/useOfflineDownload";
 import type { OfflineSnapshotMeta } from "../../services/offlineSetlistService";
 import { removeSnapshot } from "../../services/offlineSetlistService";
-import { formatSavedDate } from "../../lib/offlineDownloadUi";
+import { formatSavedDate, notDownloadedCount, offlineBadgeState } from "../../lib/offlineDownloadUi";
+import type { OfflineBadgeState } from "../../lib/offlineDownloadUi";
 import { ConfirmModal } from "../ConfirmModal";
 import type { OfflineDownloadVariant } from "./useOfflineDownloadFlow";
 import { useOfflineDownloadFlow } from "./useOfflineDownloadFlow";
@@ -19,7 +20,9 @@ import { useOfflineDownloadFlow } from "./useOfflineDownloadFlow";
  * "Make available offline" (PR 2.3, §4.1): plan → confirmation → progress →
  * result. Available to every band role, guests included (A7). Downloads need
  * a connection and a valid session; without them the action is disabled with
- * "Needs a connection" (A8).
+ * "Needs a connection" (A8). PR 3.2: an outdated copy offers "Update offline
+ * copy" (the same flow: the plan only fetches files the device lacks); a copy
+ * deleted on the server offers nothing but Remove.
  */
 
 type Variant = OfflineDownloadVariant;
@@ -51,6 +54,7 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
   const running = active?.setlistId === setlistId ? active : null;
   const compact = variant === "toolbar";
   const Button = variant === "setlist" ? RowActionButton : ActionButton;
+  const state = meta ? offlineBadgeState(meta) : null;
 
   let button: ReactElement | null = null;
   if (running) {
@@ -64,8 +68,35 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
         <span>{label}</span>
       </Button>
     );
-  } else if (meta === undefined) {
-    button = null; // still reading the store
+  } else if (meta === undefined || state === "deleted") {
+    button = null; // still reading the store / nothing to download from a deleted setlist (D5)
+  } else if (meta && state === "outdated") {
+    const count = notDownloadedCount(meta);
+    const label = flow.canDownload ? t("offline.update.button") : t("offline.action.needsConnection");
+    const update = (
+      <Button
+        type="button"
+        onClick={() => void flow.begin({ update: true })}
+        disabled={!flow.canDownload || flow.planning}
+        title={flow.canDownload ? t("offline.update.hint", { count }) : label}
+        aria-label={label}
+        $compact={compact}
+      >
+        {flow.planning ? <Spinner size="sm" /> : <i className={`bi ${flow.canDownload ? "bi-cloud-arrow-down" : "bi-wifi-off"}`} />}
+        <span>{flow.planning ? t("offline.action.preparing") : label}</span>
+      </Button>
+    );
+    // The detail says why (D2); the toolbar and the show keep it to the button.
+    button =
+      variant === "setlist" ? (
+        <Notice role="status" $tone="info" data-testid="offline-update-notice">
+          <i className="bi bi-cloud-arrow-down" aria-hidden="true" />
+          <span>{t("offline.update.notice", { count })}</span>
+          <NoticeActions>{update}</NoticeActions>
+        </Notice>
+      ) : (
+        update
+      );
   } else if (!meta || meta.completeness === "partial" || variant === "show") {
     // The show keeps its action when the setlist is saved: it re-plans the
     // same snapshot and downloads nothing already present (A3).
@@ -95,8 +126,10 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
     );
   }
 
+  // The toolbar on the snapshot hides the plain saved badge (the source badge says it),
+  // never one that explains something: partial (Retry) or deleted.
   const showBadge =
-    variant !== "setlist" && !running && meta && (showSavedBadge || meta.completeness === "partial");
+    variant !== "setlist" && !running && meta && (showSavedBadge || state === "partial" || state === "deleted");
   return (
     <>
       {showBadge && <OfflineBadge meta={meta} compact={compact} />}
@@ -106,16 +139,94 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
   );
 };
 
+const BADGE: Record<OfflineBadgeState, { icon: string; color: string; label: string; short: string; hint?: string }> = {
+  available: {
+    icon: "bi-cloud-check",
+    color: theme.colors.semantic.success,
+    label: "offline.badge.available",
+    short: "offline.badge.availableShort",
+  },
+  partial: {
+    icon: "bi-cloud-slash",
+    color: theme.colors.semantic.warning,
+    label: "offline.badge.partial",
+    short: "offline.badge.partialShort",
+  },
+  outdated: {
+    icon: "bi-cloud-arrow-down",
+    color: theme.colors.semantic.info,
+    label: "offline.badge.outdated",
+    short: "offline.badge.outdatedShort",
+    hint: "offline.badge.outdatedHint",
+  },
+  deleted: {
+    icon: "bi-cloud-minus",
+    color: theme.colors.semantic.error,
+    label: "offline.badge.deleted",
+    short: "offline.badge.deletedShort",
+    hint: "offline.badge.deletedHint",
+  },
+};
+
+/** §6.6: none (no copy), "Available offline · {date}", "Partial", "Outdated", "Deleted on server". */
 export const OfflineBadge: FC<{ meta: OfflineSnapshotMeta; compact?: boolean }> = ({ meta, compact }) => {
   const { t, i18n } = useTranslation();
   const date = formatSavedDate(meta.savedAt, i18n.language);
-  const partial = meta.completeness === "partial";
-  const full = t(partial ? "offline.badge.partial" : "offline.badge.available", { date });
+  const state = offlineBadgeState(meta);
+  const look = BADGE[state];
+  const full = t(look.label, { date });
   return (
-    <Badge $partial={partial} title={full} data-testid="offline-badge">
-      <i className={`bi ${partial ? "bi-cloud-slash" : "bi-cloud-check"}`} />
-      <span>{compact ? t(partial ? "offline.badge.partialShort" : "offline.badge.availableShort") : full}</span>
+    <Badge $color={look.color} title={look.hint ? t(look.hint) : full} data-testid="offline-badge" data-state={state}>
+      <i className={`bi ${look.icon}`} />
+      <span>{compact ? t(look.short) : full}</span>
     </Badge>
+  );
+};
+
+/** Remove offline copy + its confirmation (§6.6 F3). `onRemoved` runs after a successful removal. */
+export const RemoveOfflineCopy: FC<{ setlistId: string; setlistName: string; onRemoved?: () => void }> = ({
+  setlistId,
+  setlistName,
+  onRemoved,
+}) => {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const remove = async () => {
+    setRemoving(true);
+    let removed = false;
+    try {
+      await removeSnapshot(setlistId);
+      removed = true;
+      toast.success(t("offline.remove.success"));
+    } catch (error) {
+      console.error("Could not remove the offline copy:", error);
+      toast.error(t("offline.remove.error"));
+    } finally {
+      setRemoving(false);
+      setConfirmRemove(false);
+    }
+    if (removed) onRemoved?.();
+  };
+
+  return (
+    <>
+      <LinkButton type="button" onClick={() => setConfirmRemove(true)}>
+        <i className="bi bi-trash" /> {t("offline.remove.button")}
+      </LinkButton>
+      <ConfirmModal
+        isOpen={confirmRemove}
+        tone="danger"
+        title={t("offline.remove.title")}
+        message={t("offline.remove.message", { setlist: setlistName })}
+        confirmLabel={t("offline.remove.confirm")}
+        busy={removing}
+        onConfirm={() => void remove()}
+        onClose={() => setConfirmRemove(false)}
+      />
+    </>
   );
 };
 
@@ -127,29 +238,12 @@ export const OfflineBadge: FC<{ meta: OfflineSnapshotMeta; compact?: boolean }> 
  */
 export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = ({ setlistId, setlistName }) => {
   const { t, i18n } = useTranslation();
-  const toast = useToast();
   const { isOnline } = useBandContext();
   const meta = useOfflineSnapshotMeta(setlistId);
   const interrupted = useInterruptedDownload(setlistId);
   const { active } = useOfflineDownloadState();
   const controller = getOfflineDownloadController();
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  const [removing, setRemoving] = useState(false);
   const [resuming, setResuming] = useState(false);
-
-  const remove = async () => {
-    setRemoving(true);
-    try {
-      await removeSnapshot(setlistId);
-      toast.success(t("offline.remove.success"));
-    } catch (error) {
-      console.error("Could not remove the offline copy:", error);
-      toast.error(t("offline.remove.error"));
-    } finally {
-      setRemoving(false);
-      setConfirmRemove(false);
-    }
-  };
 
   // The page's action shows the result (or the notifier toasts it).
   const resume = async () => {
@@ -167,11 +261,7 @@ export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = 
     <Row data-testid="offline-status-row">
       {showMeta && <OfflineBadge meta={meta} />}
       <OfflineDownloadAction setlistId={setlistId} setlistName={setlistName} variant="setlist" />
-      {showMeta && (
-        <LinkButton type="button" onClick={() => setConfirmRemove(true)}>
-          <i className="bi bi-trash" /> {t("offline.remove.button")}
-        </LinkButton>
-      )}
+      {showMeta && <RemoveOfflineCopy setlistId={setlistId} setlistName={setlistName} />}
       {interrupted && (
         <Notice role="status">
           <i className="bi bi-pause-circle" />
@@ -195,16 +285,6 @@ export const OfflineStatusRow: FC<{ setlistId: string; setlistName: string }> = 
           </NoticeActions>
         </Notice>
       )}
-      <ConfirmModal
-        isOpen={confirmRemove}
-        tone="danger"
-        title={t("offline.remove.title")}
-        message={t("offline.remove.message", { setlist: setlistName })}
-        confirmLabel={t("offline.remove.confirm")}
-        busy={removing}
-        onConfirm={() => void remove()}
-        onClose={() => setConfirmRemove(false)}
-      />
     </Row>
   );
 };
@@ -253,7 +333,7 @@ const ActionButton = styled.button<{ $compact?: boolean }>`
   }
 `;
 
-const Badge = styled.span<{ $partial: boolean }>`
+const Badge = styled.span<{ $color: string }>`
   display: inline-flex;
   align-items: center;
   gap: ${theme.space[1]};
@@ -262,9 +342,9 @@ const Badge = styled.span<{ $partial: boolean }>`
   font-size: ${theme.fontSizes.bodyXs};
   font-weight: ${theme.fontWeights.semibold};
   white-space: nowrap;
-  color: ${(p) => (p.$partial ? theme.colors.semantic.warning : theme.colors.semantic.success)};
-  background: ${(p) => (p.$partial ? theme.colors.semantic.warning : theme.colors.semantic.success)}1f;
-  border: 1px solid ${(p) => (p.$partial ? theme.colors.semantic.warning : theme.colors.semantic.success)}55;
+  color: ${(p) => p.$color};
+  background: ${(p) => p.$color}1f;
+  border: 1px solid ${(p) => p.$color}55;
 `;
 
 const Row = styled.div`
@@ -311,7 +391,7 @@ const RowActionButton = styled(LinkButton)<{ $compact?: boolean }>`
   }
 `;
 
-const Notice = styled.div`
+const Notice = styled.div<{ $tone?: "warning" | "info" }>`
   flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -319,15 +399,19 @@ const Notice = styled.div`
   gap: ${theme.space[2]};
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
-  border: 1px solid ${theme.colors.semantic.warning}55;
-  background: ${theme.colors.semantic.warning}14;
+  border: 1px solid ${(p) => noticeTone(p.$tone)}55;
+  background: ${(p) => noticeTone(p.$tone)}14;
   font-size: ${theme.fontSizes.bodySm};
   color: var(--color-text-primary);
 
   > i {
-    color: ${theme.colors.semantic.warning};
+    color: ${(p) => noticeTone(p.$tone)};
   }
 `;
+
+function noticeTone(tone: "warning" | "info" | undefined): string {
+  return tone === "info" ? theme.colors.semantic.info : theme.colors.semantic.warning;
+}
 
 const NoticeActions = styled.div`
   display: flex;

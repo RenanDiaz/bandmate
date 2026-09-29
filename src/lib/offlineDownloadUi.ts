@@ -2,6 +2,7 @@ import type {
   DownloadPlan,
   OfflineMissingFile,
   OfflineSnapshot,
+  OfflineSnapshotMeta,
 } from "../services/offlineSetlistService";
 import type { DownloadFailureCode } from "../context/offlineDownloadController";
 
@@ -110,4 +111,25 @@ export function formatSavedDate(iso: string, locale?: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+}
+
+/**
+ * The one state an offline badge shows (spec §6.6, PR 3.2), most urgent first:
+ * the setlist is gone on the server, some downloads failed, new PDFs wait to
+ * be downloaded, or the copy is current.
+ */
+export type OfflineBadgeState = "deleted" | "partial" | "outdated" | "available";
+
+export function offlineBadgeState(
+  meta: Pick<OfflineSnapshotMeta, "freshness" | "completeness">
+): OfflineBadgeState {
+  if (meta.freshness === "deleted") return "deleted";
+  if (meta.completeness === "partial") return "partial";
+  if (meta.freshness === "outdated") return "outdated";
+  return "available";
+}
+
+/** PDFs the rows reference that are not on the device yet (what "Update offline copy" fetches). */
+export function notDownloadedCount(meta: Pick<OfflineSnapshotMeta, "missingFiles">): number {
+  return meta.missingFiles.filter((m) => m.reason === "not-downloaded").length;
 }

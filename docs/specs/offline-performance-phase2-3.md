@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.1) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.2) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,41 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-29 — PR 3.2: outdated / deleted UX (decisions the spec did not cover).**
+  - **One badge state, by urgency:** deleted > partial > outdated >
+    available (`offlineBadgeState`). "Outdated" keeps the §6.6 tooltip ("New
+    sheet music to download").
+  - **The banner shows the count, not the size** (owner's call on the 3.1
+    note): "New sheet music is available for this setlist: N PDFs to
+    download." + "Update offline copy". The size appears in the confirmation,
+    which already runs a plan. D2's "with the size to download" reads as that
+    confirmation.
+  - **"Update offline copy" is the existing flow** with update wording
+    (title, message, "Update"): `planDownload` already puts only files the
+    store lacks in `filesToDownload` and sizes them, so E1's "exactly the new
+    PDF's size, only that file downloads" holds today. **Consequence for
+    3.3:** what is left there is `{ incremental: true }` itself (plan from
+    `lastDiff.filesToDownload`), and verifying E2 / E4 (old snapshot readable
+    until commit, `outdated` surviving a failed update) with tests — both
+    look true of the current commit, which replaces the snapshot in one
+    transaction and never touches the meta on failure.
+  - **Performance mode: a toolbar button, not a banner.** The top bar stays
+    on one row on phones (PR #162) and a banner mid-show competes with the
+    lyrics; the compact toolbar action becomes "Update offline copy" (icon on
+    phones, label on wider screens). The deleted badge shows there even on
+    the snapshot (like partial).
+  - **Deleted is reachable online.** The online lists come from the server,
+    so a deleted setlist only shows through its detail link, performance
+    mode or (3.4) management. `SetlistDetailView`, when `getSetlist` answers
+    PostgREST `PGRST116` (no row) and the device has a copy, renders the
+    copy (`OfflineSetlistDetail online`: no offline banner, back to
+    `/setlists`) with the deleted notice, Perform and Remove, instead of the
+    toast + bounce. Without a copy nothing changes. Offline, the detail
+    offers Remove only for a deleted copy (D5: "only Remove offered"); a
+    current copy is still removed from the online detail.
+  - No download action on a deleted copy anywhere (a Retry would fail with
+    `setlist-not-found`).
 
 - **2026-09-29 — PR 3.1: fingerprint and update check (decisions the spec did not cover).**
   - **One batch for every snapshot, not one per band.** Query 1 is

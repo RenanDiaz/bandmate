@@ -43,6 +43,8 @@ import { useBandContext } from "../context/useBandContext";
 import { isNetworkError } from "../lib/networkErrors";
 import { useToast } from "../context/useToast";
 import { OfflineStatusRow } from "./offline/OfflineDownloadAction";
+import { OfflineSetlistDetail } from "./offline/OfflineSetlistDetail";
+import { getSnapshotMeta } from "../services/offlineSetlistService";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent, canManageEvents } from "../services/bandMembersService";
 import { SetlistHeaderActions } from "./setlist/SetlistHeaderActions";
@@ -443,6 +445,11 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
   );
 };
 
+/** PostgREST "no rows" from `.single()`: the setlist is gone or RLS hides it. */
+function isSetlistGone(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === "PGRST116";
+}
+
 const SetlistDetailView: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
@@ -455,6 +462,8 @@ const SetlistDetailView: FC = () => {
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
   const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  // D5 (PR 3.2): the server no longer returns the setlist, but this device has a copy.
+  const [goneOnServer, setGoneOnServer] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -654,6 +663,7 @@ const SetlistDetailView: FC = () => {
 
     const loadData = async () => {
       setLoading(true);
+      setGoneOnServer(false);
       try {
         const setlistData = await getSetlist(setlistId);
         reportNetworkSuccess();
@@ -680,6 +690,10 @@ const SetlistDetailView: FC = () => {
         // offline detail once isOnline drops, so no toast and no bounce (§7.3).
         if (isNetworkError(error)) {
           reportNetworkFailure();
+        } else if (isSetlistGone(error) && (await getSnapshotMeta(setlistId))) {
+          // Deleted (or access lost) with a copy on this device: show the copy,
+          // which says so and offers Remove, instead of bouncing (D5).
+          setGoneOnServer(true);
         } else {
           toast.error(t("setlists.detail.loadError"));
           navigate("/setlists");
@@ -812,6 +826,8 @@ const SetlistDetailView: FC = () => {
     return setlistSong?.notes;
   };
 
+
+  if (goneOnServer) return <OfflineSetlistDetail online />;
 
   if (loading) {
     return (
