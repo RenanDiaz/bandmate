@@ -7,6 +7,8 @@ import {
   failureMessageKey,
   formatBytes,
   groupMissingBySong,
+  notDownloadedCount,
+  offlineBadgeState,
   quotaWarning,
   reasonKey,
   summarizePlan,
@@ -119,5 +121,40 @@ describe("copy exists in both locales", () => {
 
   it("an unknown code falls back to the generic message", () => {
     expect(failureMessageKey(null)).toBe("offline.failure.unknown");
+  });
+});
+
+describe("offlineBadgeState / notDownloadedCount (PR 3.2)", () => {
+  const base = { freshness: "fresh" as const, completeness: "complete" as const };
+  it("orders deleted > partial > outdated > available", () => {
+    expect(offlineBadgeState(base)).toBe("available");
+    expect(offlineBadgeState({ ...base, freshness: "unknown" })).toBe("available");
+    expect(offlineBadgeState({ ...base, freshness: "outdated" })).toBe("outdated");
+    expect(offlineBadgeState({ freshness: "outdated", completeness: "partial" })).toBe("partial");
+    expect(offlineBadgeState({ freshness: "deleted", completeness: "partial" })).toBe("deleted");
+  });
+
+  it("counts only not-downloaded files", () => {
+    const file = (reason: OfflineMissingFile["reason"]): OfflineMissingFile => ({
+      storagePath: `p-${reason}`,
+      sheetMusicId: "x",
+      songId: "s",
+      reason,
+      bytes: null,
+    });
+    expect(notDownloadedCount({ missingFiles: [file("not-downloaded"), file("quota"), file("not-downloaded")] })).toBe(2);
+  });
+
+  it("every badge and update string exists in both locales", () => {
+    for (const locale of [en, es]) {
+      const o = locale.offline as Record<string, Record<string, string>>;
+      for (const key of ["outdated", "outdatedShort", "outdatedHint", "deleted", "deletedShort", "deletedHint"]) {
+        expect(o.badge[key]).toBeTruthy();
+      }
+      for (const key of ["button", "hint_one", "hint_other", "notice_one", "notice_other", "title", "message", "confirm"]) {
+        expect(o.update[key]).toBeTruthy();
+      }
+      expect(o.deleted.notice).toBeTruthy();
+    }
   });
 });

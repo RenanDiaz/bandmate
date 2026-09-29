@@ -10,15 +10,18 @@ import type { OfflineSnapshot, OfflineSnapshotMeta } from "../../services/offlin
 import type { SetlistItem } from "../../services/setlistsService";
 import { getSetlistItemKey, isBreakItem, isSongItem } from "../../services/setlistsService";
 import { BandAvatar } from "../BandAvatar";
-import { OfflineBadge } from "./OfflineDownloadAction";
+import { OfflineBadge, RemoveOfflineCopy } from "./OfflineDownloadAction";
 import { OfflineNotAvailable } from "./OfflineMessage";
 import { Banner, Header, Muted, Page, PrimaryLink, SecondaryButton, Subtitle, Title } from "./offlineStyles";
 
 /**
  * `/setlists/:setlistId` offline (§7.3): read-only, from the snapshot. The
- * online SetlistDetailView is not mounted offline at all.
+ * online SetlistDetailView is not mounted offline at all. `online`: rendered
+ * by SetlistDetailView when the server no longer returns the setlist but this
+ * device has a copy (D5, PR 3.2) — no offline banner, back to /setlists.
+ * A copy deleted on the server says so and offers only Remove.
  */
-export const OfflineSetlistDetail: FC = () => {
+export const OfflineSetlistDetail: FC<{ online?: boolean }> = ({ online = false }) => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const snapshot = useOfflineSnapshot(setlistId);
   // The meta holds completeness and missing files: wait for both, so the
@@ -32,10 +35,14 @@ export const OfflineSetlistDetail: FC = () => {
     );
   }
   if (!snapshot) return <OfflineNotAvailable />;
-  return <SnapshotDetail snapshot={snapshot} meta={meta} />;
+  return <SnapshotDetail snapshot={snapshot} meta={meta} online={online} />;
 };
 
-const SnapshotDetail: FC<{ snapshot: OfflineSnapshot; meta: OfflineSnapshotMeta | null }> = ({ snapshot, meta }) => {
+const SnapshotDetail: FC<{ snapshot: OfflineSnapshot; meta: OfflineSnapshotMeta | null; online: boolean }> = ({
+  snapshot,
+  meta,
+  online,
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { setlist, band } = snapshot;
@@ -48,15 +55,25 @@ const SnapshotDetail: FC<{ snapshot: OfflineSnapshot; meta: OfflineSnapshotMeta 
     return new Set(snapshot.files.map((f) => f.sheetMusicId).filter((id) => !missing.has(id)));
   }, [snapshot.files, meta?.missingFiles]);
 
+  const deleted = meta?.freshness === "deleted";
+  const home = online ? "/setlists" : "/";
   let songNumber = 0;
   return (
     <Page data-testid="offline-setlist-detail">
-      <Banner role="status">
-        <i className="bi bi-wifi-off" aria-hidden="true" />
-        <span>{t("offline.screen.banner")}</span>
-      </Banner>
+      {!online && (
+        <Banner role="status">
+          <i className="bi bi-wifi-off" aria-hidden="true" />
+          <span>{t("offline.screen.banner")}</span>
+        </Banner>
+      )}
+      {deleted && (
+        <DeletedBanner role="status" data-testid="offline-deleted-notice">
+          <i className="bi bi-cloud-minus" aria-hidden="true" />
+          <span>{t("offline.deleted.notice")}</span>
+        </DeletedBanner>
+      )}
       <div>
-        <SecondaryButton type="button" onClick={() => navigate("/")}>
+        <SecondaryButton type="button" onClick={() => navigate(home)}>
           <i className="bi bi-arrow-left" aria-hidden="true" /> {t("offline.detail.back")}
         </SecondaryButton>
       </div>
@@ -73,6 +90,13 @@ const SnapshotDetail: FC<{ snapshot: OfflineSnapshot; meta: OfflineSnapshotMeta 
         <PrimaryLink to={`/setlists/${snapshot.setlistId}/perform`}>
           <i className="bi bi-play-fill" aria-hidden="true" /> {t("offline.list.perform")}
         </PrimaryLink>
+        {deleted && (
+          <RemoveOfflineCopy
+            setlistId={snapshot.setlistId}
+            setlistName={setlist.name}
+            onRemoved={() => navigate(home, { replace: true })}
+          />
+        )}
       </Actions>
       <Items>
         {items.map((item) => {
@@ -148,6 +172,15 @@ const Description = styled.p`
   color: var(--color-text-secondary);
   margin: 0;
   white-space: pre-wrap;
+`;
+
+const DeletedBanner = styled(Banner)`
+  border-color: ${theme.colors.semantic.error}55;
+  color: var(--color-text-primary);
+
+  i {
+    color: ${theme.colors.semantic.error};
+  }
 `;
 
 const Actions = styled.div`

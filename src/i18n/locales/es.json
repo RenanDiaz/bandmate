@@ -1498,7 +1498,13 @@
       "available": "Disponible sin conexión · {{date}}",
       "partial": "Parcial · {{date}}",
       "availableShort": "Sin conexión",
-      "partialShort": "Parcial"
+      "partialShort": "Parcial",
+      "outdated": "Desactualizada",
+      "outdatedShort": "Desactualizada",
+      "outdatedHint": "Hay PDFs nuevos para descargar",
+      "deleted": "Borrado en el servidor",
+      "deletedShort": "Borrado",
+      "deletedHint": "Este setlist se borró en el servidor o ya no tienes acceso. La copia de este dispositivo sigue funcionando hasta que la elimines."
     },
     "confirm": {
       "title": "¿Guardar para usar sin conexión?",
@@ -1635,6 +1641,19 @@
       "needsConnection": "Necesita conexión",
       "dismiss": "Descartar",
       "unknownBand": "Otra banda"
+    },
+    "update": {
+      "button": "Actualizar copia sin conexión",
+      "hint_one": "{{count}} PDF nuevo para descargar",
+      "hint_other": "{{count}} PDFs nuevos para descargar",
+      "notice_one": "Hay PDFs nuevos para este setlist: {{count}} PDF para descargar.",
+      "notice_other": "Hay PDFs nuevos para este setlist: {{count}} PDFs para descargar.",
+      "title": "¿Actualizar la copia sin conexión?",
+      "message": "Solo se descargarán los PDFs de “{{setlist}}” que aún no están en este dispositivo. Lo demás se queda como está.",
+      "confirm": "Actualizar"
+    },
+    "deleted": {
+      "notice": "Este setlist se borró en el servidor o ya no tienes acceso. La copia de este dispositivo se puede seguir usando hasta que la elimines."
     }
   },
   "notifications": {

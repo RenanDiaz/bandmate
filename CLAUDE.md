@@ -371,7 +371,21 @@ also used by the schema-wipe notice's Download buttons).
 - **Every role** sees and can use the action (A7); it is disabled with "Needs
   a connection" unless online with `authMode: "session"` (A8).
 - **Remove only in the setlist detail** — never in the toolbar variant
-  (performance mode renders from the snapshot from 2.4 on).
+  (performance mode renders from the snapshot from 2.4 on). `RemoveOfflineCopy`
+  is the button + `ConfirmModal`.
+- **Freshness UI (PR 3.2):** `OfflineBadge` shows one state,
+  `offlineBadgeState(meta)` (`src/lib/offlineDownloadUi.ts`): deleted >
+  partial > outdated > available. **Outdated** → "Update offline copy":
+  the same `useOfflineDownloadFlow` (`begin({ update: true })`, update
+  wording; the plan already fetches only files the device lacks). In the
+  detail it is a notice with the count of new PDFs (the size shows in the
+  confirmation: the check never calls Storage); in performance mode's
+  toolbar only a button (no banner on stage). **Deleted** → no download
+  action anywhere, the badge shows on the toolbar too, and the detail says so
+  with Remove: `SetlistDetailView` renders `<OfflineSetlistDetail online />`
+  when `getSetlist` answers `PGRST116` and the device has a copy (else the
+  old toast + bounce); offline, `OfflineSetlistDetail` offers Remove only for
+  a deleted copy.
 - The confirmation reuses `ConfirmModal` (`children` slot); on iOS it says
   "Saved on this device, in this app" and, in a browser tab
   (`src/lib/platform.ts`), shows the install hint (§9.1).

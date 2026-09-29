@@ -1498,7 +1498,13 @@
       "available": "Available offline · {{date}}",
       "partial": "Partial · {{date}}",
       "availableShort": "Offline",
-      "partialShort": "Partial"
+      "partialShort": "Partial",
+      "outdated": "Outdated",
+      "outdatedShort": "Outdated",
+      "outdatedHint": "New sheet music to download",
+      "deleted": "Deleted on server",
+      "deletedShort": "Deleted",
+      "deletedHint": "This setlist was deleted on the server, or you no longer have access. The copy on this device still works until you remove it."
     },
     "confirm": {
       "title": "Make available offline?",
@@ -1635,6 +1641,19 @@
       "needsConnection": "Needs a connection",
       "dismiss": "Dismiss",
       "unknownBand": "Another band"
+    },
+    "update": {
+      "button": "Update offline copy",
+      "hint_one": "{{count}} new PDF to download",
+      "hint_other": "{{count}} new PDFs to download",
+      "notice_one": "New sheet music is available for this setlist: {{count}} PDF to download.",
+      "notice_other": "New sheet music is available for this setlist: {{count}} PDFs to download.",
+      "title": "Update offline copy?",
+      "message": "Only the sheet music of “{{setlist}}” that isn’t on this device yet will download. Everything else stays as it is.",
+      "confirm": "Update"
+    },
+    "deleted": {
+      "notice": "This setlist was deleted on the server, or you no longer have access. The copy on this device still performs until you remove it."
     }
   },
   "notifications": {

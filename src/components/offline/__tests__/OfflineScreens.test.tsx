@@ -208,6 +208,30 @@ describe("OfflineSetlistDetail (§7.3)", () => {
   });
 });
 
+describe("OfflineSetlistDetail: deleted on the server (D5, PR 3.2)", () => {
+  it("says so, keeps Perform, and offers Remove", async () => {
+    const { meta, snapshot } = fixture();
+    vi.mocked(offline.getSnapshot).mockResolvedValue(snapshot);
+    vi.mocked(offline.getSnapshotMeta).mockResolvedValue({ ...meta, freshness: "deleted" });
+    renderApp(<AppMain />, { ctx: offlineCtx(), path: "/setlists/s1" });
+    const detail = await screen.findByTestId("offline-setlist-detail");
+    expect(within(detail).getByTestId("offline-deleted-notice").textContent).toMatch(/deleted on the server/);
+    expect(within(detail).getByTestId("offline-badge").textContent).toMatch(/Deleted on server/);
+    expect(within(detail).getByRole("link", { name: /Perform/ })).toBeTruthy();
+    expect(within(detail).getByRole("button", { name: /Remove offline copy/ })).toBeTruthy();
+  });
+
+  it("a copy that is not deleted has no Remove offline (only the detail online has it)", async () => {
+    const { meta, snapshot } = fixture();
+    vi.mocked(offline.getSnapshot).mockResolvedValue(snapshot);
+    vi.mocked(offline.getSnapshotMeta).mockResolvedValue(meta);
+    renderApp(<AppMain />, { ctx: offlineCtx(), path: "/setlists/s1" });
+    const detail = await screen.findByTestId("offline-setlist-detail");
+    expect(within(detail).queryByTestId("offline-deleted-notice")).toBeNull();
+    expect(within(detail).queryByRole("button", { name: /Remove/ })).toBeNull();
+  });
+});
+
 describe("routes without an offline screen", () => {
   it("render 'This page needs a connection' with a link home", () => {
     renderApp(<AppMain />, { ctx: offlineCtx(), path: "/shows" });
