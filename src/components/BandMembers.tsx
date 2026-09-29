@@ -270,7 +270,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
                 <Avatar>{getInitials(member.email)}</Avatar>
                 <MemberDetails>
                   <MemberEmail>
-                    {member.email || t("common.unknown")}
+                    <EmailText>{member.email || t("common.unknown")}</EmailText>
                     {isCurrentUser && <YouBadge>{t("common.you")}</YouBadge>}
                   </MemberEmail>
                   <MemberMeta>
@@ -445,7 +445,8 @@ const Header = styled.div`
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[4]};
+  flex-wrap: wrap;
+  gap: ${theme.space[2]} ${theme.space[4]};
 `;
 
 const Title = styled.h3`
@@ -570,6 +571,10 @@ const MemberInfo = styled.div`
   gap: ${theme.space[3]};
   flex: 1;
   min-width: 0;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 100%;
+  }
 `;
 
 const Avatar = styled.div`
@@ -595,12 +600,19 @@ const MemberEmail = styled.div`
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
+  min-width: 0;
+`;
+
+// The ellipsis must sit on its own element: a bare text node inside a flex
+// row can't shrink below its content width.
+const EmailText = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const YouBadge = styled.span`
@@ -612,6 +624,7 @@ const YouBadge = styled.span`
   font-weight: ${theme.fontWeights.semibold};
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
+  flex-shrink: 0;
 `;
 
 const MemberMeta = styled.div`
@@ -621,6 +634,7 @@ const MemberMeta = styled.div`
   align-items: center;
   gap: ${theme.space[2]};
   margin-top: ${theme.space[1]};
+  flex-wrap: wrap;
 `;
 
 const ExpiryNotice = styled.span`
@@ -775,6 +789,10 @@ const InvitationInfo = styled.div`
   gap: ${theme.space[3]};
   flex: 1;
   min-width: 0;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    width: 100%;
+  }
 `;
 
 const InvitationIcon = styled.div`

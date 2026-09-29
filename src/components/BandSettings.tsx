@@ -192,6 +192,11 @@ const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[4]};
+  min-width: 0;
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    gap: ${theme.space[3]};
+  }
 `;
 
 const BackButton = styled.button`
@@ -207,6 +212,7 @@ const BackButton = styled.button`
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
   font-size: ${theme.fontSizes.bodyLg};
+  flex-shrink: 0;
 
   &:hover {
     background: var(--color-bg-elevated);
@@ -220,6 +226,7 @@ const HeaderInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[1]};
+  min-width: 0;
 `;
 
 const BandName = styled.h1`
@@ -228,6 +235,7 @@ const BandName = styled.h1`
   color: var(--color-text-primary);
   margin: 0;
   line-height: ${theme.lineHeights.tight};
+  overflow-wrap: anywhere;
 `;
 
 const BreadcrumbText = styled.div`
@@ -240,6 +248,22 @@ const TabsContainer = styled.div`
   gap: ${theme.space[2]};
   margin-bottom: ${theme.space[6]};
   border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: ${theme.breakpoints.sm}) {
+    gap: 0;
+    /* Safety net for long labels on the narrowest phones: scroll the tab
+       row, never the page. */
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* A scroll container clips the tabs' -1px overlap, so draw the rule as
+       an inset shadow the active underline paints over. */
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--color-border);
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
@@ -258,6 +282,7 @@ const Tab = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: ${theme.space[2]};
   margin-bottom: -1px;
+  white-space: nowrap;
 
   i {
     font-size: ${theme.fontSizes.bodyLg};
@@ -265,6 +290,23 @@ const Tab = styled.button<{ $active: boolean }>`
 
   &:hover {
     color: ${theme.colors.brand.primary};
+  }
+
+  /* Tabs share the phone width instead of overflowing the page. */
+  @media (max-width: ${theme.breakpoints.sm}) {
+    flex: 1 0 auto;
+    margin-bottom: 0;
+    justify-content: center;
+    padding: ${theme.space[3]} ${theme.space[1]};
+    gap: ${theme.space[1]};
+    font-size: ${theme.fontSizes.bodySm};
+  }
+
+  /* Labels only on the narrowest phones (e.g. "Configuración" at 320 px). */
+  @media (max-width: 374px) {
+    i {
+      display: none;
+    }
   }
 `;
 
