@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PR 3.0) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.1) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,50 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-29 — PR 3.1: fingerprint and update check (decisions the spec did not cover).**
+  - **One batch for every snapshot, not one per band.** Query 1 is
+    `setlists.select("id, updated_at, songs").in("id", …)` (the three queries
+    are made once for all snapshots, so five setlists in two bands cost three
+    requests). Query 2 asks only for the **server's** song ids: the snapshot's
+    side is already in the stored fingerprint.
+  - **Compared field by field, not by hash.** `hash` is `""` without
+    `crypto.subtle`; comparing `setlistUpdatedAt` / `songs` / `sheetMusic`
+    works everywhere. The hash stays as stored data.
+  - **`refreshSnapshotRows` always recomputes the fingerprint** from the rows
+    it fetched (it reuses the stored one when the fields are equal). Before,
+    it kept the old one when rows compared equal, so a stale fingerprint —
+    every snapshot saved before `songs.updated_at` has `""` song timestamps —
+    would have refreshed rows on every check. Each such snapshot refreshes
+    once, then matches.
+  - **`lastDiff`:** `applied` and `filesReleased` describe the last refresh
+    that **changed rows** (a no-op check keeps them, for "what changed");
+    `filesToDownload` is rewritten on every refresh and always equals the
+    `not-downloaded` entries of `missingFiles`. Its `bytes` are `null`: the
+    check never calls Storage (D4), so sizes come from the incremental plan
+    (3.3). **Consequence for 3.2:** D2's banner "with the size to download"
+    needs a `planDownload` (a Storage `list()` per folder) — or the banner
+    shows the file count and the size appears in the confirmation.
+  - **`checkForUpdates` rejects `not-authenticated`** (§5.4) and returns
+    `unknown/offline` for every snapshot offline **or on a network error**
+    (`unknown/error` for an HTTP error); nothing is written in either case.
+    A snapshot marked `deleted` whose setlist the server returns again
+    (access regained) is checked normally and becomes `fresh` / `outdated`.
+  - **Triggers:** app start = `useOfflineStartup` after resume + GC, with a
+    session online, at once; the connection returning = the same effect, 5 s
+    later (a flap restarts the wait); opening the setlist detail online
+    (`useOfflineUpdateCheckOnOpen`). Overlapping checks share one run, and a
+    check of some setlists joins a running full check.
+  - **`verifySnapshot`:** `ok` means every referenced file is stored and
+    reads back (recorded size, first byte); `not-downloaded` files
+    (freshness) don't count, failed downloads do (a `partial` snapshot is
+    never "verified"). A bad file joins `missingFiles` as `unknown`; its
+    `file:` record is deleted only online (as §9.3), so a transient read
+    failure offline loses nothing.
+  - No UI in this PR: freshness and `lastDiff` are visible through
+    `window.__bandmateOffline` (`checkForUpdates`, `getSnapshotMeta`,
+    `verifySnapshot`) in `npm run dev`. D1–D6 and E2b are covered by
+    `offlineUpdateCheck.test.ts`; their UI half (badges, banners) is 3.2.
 
 - **2026-09-29 — PR 3.0: `songs.updated_at` migration.** The owner ran I3
   (airplane mode > 1 h, relaunch offline) on iOS after 2.6 merged: passed.

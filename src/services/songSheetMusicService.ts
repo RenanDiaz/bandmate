@@ -60,6 +60,31 @@ export async function getSheetMusicForSong(songId: string): Promise<SheetMusic[]
   return data || [];
 }
 
+/** The columns the offline update check compares (spec §6.3). */
+export interface SheetMusicFingerprintRow {
+  id: string;
+  song_id: string;
+  updated_at: string;
+  file_url: string;
+}
+
+/**
+ * `id, song_id, updated_at, file_url` of every sheet music row of the given
+ * songs, for the offline update check. `[]` without a round-trip for no ids.
+ */
+export async function getSheetMusicFingerprintRows(songIds: string[]): Promise<SheetMusicFingerprintRow[]> {
+  const uniqueIds = [...new Set(songIds)];
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("song_sheet_music")
+    .select("id, song_id, updated_at, file_url")
+    .in("song_id", uniqueIds);
+
+  if (error) throw error;
+  return data || [];
+}
+
 /**
  * Get all sheet music for several songs in one query, grouped by song_id and
  * sorted by position. Every requested id is present (an empty array when the

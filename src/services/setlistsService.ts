@@ -276,6 +276,34 @@ export async function getSetlist(setlistId: string): Promise<Setlist> {
   return normalizeSetlist(data);
 }
 
+/** The columns the offline update check compares (spec §6.3). */
+export interface SetlistFingerprintRow {
+  id: string;
+  updated_at: string;
+  songs: SetlistItem[];
+}
+
+/**
+ * `id, updated_at, songs` of the given setlists, for the offline update check.
+ * Missing or RLS-hidden ids are simply absent (read as deleted). `[]` without
+ * a round-trip for no ids.
+ */
+export async function getSetlistFingerprintRows(ids: string[]): Promise<SetlistFingerprintRow[]> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("setlists")
+    .select("id, updated_at, songs")
+    .in("id", uniqueIds);
+
+  if (error) throw error;
+  return ((data || []) as SetlistFingerprintRow[]).map((row) => ({
+    ...row,
+    songs: normalizeSetlistItems(row.songs || []),
+  }));
+}
+
 /**
  * Create a new setlist
  */

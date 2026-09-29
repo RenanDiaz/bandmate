@@ -53,7 +53,7 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -85,10 +85,10 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `bandsService.ts` | Bands; membership via the `band_members` join table |
 | `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
-| `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode) |
-| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads |
+| `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode); `getSongTimestamps(ids)` (`id, updated_at`, offline update check) |
+| `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads; `getSheetMusicFingerprintRows(songIds)` (offline update check) |
 | `sheetMusicPreferencesService.ts` | Per-user preferred PDF per song (`user_sheet_music_preferences`) + device-local preferred instrument |
-| `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column) |
+| `setlistsService.ts` | Setlists with embedded song references (JSONB `songs` column); `getSetlistFingerprintRows(ids)` (`id, updated_at, songs`, offline update check) |
 | `showsService.ts` | Show/gig scheduling; `getUpcomingShowsForBands(ids)` loads several bands' upcoming shows in one `.in("band_id")` query (`[]` without a round-trip for no ids) |
 | `rehearsalsService.ts` | Rehearsal scheduling; `getUpcomingRehearsalsForBands(ids)`, same shape |
 | `requestsService.ts` | Band requests/proposals with comments and votes |
@@ -96,7 +96,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `calendarSubscriptionService.ts` | Per-user iCal feed subscriptions (served by the `calendar-feed` Edge Function): shows/rehearsals toggles, time zone, one-tap subscribe links (`webcal://`, Google, Outlook.com) |
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
 | `pushSubscriptionService.ts` | Push notifications: this browser's subscription row (`savePushSubscription` → `register_push_subscription` RPC, `deletePushSubscription`, `hasPushSubscription`, `updatePushSubscriptionLocale`) and per-band mutes (`getMutedBandIds`, `setBandMuted`). Browser side: `src/lib/pushSupport.ts`, see "Push notifications" |
-| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. See "Offline store", "Offline downloads" and "Offline download UI" below |
+| `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. Update check (PR 3.1): `checkForUpdates`, `verifySnapshot`. See "Offline store", "Offline downloads", "Offline update check" and "Offline download UI" below |
 | `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
 | `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
 
@@ -304,6 +304,39 @@ that keep it correct (spec changelog, PR 2.2b) — keep them when changing it:
    `bandmate-offline-download` (`ifAvailable`); without Web Locks only the
    in-tab claim holds.
 
+### Offline update check
+
+Phase 3 (PR 3.1, spec §6.1–§6.5). `checkForUpdates(ids?)` checks every
+snapshot of the current user with **three cheap queries for all of them**
+(`getSetlistFingerprintRows`, `getSongTimestamps`,
+`getSheetMusicFingerprintRows`) and compares them **field by field** with
+`meta.fingerprint` (never the hash: it is `""` without `crypto.subtle`;
+timestamps are compared as strings, never parsed). Match → only
+`lastCheckedAt`; mismatch → `refreshSnapshotRows` (rows committed, A3); no
+setlist row → `deleted` (rows kept). Freshness comes from files alone:
+`outdated` ⇔ a `missingFiles` entry with reason `not-downloaded`. It never
+fetches a PDF or calls Storage (`lastDiff.filesToDownload[].bytes` is `null`;
+sizes come from a plan). Offline or a network error → every result
+`unknown/offline`, nothing written; without a session it rejects
+`not-authenticated`. Overlapping checks share one run (a subset joins a full
+one).
+
+- `refreshSnapshotRows` always recomputes the fingerprint from the rows it
+  fetched (a stale one would refresh on every check) and writes `lastDiff`:
+  `applied` / `filesReleased` from the last refresh that changed rows,
+  `filesToDownload` always what the rows still lack.
+- **Triggers** (`useOfflineUpdateCheck.ts`): `useOfflineStartup` runs it
+  after resume + GC with a session online — at once on app start, 5 s
+  (`ONLINE_CHECK_DEBOUNCE_MS`) after the connection returns (a flap
+  restarts the wait); `useOfflineUpdateCheckOnOpen(id)` in
+  `SetlistDetailView`. Never on a timer, never while performing (perform
+  mode refreshes rows itself, §8.2). Results reach the UI only through
+  `snapshot-changed`; no toasts.
+- `verifySnapshot(id)` (§6.5, works offline) reads every stored file back
+  (recorded size + a first byte). All good → `verifiedAt`; a bad one joins
+  `missingFiles` (`unknown`, `partial`) and, online only, its `file:` record
+  is deleted so Retry refetches it. `not-downloaded` files don't fail it.
+
 Quota (§4.5): a file that fails with `QuotaExceededError` (also Safari's
 aborted-transaction form, `isQuotaExceeded`) is recorded as `quota` and only
 smaller files are tried after it; a commit that doesn't fit is retried once
@@ -344,7 +377,8 @@ also used by the schema-wipe notice's Download buttons).
   (`src/lib/platform.ts`), shows the install hint (§9.1).
 - **App start:** `useOfflineStartup()` (called in `AppContent`) runs
   `resume()` then `collectGarbage()` once the user is known (`session` or
-  `offline-cached`) and again when the connection returns.
+  `offline-cached`) and again when the connection returns; then, with a
+  session online, the update check (see "Offline update check").
 
 ### Offline screens (PR 2.5)
 
@@ -385,7 +419,8 @@ its online view again. Nothing navigates. Spec §7.3.
 **Dev hook:** in `npm run dev`, `window.__bandmateOffline` exposes
 `planDownload`, `downloadSetlist`, `download(id)`, `listSnapshots`,
 `getStorageUsage`, `listInterruptedDownloads`, `resumeInterruptedDownloads`,
-`cancelDownload`, `removeSnapshot`, `collectGarbage`, `getFile`
+`cancelDownload`, `removeSnapshot`, `collectGarbage`, `getFile`,
+`getSnapshotMeta`, `checkForUpdates`, `verifySnapshot`
 (`src/lib/devOfflineHook.ts`, loaded from `main.tsx` behind
 `import.meta.env.DEV`; production builds contain no reference to it — keep it
 that way).

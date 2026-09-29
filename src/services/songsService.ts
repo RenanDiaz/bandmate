@@ -107,6 +107,23 @@ export async function getSongsByIds(ids: string[]): Promise<Song[]> {
   return data;
 }
 
+/**
+ * `id, updated_at` of the given songs, for the offline update check (spec
+ * §6.3). Missing or RLS-hidden ids are simply absent.
+ */
+export async function getSongTimestamps(ids: string[]): Promise<Array<{ id: string; updated_at: string }>> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("songs")
+    .select("id, updated_at")
+    .in("id", uniqueIds);
+
+  if (error) throw error;
+  return data || [];
+}
+
 export interface CreateSongInput {
   title: string;
   band_id: number;
