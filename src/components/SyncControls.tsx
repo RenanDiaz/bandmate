@@ -137,6 +137,7 @@ export const SyncControls: FC<SyncControlsProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         $isOpen={isOpen}
         $hasSession={hasActiveSession}
+        aria-label={hasActiveSession ? t("performanceSync.sessionActive") : t("performanceSync.sync")}
       >
         <i className="bi bi-broadcast" />
         <span>
@@ -312,8 +313,17 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
 
+  /* Icon only on phones (the label is the aria-label / title): the text wrapped the top bar. */
+  > span {
+    display: none;
+  }
+
   @media (min-width: ${theme.breakpoints.md}) {
     padding: ${theme.space[2]} ${theme.space[4]};
+
+    > span {
+      display: inline;
+    }
   }
 
   &:disabled {

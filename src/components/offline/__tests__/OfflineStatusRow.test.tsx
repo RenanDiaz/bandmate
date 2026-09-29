@@ -6,7 +6,7 @@ import type { OfflineSnapshotMeta } from "../../../services/offlineSetlistServic
 import * as offline from "../../../services/offlineSetlistService";
 import { performSnapshotRecords, serverRows } from "../../../test/performFixtures";
 import { bandContext, renderApp } from "../../../test/renderApp";
-import { OfflineStatusRow } from "../OfflineDownloadAction";
+import { OfflineDownloadAction, OfflineStatusRow } from "../OfflineDownloadAction";
 
 // Service-module boundary: the row only reads through these.
 vi.mock("../../../services/offlineSetlistService", async (importOriginal) => {
@@ -62,5 +62,34 @@ describe("OfflineStatusRow owns the setlist's offline state (spec §2.5)", () =>
     await waitFor(() => expect(within(row()).getByTestId("offline-badge")).toBeTruthy());
     expect(within(row()).getByRole("button", { name: /Retry/ })).toBeTruthy();
     expect(within(row()).getByRole("button", { name: /Remove/ })).toBeTruthy();
+  });
+});
+
+describe("OfflineDownloadAction toolbar variant (performance mode)", () => {
+  const renderToolbar = (showSavedBadge: boolean) =>
+    renderApp(
+      <div data-testid="toolbar">
+        <OfflineDownloadAction setlistId="s1" setlistName="Friday" variant="toolbar" showSavedBadge={showSavedBadge} />
+      </div>,
+      { ctx: bandContext() }
+    );
+
+  it("on the snapshot it drops the saved badge: the source badge already says it", async () => {
+    vi.mocked(offline.getSnapshotMeta).mockResolvedValue(meta());
+    renderToolbar(false);
+    await waitFor(() => expect(offline.getSnapshotMeta).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByTestId("offline-badge")).toBeNull();
+  });
+
+  it("keeps the saved badge when asked, and the partial badge always", async () => {
+    vi.mocked(offline.getSnapshotMeta).mockResolvedValue(meta());
+    renderToolbar(true);
+    await waitFor(() => expect(screen.getByTestId("offline-badge")).toBeTruthy());
+    cleanup();
+    vi.mocked(offline.getSnapshotMeta).mockResolvedValue({ ...meta(), completeness: "partial" });
+    renderToolbar(false);
+    await waitFor(() => expect(screen.getByTestId("offline-badge")).toBeTruthy());
+    expect(screen.getByRole("button", { name: /Retry/ })).toBeTruthy();
   });
 });

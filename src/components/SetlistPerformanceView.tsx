@@ -261,6 +261,8 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   // the current index; never reseeded while reordering (§8.1).
   const { setlistItems, setSetlistItems, currentIndex, setCurrentIndex } = usePerformItems(perf.items, isReorderMode);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // iPhone Safari (and the installed iOS app) has no element fullscreen: the button would do nothing.
+  const [canFullscreen] = useState(() => typeof document !== "undefined" && document.fullscreenEnabled === true);
   const [showSongList, setShowSongList] = useState(false);
   const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">(readPreferredContentView);
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
@@ -851,6 +853,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   };
 
   const toggleFullscreen = () => {
+    if (!canFullscreen) return;
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
       setIsFullscreen(true);
@@ -1129,7 +1132,12 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
               )}
               {/* Self-contained (reads the offline service itself); no Remove here. */}
               {!isSong && (
-                <OfflineDownloadAction setlistId={setlist.id} setlistName={setlist.name} variant="toolbar" />
+                <OfflineDownloadAction
+                  setlistId={setlist.id}
+                  setlistName={setlist.name}
+                  variant="toolbar"
+                  showSavedBadge={!onSnapshot}
+                />
               )}
               <ViewToggleGroup>
                 <ViewToggleButton
@@ -1223,9 +1231,11 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                   <i className="bi bi-list-ul"></i>
                 </IconButton>
               )}
-              <IconButton onClick={toggleFullscreen} title={t("performance.fullscreenShortcut")}>
-                <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
-              </IconButton>
+              {canFullscreen && (
+                <IconButton onClick={toggleFullscreen} title={t("performance.fullscreenShortcut")}>
+                  <i className={`bi bi-${isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}`}></i>
+                </IconButton>
+              )}
             </>
           )}
         </TopBarControls>
