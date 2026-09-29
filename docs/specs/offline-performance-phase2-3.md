@@ -12,6 +12,14 @@ given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
 
+- **2026-09-29 — Flag by URL for the §11 checklist.** Devices without a
+  console (no developer mode, e.g. a phone under parental controls) turn the
+  offline flag on by opening any page with `?flag=offline` (`?flag=-offline`
+  clears it). It writes the same `bandmate_flag_offline` key, so it goes away
+  with the flag in PR 2.6. On Android the installed app shares Chrome's
+  storage, so opening the link in Chrome is enough; an installed iOS app has
+  its own storage and no address bar, so iOS still needs the Web Inspector.
+
 - **2026-09-27 — Performance target (docs/specs/song-performance.md).**
   Performance mode takes a `PerformanceTarget` (`setlist` or `song`) instead
   of a `setlistId`; the setlist target is unchanged. `/songs/:songId/perform`

@@ -315,7 +315,10 @@ after GC, then returned as `failed` / `quota-rows`. Tests inject quota with
 **Feature flag.** Every offline entry point is hidden unless
 `isOfflineDownloadsEnabled()` (`src/lib/featureFlags.ts`) is true:
 `VITE_OFFLINE_DOWNLOADS=true` at build time (Vercel Preview), or per device
-`localStorage.bandmate_flag_offline = "1"` (testing against production). Off
+`localStorage.bandmate_flag_offline = "1"` (testing against production), which
+devices without a console set by opening any page with `?flag=offline`
+(`?flag=-offline` clears it; `push` works too; `applyFlagParams`, called in
+`main.tsx`, drops the param before the first render). Off
 by default; it also gates performance mode's snapshot source (PR 2.4) and the
 offline screens (PR 2.5, below), and the flag is removed in PR 2.6 once the
 §11 device checklist passes. The check runs before

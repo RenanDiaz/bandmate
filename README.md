@@ -87,9 +87,9 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
    | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
    | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
-   | `VITE_OFFLINE_DOWNLOADS` | — | `true` shows "Make available offline" (off by default until offline performance ships; per device: `localStorage.bandmate_flag_offline = "1"`) |
+   | `VITE_OFFLINE_DOWNLOADS` | — | `true` shows "Make available offline" (off by default until offline performance ships; per device: `localStorage.bandmate_flag_offline = "1"`, or open any page with `?flag=offline` / `?flag=-offline`) |
    | `VITE_VAPID_PUBLIC_KEY` | — | Public VAPID key for push notifications, from `npm run vapid-keys` ([docs/setup/push-notifications.md](docs/setup/push-notifications.md)); public by design |
-   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"`) |
+   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"` or `?flag=push`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
    > Don't put production secrets in them.

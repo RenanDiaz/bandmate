@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   OFFLINE_FLAG_STORAGE_KEY,
   PUSH_FLAG_STORAGE_KEY,
+  applyFlagParams,
   isOfflineDownloadsEnabled,
   isPushNotificationsEnabled,
 } from "../featureFlags";
@@ -51,5 +52,44 @@ describe("isPushNotificationsEnabled", () => {
     localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "true");
     expect(isPushNotificationsEnabled()).toBe(false);
     localStorage.clear();
+  });
+});
+
+describe("applyFlagParams", () => {
+  const origin = "https://www.bandmate.space";
+
+  it("returns null and touches nothing without a flag param", () => {
+    localStorage.clear();
+    expect(applyFlagParams(`${origin}/setlists?band=7`, localStorage)).toBeNull();
+    expect(localStorage.length).toBe(0);
+  });
+
+  it("?flag=offline turns the offline flag on and drops only that param", () => {
+    localStorage.clear();
+    expect(applyFlagParams(`${origin}/setlists?band=7&flag=offline#x`, localStorage)).toBe("/setlists?band=7#x");
+    expect(localStorage.getItem(OFFLINE_FLAG_STORAGE_KEY)).toBe("1");
+    expect(isOfflineDownloadsEnabled()).toBe(true);
+    localStorage.clear();
+  });
+
+  it("-name removes the override; commas and repeated params combine", () => {
+    localStorage.clear();
+    expect(applyFlagParams(`${origin}/?flag=offline,push`, localStorage)).toBe("/");
+    expect(localStorage.getItem(PUSH_FLAG_STORAGE_KEY)).toBe("1");
+    expect(applyFlagParams(`${origin}/?flag=-offline&flag=-push`, localStorage)).toBe("/");
+    expect(localStorage.getItem(OFFLINE_FLAG_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(PUSH_FLAG_STORAGE_KEY)).toBeNull();
+  });
+
+  it("ignores unknown names but still cleans the URL", () => {
+    localStorage.clear();
+    expect(applyFlagParams(`${origin}/?flag=everything`, localStorage)).toBe("/");
+    expect(localStorage.length).toBe(0);
+  });
+
+  it("storage that throws or is missing keeps the flag off without failing", () => {
+    const throwing = { setItem: () => { throw new Error("SecurityError"); }, removeItem: () => {} };
+    expect(applyFlagParams(`${origin}/?flag=offline`, throwing)).toBe("/");
+    expect(applyFlagParams(`${origin}/?flag=offline`, null)).toBe("/");
   });
 });
