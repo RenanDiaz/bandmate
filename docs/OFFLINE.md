@@ -82,7 +82,7 @@ record OS / browser versions.
 | Row (§11) | iPhone | Android |
 |-----------|--------|---------|
 | Every Phase 2 row not listed below | not reported | ✅ pass (2026-09-29) |
-| Airplane mode > 1 h, kill and relaunch: offline home with `S1` (I3) | ✅ pass (2026-09-29) | not reported (ran after merge on iOS) |
+| Airplane mode > 1 h, kill and relaunch: offline home with `S1` (I3) | ✅ pass (2026-09-29) | not reported |
 | Captive-portal Wi-Fi relaunch (I5) | not run — accepted | not run — accepted |
 | Fill the device storage until a PDF doesn't fit (D4) | not run — accepted | not run — accepted |
 | `OFFLINE_SCHEMA_VERSION` bump over existing copies (D7) | not run — covered by unit tests | not run — covered by unit tests |
