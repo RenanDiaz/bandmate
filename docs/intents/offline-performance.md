@@ -1,6 +1,6 @@
 # Intent: Offline performance mode
 
-> **Status:** in progress — Phase 1 done (2026-09-25); Phase 2 shipped (2026-09-29); Phase 3 not started · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** shipped (Phases 1–3), Phase 3 device validation pending — Phase 1 done (2026-09-25); Phase 2 shipped (2026-09-29); Phase 3 shipped (2026-09-30, PRs 3.0–3.4; §11 Phase 3 rows not run yet); Phase 4 is a separate intent · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 >
 > An *intent* states a problem, the outcome we want and the boundaries of a
 > change **before** it is designed in detail. It is the thing a PR points back
@@ -117,6 +117,14 @@ setlist changed since you downloaded it — Update offline copy"), and an
 "Outdated" state on the offline badge in lists. Updating is one tap and only
 re-downloads what changed (new or replaced PDFs, changed rows); removed PDFs
 are deleted.
+
+> Amended 2026-09-30 (spec, PRs 3.1–3.3): only **new PDFs** make a copy
+> "Outdated" (row changes are applied on their own, see above). The detail's
+> notice reads "New sheet music is available for this setlist: N PDFs to
+> download" (the size shows in the confirmation: the check never touches
+> Storage); performance mode shows an "Update offline copy" button, not a
+> banner. A setlist deleted on the server shows "Deleted on server" and
+> still performs until removed.
 The PDF viewer receives a local blob URL when the file is in the snapshot,
 and a signed URL otherwise.
 
@@ -158,6 +166,13 @@ Needed regardless of the feature, and cheap:
 > Amended 2026-09-29 (spec C6): offline, the app needs a way to *reach* a
 > snapshot, so Phase 2 ships an offline home (the saved setlists, a read-only
 > setlist view, Perform). The management section above stays in Phase 3.
+>
+> Amended 2026-09-30 (spec, PR 3.4): "Offline setlists" is its own page,
+> `/offline`, reached from the user menu, not a band settings section (band
+> settings is per band, online only and for owners and admins). It works
+> offline, lists every band's copies with size, dates and state, and offers
+> Verify, Update and Remove, plus storage used and whether the browser
+> protects it.
 
 ## Phases
 
@@ -167,7 +182,8 @@ Needed regardless of the feature, and cheap:
    offline UX, sign-out wipe. This is the phase that makes it possible to do a
    show with no connection. ✅ Shipped (2026-09-29, PR 2.6 removed the flag).
 3. **Update check and management:** fingerprint check, "outdated" notice,
-   incremental update, offline setlists list.
+   incremental update, offline setlists list. ✅ Shipped (2026-09-30,
+   PRs 3.0–3.4); device checklist pending (`docs/OFFLINE.md`).
 4. **Follow-ups (separate intents):** persist backing tracks in
    IndexedDB/OPFS so they survive a restart.
 
