@@ -1654,6 +1654,30 @@
     },
     "deleted": {
       "notice": "Este setlist se borró en el servidor o ya no tienes acceso. La copia de este dispositivo se puede seguir usando hasta que la elimines."
+    },
+    "manage": {
+      "menuItem": "Setlists sin conexión",
+      "title": "Setlists sin conexión",
+      "subtitle": "Guardados en este dispositivo, de todas tus bandas. Funcionan sin conexión.",
+      "listTitle_one": "{{count}} setlist en este dispositivo",
+      "listTitle_other": "{{count}} setlists en este dispositivo",
+      "checkNow": "Buscar actualizaciones",
+      "checked": "Setlists sin conexión revisados",
+      "checkFailed": "No se pudo buscar actualizaciones",
+      "empty": "Todavía no hay nada guardado en este dispositivo. Abre un setlist y elige “Guardar para usar sin conexión”.",
+      "copiesUse": "Las copias sin conexión ocupan {{size}}",
+      "deviceUsage": "la app usa {{used}} de {{quota}} disponibles",
+      "persisted": "Protegidas: el navegador no borrará estas copias para liberar espacio.",
+      "notPersisted": "Sin protección: el navegador puede borrar estas copias si el dispositivo se queda sin espacio.",
+      "persistedUnknown": "Este navegador no indica si puede borrar estas copias cuando falta espacio.",
+      "askPersist": "Pedir que las proteja",
+      "saved": "Guardado el {{date}}",
+      "updated": "Actualizado el {{date}}",
+      "verified": "Verificado el {{date}}",
+      "verify": "Verificar",
+      "verifyOk": "Todos los PDFs de “{{setlist}}” se leen bien",
+      "verifyMissing_one": "Falta o está dañado {{count}} PDF de “{{setlist}}”: Reintentar lo vuelve a descargar",
+      "verifyMissing_other": "Faltan o están dañados {{count}} PDFs de “{{setlist}}”: Reintentar los vuelve a descargar"
     }
   },
   "notifications": {

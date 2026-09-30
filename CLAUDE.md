@@ -122,6 +122,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `/requests/:requestId` | Request detail (comments, votes) |
 | `/bands/:bandId/settings` | Band settings/members panel |
 | `/invite/accept` | Invitation acceptance flow |
+| `/offline` | Offline setlists: this device's copies across bands (works offline, no band needed) |
 | `/about` | About page |
 | `/privacy` | Privacy policy |
 | `/terms` | Terms of service |
@@ -386,6 +387,20 @@ also used by the schema-wipe notice's Download buttons).
   when `getSetlist` answers `PGRST116` and the device has a copy (else the
   old toast + bounce); offline, `OfflineSetlistDetail` offers Remove only for
   a deleted copy.
+- **Offline setlists (PR 3.4):** `/offline` (`OfflineSetlistsManager`),
+  from the user menu's "Offline setlists" (session and `offline-cached`).
+  Device-local, so one page online and offline, every role, and it skips the
+  band gate like `/invite/accept`; without a known user it redirects to `/`.
+  Shows the copies' bytes and the device's usage / quota
+  (`useOfflineStorageUsage`), whether storage is persisted (+ "Ask to protect
+  them" → `requestPersistence`), every copy of the current user sorted by
+  band (`useOfflineBands`) with badge, saved / updated / verified dates and
+  size, Verify (`verifySnapshot`), Update / Retry (`OfflineDownloadAction`
+  variant `manage`: no badge, nothing for a current copy) and Remove;
+  "Check for updates" (`checkForUpdates()`, session + online), interrupted
+  downloads with Resume / Discard, the schema-wipe notice and, in an iOS
+  browser tab, the install hint. It is the one place online that lists a
+  copy deleted on the server.
 - The confirmation reuses `ConfirmModal` (`children` slot); on iOS it says
   "Saved on this device, in this app" and, in a browser tab
   (`src/lib/platform.ts`), shows the install hint (§9.1).
@@ -458,7 +473,7 @@ desktop bar it is `variant="dropdown"` with `compact`: a trigger with the avatar
 (no email; the open menu shows it) opens a floating menu (closed by Escape, a
 click outside or the trigger). In the mobile drawer (`CustomOffcanvas`) it is
 `variant="inline"`: the same content as flat rows of the drawer (account
-header, Language, About, Notifications, Check for updates, Sign out) with
+header, Language, Offline setlists, About, Notifications, Check for updates, Sign out) with
 `onAction` closing the drawer. Notifications shows only with
 `isPushNotificationsEnabled()`, in `session` and online; it opens the modal
 through `notificationSettingsStore`, rendered by `NotificationSettingsHost`

@@ -37,6 +37,8 @@ interface ActionProps {
    *   the action stays when it is saved (A3: re-plans, downloads nothing present).
    * "toolbar": compact, for performance mode's top bar. No Remove there: a mis-tap on
    * stage must not delete the copy performance mode renders from.
+   * "manage": a row of Offline setlists (PR 3.4): only Update / Retry / progress, no
+   *   badge (the row shows it) and nothing for a current copy.
    */
   variant: Variant;
   /**
@@ -129,7 +131,7 @@ export const OfflineDownloadAction: FC<ActionProps> = ({ setlistId, setlistName,
   // The toolbar on the snapshot hides the plain saved badge (the source badge says it),
   // never one that explains something: partial (Retry) or deleted.
   const showBadge =
-    variant !== "setlist" && !running && meta && (showSavedBadge || state === "partial" || state === "deleted");
+    variant !== "setlist" && variant !== "manage" && !running && meta && (showSavedBadge || state === "partial" || state === "deleted");
   return (
     <>
       {showBadge && <OfflineBadge meta={meta} compact={compact} />}

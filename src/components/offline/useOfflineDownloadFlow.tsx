@@ -11,7 +11,7 @@ import { ConfirmModal } from "../ConfirmModal";
 import { OfflineDownloadConfirmBody } from "./OfflineDownloadBodies";
 import { OfflineDownloadModal } from "./OfflineDownloadModal";
 
-export type OfflineDownloadVariant = "setlist" | "show" | "toolbar";
+export type OfflineDownloadVariant = "setlist" | "show" | "toolbar" | "manage";
 
 /**
  * Plan, confirm and the progress/result modal for one setlist: used by the

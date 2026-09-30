@@ -7,10 +7,13 @@ import {
   getSchemaWipeNotice,
   getSnapshot,
   getSnapshotMeta,
+  getStorageUsage,
   listInterruptedDownloads,
+  listOfflineBands,
   listSnapshots,
   subscribe,
 } from "../services/offlineSetlistService";
+import type { Band } from "../services/bandsService";
 
 /**
  * React access to offline downloads (PR 2.3): the controller's state
@@ -182,4 +185,19 @@ export function useSchemaWipeNotice(): {
     [reload]
   );
   return { entries: value ?? [], dismiss };
+}
+
+/** Bands named by the current user's snapshots (for the management list, PR 3.4); `undefined` while loading. */
+export function useOfflineBands(): Band[] | undefined {
+  const read = useCallback(() => listOfflineBands(), []);
+  return useOfflineRead(read, anyChange).value;
+}
+
+export type OfflineStorageUsage = Awaited<ReturnType<typeof getStorageUsage>>;
+
+/** Device usage, quota, persistence and the offline copies' bytes (§6.6); `reload` after requestPersistence. */
+export function useOfflineStorageUsage(): { usage: OfflineStorageUsage | undefined; reload: () => void } {
+  const read = useCallback(() => getStorageUsage(), []);
+  const { value, reload } = useOfflineRead(read, anyChange);
+  return { usage: value, reload };
 }
