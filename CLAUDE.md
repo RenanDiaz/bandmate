@@ -996,8 +996,8 @@ Index: [docs/README.md](docs/README.md).
 - [docs/guides/band-members.md](docs/guides/band-members.md) - Roles, why `band_members` has no RLS, invitation flow
 - [docs/setup/email-sending.md](docs/setup/email-sending.md) - Invitation emails (Edge Function + Resend)
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) - Google OAuth configuration
-- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (in progress, Phases 1–2 shipped, Phase 3 not started): offline performance mode
-- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (in progress, Phase 2 shipped (PRs 2.0–2.6), Phase 3 in progress): offline performance Phases 2–3 (PR breakdown in §12)
+- [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (shipped, Phases 1–3; Phase 3 device validation pending): offline performance mode
+- [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (shipped, Phase 2 (PRs 2.0–2.6) and Phase 3 (PRs 3.0–3.5); Phase 3 device checklist pending): offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)

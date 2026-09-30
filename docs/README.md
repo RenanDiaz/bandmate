@@ -30,8 +30,8 @@ docs/
 
 ## Offline performance
 - [OFFLINE.md](OFFLINE.md) — entry point: what works offline, the rules that keep it correct, where the code is
-- [intents/offline-performance.md](intents/offline-performance.md) — intent (in progress: Phases 1–2 shipped, Phase 3 not started)
-- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3 (in progress: Phase 2 shipped with PRs 2.0–2.6, Phase 3 in progress)
+- [intents/offline-performance.md](intents/offline-performance.md) — intent (shipped: Phases 1–3; Phase 3 device validation pending)
+- [specs/offline-performance-phase2-3.md](specs/offline-performance-phase2-3.md) — spec for Phases 2–3 (shipped: PRs 2.0–2.6 and 3.0–3.5; Phase 3 device checklist pending)
 
 ## Backlog specs (from the 2026-09 TODO review)
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)

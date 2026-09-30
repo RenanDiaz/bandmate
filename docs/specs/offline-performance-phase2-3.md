@@ -1,6 +1,6 @@
 # Spec: Offline performance mode — Phases 2 and 3
 
-> **Status:** in progress — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 in progress (PRs 3.0–3.4) · **Created:** 2026-09-24 · **Owner:** Renán Díaz
+> **Status:** shipped — Phase 2 shipped (PRs 2.0–2.6, flag removed 2026-09-29, §11 I3 passed on iOS); Phase 3 shipped (PRs 3.0–3.5, 2026-09-30), §11 Phase 3 rows pending on devices · **Created:** 2026-09-24 · **Owner:** Renán Díaz
 > **Intent:** [docs/intents/offline-performance.md](../intents/offline-performance.md)
 > **Scope:** Phase 2 (snapshot + performance mode offline) and Phase 3 (update
 > check and management). Phase 1 (local pdf.js worker, offline-safe auth,
@@ -11,6 +11,14 @@ This is a design, not code. Type declarations and function signatures are
 given because they are the contract between PRs; no bodies are written here.
 
 ## Changelog
+
+- **2026-09-30 — PR 3.5: docs; Phase 3 shipped, device validation pending.**
+  PRs 3.0–3.4 are merged. The intent's status is "shipped (Phases 1–3)" with
+  its §2b and §5 amended for PRs 3.1–3.4. The §11 results are kept in
+  `docs/OFFLINE.md` ("Device checklist results"): Phase 2 as reported, and
+  the Phase 3 rows ("Update and management", the `persist()` row) marked
+  **pending** on iPhone and Android until the owner runs them. A failure
+  there is a bug against the PR it names, not a revert of Phase 3.
 
 - **2026-09-29 — PR 3.4: Offline setlists management (decisions the spec did not cover).**
   - **A route, not a BandSettings section.** §6.6 put it in `BandSettings`
@@ -2081,7 +2089,7 @@ an Android phone (Chrome → Install). Record OS/browser versions in the PR.
 - [ ] Progress survives switching to another app and back mid-download.
 - [ ] Kill the app mid-download; relaunch online: resumes, does not re-download stored files.
 - [ ] Fill the device storage (large video files) until a PDF does not fit: partial result, message names the PDF; free space, Retry: completes.
-- [ ] `navigator.storage.persist()` answer shown in management (until 3.4: Web Inspector → IndexedDB `bandmate-offline` → `kv` → `meta.persisted`, or `await navigator.storage.persisted()`); note the value per OS.
+- [ ] `navigator.storage.persist()` answer shown in Offline setlists (`/offline`, PR 3.4: "Protected" / "Not protected"); note the value per OS.
 - [ ] Lock the screen mid-download (and, separately, switch apps for > 30 s): the wake lock kept the screen on and the download continued, or on return the setlist detail offers Resume right away (no relaunch) and Resume completes without re-downloading stored files.
 - [ ] Install a build with `OFFLINE_SCHEMA_VERSION` bumped (test build only) over a device with snapshots: the "download these again" notice lists them once; Download works per setlist (A9).
 
