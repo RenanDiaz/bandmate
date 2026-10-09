@@ -52,6 +52,9 @@ docs/
 ## Notifications (2026-09-27)
 - [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2, invitations in Phase 3, flag removal in Phase 4 (four phases, five PRs; in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started)
 
+## Performance mode (2026-10-09)
+- [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented, manual validation of AC8–AC10 on device pending)
+
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)
 

@@ -53,9 +53,9 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -231,7 +231,7 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
 
 **Offline wipe rules — exactly two triggers** (spec §3.5 #6). `wipeAll()` clears
 the IndexedDB store (`last-user` included) and every
-`bandmate_perform_position_*` localStorage key. It runs **only**:
+`bandmate_perform_position_*` and `bandmate_show_clock_*` localStorage key. It runs **only**:
 1. on user-initiated sign-out: `AuthButton.logout` calls
    `performUserSignOut(wipeAll, signOutEverywhereOrLocally)`, which awaits the
    wipe **before** signing out and marks the resulting `SIGNED_OUT` as
@@ -602,6 +602,15 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   performance mode (`location.key !== "default"` at mount), else the
   setlist's detail (`/setlists/:id`) or `/songs`. Load errors still bounce
   to `/setlists` / `/songs`.
+- **Show clock** ([docs/specs/show-clock.md](docs/specs/show-clock.md)):
+  `ShowClockControl` in the top bar (setlists only), state in `useShowClock`
+  / `src/lib/showClock.ts`, per user and setlist in `localStorage`
+  (`bandmate_show_clock_{uid}_{setlistId}`, 12 h expiry, cleared by
+  `wipeAll()` with the positions). Time comes from timestamps, never a
+  counter. Idle → running → stopped (Resume / Reset). The first song item's
+  backing track starting (`handleAudioPlayingChange`) starts it **only from
+  idle**; never resume a stopped clock automatically (soundcheck: Stop +
+  Reset re-arms it). Not shared through sync.
 - **Content view:** the toolbar order is Lyrics · Chords · Sheet (the `T`
   shortcut and mobile toggle cycle the same way). Without a saved position the
   view opens on the user's last pick (`readPreferredContentView`,
@@ -1008,6 +1017,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9, AC12 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
+- [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, manual validation (AC8–AC10 on device) pending): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; Phase 4 removes the flag (4 phases, 5 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

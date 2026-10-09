@@ -80,6 +80,7 @@ describe("PerformanceView, song target (song spec §2)", () => {
     expect(screen.getAllByText("Solo Song").length).toBeGreaterThan(0);
     expect(screen.getAllByText("The Artist").length).toBeGreaterThan(0);
     expect(screen.queryByText("1 / 1")).toBeNull();
+    expect(screen.queryByLabelText("Start show clock")).toBeNull();
     expect(screen.queryByTestId("sync-controls")).toBeNull();
     expect(screen.queryByTestId("offline-toolbar")).toBeNull();
     expect(screen.queryByTitle("Song List (L)")).toBeNull();
@@ -148,6 +149,7 @@ describe("PerformanceView, setlist target", () => {
     renderApp(<PerformanceView target={{ kind: "setlist", setlistId: "s1" }} />, { ctx, path: "/setlists/s1/perform" });
 
     expect(screen.getByText("1 / 3")).toBeTruthy();
+    expect(screen.getByLabelText("Start show clock")).toBeTruthy();
     expect(screen.getByTestId("sync-controls")).toBeTruthy();
     expect(screen.getByTestId("offline-toolbar")).toBeTruthy();
     expect(screen.getByTitle("Song List (L)")).toBeTruthy();

@@ -1120,6 +1120,14 @@
       "key": "Tonalidad: {{key}}",
       "bpm": "{{tempo}} BPM",
       "notes": "Notas"
+    },
+    "showClock": {
+      "label": "Cronómetro del show",
+      "start": "Iniciar cronómetro del show",
+      "startAuto": "Iniciar cronómetro del show (arranca solo cuando suena la secuencia de la primera canción)",
+      "stop": "Detener cronómetro",
+      "resume": "Reanudar cronómetro",
+      "reset": "Reiniciar cronómetro"
     }
   },
   "sectionEditor": {

@@ -49,6 +49,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Start from any song of a setlist ("Start performance here" in the setlist view); exiting returns to the page you came from
 - Perform a single song straight from the song library (chords, lyrics, sheet music, backing track)
 - Real-time sync: one host drives the song position, every bandmate follows
+- Show clock: how long the show has been running, started by the first song's backing track or by hand; stop and reset it after a soundcheck
 - Local backing tracks (audio stays on the device)
 
 **Collaboration**
@@ -193,6 +194,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) — spec: setlist actions layout (detail header, reorder toolbar, list cards)
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
+- [docs/specs/show-clock.md](docs/specs/show-clock.md) — spec (implemented): show clock in performance mode
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations
