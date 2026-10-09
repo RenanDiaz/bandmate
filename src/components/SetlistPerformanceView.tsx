@@ -1,5 +1,5 @@
 import { Component, type FC, type ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -32,6 +32,8 @@ import { usePerformanceSync } from "../hooks/usePerformanceSync";
 import { useLocalBackingTracks } from "../hooks/useLocalBackingTracks";
 import { BackingTrackPlayer } from "./BackingTrackPlayer";
 import type { BackingTrackPlayerHandle } from "./BackingTrackPlayer";
+import { ShowClockControl } from "./ShowClockControl";
+import { useShowClock } from "../hooks/useShowClock";
 import { SyncedLyricsDisplay } from "./SyncedLyricsDisplay";
 import SheetMusicViewer from "./SheetMusicViewer";
 import type { SheetMusicViewerHandle } from "./SheetMusicViewer";
@@ -384,6 +386,15 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
     getTrackInfo,
     hadTrackPreviously,
   } = useLocalBackingTracks(targetKey);
+
+  // Show clock (docs/specs/show-clock.md): setlists only; the first song's
+  // backing track starts it from idle.
+  const showClock = useShowClock(isSong ? null : userId, targetKey);
+  const startShowClockIfIdle = showClock.startIfIdle;
+  const firstSongId = useMemo(() => {
+    const first = setlistItems.find(isSongItem);
+    return first ? first.song_id : null;
+  }, [setlistItems]);
 
   // Mouse + long-press touch + keyboard; the row menu is the non-drag path (setlist-builder §3.5)
   const sensors = useSortableSensors();
@@ -781,11 +792,17 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   // Handle audio playing state change (host syncs to viewers)
   const handleAudioPlayingChange = useCallback((playing: boolean) => {
     setIsAudioPlaying(playing);
+    // The player only plays the current song: the first song's track starting
+    // is the show starting (a paused clock stays paused).
+    const current = setlistItems[currentIndex];
+    if (playing && !isSong && current && isSongItem(current) && current.song_id === firstSongId) {
+      startShowClockIfIdle();
+    }
     if (syncRole === "host") {
       const timeMs = Math.round(audioCurrentTime * 1000);
       syncPlaybackState(timeMs, playing);
     }
-  }, [syncRole, audioCurrentTime, syncPlaybackState]);
+  }, [syncRole, audioCurrentTime, syncPlaybackState, setlistItems, currentIndex, isSong, firstSongId, startShowClockIfIdle]);
 
   // Use synced values for viewers
   const displayAudioTime = syncRole === "viewer" ? syncedPlaybackTimeMs / 1000 : audioCurrentTime;
@@ -1079,6 +1096,16 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
             )}
           </TopBarLeft>
 
+          {!isSong && (
+            <ShowClockControl
+              status={showClock.clock.status}
+              elapsedMs={showClock.elapsedMs}
+              autoStartArmed={firstSongId !== null && getTrackUrl(firstSongId) !== null}
+              onStart={showClock.start}
+              onPause={showClock.pause}
+              onReset={showClock.reset}
+            />
+          )}
           {!isSong && (
             <SongCounter>
               {currentIndex + 1} / {setlistItems.length}

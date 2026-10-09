@@ -24,6 +24,7 @@ import {
 import { FileFetchError, classifyHttpStatus, fetchFileWithStallTimeout, mapWithConcurrency } from "../lib/offlineFetch";
 import { isNetworkError } from "../lib/networkErrors";
 import { clearAllPerformPositions } from "../lib/performPosition";
+import { clearAllShowClocks } from "../lib/showClock";
 import { deepEqual } from "../utils/deepEqual";
 import { getSetlist, getSetlistFingerprintRows, isSongItem, normalizeSetlistItems } from "./setlistsService";
 import { getSongTimestamps, getSongsByIds } from "./songsService";
@@ -368,7 +369,8 @@ export function confirmSignedInUser(userId: string): Promise<{ wiped: boolean }>
 
 /**
  * Deletes every offline record (the IndexedDB store, `last-user` included)
- * and the `bandmate_perform_position_*` localStorage keys (A2).
+ * and the `bandmate_perform_position_*` (A2) and `bandmate_show_clock_*`
+ * localStorage keys.
  *
  * Only two callers (§3.5 #6): AuthButton's user-initiated sign-out, awaited
  * before `supabase.auth.signOut()`, and confirmSignedInUser() on a confirmed
@@ -387,6 +389,7 @@ async function runWipe(reason: "sign-out" | "user-changed"): Promise<boolean> {
   // refused by the epoch the clear below replaces.
   abortActiveDownload("wiped");
   clearAllPerformPositions();
+  clearAllShowClocks();
   if (!(await storeReady())) {
     emit({ type: "store-wiped", reason });
     return true;

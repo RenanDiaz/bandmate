@@ -1120,6 +1120,14 @@
       "key": "Key: {{key}}",
       "bpm": "{{tempo}} BPM",
       "notes": "Notes"
+    },
+    "showClock": {
+      "label": "Show clock",
+      "start": "Start show clock",
+      "startAuto": "Start show clock (starts by itself when the first song's backing track plays)",
+      "stop": "Stop show clock",
+      "resume": "Resume show clock",
+      "reset": "Reset show clock"
     }
   },
   "sectionEditor": {
