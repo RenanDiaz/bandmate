@@ -59,7 +59,7 @@ src/
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch, pdfPages)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
@@ -675,9 +675,19 @@ graph for the L/R volumes. Two rules keep it reliable on the iPad:
   time moved and the `AudioContext` is `running`; otherwise it pauses, warns
   (toast + header) and the next tap rebuilds the context and element. iOS
   only unlocks audio inside a user gesture, so there is no automatic retry.
-- Each play, watchdog verdict, context change and stall is logged as
-  `[backing-track] …` (`console.info`): read it in Safari's Web Inspector
-  with the iPad connected to a Mac.
+- **Keep the main thread free while a track plays.** pdf.js paints a sheet
+  music page on the main thread, and a long paint can make the track skip
+  (or briefly shift pitch) through the `MediaElementAudioSourceNode`.
+  `SheetMusicViewer` keeps the pages next to the current one painted
+  (`PRERENDER_RADIUS`, `pagesAround` in `src/utils/pdfPages.ts`, `<Page>`
+  keyed by page number) so a turn only swaps canvases, and the context asks
+  for `latencyHint: "playback"`. Don't go back to one `<Page>` that repaints
+  on every turn.
+- Each play (with the context's `sampleRate` / `baseLatency`), watchdog
+  verdict, context change and stall is logged as `[backing-track] …`, and each
+  page paint as `[sheet-music] render` (ms, visible, track playing)
+  (`console.info`): read them in Safari's Web Inspector with the iPad
+  connected to a Mac.
 
 ### Edge Functions (`supabase/functions/`)
 

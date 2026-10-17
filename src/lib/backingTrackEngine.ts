@@ -30,6 +30,11 @@
  *
  * Every play, verdict and stall goes to `log` (the console by default) so a
  * failure on the iPad can be read in Safari's Web Inspector.
+ *
+ * The context asks for `latencyHint: "playback"`: larger output buffers, so a
+ * busy main thread (pdf.js painting a sheet music page) is less likely to make
+ * the track skip. The extra output latency doesn't matter for a backing track
+ * (its click is in the file).
  */
 
 export const STALL_TIMEOUT_MS = 1500;
@@ -79,7 +84,13 @@ function defaultDeps(): BackingTrackEngineDeps {
     createContext: () => {
       type WebkitWindow = typeof window & { webkitAudioContext?: typeof AudioContext };
       const Ctor = window.AudioContext || (window as WebkitWindow).webkitAudioContext;
-      return Ctor ? new Ctor() : null;
+      if (!Ctor) return null;
+      try {
+        return new Ctor({ latencyHint: "playback" });
+      } catch {
+        // Engines that reject the options object.
+        return new Ctor();
+      }
     },
     setTimeout: (fn, ms) => window.setTimeout(fn, ms),
     clearTimeout: (handle) => window.clearTimeout(handle as number),
@@ -174,6 +185,9 @@ export class BackingTrackEngine {
       networkState: audio.networkState,
       at: startedAt,
       context: this.graph?.ctx.state ?? "none",
+      // A pitch shift after a skip points at resampling (file rate ≠ context rate).
+      sampleRate: this.graph?.ctx.sampleRate,
+      baseLatency: this.graph?.ctx.baseLatency,
     });
     const played = audio.play();
     // Older engines return undefined instead of a promise.
