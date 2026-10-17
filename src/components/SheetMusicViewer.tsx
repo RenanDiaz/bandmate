@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { PageTiming } from "../services/songsService";
 import { theme } from "../theme";
+import { fitPageWidth, pagesAround } from "../utils/pdfPages";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import "../lib/pdfWorker";
@@ -24,6 +25,15 @@ interface SheetMusicViewerProps {
    */
   onLoadError?: (error: Error) => void;
 }
+
+/**
+ * Pages kept rendered on each side of the current one. pdf.js paints a page on
+ * the main thread (hundreds of ms for a scanned page on an iPad), which can
+ * make a playing backing track skip; with the neighbours already painted, a
+ * turn only swaps which canvas is visible, and a chart of up to three pages is
+ * fully painted before the track starts.
+ */
+const PRERENDER_RADIUS = 1;
 
 export interface SheetMusicViewerHandle {
   goToNextPage: () => boolean;
@@ -51,9 +61,18 @@ const PDFContainer = styled.div<{ $invertColors?: boolean }>`
   padding: ${theme.space[1]};
 
   .react-pdf__Document {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  /* Pre-rendered neighbours: painted, laid out on top of the visible page, not shown. */
+  .react-pdf__Page.prerendered {
+    position: absolute;
+    top: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .react-pdf__Page {
@@ -261,10 +280,12 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
   const [navVisible, setNavVisible] = useState(true);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const [containerHeight, setContainerHeight] = useState<number | null>(null);
-  const [pageAspectRatio, setPageAspectRatio] = useState<number | null>(null);
+  const [pageAspectRatios, setPageAspectRatios] = useState<Record<number, number>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  /** performance.now() when each page's render started, for the render log. */
+  const renderStartRef = useRef(new Map<number, number>());
   const lastInteractionRef = useRef<number>(Date.now());
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -393,29 +414,37 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
     onLoadError?.(err);
   };
 
-  const handlePageLoadSuccess = (page: { originalWidth: number; originalHeight: number }) => {
+  const handlePageLoadSuccess = (page: { pageNumber: number; originalWidth: number; originalHeight: number }) => {
+    renderStartRef.current.set(page.pageNumber, performance.now());
     if (page.originalWidth > 0 && page.originalHeight > 0) {
-      setPageAspectRatio(page.originalWidth / page.originalHeight);
+      const aspect = page.originalWidth / page.originalHeight;
+      setPageAspectRatios((prev) => (prev[page.pageNumber] === aspect ? prev : { ...prev, [page.pageNumber]: aspect }));
     }
   };
 
-  // Calculate the optimal width to fit the page within the container (fit-to-page)
-  const renderWidth = (() => {
+  // Main-thread cost of each page, read in Safari's Web Inspector next to the
+  // [backing-track] log when a track skips during a page turn.
+  const handlePageRenderSuccess = (page: { pageNumber: number }) => {
+    const startedAt = renderStartRef.current.get(page.pageNumber);
+    renderStartRef.current.delete(page.pageNumber);
+    console.info("[sheet-music] render", {
+      page: page.pageNumber,
+      ms: startedAt === undefined ? null : Math.round(performance.now() - startedAt),
+      visible: page.pageNumber === currentPage,
+      trackPlaying: isPlaying,
+      devicePixelRatio: window.devicePixelRatio,
+    });
+  };
+
+  // Fit-to-page width for each page. Pages of one PDF can differ in size; until
+  // a page has loaded, assume the size of one that has (most PDFs are uniform),
+  // so a pre-rendered page isn't painted twice.
+  const knownAspectRatio = Object.values(pageAspectRatios)[0];
+  const widthForPage = (page: number): number | null => {
     if (containerWidth === null || containerHeight === null) return null;
-    if (!pageAspectRatio) return containerWidth; // Before page loads, use container width
-
-    // Calculate what height the page would be at full container width
-    const heightAtFullWidth = containerWidth / pageAspectRatio;
-
-    if (heightAtFullWidth <= containerHeight) {
-      // Page fits vertically at full width - use full width
-      return containerWidth;
-    }
-
-    // Page would overflow vertically - constrain by height instead
-    const widthFromHeight = containerHeight * pageAspectRatio;
-    return Math.max(280, Math.min(widthFromHeight, containerWidth));
-  })();
+    return fitPageWidth(containerWidth, containerHeight, pageAspectRatios[page] ?? knownAspectRatio);
+  };
+  const renderWidth = widthForPage(currentPage);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -497,13 +526,19 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
             onLoadError={handleDocumentLoadError}
             loading={null}
           >
-            <Page
-              pageNumber={currentPage}
-              width={renderWidth}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              onLoadSuccess={handlePageLoadSuccess}
-            />
+            {pagesAround(currentPage, numPages, PRERENDER_RADIUS).map((page) => (
+              // Keyed by page number: a turn keeps the already painted canvases.
+              <Page
+                key={page}
+                pageNumber={page}
+                width={widthForPage(page) ?? undefined}
+                className={page === currentPage ? undefined : "prerendered"}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                onLoadSuccess={handlePageLoadSuccess}
+                onRenderSuccess={handlePageRenderSuccess}
+              />
+            ))}
           </Document>
         )}
       </PDFContainer>
