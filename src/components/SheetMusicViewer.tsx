@@ -67,10 +67,18 @@ const PDFContainer = styled.div<{ $invertColors?: boolean }>`
     align-items: center;
   }
 
-  /* Pre-rendered neighbours: painted, laid out on top of the visible page, not shown. */
-  .react-pdf__Page.prerendered {
+  /*
+   * Pre-rendered neighbours: painted, stacked over the visible page and clipped
+   * to it, not shown. A wrapper of our own, because react-pdf sets an inline
+   * position: relative on .react-pdf__Page, which would keep the hidden pages
+   * in the flow and push the visible one off-centre.
+   */
+  .prerendered-page {
     position: absolute;
-    top: 0;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
     visibility: hidden;
     pointer-events: none;
   }
@@ -528,16 +536,16 @@ const SheetMusicViewer = forwardRef<SheetMusicViewerHandle, SheetMusicViewerProp
           >
             {pagesAround(currentPage, numPages, PRERENDER_RADIUS).map((page) => (
               // Keyed by page number: a turn keeps the already painted canvases.
-              <Page
-                key={page}
-                pageNumber={page}
-                width={widthForPage(page) ?? undefined}
-                className={page === currentPage ? undefined : "prerendered"}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                onLoadSuccess={handlePageLoadSuccess}
-                onRenderSuccess={handlePageRenderSuccess}
-              />
+              <div key={page} className={page === currentPage ? undefined : "prerendered-page"}>
+                <Page
+                  pageNumber={page}
+                  width={widthForPage(page) ?? undefined}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  onLoadSuccess={handlePageLoadSuccess}
+                  onRenderSuccess={handlePageRenderSuccess}
+                />
+              </div>
             ))}
           </Document>
         )}
