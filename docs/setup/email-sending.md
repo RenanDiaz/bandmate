@@ -73,8 +73,9 @@ Environment variables needed:
 ### Deploy the Function
 
 ```bash
-# Deploy the function
+# Deploy the functions (same secrets for both)
 supabase functions deploy send-invitation-email
+supabase functions deploy send-sign-in-help   # "Email how to sign in" in the member list
 
 # Test it works
 supabase functions list

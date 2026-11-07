@@ -20,6 +20,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - GitHub and Google sign-in (Supabase Auth)
 - Multiple bands per user, with avatars and ownership transfer
 - Email invitations with roles: owner, admin, member, guest
+- Email a member how to sign in (which account and button they use, plus the link) from the member list
 
 **Songs**
 - Song library with key, tempo, lyrics, chords and popularity
@@ -113,11 +114,12 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 4. **Configure authentication** — enable the GitHub and/or Google providers in
    Supabase → Authentication → Providers ([Google guide](docs/setup/google-oauth.md)).
 
-5. **(Optional) Deploy Edge Functions** — `send-invitation-email` (needs a
-   Resend key, see [docs/setup/email-sending.md](docs/setup/email-sending.md))
+5. **(Optional) Deploy Edge Functions** — `send-invitation-email` and
+   `send-sign-in-help` (need a Resend key, see [docs/setup/email-sending.md](docs/setup/email-sending.md))
    and `calendar-feed` (public feed read by calendar apps, so no JWT check):
    ```bash
    supabase functions deploy send-invitation-email
+   supabase functions deploy send-sign-in-help
    supabase functions deploy calendar-feed --no-verify-jwt
    supabase functions deploy send-push-notifications --no-verify-jwt  # after docs/setup/push-notifications.md
    ```
@@ -179,7 +181,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/design/style-guide.md](docs/design/style-guide.md) — design system
 - [docs/guides/landing-seo.md](docs/guides/landing-seo.md) — landing prerender, SEO, robots/sitemap
 - [docs/guides/band-members.md](docs/guides/band-members.md) — roles, member security model, invitations
-- [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation emails
+- [docs/setup/email-sending.md](docs/setup/email-sending.md) — invitation and sign-in help emails
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) — push notifications (VAPID keys, Vault, Edge Function, pg_cron)
 - [docs/guides/song-metadata.md](docs/guides/song-metadata.md) — metadata lookup (Spotify, MusicBrainz, AcousticBrainz) and Spotify setup
 - [docs/setup/google-oauth.md](docs/setup/google-oauth.md) — Google OAuth
@@ -195,6 +197,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) — spec (implemented): show clock in performance mode
+- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) — spec (implemented, manual validation pending): email a member how to sign in
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations

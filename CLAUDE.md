@@ -83,7 +83,7 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | Service | Domain |
 |---------|--------|
 | `bandsService.ts` | Bands; membership via the `band_members` join table |
-| `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest) |
+| `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest); `sendSignInHelpEmail(bandId, memberUserId, locale)` (→ `send-sign-in-help`, never throws, returns a `SignInHelpResult`) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
 | `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode); `getSongTimestamps(ids)` (`id, updated_at`, offline update check) |
 | `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads; `getSheetMusicFingerprintRows(songIds)` (offline update check) |
@@ -744,6 +744,18 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md).
   Needs `pg_cron` for the moved / cancelled events.
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
+- `send-sign-in-help` — "Email how to sign in" in the member list
+  ([docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md)):
+  emails a member which account / button they sign in with (from
+  `auth.users.app_metadata` providers, never sent to the client) and the
+  `/login` link, via Resend (same secrets as invitations). Called with the
+  user's JWT (default `verify_jwt`); it re-checks that the caller is the
+  band's **owner**, that the recipient is in the band and isn't the caller,
+  and a per-recipient limit across bands (10 min, 3 per 24 h, logged in
+  `member_sign_in_help_emails`). Texts (en/es, the sender's UI language),
+  methods and quota are `_shared/signInHelp.ts`, dependency-free, tested from
+  `src/lib/__tests__/signInHelp.test.ts`; every interpolated value is
+  HTML-escaped.
 
 ### Landing Page & SEO
 
@@ -818,6 +830,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `performance_sessions` | Real-time sync sessions with `current_song_index` |
 | `push_subscriptions` | Web Push subscription per browser (`endpoint` unique, keys, `locale`); RLS own rows, no INSERT policy: created by `register_push_subscription()`, which hands the endpoint to the caller |
 | `band_notification_mutes` | `(user_id, band_id)`: that user gets no pushes for that band; no row = on |
+| `member_sign_in_help_emails` | Log of sign-in help emails (`band_id`, `recipient_id`, `sent_by`, `sent_at`), the rate limit of `send-sign-in-help`; RLS on with no policies (service role only) |
 | `notification_events` | Push outbox written by triggers, read by `send-push-notifications`; RLS on with no policies (clients can't read or write). `send_after` (null = now; changes wait 2 min), `dispatched_at` / `dispatch_attempts` (cron retry), `entity_kind` (generated from `type`) |
 
 > The full schema is versioned: `supabase/migrations/20260101000000_baseline.sql`
@@ -1028,6 +1041,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9, AC12 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, manual validation (AC8–AC10 on device) pending): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
+- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) - Spec (implemented, manual validation (AC6–AC8, needs the function deployed) pending): email a member how to sign in — owner-only button in the member list, Edge Function naming the account / button they use, per-recipient rate limit (1 phase, 1 PR)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; Phase 4 removes the flag (4 phases, 5 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide
