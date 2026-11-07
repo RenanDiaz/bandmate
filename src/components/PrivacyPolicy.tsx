@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
       <Container>
         <Header>
           <Title>{t('privacy.title')}</Title>
-          <LastUpdated>{t('privacy.lastUpdated')}: September 2026</LastUpdated>
+          <LastUpdated>{t('privacy.lastUpdated')}: November 2026</LastUpdated>
         </Header>
 
         <ContentSection>

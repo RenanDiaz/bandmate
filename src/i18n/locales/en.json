@@ -1360,7 +1360,7 @@
     },
     "dataSharing": {
       "title": "Information Sharing",
-      "text": "We do not sell, trade, or rent your personal information to third parties. We may share your information only with band members you invite to collaborate, and with service providers who assist in operating our platform (such as Supabase for database and authentication services)."
+      "text": "We do not sell, trade, or rent your personal information to third parties. We may share your information only with band members you invite to collaborate, and with service providers who assist in operating our platform (such as Supabase for database and authentication services, and Vercel for hosting and visit statistics)."
     },
     "security": {
       "title": "Data Security",
@@ -1368,7 +1368,7 @@
     },
     "cookies": {
       "title": "Cookies and Local Storage",
-      "text": "Bandmate uses local storage to remember your preferences (such as selected band and language settings) and to keep you logged in. We do not use tracking cookies or third-party analytics that track individual users."
+      "text": "Bandmate uses local storage to remember your preferences (such as selected band and language settings) and to keep you logged in. We do not use tracking cookies. To understand how people find Bandmate we use Vercel Web Analytics, which counts page visits with the referring site, country and device type, without cookies and without identifying you or following you across sites. The address it records is the page path only, never its parameters."
     },
     "pushNotifications": {
       "title": "Push notifications",

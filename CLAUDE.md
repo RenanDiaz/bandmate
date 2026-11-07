@@ -55,7 +55,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (analytics, supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -480,6 +480,15 @@ through `notificationSettingsStore`, rendered by `NotificationSettingsHost`
 in `App` (a modal inside the drawer would unmount with it). About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
 anchored to its last row it opens below the viewport. Tests:
 `src/__tests__/AuthButton.test.tsx`, header: `src/components/__tests__/AppNavbar.test.tsx`.
+
+**Visit statistics** (`src/lib/analytics.ts`): Vercel Web Analytics,
+injected from `main.tsx` in production builds only and not while offline. It
+loads `/_vercel/insights/script.js` with the `window.va` queue instead of the
+`@vercel/analytics` package (its optional Remix peer wants React 18 and npm
+refuses it). `sanitizeAnalyticsEvent` (`beforeSend`) keeps origin + path, never
+the query or hash (`/invite/accept?token=…`). Cookieless, no user id; the
+privacy policy (`privacy.cookies`) says so — update it if this changes. Data
+appears only once Web Analytics is enabled in the Vercel project.
 
 **Service worker updates** use `registerType: 'prompt'`. `PwaUpdater`
 (`src/lib/pwaUpdates.ts`, plain TS, unit-tested; one instance via

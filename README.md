@@ -63,7 +63,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - **Styling:** Bootstrap 5, Reactstrap, Styled Components
 - **Backend:** Supabase — PostgreSQL + RLS, Auth, Realtime, Storage, Edge Functions
 - **Other:** dnd-kit, i18next, react-pdf, PapaParse
-- **Hosting:** Vercel
+- **Hosting:** Vercel (+ Web Analytics for visit sources; enable it in the project's Analytics tab)
 
 ## 📦 Getting Started
 

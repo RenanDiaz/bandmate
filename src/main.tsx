@@ -13,6 +13,7 @@ import "./styles/design-tokens.css";
 import theme from "./theme";
 import './i18n';
 import { applyFlagParams } from "./lib/featureFlags";
+import { installAnalytics } from "./lib/analytics";
 
 // `?flag=push` / `?flag=-push` toggles a per-device feature flag on
 // devices without a console; drop the param before the router reads the URL.
@@ -35,6 +36,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 if (import.meta.env.DEV) {
   void import("./lib/devOfflineHook").then((m) => m.installOfflineDevHook());
 }
+
+// Vercel Web Analytics (src/lib/analytics.ts): production builds only.
+if (import.meta.env.PROD) installAnalytics();
 
 // The build prerenders the landing into index.html so crawlers and slow
 // connections get real content (see src/entry-server.tsx). `createRoot` throws
