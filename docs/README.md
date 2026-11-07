@@ -54,6 +54,7 @@ docs/
 
 ## Performance mode (2026-10-09)
 - [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented, manual validation of AC8–AC10 on device pending)
+- [specs/member-sign-in-help.md](specs/member-sign-in-help.md) — email a member how to sign in: the account and button they use, plus the link, from the member list (one phase, one PR; implemented, manual validation of AC6–AC8 pending)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

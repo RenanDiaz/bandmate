@@ -86,6 +86,15 @@ declined invitations can't be accepted.
 | `createBandInvitation`, `getBandInvitations`, `revokeInvitation` | Owner side |
 | `getMyInvitations`, `getInvitationByToken`, `acceptInvitation`, `declineInvitation` | Invitee side |
 
+## Sign-in help email (owner)
+
+Band Settings → Members → envelope button on a member's row ("Email how to
+sign in"), after a confirmation. The `send-sign-in-help` Edge Function emails
+the member which account and button they use (Google, email + password, …)
+and the `/login` link. Owner only, never to yourself, at most one email per
+person every 10 minutes and three per day. See
+[docs/specs/member-sign-in-help.md](../specs/member-sign-in-help.md).
+
 ## Tables
 
 **`band_members`** — `id`, `band_id`, `user_id`, `role`, `invited_by`, `joined_at`,

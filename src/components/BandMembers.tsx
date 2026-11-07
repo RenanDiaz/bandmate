@@ -12,6 +12,7 @@ import {
   leaveBand,
   getBandInvitations,
   revokeInvitation,
+  sendSignInHelpEmail,
 } from "../services/bandMembersService";
 import type { BandMember, BandRole, BandInvitation } from "../services/bandMembersService";
 import { ConfirmModal } from "./ConfirmModal";
@@ -31,11 +32,12 @@ type ConfirmState = {
   title: string;
   message: string;
   confirmLabel: string;
+  tone?: "danger" | "primary";
   action: () => Promise<void>;
 };
 
 export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemberChange, onInviteClick }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [members, setMembers] = useState<BandMember[]>([]);
   const [invitations, setInvitations] = useState<BandInvitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,33 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
         } catch (error) {
           console.error("Failed to leave band:", error);
           setFeedback({ type: "error", message: t("bands.leaveError") });
+        }
+      },
+    });
+  };
+
+  const handleSendSignInHelp = (member: BandMember) => {
+    const email = member.email || t("common.unknown");
+    setConfirm({
+      title: t("bands.sendSignInHelpTitle"),
+      message: t("bands.confirmSendSignInHelp", { email }),
+      confirmLabel: t("bands.sendSignInHelpConfirm"),
+      tone: "primary",
+      action: async () => {
+        const result = await sendSignInHelpEmail(band.id, member.user_id, i18n.language);
+        if (result.ok) {
+          setFeedback({ type: "success", message: t("bands.signInHelpSent", { email }) });
+        } else if (result.reason === "too-soon") {
+          const minutes = Math.max(1, Math.ceil(result.retryAfterSeconds / 60));
+          setFeedback({ type: "error", message: t("bands.signInHelpTooSoon", { email, minutes }) });
+        } else if (result.reason === "no-email") {
+          setFeedback({ type: "error", message: t("bands.signInHelpNoEmail", { email }) });
+        } else if (result.reason === "forbidden") {
+          setFeedback({ type: "error", message: t("common.noPermission") });
+        } else if (result.reason === "network") {
+          setFeedback({ type: "error", message: t("bands.signInHelpNetwork") });
+        } else {
+          setFeedback({ type: "error", message: t("bands.signInHelpError") });
         }
       },
     });
@@ -301,10 +330,27 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
                   </RoleBadge>
                 )}
 
-                {isOwner && member.role !== "owner" && !isCurrentUser && (
-                  <RemoveButton onClick={() => handleRemoveMember(member)} title={t("bands.removeMember")}>
-                    <i className="bi bi-x-lg"></i>
-                  </RemoveButton>
+                {isOwner && !isCurrentUser && (
+                  <IconButtons>
+                    <SignInHelpButton
+                      type="button"
+                      onClick={() => handleSendSignInHelp(member)}
+                      title={t("bands.sendSignInHelp")}
+                      aria-label={t("bands.sendSignInHelp")}
+                    >
+                      <i className="bi bi-envelope-arrow-up"></i>
+                    </SignInHelpButton>
+                    {member.role !== "owner" && (
+                      <RemoveButton
+                        type="button"
+                        onClick={() => handleRemoveMember(member)}
+                        title={t("bands.removeMember")}
+                        aria-label={t("bands.removeMember")}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </RemoveButton>
+                    )}
+                  </IconButtons>
                 )}
               </MemberActions>
             </MemberCard>
@@ -378,7 +424,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
         title={confirm?.title ?? ""}
         message={confirm?.message ?? ""}
         confirmLabel={confirm?.confirmLabel}
-        tone="danger"
+        tone={confirm?.tone ?? "danger"}
         busy={confirmBusy}
         onConfirm={runConfirm}
         onClose={() => setConfirm(null)}
@@ -691,6 +737,36 @@ const RoleSelect = styled.select`
     outline: none;
     border-color: ${theme.colors.brand.primary};
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+`;
+
+const IconButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+`;
+
+const SignInHelpButton = styled.button`
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: ${theme.colors.brand.primary};
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 

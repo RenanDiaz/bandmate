@@ -496,3 +496,81 @@ export async function canUserManageEvents(bandId: number): Promise<boolean> {
   const role = await getUserBandRole(bandId);
   return canManageEvents(role);
 }
+
+// ============================================
+// Sign-in help email (docs/specs/member-sign-in-help.md)
+// ============================================
+
+export type SignInHelpFailure =
+  | "not-authenticated"
+  | "forbidden"
+  | "member-not-found"
+  | "no-email"
+  | "network"
+  | "failed";
+
+export type SignInHelpResult =
+  | { ok: true }
+  | { ok: false; reason: "too-soon"; retryAfterSeconds: number }
+  | { ok: false; reason: SignInHelpFailure };
+
+const SIGN_IN_HELP_FAILURES: readonly string[] = [
+  "not-authenticated",
+  "forbidden",
+  "member-not-found",
+  "no-email",
+];
+
+/**
+ * Reads the `send-sign-in-help` error body (`{ error, retryAfterSeconds? }`)
+ * into a result. Exported for tests.
+ */
+export function signInHelpResultFromBody(body: unknown): SignInHelpResult {
+  const data = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  if (data.error === "too-soon") {
+    const seconds = Number(data.retryAfterSeconds);
+    return {
+      ok: false,
+      reason: "too-soon",
+      retryAfterSeconds: Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 600,
+    };
+  }
+  if (typeof data.error === "string" && SIGN_IN_HELP_FAILURES.includes(data.error)) {
+    return { ok: false, reason: data.error as SignInHelpFailure };
+  }
+  return { ok: false, reason: "failed" };
+}
+
+/**
+ * Emails a member of the band how to sign in to Bandmate (owner only; the
+ * Edge Function re-checks the role, the membership and a per-recipient
+ * limit). Never throws: failures come back as a result.
+ */
+export async function sendSignInHelpEmail(
+  bandId: number,
+  memberUserId: string,
+  locale: string
+): Promise<SignInHelpResult> {
+  try {
+    const { error } = await supabase.functions.invoke("send-sign-in-help", {
+      body: { bandId, memberUserId, locale },
+    });
+    if (!error) return { ok: true };
+
+    // FunctionsHttpError: the function answered non-2xx; its Response is in `context`.
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      try {
+        return signInHelpResultFromBody(await context.clone().json());
+      } catch {
+        return { ok: false, reason: "failed" };
+      }
+    }
+    // FunctionsFetchError / FunctionsRelayError: the request never reached it.
+    console.warn("Failed to send sign-in help email:", error);
+    return { ok: false, reason: error.name === "FunctionsFetchError" ? "network" : "failed" };
+  } catch (err) {
+    console.warn("Failed to send sign-in help email:", err);
+    return { ok: false, reason: "network" };
+  }
+}
