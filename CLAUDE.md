@@ -797,6 +797,10 @@ Reference `src/theme.ts` for the design system. Key patterns:
 - Brand color: `#8B5CF6` (purple)
 - Use `theme.space[n]`, `theme.radius.base`, `theme.colors.dark.*` for consistency
 - Icons: Bootstrap Icons (`bi-*` classes)
+- Buttons: never reactstrap's `<Button color="…">` (Bootstrap's default look).
+  In dialogs and forms use `PrimaryButton` (`$tone="danger"` for red actions),
+  `SecondaryButton` and `DangerOutlineButton` from `src/components/ui/buttons.ts`,
+  always with an explicit `type` (a native `<button>` inside `<Form>` submits)
 - Print styles: Components hide navbar and use `@media print` for print views
 
 ### User Feedback & Dialogs

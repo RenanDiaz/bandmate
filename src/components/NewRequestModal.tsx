@@ -14,6 +14,7 @@ import {
 } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { SecondaryButton } from "./ui/buttons";
 import { useToast } from "../context/useToast";
 import {
   createRequest,
@@ -231,9 +232,9 @@ export const NewRequestModal: FC<Props> = ({
           </FormGroup>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={handleClose} disabled={isSubmitting}>
+          <SecondaryButton type="button" onClick={handleClose} disabled={isSubmitting}>
             {t("common.cancel")}
-          </Button>
+          </SecondaryButton>
           <SubmitButton type="submit" disabled={isSubmitting || !title.trim()}>
             {isSubmitting ? t("common.creating") : t("requests.submitRequest")}
           </SubmitButton>

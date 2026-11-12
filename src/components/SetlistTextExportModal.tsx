@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { useId, useMemo, useState } from "react";
-import { Button, Collapse, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
+import { Collapse, FormGroup, Input, Label, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
+import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import { useSetlistTextExport, type SetlistTextFlag } from "../hooks/useSetlistTextExport";
 import { setlistTextDurations, type SetlistTextInput, type SetlistTextLayout } from "../utils/setlistText";
 
@@ -119,28 +120,27 @@ const ExportContent: FC<{ input: SetlistTextInput; onClose: () => void }> = ({ i
         </Collapse>
       </ModalBody>
       <ModalFooter>
-        <Button color="secondary" onClick={onClose}>
+        <SecondaryButton type="button" onClick={onClose}>
           {t("common.cancel")}
-        </Button>
+        </SecondaryButton>
         {canShare && (
-          <Button color="secondary" outline onClick={share}>
+          <SecondaryButton type="button" onClick={share}>
             <i className="bi bi-share"></i> {t("setlists.export.share")}
-          </Button>
+          </SecondaryButton>
         )}
-        <Button
-          color="secondary"
-          outline
+        <SecondaryButton
+          type="button"
           onClick={() => {
             download();
             onClose();
           }}
         >
           <i className="bi bi-download"></i> {t("setlists.export.download")}
-        </Button>
-        <Button color="primary" onClick={copy}>
+        </SecondaryButton>
+        <PrimaryButton type="button" onClick={copy}>
           <i className={`bi ${copied ? "bi-check-lg" : "bi-clipboard"}`}></i>{" "}
           {copied ? t("setlists.export.copied") : t("setlists.export.copy")}
-        </Button>
+        </PrimaryButton>
       </ModalFooter>
     </>
   );

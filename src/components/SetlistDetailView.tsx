@@ -1,7 +1,8 @@
 import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Input } from "reactstrap";
+import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, FormGroup, Input } from "reactstrap";
+import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import styled from "styled-components";
 import {
   DndContext,
@@ -1115,10 +1116,10 @@ const SetlistDetailView: FC = () => {
               </AuthIcon>
               <AuthTitle>{t("youtubeMusic.authRequired")}</AuthTitle>
               <AuthText>{t("youtubeMusic.authDescription")}</AuthText>
-              <Button color="danger" onClick={handleRequestYouTubeAccess}>
-                <i className="bi bi-google me-2"></i>
+              <PrimaryButton type="button" $tone="danger" onClick={handleRequestYouTubeAccess}>
+                <i className="bi bi-google"></i>
                 {t("youtubeMusic.connectGoogle")}
-              </Button>
+              </PrimaryButton>
             </YouTubeAuthPrompt>
           ) : youtubeResult ? (
             <YouTubeResultContainer>
@@ -1229,33 +1230,34 @@ const SetlistDetailView: FC = () => {
         </ModalBody>
         <ModalFooter>
           {youtubeResult || setlist?.youtube_playlist_url ? (
-            <Button
-              color="secondary"
+            <SecondaryButton
+              type="button"
               onClick={() => {
                 setShowYouTubeModal(false);
                 setYoutubeResult(null);
               }}
             >
               {t("common.close")}
-            </Button>
+            </SecondaryButton>
           ) : (
             <>
-              <Button
-                color="secondary"
+              <SecondaryButton
+                type="button"
                 onClick={() => setShowYouTubeModal(false)}
                 disabled={youtubeExporting}
               >
                 {t("common.cancel")}
-              </Button>
+              </SecondaryButton>
               {hasYouTubeAccess !== false && (
-                <Button
-                  color="danger"
+                <PrimaryButton
+                  type="button"
+                  $tone="danger"
                   onClick={handleExportToYouTube}
                   disabled={youtubeExporting || songItemsOnly.length === 0}
                 >
-                  <i className="bi bi-youtube me-2"></i>
+                  <i className="bi bi-youtube"></i>
                   {t("youtubeMusic.createPlaylistButton")}
-                </Button>
+                </PrimaryButton>
               )}
             </>
           )}
@@ -1306,31 +1308,31 @@ const SetlistDetailView: FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button
-            color="secondary"
+          <SecondaryButton
+            type="button"
             onClick={() => setShowLinkModal(false)}
             disabled={linkingShow}
           >
             {t("common.cancel")}
-          </Button>
+          </SecondaryButton>
           {availableShows.length > 0 && (
-            <Button
-              color="primary"
+            <PrimaryButton
+              type="button"
               onClick={handleLinkToShow}
               disabled={linkingShow || !selectedShowId}
             >
               {linkingShow ? (
                 <>
-                  <Spinner size="sm" style={{ marginRight: "8px" }} />
+                  <Spinner size="sm" />
                   {t("common.saving")}
                 </>
               ) : (
                 <>
-                  <i className="bi bi-link-45deg me-2"></i>
+                  <i className="bi bi-link-45deg"></i>
                   {t("setlists.detail.linkToShow")}
                 </>
               )}
-            </Button>
+            </PrimaryButton>
           )}
         </ModalFooter>
       </Modal>
@@ -1447,14 +1449,14 @@ const SetlistDetailView: FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
+          <SecondaryButton type="button" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
             {t("common.cancel")}
-          </Button>
+          </SecondaryButton>
           {optimization && !optimizing && (
-            <Button color="primary" onClick={handleApplyOptimization}>
-              <i className="bi bi-check-circle" style={{ marginRight: "8px" }}></i>
+            <PrimaryButton type="button" onClick={handleApplyOptimization}>
+              <i className="bi bi-check-circle"></i>
               {t("ai.applyChanges")}
-            </Button>
+            </PrimaryButton>
           )}
         </ModalFooter>
       </Modal>
