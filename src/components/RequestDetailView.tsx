@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Container, Spinner, Button } from "reactstrap";
+import { DangerOutlineButton } from "./ui/buttons";
 import styled from "styled-components";
 import { theme } from "../theme";
 import { useBandContext } from "../context/useBandContext";
@@ -440,10 +441,10 @@ const RequestDetailView: FC = () => {
           )}
 
           <DeleteSection>
-            <Button color="danger" outline onClick={handleDelete}>
-              <i className="bi bi-trash me-2"></i>
+            <DangerOutlineButton type="button" onClick={handleDelete}>
+              <i className="bi bi-trash"></i>
               {t("requests.deleteRequest")}
-            </Button>
+            </DangerOutlineButton>
           </DeleteSection>
         </DetailCard>
 

@@ -1,7 +1,7 @@
 import type { FC, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, Button, FormGroup, Label, Input } from "reactstrap";
+import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, FormGroup, Label, Input } from "reactstrap";
 import styled from "styled-components";
 import {
   DndContext,
@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
+import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import {
   getSetlist,
   getBandSetlists,
@@ -1053,12 +1054,12 @@ const SetlistEditor: FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setIsSpecialItemModalOpen(false)}>
+          <SecondaryButton type="button" onClick={() => setIsSpecialItemModalOpen(false)}>
             {t("common.cancel")}
-          </Button>
-          <Button color="primary" onClick={handleSaveSpecialItem} disabled={!specialItemLabel.trim()}>
+          </SecondaryButton>
+          <PrimaryButton type="button" onClick={handleSaveSpecialItem} disabled={!specialItemLabel.trim()}>
             {t("common.save")}
-          </Button>
+          </PrimaryButton>
         </ModalFooter>
       </Modal>
 
@@ -1157,14 +1158,14 @@ const SetlistEditor: FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
+          <SecondaryButton type="button" onClick={() => setIsOptimizeModalOpen(false)} disabled={optimizing}>
             {t("common.cancel")}
-          </Button>
+          </SecondaryButton>
           {optimization && !optimizing && (
-            <Button color="primary" onClick={handleApplyOptimization}>
-              <i className="bi bi-check-circle" style={{ marginRight: "8px" }}></i>
+            <PrimaryButton type="button" onClick={handleApplyOptimization}>
+              <i className="bi bi-check-circle"></i>
               {t("ai.applyChanges")}
-            </Button>
+            </PrimaryButton>
           )}
         </ModalFooter>
       </Modal>

@@ -1,6 +1,8 @@
 import type { FC } from "react";
 import { useState } from "react";
-import { Modal, ModalHeader, ModalBody, ModalFooter, Button, Spinner, Alert } from "reactstrap";
+import { useTranslation } from "react-i18next";
+import { Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert } from "reactstrap";
+import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import styled from "styled-components";
 import Papa from "papaparse";
 import { theme } from "../theme";
@@ -34,6 +36,7 @@ interface ImportError {
 }
 
 export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete, bandId }) => {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [parsedSongs, setParsedSongs] = useState<ParsedSong[]>([]);
   const [importing, setImporting] = useState(false);
@@ -64,7 +67,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
         setParsedSongs(songs);
       },
       error: (error) => {
-        setErrors([{ row: 0, message: `Parse error: ${error.message}` }]);
+        setErrors([{ row: 0, message: t("songs.import.parseError", { message: error.message }) }]);
       },
     });
   };
@@ -97,7 +100,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
 
     // Check if it's a CSV file
     if (!droppedFile.name.endsWith('.csv') && !droppedFile.name.endsWith('.tsv')) {
-      setErrors([{ row: 0, message: 'Please drop a CSV or TSV file' }]);
+      setErrors([{ row: 0, message: t("songs.import.wrongFileType") }]);
       return;
     }
 
@@ -200,7 +203,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
 
       // Validate required fields
       if (!song.title || song.title.trim() === "") {
-        importErrors.push({ row: i + 1, message: "Missing title" });
+        importErrors.push({ row: i + 1, message: t("songs.import.missingTitle") });
         continue;
       }
 
@@ -237,7 +240,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
       } catch (error) {
         importErrors.push({
           row: i + 1,
-          message: error instanceof Error ? error.message : "Failed to import"
+          message: error instanceof Error ? error.message : t("songs.import.failed")
         });
       }
     }
@@ -269,35 +272,35 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
 
   return (
     <Modal isOpen={isOpen} toggle={handleClose} size="lg">
-      <ModalHeader toggle={handleClose}>Import Songs from CSV</ModalHeader>
+      <ModalHeader toggle={handleClose}>{t("songs.import.title")}</ModalHeader>
       <ModalBody>
         <Instructions>
           <InstructionTitle>
             <i className="bi bi-info-circle"></i>
-            CSV Format Instructions
+            {t("songs.import.formatTitle")}
           </InstructionTitle>
           <InstructionText>
-            Your CSV file should have these columns (case-insensitive):
+            {t("songs.import.formatIntro")}
           </InstructionText>
           <ColumnList>
-            <li><code>Title</code> (required)</li>
+            <li><code>Title</code> ({t("songs.import.colRequired")})</li>
             <li><code>Artist</code></li>
             <li><code>Language</code></li>
             <li><code>Country</code></li>
-            <li><code>Release year</code> (or <code>Release Year</code>)</li>
-            <li><code>Duration</code> (format: MM:SS, e.g., "3:35")</li>
-            <li><code>Tempo</code> (format: "120 BPM" or just "120")</li>
-            <li><code>Key</code> (note, e.g., "C", "Am")</li>
-            <li><code>Mode</code> (Major, Minor, Phrygian, Lydian, etc.)</li>
-            <li><code>Electric</code> (checkbox: TRUE/FALSE)</li>
-            <li><code>Acoustic</code> (checkbox: TRUE/FALSE)</li>
-            <li><code>Sequence</code> (checkbox: TRUE/FALSE for backing track)</li>
+            <li><code>Release year</code> ({t("songs.import.colReleaseYearAlt")} <code>Release Year</code>)</li>
+            <li><code>Duration</code> ({t("songs.import.colDuration")})</li>
+            <li><code>Tempo</code> ({t("songs.import.colTempo")})</li>
+            <li><code>Key</code> ({t("songs.import.colKey")})</li>
+            <li><code>Mode</code> ({t("songs.import.colMode")})</li>
+            <li><code>Electric</code> ({t("songs.import.colCheckbox")})</li>
+            <li><code>Acoustic</code> ({t("songs.import.colCheckbox")})</li>
+            <li><code>Sequence</code> ({t("songs.import.colSequence")})</li>
           </ColumnList>
           <InstructionText>
-            Extra columns in your CSV will be ignored.
+            {t("songs.import.extraColumns")}
           </InstructionText>
           <InstructionText>
-            Export your Google Sheet as CSV: <strong>File → Download → Comma Separated Values (.csv)</strong>
+            {t("songs.import.googleSheets")} <strong>{t("songs.import.googleSheetsPath")}</strong>
           </InstructionText>
         </Instructions>
 
@@ -314,10 +317,10 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
               {file ? (
                 <strong>{file.name}</strong>
               ) : isDragging ? (
-                <strong>Drop CSV file here</strong>
+                <strong>{t("songs.import.dropHere")}</strong>
               ) : (
                 <>
-                  <strong>Drop CSV file here</strong> or click to browse
+                  <strong>{t("songs.import.dropHere")}</strong> {t("songs.import.orBrowse")}
                 </>
               )}
             </div>
@@ -333,21 +336,21 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
         {parsedSongs.length > 0 && (
           <PreviewSection>
             <PreviewHeader>
-              <PreviewTitle>Preview ({validSongsCount} valid songs)</PreviewTitle>
+              <PreviewTitle>{t("songs.import.previewTitle", { count: validSongsCount })}</PreviewTitle>
               <PreviewSubtitle>
-                Review the songs below before importing
+                {t("songs.import.previewSubtitle")}
               </PreviewSubtitle>
             </PreviewHeader>
             <PreviewTable>
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Title</th>
-                  <th>Artist</th>
-                  <th>Key</th>
-                  <th>Tempo</th>
-                  <th>Duration</th>
-                  <th>Tags</th>
+                  <th>{t("songs.songTitle")}</th>
+                  <th>{t("songs.artist")}</th>
+                  <th>{t("songs.key")}</th>
+                  <th>{t("songs.tempo")}</th>
+                  <th>{t("songs.duration")}</th>
+                  <th>{t("songs.tags")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,7 +361,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
                   return (
                     <tr key={idx} className={!isValid ? "invalid" : ""}>
                       <td>{idx + 1}</td>
-                      <td>{song.title || <em>Missing title</em>}</td>
+                      <td>{song.title || <em>{t("songs.import.missingTitle")}</em>}</td>
                       <td>{song.artist || "-"}</td>
                       <td>{parseKey(song.key || "", song.mode || "") || "-"}</td>
                       <td>{parseTempo(song.tempo || "") || "-"}</td>
@@ -371,7 +374,7 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
             </PreviewTable>
             {parsedSongs.length > 10 && (
               <PreviewFooter>
-                Showing first 10 of {parsedSongs.length} songs
+                {t("songs.import.showingFirst", { total: parsedSongs.length })}
               </PreviewFooter>
             )}
           </PreviewSection>
@@ -379,16 +382,14 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
 
         {successCount > 0 && (
           <Alert color="success">
-            Successfully imported {successCount} song{successCount !== 1 ? "s" : ""}!
-            {skippedCount > 0 && (
-              <> ({skippedCount} duplicate{skippedCount !== 1 ? "s" : ""} skipped)</>
-            )}
+            {t("songs.import.success", { count: successCount })}
+            {skippedCount > 0 && <> {t("songs.import.duplicatesSkipped", { count: skippedCount })}</>}
           </Alert>
         )}
 
         {skippedCount > 0 && successCount === 0 && errors.length === 0 && (
           <Alert color="warning">
-            <i className="bi bi-info-circle"></i> All {skippedCount} song{skippedCount !== 1 ? "s" : ""} already exist in your library (duplicates skipped)
+            <i className="bi bi-info-circle"></i> {t("songs.import.allDuplicates", { count: skippedCount })}
           </Alert>
         )}
 
@@ -396,38 +397,40 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
           <ErrorSection>
             <ErrorTitle>
               <i className="bi bi-exclamation-triangle"></i>
-              Import Errors ({errors.length})
+              {t("songs.import.errorsTitle", { count: errors.length })}
             </ErrorTitle>
             <ErrorList>
               {errors.slice(0, 5).map((error, idx) => (
                 <ErrorItem key={idx}>
-                  Row {error.row}: {error.message}
+                  {error.row > 0
+                    ? t("songs.import.rowError", { row: error.row, message: error.message })
+                    : error.message}
                 </ErrorItem>
               ))}
               {errors.length > 5 && (
-                <ErrorItem>... and {errors.length - 5} more errors</ErrorItem>
+                <ErrorItem>{t("songs.import.moreErrors", { count: errors.length - 5 })}</ErrorItem>
               )}
             </ErrorList>
           </ErrorSection>
         )}
       </ModalBody>
       <ModalFooter>
-        <Button color="secondary" onClick={handleClose} disabled={importing}>
-          Cancel
-        </Button>
-        <Button
-          color="primary"
+        <SecondaryButton type="button" onClick={handleClose} disabled={importing}>
+          {t("common.cancel")}
+        </SecondaryButton>
+        <PrimaryButton
+          type="button"
           onClick={handleImport}
           disabled={importing || parsedSongs.length === 0 || validSongsCount === 0}
         >
           {importing ? (
             <>
-              <Spinner size="sm" /> Importing...
+              <Spinner size="sm" /> {t("songs.import.importing")}
             </>
           ) : (
-            <>Import {validSongsCount} Song{validSongsCount !== 1 ? "s" : ""}</>
+            t("songs.import.submit", { count: validSongsCount })
           )}
-        </Button>
+        </PrimaryButton>
       </ModalFooter>
     </Modal>
   );

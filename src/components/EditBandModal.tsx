@@ -9,8 +9,8 @@ import {
   FormGroup,
   Label,
   Input,
-  Button,
 } from "reactstrap";
+import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import { useToast } from "../context/useToast";
 import type { Band, UpdateBandInput } from "../services/bandsService";
 
@@ -99,12 +99,12 @@ export const EditBandModal = ({ band, isOpen, toggle, onSave }: Props) => {
           </FormGroup>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={toggle} disabled={isSaving}>
+          <SecondaryButton type="button" onClick={toggle} disabled={isSaving}>
             {t('common.cancel')}
-          </Button>
-          <Button color="primary" type="submit" disabled={isSaving}>
+          </SecondaryButton>
+          <PrimaryButton type="submit" disabled={isSaving}>
             {isSaving ? t('common.saving') : t('common.saveChanges')}
-          </Button>
+          </PrimaryButton>
         </ModalFooter>
       </Form>
     </Modal>
