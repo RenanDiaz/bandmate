@@ -1,6 +1,6 @@
 # Spec: My upcoming events (cross-band agenda on the dashboard)
 
-> **Status:** implemented, manual validation (AC6–AC9, AC12 on device) pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented, validated except AC6 as guest, AC8 and AC9 (2026-11-14) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una vista general de todas mis bandas, para ver
 > mis próximos eventos (shows y rehearsals) de todas las bandas en las que
 > estoy … que si le doy click a un show, me lleve a ese show dentro de la
@@ -393,6 +393,22 @@ right permissions; single-band users see no change.
 Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
 when PR 1.4 merges with the manual checklists recorded in the PR
 descriptions.
+
+## Manual validation (2026-11-14)
+
+Owner of five bands, no guest membership; Chrome desktop and 375 px, iPad Air
+11" and iPhone 17 simulators (installed app).
+
+- **AC6** Shows and rehearsals of several bands sorted (same day: 8 PM, 9 PM,
+  then the rehearsal without time), band chips and colours; a row of another
+  band switches band, toasts and opens it; the switch survives a reload. ✅
+  The guest part (no manage actions) is **pending**: needs a guest account.
+- **AC7** "Setlist" on a show and "Show" on a rehearsal switch band and open
+  the right page; Back returns to `/` with the new band. ✅
+- **AC8** (one band) and **AC9** (airplane mode + Retry): **pending**.
+- **AC12** Greeting first; desktop one line; phone wraps the meta line with
+  the chip below it. ✅ Found: a wrapped meta line started with "·" — fixed
+  in this PR (`MetaClip`).
 
 ## Changelog
 

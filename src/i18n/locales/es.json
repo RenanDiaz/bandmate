@@ -139,7 +139,7 @@
     "headline": "El setlist ya no vive en el chat del grupo.",
     "subhead": "Bandmate mantiene tu repertorio, setlists, ensayos y shows en un solo lugar — en el mismo celular que ya llevas a la tarima.",
     "ctaPrimary": "Crea tu banda — gratis",
-    "ctaNote": "Entra con Google o GitHub. Sin tarjeta y sin instalar nada.",
+    "ctaNote": "Entra con Google o con tu correo. Sin tarjeta y sin instalar nada.",
     "preview": {
       "setlistName": "Set del viernes",
       "setlistDate": "Viernes · 9:30 PM",
@@ -185,7 +185,7 @@
       "subtitle": "Sin llamada de onboarding ni proyecto de migración. Tres pasos y estás adentro.",
       "band": {
         "title": "Crea la banda",
-        "body": "Entras con Google o GitHub y le pones nombre a la banda. Ese es todo el setup."
+        "body": "Entras con Google o con tu correo y le pones nombre a la banda. Ese es todo el setup."
       },
       "members": {
         "title": "Invita a los miembros",
@@ -493,7 +493,12 @@
       "addNotesPlaceholder": "Agregar notas para esta canción...",
       "removeFromSetlist": "Quitar del setlist",
       "loadError": "Error al cargar el setlist. Por favor intenta de nuevo.",
-      "saveError": "Error al guardar el setlist. Por favor intenta de nuevo."
+      "saveError": "Error al guardar el setlist. Por favor intenta de nuevo.",
+      "setlistPanel": "Setlist",
+      "discardTitle": "¿Descartar los cambios?",
+      "discardMessage": "Las canciones y el orden que cambiaste en este setlist no se han guardado.",
+      "discardConfirm": "Descartar",
+      "keepEditing": "Seguir editando"
     },
     "picker": {
       "title": "Biblioteca de Canciones",
@@ -980,8 +985,8 @@
     "whatIsBandmate": "¿Qué es Bandmate?",
     "whatIsBandmateDesc": "Bandmate es una aplicación web completa diseñada para ayudar a las bandas a gestionar sus canciones, setlists, shows y miembros en una plataforma centralizada. Construida con tecnologías web modernas, ayuda a los músicos a mantenerse organizados y colaborar eficientemente.",
     "currentFeatures": "Características Actuales",
-    "oauthAuth": "Autenticación OAuth",
-    "oauthAuthDesc": "Inicio de sesión seguro con cuentas de GitHub o Google",
+    "oauthAuth": "Inicio de sesión",
+    "oauthAuthDesc": "Inicio de sesión seguro con Google o con correo y contraseña",
     "bandManagementFeature": "Gestión de Bandas",
     "bandManagementFeatureDesc": "Crea y gestiona múltiples bandas con diferentes miembros",
     "memberRoles": "Roles e Invitaciones",
@@ -994,8 +999,8 @@
     "guestAccessDesc": "Acceso temporal para miembros temporales y sustitutos",
     "themes": "Temas Claro y Oscuro",
     "themesDesc": "Alterna entre temas para una visualización cómoda",
-    "showScheduling": "Programación de Shows",
-    "showSchedulingDesc": "Registra conciertos, lugares e historial de presentaciones",
+    "showScheduling": "Programación de shows y ensayos",
+    "showSchedulingDesc": "Planifica presentaciones y ensayos, y sincronízalos con tu calendario",
     "emailNotifications": "Notificaciones por Email",
     "emailNotificationsDesc": "Alertas automáticas por correo para invitaciones y actualizaciones",
     "fileAttachments": "Archivos Adjuntos",
@@ -1383,7 +1388,7 @@
       "title": "Información que Recopilamos",
       "text": "Recopilamos información que nos proporcionas directamente al usar Bandmate:",
       "items": {
-        "account": "Información de cuenta: dirección de correo electrónico y datos de autenticación de proveedores OAuth (Google, GitHub)",
+        "account": "Información de cuenta: dirección de correo electrónico y datos de autenticación del inicio de sesión con Google o de tu cuenta de correo",
         "content": "Contenido que creas: canciones, setlists, shows, información de bandas y datos relacionados",
         "usage": "Información de uso: cómo interactúas con el servicio, funciones utilizadas y preferencias"
       }
@@ -1442,7 +1447,7 @@
     },
     "userAccounts": {
       "title": "Cuentas de Usuario",
-      "text": "Para usar Bandmate, debes crear una cuenta usando un proveedor OAuth compatible (Google o GitHub). Eres responsable de:",
+      "text": "Para usar Bandmate, debes crear una cuenta con Google o con correo y contraseña. Eres responsable de:",
       "items": {
         "accurate": "Proporcionar información de cuenta precisa",
         "secure": "Mantener la seguridad de las credenciales de tu cuenta",

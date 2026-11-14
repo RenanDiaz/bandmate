@@ -1,7 +1,7 @@
 # Spec: Email a member how to sign in
 
-> **Status:** Phase 1 implemented (PR 1.1), manual validation (AC6–AC8,
-> needs the function deployed) pending · **Created:** 2026-11-07 ·
+> **Status:** Phase 1 implemented (PR 1.1), deployed and validated
+> (2026-11-14) · **Created:** 2026-11-07 ·
 > **Owner:** Renán Díaz
 > **Origin:** request "un botón para cada miembro en la lista de miembros
 > para enviarle un correo para que entre a Bandmate, porque no recuerdan
@@ -103,3 +103,8 @@ id), AC6–AC8 with a Google account and an email/password account.
   it only copies the link).
 - The same email for admins, or a self-service "email me how I sign in" on
   the login page.
+
+## Manual validation (2026-11-14)
+
+Migration applied and `send-sign-in-help` deployed; AC1–AC8 checked by the
+owner in production. ✅

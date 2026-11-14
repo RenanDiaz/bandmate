@@ -17,6 +17,7 @@ import { NewRequestModal } from "./NewRequestModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { SEO } from "./SEO";
 import { useToast } from "../context/useToast";
+import { SignInLink } from "./ui/SignInLink";
 
 interface Props {
   user: AppUser | null;
@@ -129,6 +130,7 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
             </MessageIcon>
             <MessageTitle>{t("common.authRequired")}</MessageTitle>
             <MessageText>{t("requests.pleaseSignIn")}</MessageText>
+            <SignInLink />
           </MessageCard>
         </Container>
       </PageWrapper>

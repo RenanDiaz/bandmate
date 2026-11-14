@@ -100,6 +100,7 @@ export const UpcomingEventRow = ({
       </DateBlock>
       <Details>
         <Name>{event.data.name}</Name>
+        <MetaClip>
         <Meta data-testid="event-meta">
           {bandName && (
             <BandChip title={bandName}>
@@ -117,6 +118,7 @@ export const UpcomingEventRow = ({
             {countdown(days)}
           </Countdown>
         </Meta>
+        </MetaClip>
       </Details>
       {link && onOpenLink && (
         <LinkChip
@@ -213,6 +215,18 @@ const Name = styled.div`
   text-overflow: ellipsis;
 `;
 
+/** Width of one "·" separator, including the space around it. */
+const SEPARATOR_WIDTH = "0.9em";
+
+/**
+ * Clips the separator that starts each line of `Meta`, so a wrapped line
+ * (narrow screens) doesn't begin with "·".
+ */
+const MetaClip = styled.div`
+  overflow: hidden;
+  min-width: 0;
+`;
+
 /** One line: band · type · place · time · countdown, separated by dots. */
 const Meta = styled.div`
   font-size: ${theme.fontSizes.bodySm};
@@ -220,13 +234,17 @@ const Meta = styled.div`
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  column-gap: ${theme.space[1]};
   row-gap: 2px;
   min-width: 0;
+  /* Every item starts with a separator; this pulls the first one of each
+     line under MetaClip's left edge. */
+  margin-left: -${SEPARATOR_WIDTH};
 
-  > * + *::before {
+  > *::before {
     content: "·";
-    margin-right: ${theme.space[1]};
+    display: inline-block;
+    width: ${SEPARATOR_WIDTH};
+    text-align: center;
     color: var(--color-text-disabled);
   }
 `;

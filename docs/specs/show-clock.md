@@ -1,7 +1,7 @@
 # Spec: Show clock in performance mode
 
-> **Status:** Phase 1 implemented (PR 1.1), manual validation (AC8–AC10 on
-> device) pending · **Created:** 2026-10-09 · **Owner:** Renán Díaz
+> **Status:** Phase 1 implemented (PR 1.1), validated except AC4–AC6 and
+> AC10 (need a real backing track) · **Created:** 2026-10-09 · **Owner:** Renán Díaz
 > **Origin:** request "un cronómetro para ver cuánto tiempo va de show desde
 > que empieza; si la primera canción tiene secuencia, eso lo dispara, si no,
 > manual; y poder detenerlo por si solo puse la primera canción para hacer
@@ -88,3 +88,16 @@ song's backing track or by hand, and stoppable for a soundcheck.
 - Sharing the host's clock with viewers in a sync session.
 - Comparing against the setlist's planned duration (over / under time).
 - Per-song elapsed time or a set-break split.
+
+## Manual validation (2026-11-14)
+
+- **AC1–AC3** dev server: `0:00` next to the counter, start, Stop freezes,
+  Resume continues, Reset → `0:00`. ✅
+- **AC7** not shown in single-song performance mode. ✅
+- **AC8** reload in Chrome (0:05 → 0:12) and, in the iPad Air 11" simulator
+  (installed app), force-quit + relaunch: 2:40, the real elapsed time. ✅
+- **AC9** iPad simulator locked one minute: 1:41 on return, the real time. ✅
+- **AC4–AC6**, **AC10**: **pending**, need a local backing track on a device.
+- Found: on an iPad in portrait the top bar's one-row layout (from `md`)
+  squeezed the clock and stacked "1 / 2" over Sync — fixed in this PR (one
+  row from `lg`).

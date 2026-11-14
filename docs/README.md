@@ -37,7 +37,7 @@ docs/
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
 - [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
-- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs; implemented, manual validation of AC9–AC14 pending)
+- [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs; implemented; AC11 and AC13 validated, AC9, AC10, AC12 and AC14 pending)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
 - [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (implemented)
 
@@ -46,15 +46,15 @@ docs/
 - [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one phase, one PR; fragments are v2)
 
 ## Header and personal agenda (2026-09-27)
-- [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR; implemented, manual validation pending)
-- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented, manual validation of AC6–AC9 and AC12 on device pending)
+- [specs/app-header.md](specs/app-header.md) — lighter app header: About out of the nav (footer + user menu), one link list, desktop from `lg`, compact user button (one phase, one PR; implemented and validated)
+- [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented; validated except AC6 as guest, AC8 and AC9)
 
 ## Notifications (2026-09-27)
 - [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2, invitations in Phase 3, flag removal in Phase 4 (four phases, five PRs; in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started)
 
 ## Performance mode (2026-10-09)
-- [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented, manual validation of AC8–AC10 on device pending)
-- [specs/member-sign-in-help.md](specs/member-sign-in-help.md) — email a member how to sign in: the account and button they use, plus the link, from the member list (one phase, one PR; implemented, manual validation of AC6–AC8 pending)
+- [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented; validated except AC4–AC6 and AC10, which need a real backing track)
+- [specs/member-sign-in-help.md](specs/member-sign-in-help.md) — email a member how to sign in: the account and button they use, plus the link, from the member list (one phase, one PR; implemented and validated)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

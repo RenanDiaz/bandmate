@@ -1,6 +1,6 @@
 # Spec: Lighter app header
 
-> **Status:** implemented, manual validation (AC5–AC8 on device) pending ·
+> **Status:** implemented and validated (AC5–AC8, 2026-11-14) ·
 > **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** TODO "Mejorar header de la app, mover About a otra pantalla, no
 > es necesario mostrarlo en el navbar, sobre todo en desktop, porque ya ocupa
@@ -12,6 +12,17 @@
 > tempt a new nav link.
 
 This is a design, not code. Signatures are the contract; no bodies here.
+
+## Manual validation (2026-11-14)
+
+- **AC5** Chrome at 1280, 992, 900 and 768 px with a long band name (one
+  line and ellipsis from 992; icon logo, band and hamburger below, every
+  offcanvas link navigates and closes it); iPad Air 11" simulator, installed
+  app, portrait: logo, band, hamburger, drawer with every link. ✅
+- **AC6** Footer About (signed out), user menu About (signed in), logo → `/`. ✅
+- **AC7** `npm run build`: `sitemap.xml` lists `/about`, landing prerendered. ✅
+- **AC8** Performance mode covers the header; print views hide it
+  (`@media print`). ✅
 
 ## Changelog
 
