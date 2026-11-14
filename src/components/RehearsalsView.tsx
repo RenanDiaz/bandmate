@@ -17,6 +17,7 @@ import { SEO } from "./SEO";
 import { useToast } from "../context/useToast";
 import { isPermissionDenied } from "../services/permissionError";
 import { canManageEvents } from "../services/bandMembersService";
+import { SignInLink } from "./ui/SignInLink";
 
 interface Props {
   user: AppUser | null;
@@ -144,6 +145,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
           <AuthMessage>
             <i className="bi bi-lock"></i>
             <p>{t('rehearsals.pleaseSignIn')}</p>
+            <SignInLink />
           </AuthMessage>
         </Container>
       </PageWrapper>

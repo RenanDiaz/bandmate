@@ -76,6 +76,14 @@ const About = () => {
                 <i className="bi bi-check-circle-fill"></i>
               </FeatureIcon>
               <FeatureText>
+                <strong>{t('about.showScheduling')}</strong> - {t('about.showSchedulingDesc')}
+              </FeatureText>
+            </FeatureItem>
+            <FeatureItem>
+              <FeatureIcon>
+                <i className="bi bi-check-circle-fill"></i>
+              </FeatureIcon>
+              <FeatureText>
                 <strong>{t('about.guestAccess')}</strong> - {t('about.guestAccessDesc')}
               </FeatureText>
             </FeatureItem>
@@ -93,14 +101,6 @@ const About = () => {
         <Card>
           <CardTitle>{t('about.comingSoon')}</CardTitle>
           <FeatureList>
-            <FeatureItem>
-              <FeatureIcon $coming>
-                <i className="bi bi-clock"></i>
-              </FeatureIcon>
-              <FeatureText>
-                <strong>{t('about.showScheduling')}</strong> - {t('about.showSchedulingDesc')}
-              </FeatureText>
-            </FeatureItem>
             <FeatureItem>
               <FeatureIcon $coming>
                 <i className="bi bi-clock"></i>

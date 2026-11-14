@@ -23,6 +23,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from "../context/useToast";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
+import { SignInLink } from "./ui/SignInLink";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -168,6 +169,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
             </MessageIcon>
             <MessageTitle>{t("common.authRequired")}</MessageTitle>
             <MessageText>{t("songs.pleaseSignIn")}</MessageText>
+            <SignInLink />
           </MessageCard>
         </Container>
       </PageWrapper>

@@ -1,7 +1,7 @@
 # Spec: Perform a single song from the song library
 
-> **Status:** Phase 1 implemented (PR 1.1, PR 1.2), manual validation
-> (AC9–AC14) pending · **Created:** 2026-09-26 · **Owner:** Renán Díaz
+> **Status:** Phase 1 implemented (PR 1.1, PR 1.2), AC11 and AC13
+> validated; AC9, AC10, AC12, AC14 pending · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** TODO "Poder ver una canción tipo performance desde la lista de
 > canciones".
 > **Scope:** a Perform action on every song card that opens the existing
@@ -325,3 +325,11 @@ regression smoke (AC12) with two devices for sync; record the devices used.
 
 Definition of done per PR: the `CLAUDE.md` checklist. The phase is done
 when PR 1.2 merges with the manual checklist recorded in its description.
+
+## Manual validation (2026-11-14)
+
+- **AC11** none of the setlist chrome; `r` and `l` do nothing. ✅
+- **AC13** an unknown song id shows "Song not found" + Back. ✅
+- X and Escape return to `/songs` (part of AC9). ✅
+- **AC9** (two PDFs, Add PDF), **AC10** (guest), **AC12** (sync on two
+  devices), **AC14** (update prompt): **pending**.

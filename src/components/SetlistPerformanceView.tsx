@@ -1768,7 +1768,9 @@ const TopBar = styled.div`
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  /* One row only from lg: between md and lg (an iPad in portrait) the
+     controls take the whole width and squeeze the clock and counter. */
+  @media (min-width: ${theme.breakpoints.lg}) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -1783,7 +1785,7 @@ const TopBarRow = styled.div`
   gap: ${theme.space[4]};
   min-width: 0;
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.lg}) {
     flex: 1;
     justify-content: flex-start;
   }
@@ -1812,7 +1814,7 @@ const TopBarLeft = styled.div`
   min-width: 0;
   flex: 1;
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.lg}) {
     gap: ${theme.space[4]};
     flex: unset;
   }
@@ -1825,7 +1827,7 @@ const TopBarControls = styled.div`
   flex-wrap: wrap;
   justify-content: flex-end;
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.lg}) {
     gap: ${theme.space[3]};
     flex-wrap: nowrap;
   }
@@ -1882,6 +1884,8 @@ const SongSubtitle = styled.div`
 `;
 
 const SongCounter = styled.div`
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: ${theme.fontSizes.body};
   font-weight: ${theme.fontWeights.medium};
   color: var(--color-text-primary);

@@ -17,7 +17,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 ## ✨ Features
 
 **Bands & members**
-- GitHub and Google sign-in (Supabase Auth)
+- Google and email/password sign-in (Supabase Auth)
 - Multiple bands per user, with avatars and ownership transfer
 - Email invitations with roles: owner, admin, member, guest
 - Email a member how to sign in (which account and button they use, plus the link) from the member list
@@ -111,7 +111,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    [`migrations/`](migrations/README.md) are the legacy history the baseline
    replaces; don't apply them.
 
-4. **Configure authentication** — enable the GitHub and/or Google providers in
+4. **Configure authentication** — enable the Google provider (and email sign-in) in
    Supabase → Authentication → Providers ([Google guide](docs/setup/google-oauth.md)).
 
 5. **(Optional) Deploy Edge Functions** — `send-invitation-email` and
@@ -197,7 +197,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) — spec: setlist builder (song picker with play history and filters, touch reordering, target duration, templates, candidates)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) — spec (implemented): show clock in performance mode
-- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) — spec (implemented, manual validation pending): email a member how to sign in
+- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) — spec (implemented): email a member how to sign in
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations

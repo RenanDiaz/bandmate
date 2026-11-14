@@ -37,6 +37,8 @@ import { getBandShows, type Show } from "../services/showsService";
 import { optimizeSetlistOrder, type SetlistOptimization } from "../services/aiSetlistService";
 import { groqService, GroqApiError } from "../services/groqService";
 import { EditSongModal } from "./EditSongModal";
+import { ConfirmModal } from "./ConfirmModal";
+import { deepEqual } from "../utils/deepEqual";
 import { useTranslation } from "react-i18next";
 import { useBandContext } from "../context/useBandContext";
 import { useToast } from "../context/useToast";
@@ -267,6 +269,7 @@ const SetlistEditor: FC = () => {
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   // History signals for the picker; null when either read failed (spec §3.6).
   const [bandSetlists, setBandSetlists] = useState<Setlist[] | null>(null);
   const [bandShows, setBandShows] = useState<Show[] | null>(null);
@@ -406,6 +409,17 @@ const SetlistEditor: FC = () => {
 
     loadData();
   }, [setlistId, navigate]);
+
+  // Leaving with unsaved changes (Cancel or back) asks first; nothing to
+  // lose → leave at once.
+  const hasUnsavedChanges = setlist !== null && !deepEqual(setlistItems, setlist.songs || []);
+  const leaveEditor = () => {
+    if (hasUnsavedChanges) {
+      setIsDiscardConfirmOpen(true);
+      return;
+    }
+    navigate("/setlists");
+  };
 
   const handleSave = async () => {
     if (!setlist) return;
@@ -782,7 +796,7 @@ const SetlistEditor: FC = () => {
       <Container>
         <Header>
           <HeaderLeft>
-            <BackButton onClick={() => navigate("/setlists")}>
+            <BackButton onClick={leaveEditor} aria-label={t("common.back")}>
               <i className="bi bi-arrow-left"></i>
             </BackButton>
             <HeaderInfo>
@@ -790,7 +804,7 @@ const SetlistEditor: FC = () => {
             </HeaderInfo>
           </HeaderLeft>
           <HeaderActions>
-            <CancelButton onClick={() => navigate("/setlists")} disabled={saving}>
+            <CancelButton onClick={leaveEditor} disabled={saving}>
               {t('common.cancel')}
             </CancelButton>
             {/* Narrow: Save lives in the sticky footer */}
@@ -838,7 +852,7 @@ const SetlistEditor: FC = () => {
               <PanelHeader>
                 <PanelTitle>
                   <i className="bi bi-music-note-list"></i>
-                  {t('setlists.title')}
+                  {t('setlists.editor.setlistPanel')}
                 </PanelTitle>
                 <PanelStats>
                   {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
@@ -1008,6 +1022,20 @@ const SetlistEditor: FC = () => {
         isOpen={isEditSongModalOpen}
         onClose={() => setIsEditSongModalOpen(false)}
         onSave={handleSaveSong}
+      />
+
+      <ConfirmModal
+        isOpen={isDiscardConfirmOpen}
+        title={t("setlists.editor.discardTitle")}
+        message={t("setlists.editor.discardMessage")}
+        confirmLabel={t("setlists.editor.discardConfirm")}
+        cancelLabel={t("setlists.editor.keepEditing")}
+        tone="danger"
+        onConfirm={() => {
+          setIsDiscardConfirmOpen(false);
+          navigate("/setlists");
+        }}
+        onClose={() => setIsDiscardConfirmOpen(false)}
       />
 
       {/* Special Item Modal */}
@@ -1192,17 +1220,13 @@ const Header = styled.div`
   margin-bottom: ${theme.space[6]};
   padding-bottom: ${theme.space[4]};
   border-bottom: 1px solid var(--color-border);
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 `;
 
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[4]};
+  min-width: 0;
 `;
 
 const BackButton = styled.button`
@@ -1231,6 +1255,7 @@ const HeaderInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.space[1]};
+  min-width: 0;
 `;
 
 const SetlistTitle = styled.h1`
@@ -1239,15 +1264,15 @@ const SetlistTitle = styled.h1`
   color: var(--color-text-primary);
   margin: 0;
   line-height: ${theme.lineHeights.tight};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const HeaderActions = styled.div`
   display: flex;
+  flex-shrink: 0;
   gap: ${theme.space[3]};
-
-  @media (max-width: ${theme.breakpoints.md}) {
-    width: 100%;
-  }
 `;
 
 const CancelButton = styled.button`

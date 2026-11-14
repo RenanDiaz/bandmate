@@ -141,7 +141,7 @@ reached from the footer and the user menu.
 
 ### Data Flow
 
-1. User authenticates via OAuth (GitHub/Google) through Supabase Auth
+1. User authenticates with Google (OAuth) or email and password through Supabase Auth
 2. `BandContext` loads user's bands via `band_members` table (not `bands.owner_id`)
 3. Selected band ID persists to localStorage via `BandStorage` utility
 4. Components fetch band-scoped data (songs, setlists, shows) using the selected band ID
@@ -645,7 +645,10 @@ the user agent). Wide + pointer: `+`, checkbox + Shift range, `/`, `↑`/`↓`,
 `pointerWithin` for those drags, `closestCenter` for reorders). Touch: tap a
 row to select, "Add N". Narrow: the picker opens as `PickerSheet` (fixed,
 z-index 1045, below reactstrap modals) and Save moves to a sticky footer.
-Inserts go through `insertSongs` (`src/utils/setlistInsert.ts`).
+Inserts go through `insertSongs` (`src/utils/setlistInsert.ts`). Cancel and
+the back arrow leave at once when nothing changed, and ask first
+(`ConfirmModal`, "Discard your changes?") when the items differ from the
+loaded setlist (`deepEqual`).
 
 **Reordering (PR 1.2)** — the editor, the detail view's reorder mode and
 performance mode's reorder all use `useSortableSensors()` (Mouse after 8 px,
@@ -1046,15 +1049,15 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
 - [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
-- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, manual checklist pending): perform a single song from the library (1 phase, 2 PRs)
+- [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, AC11 and AC13 validated; AC9, AC10, AC12, AC14 pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
-- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented, validation pending): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented and validated, Phases 2–3 not started): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
-- [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented, manual validation pending): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
-- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, manual validation (AC6–AC9, AC12 on device) pending): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
-- [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, manual validation (AC8–AC10 on device) pending): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
-- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) - Spec (implemented, manual validation (AC6–AC8, needs the function deployed) pending): email a member how to sign in — owner-only button in the member list, Edge Function naming the account / button they use, per-recipient rate limit (1 phase, 1 PR)
+- [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented and validated): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
+- [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, validated except AC6 as guest, AC8 and AC9): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
+- [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, validated except AC4–AC6 and AC10, which need a real backing track): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
+- [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) - Spec (implemented and validated): email a member how to sign in — owner-only button in the member list, Edge Function naming the account / button they use, per-recipient rate limit (1 phase, 1 PR)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; Phase 4 removes the flag (4 phases, 5 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

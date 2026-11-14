@@ -139,7 +139,7 @@
     "headline": "The setlist stops living in the group chat.",
     "subhead": "Bandmate keeps your repertoire, setlists, rehearsals and shows in one place — on the same phone you already have on stage.",
     "ctaPrimary": "Create your band — free",
-    "ctaNote": "Sign in with Google or GitHub. No credit card, nothing to install.",
+    "ctaNote": "Sign in with Google or email. No credit card, nothing to install.",
     "preview": {
       "setlistName": "Friday set",
       "setlistDate": "Friday · 9:30 PM",
@@ -185,7 +185,7 @@
       "subtitle": "No onboarding call, no migration project. Three steps and you're in.",
       "band": {
         "title": "Create the band",
-        "body": "Sign in with Google or GitHub and give the band a name. That's the whole setup."
+        "body": "Sign in with Google or email and give the band a name. That's the whole setup."
       },
       "members": {
         "title": "Invite the members",
@@ -493,7 +493,12 @@
       "addNotesPlaceholder": "Add notes for this song...",
       "removeFromSetlist": "Remove from setlist",
       "loadError": "Failed to load setlist. Please try again.",
-      "saveError": "Failed to save setlist. Please try again."
+      "saveError": "Failed to save setlist. Please try again.",
+      "setlistPanel": "Setlist",
+      "discardTitle": "Discard your changes?",
+      "discardMessage": "The songs and order you changed in this setlist haven't been saved.",
+      "discardConfirm": "Discard",
+      "keepEditing": "Keep editing"
     },
     "picker": {
       "title": "Song Library",
@@ -980,8 +985,8 @@
     "whatIsBandmate": "What is Bandmate?",
     "whatIsBandmateDesc": "Bandmate is a comprehensive web application designed to help bands manage their songs, setlists, shows, and members in one centralized platform. Built with modern web technologies, it helps musicians stay organized and collaborate efficiently.",
     "currentFeatures": "Current Features",
-    "oauthAuth": "OAuth Authentication",
-    "oauthAuthDesc": "Secure sign-in with GitHub or Google accounts",
+    "oauthAuth": "Sign-in",
+    "oauthAuthDesc": "Secure sign-in with Google or email and password",
     "bandManagementFeature": "Band Management",
     "bandManagementFeatureDesc": "Create and manage multiple bands with different members",
     "memberRoles": "Member Roles & Invitations",
@@ -994,8 +999,8 @@
     "guestAccessDesc": "Time-limited access for temporary members and substitutes",
     "themes": "Dark & Light Themes",
     "themesDesc": "Toggle between themes for comfortable viewing",
-    "showScheduling": "Show Scheduling",
-    "showSchedulingDesc": "Track gigs, venues, and performance history",
+    "showScheduling": "Show & Rehearsal Scheduling",
+    "showSchedulingDesc": "Plan gigs and rehearsals, and sync them to your calendar",
     "emailNotifications": "Email Notifications",
     "emailNotificationsDesc": "Automatic email alerts for invitations and updates",
     "fileAttachments": "File Attachments",
@@ -1383,7 +1388,7 @@
       "title": "Information We Collect",
       "text": "We collect information that you provide directly to us when using Bandmate:",
       "items": {
-        "account": "Account information: email address and authentication data from OAuth providers (Google, GitHub)",
+        "account": "Account information: email address and authentication data from Google sign-in or your email account",
         "content": "Content you create: songs, setlists, shows, band information, and related data",
         "usage": "Usage information: how you interact with the service, features used, and preferences"
       }
@@ -1442,7 +1447,7 @@
     },
     "userAccounts": {
       "title": "User Accounts",
-      "text": "To use Bandmate, you must create an account using a supported OAuth provider (Google or GitHub). You are responsible for:",
+      "text": "To use Bandmate, you must create an account with Google or with an email and password. You are responsible for:",
       "items": {
         "accurate": "Providing accurate account information",
         "secure": "Maintaining the security of your account credentials",

@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** in progress — Phase 1 implemented (PRs 1.1, 1.2), manual validation pending; Phases 2–3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phases 2–3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a
@@ -655,3 +655,19 @@ When this happens, update [themed-setlists.md](themed-setlists.md) §1
 4. **Shared candidates.** If a band asks to see each other's shortlist,
    move candidates into the setlist JSONB (`candidates: string[]` beside
    `songs`) and through the offline snapshot; that is a PR of its own.
+
+## Manual validation, Phase 1 (2026-11-14)
+
+- **AC4** iPad Air 11" simulator, installed app, portrait: tapping rows
+  selects them, "Add 3 songs" appends them in tap order, long-press drag on
+  the handle reorders, scrolling over rows never drags, the ⋮ menu moves
+  (Move up / to top disabled on row 1). ✅
+- **AC5** iPhone 17 simulator, installed app: one column, full-screen
+  picker, "Add 2 songs" returns with the songs appended, sticky footer with
+  count, duration and Save (the target arrives with Phase 2). ✅
+- **AC6** Chrome with a mouse: "+" adds at once, a library row dragged
+  between rows 1 and 2, `Enter` adds the first result, the row menu works
+  from the keyboard. ✅
+- Found and fixed in this PR: Cancel discarded unsaved changes without
+  asking (now a `ConfirmModal`), the panel was titled "Setlists", and on a
+  phone Cancel sat on its own row under the title.

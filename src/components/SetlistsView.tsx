@@ -18,6 +18,7 @@ import { useBandContext } from "../context/useBandContext";
 import { isNetworkError } from "../lib/networkErrors";
 import { isPermissionDenied } from "../services/permissionError";
 import { canEditContent } from "../services/bandMembersService";
+import { SignInLink } from "./ui/SignInLink";
 
 type ConfirmState = { title: string; message: string; confirmLabel: string; action: () => Promise<void> };
 
@@ -104,6 +105,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
             </MessageIcon>
             <MessageTitle>{t("common.authRequired")}</MessageTitle>
             <MessageText>{t("setlists.pleaseSignIn")}</MessageText>
+            <SignInLink />
           </MessageCard>
         </Container>
       </PageWrapper>
