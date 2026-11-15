@@ -21,6 +21,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Multiple bands per user, with avatars and ownership transfer
 - Email invitations with roles: owner, admin, member, guest
 - Email a member how to sign in (which account and button they use, plus the link) from the member list
+- Members appear by name (from Google) with their photo, or by a per-band nickname the owner assigns or each member sets; email accounts can set their name from the account menu
 
 **Songs**
 - Song library with key, tempo, lyrics, chords and popularity
@@ -211,6 +212,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) — spec: medleys (consecutive songs grouped into one entry)
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) — spec (implemented): show clock in performance mode
 - [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) — spec (implemented): email a member how to sign in
+- [docs/specs/member-names.md](docs/specs/member-names.md) — spec (implemented, validation pending): member names and per-band nicknames
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (implemented and validated): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations

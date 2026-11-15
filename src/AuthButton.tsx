@@ -13,6 +13,8 @@ import { signOutEverywhereOrLocally } from "./lib/authSession";
 import { getPwaUpdater } from "./lib/pwaUpdates";
 import { unsubscribeThisDevice, updateThisDeviceLocale } from "./lib/pushSupport";
 import { openNotificationSettings } from "./components/notifications/notificationSettingsStore";
+import { openAccountName } from "./components/account/accountNameStore";
+import { accountName, initialsOf, isGoogleAccount } from "./utils/memberNames";
 
 /**
  * What user-initiated sign-out clears before signing out: the offline copies
@@ -162,16 +164,20 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
   // "offline-cached": only the id is known (no email), so show a generic
   // "Offline" account instead of an address.
   const isOfflineAccount = authMode === "offline-cached" || !user.email;
-  const userLabel = user.email ?? (authMode === "offline-cached" ? t("auth.offlineAccount") : t("auth.user"));
+  const name = accountName(user.user_metadata);
+  const userLabel = name ?? user.email ?? (authMode === "offline-cached" ? t("auth.offlineAccount") : t("auth.user"));
   const avatar = (
     <UserAvatar $inline={inline} aria-hidden="true">
-      {isOfflineAccount ? <i className="bi bi-person"></i> : userLabel.charAt(0).toUpperCase()}
+      {isOfflineAccount ? <i className="bi bi-person"></i> : initialsOf(userLabel)}
     </UserAvatar>
   );
+  // Email-and-password accounts name themselves; Google sets the name of the others.
+  const canEditName = authMode === "session" && isOnline && !isGoogleAccount(user.app_metadata);
 
   const accountInfo = user.email ? (
     <>
       <UserInfoLabel>{t('auth.signedInAs')}</UserInfoLabel>
+      {name && <UserInfoName>{name}</UserInfoName>}
       <UserInfoEmail>{user.email}</UserInfoEmail>
     </>
   ) : authMode === "offline-cached" ? (
@@ -231,6 +237,19 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         <i className="bi bi-info-circle"></i>
         <span>{t('nav.about')}</span>
       </MenuItem>
+      {canEditName && (
+        <MenuItem
+          $inline={inline}
+          onClick={() => {
+            setShowUserMenu(false);
+            openAccountName();
+            onAction?.();
+          }}
+        >
+          <i className="bi bi-person-vcard"></i>
+          <span>{t("auth.yourName")}</span>
+        </MenuItem>
+      )}
       {/* Reads and writes the server: session and online only (spec §2.1). */}
       {authMode === "session" && isOnline && (
         <MenuItem
@@ -476,6 +495,13 @@ const UserInfoLabel = styled.div`
   text-transform: uppercase;
   letter-spacing: ${theme.letterSpacing.wide};
   margin-bottom: ${theme.space[1]};
+`;
+
+const UserInfoName = styled.div`
+  font-size: ${theme.fontSizes.body};
+  font-weight: ${theme.fontWeights.semibold};
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
 `;
 
 const UserInfoEmail = styled.div`

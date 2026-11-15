@@ -14,7 +14,11 @@ import {
   getBandInvitations,
   revokeInvitation,
   sendSignInHelpEmail,
+  setMemberNickname,
 } from "../services/bandMembersService";
+import { isPermissionError } from "../services/permissionError";
+import { NICKNAME_MAX_LENGTH, accountName, avatarUrl, initialsOf, memberDisplayName } from "../utils/memberNames";
+import { TextFieldModal } from "./ui/TextFieldModal";
 import type { BandMember, BandRole, BandInvitation } from "../services/bandMembersService";
 import { ConfirmModal } from "./ConfirmModal";
 
@@ -45,6 +49,26 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [nicknameFor, setNicknameFor] = useState<BandMember | null>(null);
+  // Photos that failed to load fall back to initials.
+  const [brokenAvatars, setBrokenAvatars] = useState<ReadonlySet<string>>(new Set());
+
+  const nameOf = (member: BandMember) => memberDisplayName(member) ?? t("common.unknown");
+
+  const saveNickname = async (value: string): Promise<string | null> => {
+    if (!nicknameFor) return null;
+    try {
+      const stored = await setMemberNickname(band.id, nicknameFor.user_id, value);
+      setMembers((current) =>
+        current.map((m) => (m.user_id === nicknameFor.user_id ? { ...m, nickname: stored } : m))
+      );
+      setFeedback({ type: "success", message: t(stored ? "bands.nicknameSaved" : "bands.nicknameCleared") });
+      return null;
+    } catch (error) {
+      console.error("Failed to save nickname:", error);
+      return isPermissionError(error) ? t("common.noPermission") : t("bands.nicknameError");
+    }
+  };
 
   const isOwner = band.user_role === "owner";
   const currentMember = members.find((m) => m.user_id === currentUserId);
@@ -103,7 +127,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
 
     setConfirm({
       title: t("bands.removeMember"),
-      message: t("bands.confirmRemoveMember", { email: member.email || t("common.unknown") }),
+      message: t("bands.confirmRemoveMember", { email: nameOf(member) }),
       confirmLabel: t("bands.removeMember"),
       action: async () => {
         try {
@@ -213,11 +237,6 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
     }
   };
 
-  const getInitials = (email: string | undefined): string => {
-    if (!email) return "?";
-    return email.charAt(0).toUpperCase();
-  };
-
   const handleRevokeInvitation = (invitation: BandInvitation) => {
     setConfirm({
       title: t("bands.revokeInvitation"),
@@ -293,16 +312,38 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
         {members.map((member) => {
           const roleColors = getRoleBadgeColor(member.role);
           const isCurrentUser = member.user_id === currentUserId;
+          const displayName = nameOf(member);
+          // Under the name: the account's name when a nickname replaces it, and the email.
+          const subline = [
+            member.nickname ? accountName(member.user_metadata) : null,
+            member.email && member.email !== displayName ? member.email : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const photo = brokenAvatars.has(member.user_id) ? null : avatarUrl(member.user_metadata);
+          const canEditNickname = isOwner || isCurrentUser;
 
           return (
             <MemberCard key={member.id} $isCurrentUser={isCurrentUser}>
               <MemberInfo>
-                <Avatar>{getInitials(member.email)}</Avatar>
+                <Avatar>
+                  {photo ? (
+                    <AvatarImage
+                      src={photo}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      onError={() => setBrokenAvatars((current) => new Set(current).add(member.user_id))}
+                    />
+                  ) : (
+                    initialsOf(displayName)
+                  )}
+                </Avatar>
                 <MemberDetails>
                   <MemberEmail>
-                    <EmailText>{member.email || t("common.unknown")}</EmailText>
+                    <EmailText>{displayName}</EmailText>
                     {isCurrentUser && <YouBadge>{t("common.you")}</YouBadge>}
                   </MemberEmail>
+                  {subline && <MemberSubline>{subline}</MemberSubline>}
                   <MemberMeta>
                     {t("common.joined")} {new Date(member.joined_at).toLocaleDateString()}
                     {member.expires_at && (
@@ -331,17 +372,27 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
                   </RoleBadge>
                 )}
 
-                {isOwner && !isCurrentUser && (
+                {canEditNickname && (
                   <IconButtons>
-                    <SignInHelpButton
+                    <NicknameButton
                       type="button"
-                      onClick={() => handleSendSignInHelp(member)}
-                      title={t("bands.sendSignInHelp")}
-                      aria-label={t("bands.sendSignInHelp")}
+                      onClick={() => setNicknameFor(member)}
+                      title={t("bands.editNickname")}
+                      aria-label={`${t("bands.editNickname")}: ${displayName}`}
                     >
-                      <i className="bi bi-envelope-arrow-up"></i>
-                    </SignInHelpButton>
-                    {member.role !== "owner" && (
+                      <i className="bi bi-pencil"></i>
+                    </NicknameButton>
+                    {isOwner && !isCurrentUser && (
+                      <SignInHelpButton
+                        type="button"
+                        onClick={() => handleSendSignInHelp(member)}
+                        title={t("bands.sendSignInHelp")}
+                        aria-label={t("bands.sendSignInHelp")}
+                      >
+                        <i className="bi bi-envelope-arrow-up"></i>
+                      </SignInHelpButton>
+                    )}
+                    {isOwner && !isCurrentUser && member.role !== "owner" && (
                       <RemoveButton
                         type="button"
                         onClick={() => handleRemoveMember(member)}
@@ -419,6 +470,23 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
           </InvitationsSection>
         </>
       )}
+
+      <TextFieldModal
+        isOpen={nicknameFor !== null}
+        title={
+          nicknameFor?.user_id === currentUserId
+            ? t("bands.nicknameTitleSelf", { band: band.name })
+            : t("bands.nicknameTitleOther", {
+                name: (nicknameFor && (accountName(nicknameFor.user_metadata) ?? nicknameFor.email)) || t("common.unknown"),
+              })
+        }
+        label={t("bands.nicknameLabel")}
+        hint={nicknameFor?.user_id === currentUserId ? t("bands.nicknameHintSelf") : t("bands.nicknameHint")}
+        initialValue={nicknameFor?.nickname ?? ""}
+        maxLength={NICKNAME_MAX_LENGTH}
+        onSave={saveNickname}
+        onClose={() => setNicknameFor(null)}
+      />
 
       <ConfirmModal
         isOpen={confirm !== null}
@@ -636,6 +704,7 @@ const Avatar = styled.div`
   font-size: ${theme.fontSizes.h3};
   font-weight: ${theme.fontWeights.bold};
   flex-shrink: 0;
+  overflow: hidden;
 `;
 
 const MemberDetails = styled.div`
@@ -660,6 +729,21 @@ const EmailText = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const MemberSubline = styled.div`
+  font-size: ${theme.fontSizes.bodySm};
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 `;
 
 const YouBadge = styled.span`
@@ -746,6 +830,26 @@ const IconButtons = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
+`;
+
+const NicknameButton = styled.button`
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: ${theme.radius.base};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: ${theme.colors.brand.primary};
+    color: ${theme.colors.brand.primary};
+  }
 `;
 
 const SignInHelpButton = styled.button`

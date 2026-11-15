@@ -59,7 +59,7 @@ src/
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch, pdfPages, sheetSwipe)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch, pdfPages, sheetSwipe, memberNames)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer
@@ -83,7 +83,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | Service | Domain |
 |---------|--------|
 | `bandsService.ts` | Bands; membership via the `band_members` join table |
-| `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest); `sendSignInHelpEmail(bandId, memberUserId, locale)` (→ `send-sign-in-help`, never throws, returns a `SignInHelpResult`) |
+| `bandMembersService.ts` | Member invitations and roles (owner/admin/member/guest); `sendSignInHelpEmail(bandId, memberUserId, locale)` (→ `send-sign-in-help`, never throws, returns a `SignInHelpResult`); `setMemberNickname(bandId, userId, nickname)` (→ `set_band_member_nickname`, 42501 → `PermissionError`); `getBandMemberNames(bandId, userIds)` (→ `get_band_member_names`, one call; used for request authors and the sync host) |
+| `accountService.ts` | `updateAccountName(name)`: the signed-in email account's own name (`user_metadata.full_name`) |
 | `bandAvatarStorageService.ts` | Band avatar uploads (Supabase Storage) |
 | `songsService.ts` | Songs scoped to bands; `getSongsByIds(ids)` fetches only the given songs (performance mode); `getSongTimestamps(ids)` (`id, updated_at`, offline update check) |
 | `songSheetMusicService.ts`, `sheetMusicStorageService.ts` | Sheet music PDFs per song (table + Storage), band-wide order via `position`; `getSheetMusicForSongs(ids)` loads several songs in one `.in()` query, grouped by song; `listSheetMusicFolderSizes` / `createSheetMusicDownloadUrl` size and fetch files for offline downloads; `getSheetMusicFingerprintRows(songIds)` (offline update check) |
@@ -474,11 +475,14 @@ desktop bar it is `variant="dropdown"` with `compact`: a trigger with the avatar
 (no email; the open menu shows it) opens a floating menu (closed by Escape, a
 click outside or the trigger). In the mobile drawer (`CustomOffcanvas`) it is
 `variant="inline"`: the same content as flat rows of the drawer (account
-header, Language, Offline setlists, About, Notifications, Check for updates, Sign out) with
+header, Language, Offline setlists, About, Your name, Notifications, Check for updates, Sign out) with
 `onAction` closing the drawer. Notifications shows only in `session` and
 online; it opens the modal
 through `notificationSettingsStore`, rendered by `NotificationSettingsHost`
-in `App` (a modal inside the drawer would unmount with it). About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
+in `App` (a modal inside the drawer would unmount with it). Your name shows
+only for an email-and-password account in `session` and online (Google sets
+the others' name), the same way: `accountNameStore` + `AccountNameHost`. The
+header shows the account's name above the email. About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
 anchored to its last row it opens below the viewport. Tests:
 `src/__tests__/AuthButton.test.tsx`, header: `src/components/__tests__/AppNavbar.test.tsx`.
 
@@ -875,7 +879,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | Table | Description |
 |-------|-------------|
 | `bands` | Band info, `owner_id` references creator, `avatar_url` |
-| `band_members` | Join table with `role` enum (owner/admin/member/guest) - **RLS disabled**, enforced at app level |
+| `band_members` | Join table with `role` enum (owner/admin/member/guest) - **RLS disabled**, enforced at app level; `nickname` (per band, 1–40 chars) set only through `set_band_member_nickname()` (owner: anyone's, member: their own). A person is shown as nickname → name (`full_name` / `name` metadata) → email: `memberDisplayName()` (`src/utils/memberNames.ts`) and `get_band_member_names()` |
 | `band_invitations` | Token-based invites with expiration |
 | `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity; `updated_at` set by trigger (offline update check). `country` = ISO 3166-1 alpha-2 (`MX`), `language` = ISO 639-1 (`es`), both free text with no CHECK: legacy values stay and show verbatim; names come from `src/lib/isoCodes.ts` (`displayName`, `normalizeToCode`, `IsoCodeOptions` in the forms), never stored |
 | `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
@@ -1099,6 +1103,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, validated except AC6 as guest, AC8 and AC9): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, validated except AC4–AC6 and AC10, which need a real backing track): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
 - [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) - Spec (implemented and validated): email a member how to sign in — owner-only button in the member list, Edge Function naming the account / button they use, per-recipient rate limit (1 phase, 1 PR)
+- [docs/specs/member-names.md](docs/specs/member-names.md) - Spec (implemented, manual validation pending): member names and per-band nicknames — nickname → name → email everywhere in a band, owner sets anyone's nickname and each member their own, "Your name" for email accounts, member list requires membership (1 phase, 1 PR)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
 - [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (implemented and validated, Phases 1–4): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; no feature flag since Phase 4 (4 phases, 5 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

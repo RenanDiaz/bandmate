@@ -7,6 +7,7 @@ import { theme } from "../theme";
 import { getBandMembers } from "../services/bandMembersService";
 import type { BandMember } from "../services/bandMembersService";
 import { transferBandOwnership } from "../services/bandsService";
+import { memberDisplayName } from "../utils/memberNames";
 
 interface Props {
   bandId: number;
@@ -16,8 +17,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-const memberLabel = (m: BandMember): string =>
-  m.user_metadata?.full_name || m.email || "Band member";
+const memberLabel = (m: BandMember): string => memberDisplayName(m) ?? "Band member";
 
 export const TransferOwnershipModal: FC<Props> = ({ bandId, bandName, isOpen, onClose, onSuccess }) => {
   const { t } = useTranslation();

@@ -1,4 +1,5 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { getBandMemberNames } from "./bandMembersService";
 import { supabase } from "../lib/supabaseClient";
 
 export interface PerformanceSession {
@@ -192,16 +193,15 @@ export async function isSessionHost(sessionId: string): Promise<boolean> {
 }
 
 /**
- * Get the display name of a session host
+ * The session host's name as the band calls them (nickname → name → email).
  */
 export async function getHostDisplayName(
+  bandId: number,
   hostUserId: string
 ): Promise<string | null> {
   try {
-    const { data } = await supabase.rpc("get_user_display_name", {
-      user_id_param: hostUserId,
-    });
-    return data || null;
+    const names = await getBandMemberNames(bandId, [hostUserId]);
+    return names[hostUserId] ?? null;
   } catch {
     return null;
   }
@@ -216,7 +216,7 @@ export async function getActiveSessionWithHost(
   const session = await getActiveSessionForBand(bandId);
   if (!session) return null;
 
-  const hostName = await getHostDisplayName(session.host_user_id);
+  const hostName = await getHostDisplayName(bandId, session.host_user_id);
   return {
     ...session,
     host_display_name: hostName || undefined,

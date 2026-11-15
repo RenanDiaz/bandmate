@@ -30,6 +30,11 @@ export interface OfflineUser {
  */
 export type AppUser = { id: string; offlineCached?: true } & Partial<Omit<User, "id">>;
 
+/** Same email and user metadata (what the UI shows of the account). */
+function sameProfile(a: AppUser, b: User): boolean {
+  return a.email === b.email && JSON.stringify(a.user_metadata ?? {}) === JSON.stringify(b.user_metadata ?? {});
+}
+
 export function isOfflineUser(user: AppUser | null): user is OfflineUser {
   return !!user && (user as OfflineUser).offlineCached === true;
 }
@@ -276,7 +281,9 @@ export class OfflineAuthController {
     const prev = this.state.user;
     // Keep the reference when only the token changed, so band data isn't
     // refetched on every TOKEN_REFRESHED (e.g. when the tab regains focus).
-    const user = prev && !isOfflineUser(prev) && prev.id === sessionUser.id ? prev : sessionUser;
+    // A new email or metadata (USER_UPDATED: the account's name) replaces it.
+    const user =
+      prev && !isOfflineUser(prev) && prev.id === sessionUser.id && sameProfile(prev, sessionUser) ? prev : sessionUser;
     this.deps.offline.setOfflineCurrentUser(sessionUser.id, { authenticated: true });
     this.publish({ user, authMode: "session", isCheckingAuth: false, provisional: false });
 
