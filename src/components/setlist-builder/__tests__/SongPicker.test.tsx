@@ -248,3 +248,55 @@ describe("SongPicker empty states", () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe("SongPicker candidates (§5)", () => {
+  /** Holds the candidates like the editor does, so starring re-renders. */
+  function CandidatesHarness({ initial = [] as string[], onAdd = vi.fn() }) {
+    const [ids, setIds] = useState<string[]>(initial);
+    return (
+      <SongPicker
+        songs={SONGS}
+        totalSongs={SONGS.length}
+        signals={SIGNALS}
+        candidates={new Set(ids)}
+        onToggleCandidate={(id) => setIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]))}
+        onAdd={onAdd}
+        onAddSelected={vi.fn()}
+        layout="panel"
+        capabilities={POINTER}
+        today={TODAY}
+      />
+    );
+  }
+
+  it("no star or tabs without onToggleCandidate", () => {
+    renderPicker();
+    expect(screen.queryByRole("button", { name: /candidate/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^All$/ })).toBeNull();
+  });
+
+  it("starring counts on the tab and the tab lists only candidates", () => {
+    renderApp(<CandidatesHarness />, { ctx: bandContext() });
+    fireEvent.click(screen.getByRole("button", { name: "Mark Charlie as a candidate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark Alpha as a candidate" }));
+    const tab = screen.getByRole("button", { name: "Candidates (2)" });
+    expect(screen.getByRole("button", { name: "Remove Alpha from candidates" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(tab);
+    expect(visibleTitles()).toEqual(["Alpha", "Charlie"]);
+    fireEvent.click(screen.getByRole("button", { name: "Remove Charlie from candidates" }));
+    expect(visibleTitles()).toEqual(["Alpha"]);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(visibleTitles()).toEqual(["Alpha", "Bravo", "Charlie"]);
+  });
+
+  it("an empty Candidates tab explains the star", () => {
+    renderApp(<CandidatesHarness />, { ctx: bandContext() });
+    fireEvent.click(screen.getByRole("button", { name: "Candidates (0)" }));
+    expect(screen.getByText(/Tap the star on a song/)).toBeTruthy();
+  });
+
+  it("only counts candidates still in the picker's songs", () => {
+    renderApp(<CandidatesHarness initial={["a", "gone"]} />, { ctx: bandContext() });
+    expect(screen.getByRole("button", { name: "Candidates (1)" })).toBeTruthy();
+  });
+});

@@ -33,6 +33,12 @@ export interface SongPickerProps {
   totalSongs: number;
   /** null when setlists/shows failed to load: no signal line, no Played chip or history sorts. */
   signals: ReadonlyMap<string, SongSignals> | null;
+  /** This user's candidates for the setlist (§5, Phase 3). Without `onToggleCandidate` no star or tabs. */
+  candidates?: ReadonlySet<string>;
+  onToggleCandidate?: (songId: string) => void;
+  /** All songs or only the candidates; uncontrolled when omitted. */
+  view?: PickerView;
+  onViewChange?: (view: PickerView) => void;
   /** Single "+". */
   onAdd: (song: Song) => void;
   /** "Add N", in selection order. `asMedley` stays false until setlist-medleys ships. */
@@ -47,6 +53,9 @@ export interface SongPickerProps {
   today?: string;
 }
 
+export type PickerView = "all" | "candidates";
+
+const NO_CANDIDATES: ReadonlySet<string> = new Set();
 const HISTORY_SORTS: readonly PickerSort[] = ["most_played", "longest_since_played"];
 const NO_SIGNALS: ReadonlyMap<string, SongSignals> = new Map();
 
@@ -67,6 +76,10 @@ export const SongPicker: FC<SongPickerProps> = ({
   songs,
   totalSongs,
   signals,
+  candidates = NO_CANDIDATES,
+  onToggleCandidate,
+  view: viewProp,
+  onViewChange,
   onAdd,
   onAddSelected,
   onEditSong,
@@ -90,6 +103,13 @@ export const SongPicker: FC<SongPickerProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   // The keyboard highlight only shows while the search has focus.
   const [searchFocused, setSearchFocused] = useState(false);
+  const [localView, setLocalView] = useState<PickerView>("all");
+  const hasCandidates = !!onToggleCandidate;
+  const view: PickerView = hasCandidates ? (viewProp ?? localView) : "all";
+  const setView = (next: PickerView) => {
+    setLocalView(next);
+    onViewChange?.(next);
+  };
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -102,10 +122,12 @@ export const SongPicker: FC<SongPickerProps> = ({
   );
   const sort: PickerSort = hasSignals || !HISTORY_SORTS.includes(pickerState.sort) ? pickerState.sort : "artist_title_asc";
 
+  const candidateSongs = useMemo(() => songs.filter((song) => candidates.has(song.id)), [songs, candidates]);
+  const listed = view === "candidates" ? candidateSongs : songs;
   const facets = useMemo(() => pickerFacets(songs), [songs]);
   const visible = useMemo(
-    () => sortForPicker(filterByPicker(filterBySearch(songs, query), filters, signalMap, today), sort, signalMap),
-    [songs, query, filters, signalMap, today, sort]
+    () => sortForPicker(filterByPicker(filterBySearch(listed, query), filters, signalMap, today), sort, signalMap),
+    [listed, query, filters, signalMap, today, sort]
   );
 
   const songsById = useMemo(() => new Map(songs.map((song) => [song.id, song])), [songs]);
@@ -116,7 +138,7 @@ export const SongPicker: FC<SongPickerProps> = ({
 
   useEffect(() => {
     setHighlight(0);
-  }, [query, filters, sort]);
+  }, [query, filters, sort, view]);
 
   useEffect(() => {
     if (!keyboardMode) return;
@@ -206,6 +228,7 @@ export const SongPicker: FC<SongPickerProps> = ({
       );
     }
     if (songs.length === 0) return t("setlists.editor.allSongsAdded");
+    if (view === "candidates" && candidateSongs.length === 0) return t("setlists.picker.candidates.empty");
     if (filtersActive) {
       return (
         <>
@@ -239,6 +262,23 @@ export const SongPicker: FC<SongPickerProps> = ({
           )}
         </HeaderRight>
       </PickerHeader>
+
+      {hasCandidates && (
+        <ViewTabs role="group" aria-label={t("setlists.picker.candidates.viewLabel")}>
+          <ViewTab type="button" $touch={touch} aria-pressed={view === "all"} onClick={() => setView("all")}>
+            {t("setlists.picker.candidates.all")}
+          </ViewTab>
+          <ViewTab
+            type="button"
+            $touch={touch}
+            aria-pressed={view === "candidates"}
+            onClick={() => setView("candidates")}
+          >
+            <i className="bi bi-star-fill" aria-hidden="true"></i>
+            {t("setlists.picker.candidates.tab", { count: candidateSongs.length })}
+          </ViewTab>
+        </ViewTabs>
+      )}
 
       <SearchBox>
         <i className="bi bi-search" aria-hidden="true"></i>
@@ -347,6 +387,8 @@ export const SongPicker: FC<SongPickerProps> = ({
               highlighted={keyboardMode && searchFocused && index === highlight}
               touch={touch}
               draggable={keyboardMode}
+              candidate={candidates.has(song.id)}
+              onToggleCandidate={onToggleCandidate}
               onToggle={toggle}
               onSelectRange={selectRange}
               onAdd={addOne}
@@ -387,6 +429,8 @@ interface PickerRowProps {
   highlighted: boolean;
   touch: boolean;
   draggable: boolean;
+  candidate: boolean;
+  onToggleCandidate?: (songId: string) => void;
   onToggle: (songId: string) => void;
   onSelectRange: (songId: string) => void;
   onAdd: (song: Song) => void;
@@ -401,6 +445,8 @@ const PickerRow: FC<PickerRowProps> = ({
   highlighted,
   touch,
   draggable,
+  candidate,
+  onToggleCandidate,
   onToggle,
   onSelectRange,
   onAdd,
@@ -456,6 +502,21 @@ const PickerRow: FC<PickerRowProps> = ({
         {signalLine && <SignalLine>{signalLine}</SignalLine>}
       </RowInfo>
       <RowActions onClick={stop} onMouseDown={stop}>
+        {onToggleCandidate && (
+          <RowButton
+            type="button"
+            $touch={touch}
+            $star={candidate}
+            aria-pressed={candidate}
+            onClick={() => onToggleCandidate(song.id)}
+            title={t(candidate ? "setlists.picker.candidates.unmark" : "setlists.picker.candidates.mark")}
+            aria-label={t(candidate ? "setlists.picker.candidates.unmarkSong" : "setlists.picker.candidates.markSong", {
+              title: song.title,
+            })}
+          >
+            <i className={`bi ${candidate ? "bi-star-fill" : "bi-star"}`} aria-hidden="true"></i>
+          </RowButton>
+        )}
         {onEditSong && (
           <RowButton
             type="button"
@@ -555,6 +616,43 @@ const IconButton = styled.button<{ $touch: boolean }>`
   align-items: center;
   justify-content: center;
   cursor: pointer;
+`;
+
+const ViewTabs = styled.div`
+  display: flex;
+  gap: ${theme.space[1]};
+  margin: ${theme.space[3]} ${theme.space[5]} 0;
+  padding: ${theme.space[1]};
+  border-radius: ${theme.radius.base};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+`;
+
+const ViewTab = styled.button<{ $touch: boolean }>`
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${theme.space[2]};
+  min-height: ${(props) => (props.$touch ? "40px" : "30px")};
+  border: none;
+  border-radius: ${theme.radius.sm};
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  white-space: nowrap;
+
+  i {
+    color: ${theme.colors.semantic.warning};
+    font-size: ${theme.fontSizes.bodyXs};
+  }
+
+  &[aria-pressed="true"] {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
 `;
 
 const SearchBox = styled.div`
@@ -789,7 +887,7 @@ const RowActions = styled.div`
   flex-shrink: 0;
 `;
 
-const RowButton = styled.button<{ $touch: boolean; $add?: boolean }>`
+const RowButton = styled.button<{ $touch: boolean; $add?: boolean; $star?: boolean }>`
   background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
@@ -802,6 +900,12 @@ const RowButton = styled.button<{ $touch: boolean; $add?: boolean }>`
   cursor: pointer;
   font-size: ${(props) => (props.$add ? theme.fontSizes.bodyLg : theme.fontSizes.body)};
   transition: all ${theme.transitions.fast} ease;
+
+  ${(props) =>
+    props.$star &&
+    css`
+      color: ${theme.colors.semantic.warning};
+    `}
 
   &:hover,
   &:focus-visible {

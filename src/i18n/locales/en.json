@@ -544,7 +544,21 @@
       "selectSong": "Select {{title}}",
       "noMatchFilters": "No songs match these filters",
       "goToSongs": "Go to Songs",
-      "addSongsHintNarrow": "Tap “Add songs” to pick from the library"
+      "addSongsHintNarrow": "Tap “Add songs” to pick from the library",
+      "candidates": {
+        "viewLabel": "Show songs",
+        "all": "All",
+        "tab_one": "Candidates ({{count}})",
+        "tab_other": "Candidates ({{count}})",
+        "mark": "Mark as candidate",
+        "unmark": "Remove from candidates",
+        "markSong": "Mark {{title}} as a candidate",
+        "unmarkSong": "Remove {{title}} from candidates",
+        "empty": "No candidates yet. Tap the star on a song to keep it here while you decide.",
+        "waiting_one": "No songs yet — {{count}} candidate waiting",
+        "waiting_other": "No songs yet — {{count}} candidates waiting",
+        "show": "Show candidates"
+      }
     },
     "rowMenu": {
       "label": "More actions for {{item}}",

@@ -50,7 +50,8 @@ import { moveItem, type MoveTarget } from "../utils/setlistMove";
 import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
 import { computeSongSignals } from "../utils/songSignals";
 import { insertSongs } from "../utils/setlistInsert";
-import { SongPicker } from "./setlist-builder/SongPicker";
+import { SongPicker, type PickerView } from "./setlist-builder/SongPicker";
+import { useSetlistCandidates } from "../hooks/useSetlistCandidates";
 import { PickerSheet } from "./setlist-builder/PickerSheet";
 import { SETLIST_DROP_ID, editorCollisionDetection, songIdFromPickerDrag } from "./setlist-builder/pickerDnd";
 import { SetlistDropZone } from "./setlist-builder/SetlistDropZone";
@@ -272,8 +273,13 @@ const SetlistEditor: FC = () => {
   const { setlistId } = useParams<{ setlistId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { selectedBand } = useBandContext();
+  const { selectedBand, user } = useBandContext();
   const toast = useToast();
+  // Per-device shortlist (spec §5). A candidate leaves the list once the
+  // setlist is saved (or loaded) with it; until then removing it from the
+  // setlist brings its star back.
+  const candidates = useSetlistCandidates(user?.id, setlistId);
+  const [pickerView, setPickerView] = useState<PickerView>("all");
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
@@ -424,6 +430,12 @@ const SetlistEditor: FC = () => {
     loadData();
   }, [setlistId, navigate]);
 
+  // Songs already in the loaded setlist are no longer candidates.
+  const removeCandidates = candidates.remove;
+  useEffect(() => {
+    if (setlist) removeCandidates((setlist.songs || []).filter(isSongItem).map((item) => item.song_id));
+  }, [setlist, removeCandidates]);
+
   // Leaving with unsaved changes (Cancel or back) asks first; nothing to
   // lose → leave at once.
   const targetChanged = setlist !== null && targetMinutes !== normalizeTargetMinutes(setlist.target_minutes);
@@ -448,6 +460,7 @@ const SetlistEditor: FC = () => {
         // unless the target is actually used.
         ...(targetChanged ? { target_minutes: targetMinutes } : {}),
       });
+      candidates.remove(setlistItems.filter(isSongItem).map((item) => item.song_id));
       navigate("/setlists");
     } catch (error) {
       console.error("Failed to save setlist:", error);
@@ -754,6 +767,13 @@ const SetlistEditor: FC = () => {
     return availableSongs.filter((song) => !inSetlist.has(song.id));
   }, [availableSongs, setlistItems]);
 
+  const candidateSet = useMemo(() => new Set(candidates.ids), [candidates.ids]);
+  const waitingCandidates = pickerSongs.filter((song) => candidateSet.has(song.id)).length;
+  const showCandidates = () => {
+    setPickerView("candidates");
+    if (!capabilities.wide) setIsPickerSheetOpen(true);
+  };
+
   const songSignals = useMemo(
     () =>
       bandSetlists && bandShows
@@ -853,6 +873,10 @@ const SetlistEditor: FC = () => {
                 songs={pickerSongs}
                 totalSongs={availableSongs.length}
                 signals={songSignals}
+                candidates={candidateSet}
+                onToggleCandidate={candidates.toggle}
+                view={pickerView}
+                onViewChange={setPickerView}
                 onAdd={handleAddSong}
                 onAddSelected={handleAddSelected}
                 onEditSong={canEditSongs ? handleEditSong : undefined}
@@ -928,9 +952,19 @@ const SetlistEditor: FC = () => {
                         <i className="bi bi-music-note-list"></i>
                       </EmptyIcon>
                       <EmptyTitle>{t('setlists.editor.noSongsInSetlist')}</EmptyTitle>
-                      <EmptyText>
-                        {capabilities.wide ? t('setlists.editor.addSongsHint') : t('setlists.picker.addSongsHintNarrow')}
-                      </EmptyText>
+                      {waitingCandidates > 0 ? (
+                        <>
+                          <EmptyText>{t("setlists.picker.candidates.waiting", { count: waitingCandidates })}</EmptyText>
+                          <CandidatesButton type="button" onClick={showCandidates}>
+                            <i className="bi bi-star-fill" aria-hidden="true"></i>
+                            {t("setlists.picker.candidates.show")}
+                          </CandidatesButton>
+                        </>
+                      ) : (
+                        <EmptyText>
+                          {capabilities.wide ? t('setlists.editor.addSongsHint') : t('setlists.picker.addSongsHintNarrow')}
+                        </EmptyText>
+                      )}
                     </EmptyState>
                   ) : (
                     <SortableContext
@@ -1019,6 +1053,10 @@ const SetlistEditor: FC = () => {
             songs={pickerSongs}
             totalSongs={availableSongs.length}
             signals={songSignals}
+            candidates={candidateSet}
+            onToggleCandidate={candidates.toggle}
+            view={pickerView}
+            onViewChange={setPickerView}
             onAdd={handleAddSong}
             onAddSelected={handleAddSelected}
             onEditSong={canEditSongs ? handleEditSong : undefined}
@@ -1763,6 +1801,17 @@ const EmptyText = styled.p`
   color: var(--color-text-secondary);
   margin: 0;
   line-height: ${theme.lineHeights.relaxed};
+`;
+
+const CandidatesButton = styled(SecondaryButton)`
+  margin-top: ${theme.space[4]};
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.space[2]};
+
+  i {
+    color: ${theme.colors.semantic.warning};
+  }
 `;
 
 const LoadingContainer = styled.div`

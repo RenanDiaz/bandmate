@@ -231,7 +231,8 @@ owns one `OfflineAuthController` and exposes `authMode` next to `user`:
 
 **Offline wipe rules — exactly two triggers** (spec §3.5 #6). `wipeAll()` clears
 the IndexedDB store (`last-user` included) and every
-`bandmate_perform_position_*` and `bandmate_show_clock_*` localStorage key. It runs **only**:
+`bandmate_perform_position_*`, `bandmate_show_clock_*` and
+`bandmate_setlist_candidates_*` localStorage key. It runs **only**:
 1. on user-initiated sign-out: `AuthButton.logout` calls
    `performUserSignOut(wipeAll, signOutEverywhereOrLocally)`, which awaits the
    wipe **before** signing out and marks the resulting `SIGNED_OUT` as
@@ -626,7 +627,7 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   device-wide `bandmate_perform_content_view`, default Lyrics; not cleared by
   `wipeAll()`: it names no setlist).
 
-### Setlist builder (Phases 1–2)
+### Setlist builder (Phases 1–3)
 
 **Phase 2 (plan, templates, copy):** `PlanBar` (`src/components/setlist-builder/`)
 replaces the editor's totals line: songs · music · with breaks, and the
@@ -641,6 +642,14 @@ export (`setlistTextDurations` calls `planProgress`). The editor sends
 creation) or Copy of… (`duplicateSetlist`: items with new special-item ids,
 notes, description, target; never the linked show or YouTube playlist).
 Creating or Duplicate (setlist card menu) opens `/setlists/:id/edit`.
+
+**Phase 3 (candidates):** a per-device shortlist per user and setlist,
+`bandmate_setlist_candidates_{uid}_{setlistId}` (`src/lib/setlistCandidates.ts`,
+30-day expiry, cleared by `wipeAll()`), read through `useSetlistCandidates`.
+The picker gets a star per row and `All · Candidates (n)` tabs (`view` /
+`onViewChange`, controlled by the editor); the empty setlist offers "Show
+candidates". A candidate leaves the list when the setlist is saved or
+loaded with it, never on the add itself.
 
 
 The editor's library panel is `SongPicker` (`src/components/setlist-builder/`,
@@ -1080,7 +1089,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, AC11 and AC13 validated; AC9, AC10, AC12, AC14 pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
-- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 validated, Phase 2 implemented (validation pending), Phase 3 not started): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 validated, Phases 2 and 3 implemented (validation pending)): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented and validated): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, validated except AC6 as guest, AC8 and AC9): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)
