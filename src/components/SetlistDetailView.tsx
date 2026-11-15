@@ -54,6 +54,8 @@ import { SetlistRowMenu } from "./setlist-builder/SetlistRowMenu";
 import { useSortableSensors } from "../hooks/useSortableSensors";
 import { useOfflineUpdateCheckOnOpen } from "../hooks/useOfflineUpdateCheck";
 import { moveItem, type MoveTarget } from "../utils/setlistMove";
+import { PlanBar } from "./setlist-builder/PlanBar";
+import { planProgress, normalizeTargetMinutes } from "../utils/setlistPlan";
 
 // Forward declare styled components used in SortableSongCard
 const SongCard = styled.div<{ $isDragging?: boolean }>`
@@ -856,6 +858,16 @@ const SetlistDetailView: FC = () => {
   }
 
   const totalDuration = calculateTotalDuration();
+  // Shared target (setlist builder spec §4.1): read-only here, set in the editor.
+  const targetMinutes = normalizeTargetMinutes(setlist.target_minutes);
+  const plan = planProgress(
+    setlistItems,
+    new Map(songItemsOnly.flatMap((item) => {
+      const song = getSongById(item.song_id);
+      return song ? [[song.id, song] as const] : [];
+    })),
+    targetMinutes
+  );
 
   return (
     <ViewContainer>
@@ -902,7 +914,12 @@ const SetlistDetailView: FC = () => {
             {totalDuration > 0 && (
               <MetadataItem>
                 <i className="bi bi-clock"></i>
-                Total: {formatDuration(totalDuration)}
+                {t('setlists.detail.total', { duration: formatDuration(totalDuration) })}
+              </MetadataItem>
+            )}
+            {targetMinutes !== null && (
+              <MetadataItem>
+                <PlanBar progress={plan} targetMinutes={targetMinutes} readOnly showTotals={false} />
               </MetadataItem>
             )}
             {linkedShows.length > 0 ? (

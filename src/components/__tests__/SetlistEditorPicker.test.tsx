@@ -154,8 +154,9 @@ describe("SetlistEditor with the song picker", () => {
     const panel = setlistPanelTitles();
     expect(panel.findIndex((text) => text.includes("Charlie"))).toBeLessThan(panel.findIndex((text) => text.includes("Bravo")));
     // Sticky footer: count, duration and Save; the header has no Save of its own.
-    // Panel header and sticky footer.
-    expect(screen.getAllByText(/3 songs · 9:00/)).toHaveLength(2);
+    // Plan bar (setlist builder Phase 2) and sticky footer.
+    expect(screen.getByTestId("plan-bar").textContent).toContain("9:00 of music");
+    expect(screen.getAllByText(/3 songs · 9:00/)).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: /Save Setlist/ })).toHaveLength(1);
   });
 

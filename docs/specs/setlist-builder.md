@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phases 2–3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phase 2 implemented (PR 2.1), manual validation pending; Phase 3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a
@@ -675,3 +675,23 @@ When this happens, update [themed-setlists.md](themed-setlists.md) §1
 - Found and fixed in this PR: Cancel discarded unsaved changes without
   asking (now a `ConfirmModal`), the panel was titled "Setlists", and on a
   phone Cancel sat on its own row under the title.
+
+## Changelog
+
+- **PR 2.1 (Phase 2).** Implemented §4 and §6.3–§6.4: migration
+  `20261115120000_setlists_target_minutes.sql` (column + `> 0` check;
+  policies unchanged, the setlists INSERT / UPDATE policies are row-level),
+  `setlistPlan.ts`, `setlistTemplates.ts`, `duplicateSetlist`, `PlanBar` in
+  the editor (with the sticky footer showing `total / target`) and read-only
+  in the detail header, section subtotals, `NewSetlistForm` Start from,
+  `SetlistList` Duplicate, navigate-to-editor. Additions to the contract:
+  1. **`target_minutes` only travels when used.** The editor sends it only
+     when it changed and `duplicateSetlist` only when the source has one,
+     so nothing breaks before the migration is applied — except saving a
+     target.
+  2. **Rounding:** progress minutes are rounded down (58:20 → 58, +3:20 →
+     +3), as AC7's numbers imply.
+  3. **`duplicateSetlist(sourceId, name, { description? })`:** the form's
+     description overrides the source's when copying from Start from.
+  4. **Copy of… lists the band's non-draft setlists** already loaded by
+     `SetlistsView` (no extra read) and is disabled when there are none.

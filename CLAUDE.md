@@ -626,7 +626,22 @@ the offline toolbar and snapshot badge); exit, Escape and load errors go to
   device-wide `bandmate_perform_content_view`, default Lyrics; not cleared by
   `wipeAll()`: it names no setlist).
 
-### Setlist builder (Phase 1)
+### Setlist builder (Phases 1–2)
+
+**Phase 2 (plan, templates, copy):** `PlanBar` (`src/components/setlist-builder/`)
+replaces the editor's totals line: songs · music · with breaks, and the
+target input (`setlists.target_minutes`, minutes). `planProgress` /
+`sectionSubtotals` (`src/utils/setlistPlan.ts`, pure) give music + breaks
+against the target (over → amber, `63 / 60 (+3)`, whole minutes rounded
+down) and each section's subtotal, the same rule as the `technical` text
+export (`setlistTextDurations` calls `planProgress`). The editor sends
+`target_minutes` only when it changed; the detail view shows it read-only.
+`NewSetlistForm` has **Start from**: Blank, Template (`setlistTemplates.ts`:
+`single-set`, `two-sets-break`, `two-sets-encore`; labels localised once, at
+creation) or Copy of… (`duplicateSetlist`: items with new special-item ids,
+notes, description, target; never the linked show or YouTube playlist).
+Creating or Duplicate (setlist card menu) opens `/setlists/:id/edit`.
+
 
 The editor's library panel is `SongPicker` (`src/components/setlist-builder/`,
 spec [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) §3).
@@ -851,7 +866,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity; `updated_at` set by trigger (offline update check) |
 | `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
 | `user_sheet_music_preferences` | Which PDF each user opens first per song, PK `(user_id, song_id)`; RLS restricts rows to `auth.uid()` |
-| `setlists` | Setlists with JSONB `songs` array of items: songs `{type:'song', song_id, position, notes?}` and special items `{type:'break'|'section'|'note', id, label, position, duration?}`; `id` is a client-generated stable key assigned on read (`normalizeSetlistItem`) and used for React keys / drag-and-drop. Draft flag |
+| `setlists` | Setlists with JSONB `songs` array of items: songs `{type:'song', song_id, position, notes?}` and special items `{type:'break'|'section'|'note', id, label, position, duration?}`; `id` is a client-generated stable key assigned on read (`normalizeSetlistItem`) and used for React keys / drag-and-drop. Draft flag. `target_minutes` (nullable, > 0): shared target length (songs + breaks), set in the editor |
 | `shows` | Shows/gigs with venue, date, soundcheck, setlist reference |
 | `rehearsals` | Rehearsals with date/location |
 | `requests`, `request_comments`, `request_votes` | Band proposals (new song, setlist proposal, etc.) |
@@ -1063,7 +1078,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, AC11 and AC13 validated; AC9, AC10, AC12, AC14 pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
 - [docs/specs/setlist-actions-layout.md](docs/specs/setlist-actions-layout.md) - Spec (implemented): setlist actions layout — detail header tiers (Perform · Edit · ⋯), sticky reorder toolbar, offline row, list cards without hover-reveal (2 PRs)
-- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 implemented and validated, Phases 2–3 not started): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
+- [docs/specs/setlist-builder.md](docs/specs/setlist-builder.md) - Spec (in progress, Phase 1 validated, Phase 2 implemented (validation pending), Phase 3 not started): setlist builder — song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (3 phases, 4 PRs, no AI; §11 documents the unscheduled AI follow-up)
 - [docs/specs/setlist-medleys.md](docs/specs/setlist-medleys.md) - Spec (draft): medleys — consecutive songs grouped into one named entry, rendering-only (1 phase, 1 PR; fragments are v2)
 - [docs/specs/app-header.md](docs/specs/app-header.md) - Spec (implemented and validated): lighter app header — About out of the nav (footer + user menu), one link list for desktop and offcanvas, desktop layout from `lg`, compact user button (1 phase, 1 PR)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) - Spec (implemented, validated except AC6 as guest, AC8 and AC9): my upcoming events — shows and rehearsals of every band on the dashboard, one tap selects the band and opens the event or its setlist (1 phase, 4 PRs)

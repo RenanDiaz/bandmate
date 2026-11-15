@@ -1,7 +1,9 @@
 import { useState, type FC } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { Setlist } from "../services/setlistsService";
+import { duplicateSetlist, type Setlist } from "../services/setlistsService";
+import { isPermissionDenied } from "../services/permissionError";
+import { useToast } from "../context/useToast";
 import type { OfflineSnapshotMeta } from "../services/offlineSetlistService";
 import { useOfflineSnapshotMetas } from "../hooks/useOfflineDownload";
 import { OfflineBadge } from "./offline/OfflineDownloadAction";
@@ -31,9 +33,10 @@ const SetlistCardItem: FC<{
   onView: (setlistId: string) => void;
   onPerform: (setlistId: string) => void;
   onEditSongs: (setlistId: string) => void;
+  onDuplicate: (setlist: Setlist) => void;
   canEdit: boolean;
   offlineMeta?: OfflineSnapshotMeta;
-}> = ({ setlist, onDelete, onView, onPerform, onEditSongs, canEdit, offlineMeta }) => {
+}> = ({ setlist, onDelete, onView, onPerform, onEditSongs, onDuplicate, canEdit, offlineMeta }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
   const { t } = useTranslation();
@@ -85,6 +88,9 @@ const SetlistCardItem: FC<{
                 <DropdownItem onClick={() => onEditSongs(setlist.id)}>
                   <i className="bi bi-pencil me-2"></i> {t('common.edit')}
                 </DropdownItem>
+                <DropdownItem onClick={() => onDuplicate(setlist)}>
+                  <i className="bi bi-files me-2"></i> {t('setlists.duplicate')}
+                </DropdownItem>
                 <DropdownItem divider />
                 <DropdownItem onClick={() => onDelete(setlist)} className="text-danger">
                   <i className="bi bi-trash me-2"></i> {t('common.delete')}
@@ -108,7 +114,20 @@ const SetlistCardItem: FC<{
 
 export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
   const offlineMetas = useOfflineSnapshotMetas();
+
+  // Duplicate (setlist builder spec §4.3): "{name} (copy)", then its editor.
+  const handleDuplicate = async (setlist: Setlist) => {
+    try {
+      const copy = await duplicateSetlist(setlist.id, t("setlists.copyName", { name: setlist.name }));
+      navigate(`/setlists/${copy.id}/edit`);
+    } catch (error) {
+      console.error("Failed to duplicate setlist:", error);
+      toast.error(isPermissionDenied(error) ? t("common.noPermission") : t("setlists.duplicateError"));
+    }
+  };
 
   const handleViewSetlist = (setlistId: string) => {
     navigate(`/setlists/${setlistId}`);
@@ -132,6 +151,7 @@ export const SetlistList: FC<Props> = ({ setlists, onDelete, canEdit }) => {
           onView={handleViewSetlist}
           onPerform={handlePerformSetlist}
           onEditSongs={handleEditSongs}
+          onDuplicate={(target) => void handleDuplicate(target)}
           canEdit={canEdit}
           offlineMeta={offlineMetas[setlist.id]}
         />

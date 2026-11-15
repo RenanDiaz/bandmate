@@ -158,7 +158,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
           {canEdit && (
             <>
               <AISetlistGenerator bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
-              <NewSetlistForm bandId={selectedBand.id} onSetlistCreated={loadSetlists} />
+              <NewSetlistForm bandId={selectedBand.id} setlists={setlists} onSetlistCreated={loadSetlists} />
             </>
           )}
 
