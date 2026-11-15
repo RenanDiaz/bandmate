@@ -1,7 +1,6 @@
 import type { FC } from "react";
 import { useEffect } from "react";
 import { useBandContext } from "../../context/useBandContext";
-import { isPushNotificationsEnabled } from "../../lib/featureFlags";
 import { NotificationSettingsModal } from "./NotificationSettingsModal";
 import { closeNotificationSettings, useNotificationSettingsOpen } from "./notificationSettingsStore";
 
@@ -12,7 +11,7 @@ import { closeNotificationSettings, useNotificationSettingsOpen } from "./notifi
 export const NotificationSettingsHost: FC = () => {
   const open = useNotificationSettingsOpen();
   const { authMode, isOnline } = useBandContext();
-  const available = isPushNotificationsEnabled() && authMode === "session" && isOnline;
+  const available = authMode === "session" && isOnline;
 
   useEffect(() => {
     if (!available) closeNotificationSettings();

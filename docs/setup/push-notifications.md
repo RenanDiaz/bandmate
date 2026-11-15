@@ -75,7 +75,6 @@ Set on the Vercel project (and in `.env` locally), then redeploy:
 | Variable | Value |
 |----------|-------|
 | `VITE_VAPID_PUBLIC_KEY` | the public key from step 1 (must match `VAPID_KEYS`) |
-| `VITE_PUSH_NOTIFICATIONS` | `true` to show the settings to everyone; leave it unset and use `localStorage.bandmate_flag_push = "1"` per device while testing against production (or open any page with `?flag=push`; `?flag=-push` clears it) |
 
 The Notifications row appears in the user menu (signed in, online). Push
 needs the **built** worker: locally, `npm run build && npm run preview`
@@ -194,7 +193,7 @@ once it is revoked, answered or expired.
 | `error` = `failed: 403 …` | VAPID keys don't match the key the browser subscribed with (keys regenerated?) |
 | `error` = `VAPID_KEYS is not set` | step 2 |
 | Subscriptions disappear | the push service answered 404/410 (the browser dropped them); expected |
-| No Notifications row in the user menu | the flag (step 4), signed in with a live session, online |
+| No Notifications row in the user menu | signed in with a live session (not "Offline"), online |
 | The modal says "can't receive notifications" on iPhone / iPad | it's a Safari tab: open the app from the Home Screen (iOS 16.4+) |
 | Turn on fails right away | `VITE_VAPID_PUBLIC_KEY` missing from the build, or `npm run dev` (no push handler in the dev worker) |
 | `error` = `failed: 403 web.push.apple.com` (`BadJwtToken`) | Apple's one-hour VAPID limit (spec §6) |

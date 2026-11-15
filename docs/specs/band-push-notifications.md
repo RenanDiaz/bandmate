@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (Phases 1–3 validated on devices; Phase 4 not started) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented (Phases 1–3 validated on devices; Phase 4 — flag removed in PR 4.1 — pending its Validate) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -561,7 +561,7 @@ Phase 1 already has.
 the flag → Notifications row in the user menu (desktop and drawer), turn on,
 AC1 works; offline, the app starts and the row is hidden.
 
-- **PR 4.1 — remove the flag.** Delete `isPushNotificationsEnabled()` and
+- **PR 4.1 — remove the flag** (implemented). Delete `isPushNotificationsEnabled()` and
   its call sites (`AuthButton` ×2, `NotificationSettingsHost`), then the rest
   of `src/lib/featureFlags.ts`: push is the only flag, so `applyFlagParams`,
   `FLAG_PARAM_KEYS` and the `?flag=` handling in `main.tsx` go too (the
@@ -610,3 +610,9 @@ start (§10).
 - 2026-09-29 — Phase 4 (PR 4.1): the flag from §1 decision 8 had no PR
   removing it; added, gated on every deployed phase passing its Validate.
   Removes the whole `featureFlags.ts` module (push was its only flag).
+- 2026-11-14 — PR 4.1: flag removed as planned (`featureFlags.ts` and its
+  test deleted, call sites in `AuthButton` and `NotificationSettingsHost`,
+  the `?flag=` handling in `main.tsx`, `VITE_PUSH_NOTIFICATIONS` from types,
+  `.env.example` and docs). A `?flag=` param left in an old link now stays
+  in the URL, harmless. Changing the language updates this device's push
+  language whenever the session is live (a no-op without a subscription).
