@@ -1094,6 +1094,8 @@
     "following": "Siguiendo",
     "endSession": "Terminar Sesión",
     "leaveSession": "Salir",
+    "hostingDesc": "Los miembros que se unan siguen la canción en la que estás.",
+    "followingDesc": "Sigues la canción en la que está el host.",
     "noActiveSession": "No hay sesión activa para esta banda",
     "connectionError": "Error de conexión",
     "connected": "Conectado",
