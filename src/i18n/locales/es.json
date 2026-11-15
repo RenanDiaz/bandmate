@@ -89,7 +89,12 @@
     "user": "Cuenta",
     "offlineAccount": "Sin conexión",
     "offlineAccountHint": "Sin conexión — usando la cuenta guardada en este dispositivo",
-    "signOutError": "No se pudo cerrar sesión. Inténtalo de nuevo."
+    "signOutError": "No se pudo cerrar sesión. Inténtalo de nuevo.",
+    "yourName": "Tu nombre",
+    "nameLabel": "Nombre",
+    "yourNameHint": "Lo ven tus bandas cuando no te han puesto un apodo.",
+    "nameSaved": "Nombre guardado",
+    "nameError": "No se pudo guardar tu nombre. Inténtalo de nuevo."
   },
   "settings": {
     "title": "Configuración",
@@ -1000,7 +1005,16 @@
     "selectNewOwner": "Por favor selecciona un miembro.",
     "selectMemberPlaceholder": "Selecciona un miembro…",
     "noEligibleMembers": "No hay otros miembros que puedan ser propietarios. Invita o promueve a un miembro primero.",
-    "loadMembersError": "No se pudieron cargar los miembros. Por favor intenta de nuevo."
+    "loadMembersError": "No se pudieron cargar los miembros. Por favor intenta de nuevo.",
+    "editNickname": "Editar apodo",
+    "nicknameTitleSelf": "Tu apodo en {{band}}",
+    "nicknameTitleOther": "Apodo de {{name}}",
+    "nicknameLabel": "Apodo",
+    "nicknameHint": "Cómo le dice la banda aquí. Déjalo vacío para mostrar su nombre.",
+    "nicknameHintSelf": "Cómo te dice la banda aquí. Déjalo vacío para mostrar tu nombre.",
+    "nicknameSaved": "Apodo guardado",
+    "nicknameCleared": "Apodo quitado",
+    "nicknameError": "No se pudo guardar el apodo. Inténtalo de nuevo."
   },
   "invitations": {
     "title": "Invitación",

@@ -89,7 +89,12 @@
     "user": "Account",
     "offlineAccount": "Offline",
     "offlineAccountHint": "Offline — using the account saved on this device",
-    "signOutError": "Couldn't sign out. Please try again."
+    "signOutError": "Couldn't sign out. Please try again.",
+    "yourName": "Your name",
+    "nameLabel": "Name",
+    "yourNameHint": "Your bands see it when they haven't given you a nickname.",
+    "nameSaved": "Name saved",
+    "nameError": "Couldn't save your name. Try again."
   },
   "settings": {
     "title": "Settings",
@@ -1000,7 +1005,16 @@
     "selectNewOwner": "Please select a member.",
     "selectMemberPlaceholder": "Select a member…",
     "noEligibleMembers": "There are no other members eligible to become owner. Invite or promote a member first.",
-    "loadMembersError": "Failed to load members. Please try again."
+    "loadMembersError": "Failed to load members. Please try again.",
+    "editNickname": "Edit nickname",
+    "nicknameTitleSelf": "Your nickname in {{band}}",
+    "nicknameTitleOther": "Nickname for {{name}}",
+    "nicknameLabel": "Nickname",
+    "nicknameHint": "What the band calls them here. Leave it empty to show their name.",
+    "nicknameHintSelf": "What the band calls you here. Leave it empty to show your name.",
+    "nicknameSaved": "Nickname saved",
+    "nicknameCleared": "Nickname removed",
+    "nicknameError": "Couldn't save the nickname. Try again."
   },
   "invitations": {
     "title": "Invitation",

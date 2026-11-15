@@ -303,7 +303,7 @@ export function usePerformanceSync({
       // Get our display name for the updated session
       const currentUserId = (await getSessionUser())?.id;
       const hostName = currentUserId
-        ? await getHostDisplayName(currentUserId)
+        ? await getHostDisplayName(bandId, currentUserId)
         : null;
 
       const sessionWithHost = {
@@ -320,7 +320,7 @@ export function usePerformanceSync({
     } finally {
       setIsLoading(false);
     }
-  }, [existingSession, subscribeToUpdates]);
+  }, [existingSession, subscribeToUpdates, bandId]);
 
   // Check for existing active session and user role on mount (not while
   // disabled, nor before the setlist's band is known)

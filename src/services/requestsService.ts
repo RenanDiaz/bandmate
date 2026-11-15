@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import { getUserBandRole } from "./bandMembersService";
+import { getBandMemberNames, getUserBandRole } from "./bandMembersService";
 
 // ============================================
 // Types
@@ -465,10 +465,12 @@ export async function getRequestComments(requestId: string): Promise<RequestComm
   if (error) throw error;
 
   const comments = data || [];
+  if (comments.length === 0) return [];
 
-  // Fetch user names
+  // Names as the band calls them (nickname → name → email)
+  const { data: request } = await supabase.from("requests").select("band_id").eq("id", requestId).single();
   const userIds = [...new Set(comments.map((c) => c.user_id))];
-  const userNames = await fetchUserNames(userIds);
+  const userNames = request ? await getBandMemberNames(request.band_id, userIds) : {};
 
   return comments.map((comment) => ({
     ...comment,
@@ -518,7 +520,7 @@ export async function addComment(
   if (error) throw error;
 
   // Fetch user name
-  const userNames = await fetchUserNames([user.id]);
+  const userNames = await getBandMemberNames(request.band_id, [user.id]);
   return {
     ...data,
     user_name: userNames[user.id] || "You",
@@ -748,28 +750,6 @@ export async function toggleVote(
 // ============================================
 
 /**
- * Fetch user display names
- */
-async function fetchUserNames(userIds: string[]): Promise<Record<string, string>> {
-  const names: Record<string, string> = {};
-
-  for (const userId of userIds) {
-    try {
-      const { data: displayName } = await supabase.rpc("get_user_display_name", {
-        user_id_param: userId,
-      });
-      if (displayName) {
-        names[userId] = displayName;
-      }
-    } catch {
-      // Function may not exist
-    }
-  }
-
-  return names;
-}
-
-/**
  * Enrich requests with metadata (creator names, vote counts, etc.)
  */
 async function enrichRequestsWithMetadata(requests: Request[]): Promise<Request[]> {
@@ -782,7 +762,11 @@ async function enrichRequestsWithMetadata(requests: Request[]): Promise<Request[
   const creatorIds = [...new Set(requests.map((r) => r.created_by))];
   const resolverIds = [...new Set(requests.filter((r) => r.resolved_by).map((r) => r.resolved_by!))];
   const allUserIds = [...new Set([...creatorIds, ...resolverIds])];
-  const userNames = await fetchUserNames(allUserIds);
+  // One lookup per band (a list is one band's in practice)
+  const userNames: Record<string, string> = {};
+  for (const bandId of new Set(requests.map((r) => r.band_id))) {
+    Object.assign(userNames, await getBandMemberNames(bandId, allUserIds));
+  }
 
   // Fetch vote counts for all requests
   const requestIds = requests.map((r) => r.id);

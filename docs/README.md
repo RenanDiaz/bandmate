@@ -55,6 +55,7 @@ docs/
 ## Performance mode (2026-10-09)
 - [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented; validated except AC4–AC6 and AC10, which need a real backing track)
 - [specs/member-sign-in-help.md](specs/member-sign-in-help.md) — email a member how to sign in: the account and button they use, plus the link, from the member list (one phase, one PR; implemented and validated)
+- [specs/member-names.md](specs/member-names.md) — members by nickname → name → email, per-band nicknames (owner sets anyone's, each member their own), a name for email accounts (one phase, one PR; implemented, validation pending)
 
 ## Research
 - [research/external-apis.md](research/external-apis.md) — Setlist.fm, Songstats and other APIs (Nov 2025)

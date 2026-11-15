@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthButton } from "../AuthButton";
 import { performUserSignOut } from "../context/offlineAuthController";
@@ -50,7 +50,7 @@ describe("AuthButton notifications (band push notifications §2.1)", () => {
 
     const panel = screen.getByTestId("account-panel");
     const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Your name", "Notifications", "Check for updates", "Sign out"]);
 
     await userEvent.click(screen.getByRole("button", { name: "Notifications" }));
     expect(screen.getByTestId("settings-open").textContent).toBe("true");
@@ -134,7 +134,7 @@ describe("AuthButton inline (mobile drawer)", () => {
     expect(about.getAttribute("href")).toBe("/about");
     const panel = screen.getByTestId("account-panel");
     const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Your name", "Notifications", "Check for updates", "Sign out"]);
 
     await userEvent.click(about);
     expect(onAction).toHaveBeenCalledTimes(1);
@@ -191,7 +191,7 @@ describe("AuthButton dropdown (desktop navbar)", () => {
 
     const menu = screen.getByRole("menu");
     const labels = Array.from(menu.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Your name", "Notifications", "Check for updates", "Sign out"]);
 
     const about = within(menu).getByRole("link", { name: "About" });
     expect(about.getAttribute("href")).toBe("/about");
@@ -224,5 +224,33 @@ describe("AuthButton dropdown (desktop navbar)", () => {
 
     fireEvent.mouseDown(screen.getByText("Signed in as"));
     expect(screen.getByRole("menu")).toBeTruthy();
+  });
+});
+
+describe("AuthButton account name (member-names AC5)", () => {
+  it("shows the name above the email, and no Your name for a Google account", () => {
+    renderApp(<AuthButton variant="inline" />, {
+      ctx: bandContext({
+        user: {
+          id: "user-a",
+          email: "ana@example.com",
+          user_metadata: { full_name: "Ana López" },
+          app_metadata: { provider: "google", providers: ["google"] },
+        },
+      }),
+    });
+    const panel = screen.getByTestId("account-panel");
+    expect(panel.textContent).toContain("Ana López");
+    expect(panel.textContent).toContain("ana@example.com");
+    expect(screen.queryByRole("button", { name: "Your name" })).toBeNull();
+  });
+
+  it("offers Your name to an email account, online in session only", () => {
+    renderApp(<AuthButton variant="inline" />, { ctx: signedIn });
+    expect(screen.getByRole("button", { name: "Your name" })).toBeTruthy();
+    cleanup();
+
+    renderApp(<AuthButton variant="inline" />, { ctx: { ...signedIn, isOnline: false } });
+    expect(screen.queryByRole("button", { name: "Your name" })).toBeNull();
   });
 });

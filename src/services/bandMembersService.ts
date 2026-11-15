@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { getSessionUser } from "../lib/authSession";
+import { PermissionError } from "./permissionError";
 
 export type BandRole = "owner" | "admin" | "member" | "guest";
 export type InvitationStatus = "pending" | "accepted" | "declined" | "expired";
@@ -13,10 +14,13 @@ export interface BandMember {
   joined_at: string;
   expires_at: string | null;
   created_at: string;
+  /** What the band calls this member (docs/specs/member-names.md); null = none. */
+  nickname?: string | null;
   // Populated from auth.users via join
   email?: string;
   user_metadata?: {
     full_name?: string;
+    name?: string;
     avatar_url?: string;
   };
 }
@@ -104,6 +108,65 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
     ...member,
     email: displayNames[member.user_id] || "Band member",
   }));
+}
+
+/**
+ * Set or clear (null / blank) a member's nickname in a band. The band's owner
+ * may set anyone's, a member their own: `set_band_member_nickname` checks it
+ * and refuses with 42501, thrown here as a PermissionError. Returns the
+ * stored value.
+ */
+export async function setMemberNickname(
+  bandId: number,
+  userId: string,
+  nickname: string | null
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("set_band_member_nickname", {
+    band_id_param: bandId,
+    user_id_param: userId,
+    nickname_param: nickname ?? "",
+  });
+  if (error) {
+    if (error.code === "42501") throw new PermissionError("band_members.nickname");
+    throw error;
+  }
+  return (data as string | null) ?? null;
+}
+
+/**
+ * Display names (nickname → name → email) of these users in a band, in one
+ * call. Ids the server doesn't name are absent. Falls back to one
+ * `get_user_display_name` per id (no nicknames) when the RPC is missing,
+ * i.e. before the migration is applied.
+ */
+export async function getBandMemberNames(bandId: number, userIds: string[]): Promise<Record<string, string>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  const names: Record<string, string> = {};
+  if (ids.length === 0) return names;
+
+  const { data, error } = await supabase.rpc("get_band_member_names", {
+    band_id_param: bandId,
+    user_ids: ids,
+  });
+  if (!error) {
+    for (const row of (data as { user_id: string; display_name: string | null }[] | null) ?? []) {
+      if (row.display_name) names[row.user_id] = row.display_name;
+    }
+    return names;
+  }
+
+  console.warn("get_band_member_names unavailable, falling back to one lookup per user:", error);
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const { data: name } = await supabase.rpc("get_user_display_name", { user_id_param: id });
+        if (name) names[id] = name as string;
+      } catch {
+        // Function may not exist
+      }
+    })
+  );
+  return names;
 }
 
 /**

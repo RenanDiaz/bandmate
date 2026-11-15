@@ -489,3 +489,27 @@ describe("user-initiated sign-out", () => {
     expect(await offline.getSchemaWipeNotice()).toBeNull();
   });
 });
+
+describe("same uid: the user reference", () => {
+  it("is kept on TOKEN_REFRESHED and replaced on USER_UPDATED with new metadata", async () => {
+    const t = setup({ online: true });
+    t.controller.start();
+    t.fake.answer({ data: { session: session(USER_A) }, error: null });
+    await flush();
+    const first = t.state().user;
+    expect(first?.id).toBe(USER_A);
+
+    t.fake.emit("TOKEN_REFRESHED", session(USER_A));
+    await flush();
+    expect(t.state().user).toBe(first);
+
+    const renamed = session(USER_A);
+    renamed.user = { ...renamed.user, user_metadata: { full_name: "Ana López" } };
+    t.fake.emit("USER_UPDATED", renamed);
+    await flush();
+    expect(t.state().user).not.toBe(first);
+    expect(t.state().user?.user_metadata).toEqual({ full_name: "Ana López" });
+    expect(t.state().authMode).toBe("session");
+  });
+});
+
