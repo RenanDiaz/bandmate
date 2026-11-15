@@ -1,6 +1,6 @@
 # Spec: Song country and language as ISO codes
 
-> **Status:** implemented (PR 1.1), manual validation pending · **Created:** 2026-09-26 · **Owner:** Renán Díaz
+> **Status:** implemented and validated (Phase 1, PR 1.1) · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** two TODOs — "Al obtener metadatos, si trae el país de origen,
 > debería llenarlo con el nombre completo, y no solo la abreviatura" and
 > "Quizás los campos de país de origen e idioma deberían ser dropdown y así
@@ -308,4 +308,7 @@ data migration ran on and the count of rows it changed.
      labels its options with `displayName`.
   5. England / Scotland / Wales are **not** aliased to `GB`: that would
      lose information, and "Keep" shows them as they are.
-
+- **Phase 1 validated (2026-11-15).** The data migration ran on production
+  (project `bandmate`): every country is now a code except "Scotland" and
+  "Shakira" (one song each, kept verbatim), every language is `es` or `en`.
+  AC6–AC10 passed in the app.

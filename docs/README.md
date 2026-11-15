@@ -35,7 +35,7 @@ docs/
 
 ## Backlog specs (from the 2026-09 TODO review)
 - [specs/content-permissions.md](specs/content-permissions.md) — align RLS, services and UI with the role matrix (members edit/delete any content)
-- [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns (implemented, validation pending)
+- [specs/song-country-language.md](specs/song-country-language.md) — song country/language stored as ISO codes, shown as localised names, dropdowns (implemented and validated)
 - [specs/themed-setlists.md](specs/themed-setlists.md) — theme input on the AI setlist generator + response validation
 - [specs/song-performance.md](specs/song-performance.md) — perform a single song from the library (performance target, one phase, two PRs; implemented; AC11 and AC13 validated, AC9, AC10, AC12 and AC14 pending)
 - [specs/setlist-text-export.md](specs/setlist-text-export.md) — setlist text export: pure formatter, three layouts, preview, copy/share (implemented)
