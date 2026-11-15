@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useLatest } from "../hooks/useLatest";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, FormGroup, Input } from "reactstrap";
 import { PrimaryButton, SecondaryButton } from "./ui/buttons";
@@ -460,6 +461,8 @@ const SetlistDetailView: FC = () => {
   const { selectedBand, reportNetworkFailure, reportNetworkSuccess } = useBandContext();
   useOfflineUpdateCheckOnOpen(setlistId);
   const toast = useToast();
+  // Read inside the load: a language switch must not reload (and reset) the page.
+  const tRef = useLatest(t);
 
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
@@ -698,7 +701,7 @@ const SetlistDetailView: FC = () => {
           // which says so and offers Remove, instead of bouncing (D5).
           setGoneOnServer(true);
         } else {
-          toast.error(t("setlists.detail.loadError"));
+          toast.error(tRef.current("setlists.detail.loadError"));
           navigate("/setlists");
         }
       }
@@ -706,7 +709,7 @@ const SetlistDetailView: FC = () => {
     };
 
     loadData();
-  }, [setlistId, navigate, reportNetworkFailure, reportNetworkSuccess]);
+  }, [setlistId, navigate, reportNetworkFailure, reportNetworkSuccess, toast, tRef]);
 
   // Check YouTube access on mount
   useEffect(() => {

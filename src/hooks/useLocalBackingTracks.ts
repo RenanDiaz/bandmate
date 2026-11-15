@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface BackingTrackInfo {
   fileName: string;
@@ -47,12 +47,21 @@ export function useLocalBackingTracks(setlistId: string) {
     }
   }, [trackInfo, setlistId]);
 
-  // Cleanup blob URLs on unmount
+  // Blob URLs alive now, mirrored into one Set (mutated, never replaced) so
+  // the unmount cleanup revokes the current ones, not the first render's.
+  const liveUrlsRef = useRef(new Set<string>());
   useEffect(() => {
+    const live = liveUrlsRef.current;
+    live.clear();
+    Object.values(trackUrls).forEach((url) => live.add(url));
+  }, [trackUrls]);
+
+  // Revoke blob URLs on unmount
+  useEffect(() => {
+    const live = liveUrlsRef.current;
     return () => {
-      Object.values(trackUrls).forEach((url) => {
-        URL.revokeObjectURL(url);
-      });
+      live.forEach((url) => URL.revokeObjectURL(url));
+      live.clear();
     };
   }, []);
 

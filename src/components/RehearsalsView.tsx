@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Container, Spinner, ButtonGroup, Button } from "reactstrap";
 import styled from "styled-components";
@@ -57,7 +57,7 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
     }
   };
 
-  const loadRehearsals = async () => {
+  const loadRehearsals = useCallback(async () => {
     if (!selectedBand) return;
 
     setLoading(true);
@@ -78,11 +78,11 @@ const RehearsalsView: FC<Props> = ({ user, selectedBand }) => {
       console.error("Failed to load rehearsals:", error);
     }
     setLoading(false);
-  };
+  }, [selectedBand, filter]);
 
   useEffect(() => {
     loadRehearsals();
-  }, [selectedBand, filter]);
+  }, [selectedBand, filter, loadRehearsals]);
 
   const handleDelete = async (rehearsal: Rehearsal) => {
     setConfirm({

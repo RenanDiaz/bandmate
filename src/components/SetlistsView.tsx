@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import type { AppUser } from "../context/offlineAuthController";
 import type { Band } from "../services/bandsService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
@@ -48,7 +48,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
     }
   };
 
-  const loadSetlists = async () => {
+  const loadSetlists = useCallback(async () => {
     if (!selectedBand) {
       setSetlists([]);
       setLoading(false);
@@ -67,7 +67,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
       setSetlists([]);
     }
     setLoading(false);
-  };
+  }, [selectedBand, reportNetworkSuccess, reportNetworkFailure]);
 
   useEffect(() => {
     if (user && selectedBand) {
@@ -76,7 +76,7 @@ const SetlistsView: FC<Props> = ({ user, selectedBand }) => {
       setSetlists([]);
       setLoading(false);
     }
-  }, [user, selectedBand]);
+  }, [user, selectedBand, loadSetlists]);
 
   const handleDeleteSetlist = async (setlist: Setlist) => {
     setConfirm({

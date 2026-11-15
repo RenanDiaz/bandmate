@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
@@ -611,11 +611,7 @@ export default function SheetMusicUpload({
   const [timingPdfUrl, setTimingPdfUrl] = useState<string | null>(null);
 
   // Load sheet music list
-  useEffect(() => {
-    loadSheetMusic();
-  }, [songId]);
-
-  const loadSheetMusic = async () => {
+  const loadSheetMusic = useCallback(async () => {
     try {
       setLoading(true);
       const list = await getSheetMusicForSong(songId);
@@ -625,7 +621,11 @@ export default function SheetMusicUpload({
     } finally {
       setLoading(false);
     }
-  };
+  }, [songId]);
+
+  useEffect(() => {
+    loadSheetMusic();
+  }, [songId, loadSheetMusic]);
 
   const resetModal = () => {
     setName("");

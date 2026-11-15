@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLatest } from "../hooks/useLatest";
 import styled from "styled-components";
 import { theme } from "../theme";
 import type { SectionTiming } from "../services/songsService";
@@ -114,35 +115,35 @@ export const TimingSyncModal = ({
     };
   }, [trackUrl]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: the listener always runs the latest handler (current play state and timings).
+  const keyDownRef = useLatest((e: KeyboardEvent) => {
+    // Space to play/pause
+    if (e.code === "Space" && e.target === document.body) {
+      e.preventDefault();
+      handlePlayPause();
+    }
+    // M to mark current section
+    if (e.code === "KeyM" && selectedSectionIndex !== null) {
+      e.preventDefault();
+      handleMarkTime(selectedSectionIndex);
+    }
+    // Arrow keys to navigate sections
+    if (e.code === "ArrowDown" && selectedSectionIndex !== null && selectedSectionIndex < sections.length - 1) {
+      e.preventDefault();
+      setSelectedSectionIndex(selectedSectionIndex + 1);
+    }
+    if (e.code === "ArrowUp" && selectedSectionIndex !== null && selectedSectionIndex > 0) {
+      e.preventDefault();
+      setSelectedSectionIndex(selectedSectionIndex - 1);
+    }
+  });
+
   useEffect(() => {
     if (!isOpen || !trackUrl) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Space to play/pause
-      if (e.code === "Space" && e.target === document.body) {
-        e.preventDefault();
-        handlePlayPause();
-      }
-      // M to mark current section
-      if (e.code === "KeyM" && selectedSectionIndex !== null) {
-        e.preventDefault();
-        handleMarkTime(selectedSectionIndex);
-      }
-      // Arrow keys to navigate sections
-      if (e.code === "ArrowDown" && selectedSectionIndex !== null && selectedSectionIndex < sections.length - 1) {
-        e.preventDefault();
-        setSelectedSectionIndex(selectedSectionIndex + 1);
-      }
-      if (e.code === "ArrowUp" && selectedSectionIndex !== null && selectedSectionIndex > 0) {
-        e.preventDefault();
-        setSelectedSectionIndex(selectedSectionIndex - 1);
-      }
-    };
-
+    const handleKeyDown = (e: KeyboardEvent) => keyDownRef.current(e);
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, trackUrl, selectedSectionIndex, sections.length]);
+  }, [isOpen, trackUrl, keyDownRef]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

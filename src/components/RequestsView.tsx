@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import type { AppUser } from "../context/offlineAuthController";
 import type { Band } from "../services/bandsService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner, Container, ButtonGroup, Button } from "reactstrap";
 import styled from "styled-components";
@@ -55,7 +55,7 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
     }
   };
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     if (!selectedBand) {
       setRequests([]);
       setLoading(false);
@@ -75,7 +75,7 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
       setRequests([]);
     }
     setLoading(false);
-  };
+  }, [selectedBand]);
 
   useEffect(() => {
     if (user && selectedBand) {
@@ -84,7 +84,7 @@ const RequestsView: FC<Props> = ({ user, selectedBand }) => {
       setRequests([]);
       setLoading(false);
     }
-  }, [user, selectedBand]);
+  }, [user, selectedBand, loadRequests]);
 
   const handleDeleteRequest = async (request: Request) => {
     setConfirm({

@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Spinner, Container } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -65,12 +65,13 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
     }
   };
 
-  const loadBands = async () => {
+  const userId = user?.id;
+  const loadBands = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      if (!user) throw new Error(t('common.error'));
-      const data = await getMyBands(user.id);
+      if (!userId) throw new Error(t('common.error'));
+      const data = await getMyBands(userId);
       setBands(data);
     } catch (e: unknown) {
       if (e instanceof Error) {
@@ -80,9 +81,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       }
     }
     setLoading(false);
-  };
+  }, [userId, t]);
 
-  const loadInvitations = async () => {
+  const loadInvitations = useCallback(async () => {
     setLoadingInvitations(true);
     try {
       const data = await getMyInvitations();
@@ -91,7 +92,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       console.error("Failed to load invitations:", error);
     }
     setLoadingInvitations(false);
-  };
+  }, []);
 
   const handleBandCreated = async (input: CreateBandInput) => {
     try {
@@ -182,7 +183,7 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
   useEffect(() => {
     loadBands();
     loadInvitations();
-  }, []);
+  }, [loadBands, loadInvitations]);
 
   return (
     <SelectorWrapper>

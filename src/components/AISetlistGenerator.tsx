@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
@@ -51,13 +51,7 @@ export const AISetlistGenerator = ({ bandId, onSetlistCreated }: Props) => {
     setIsConfigured(groqService.isConfigured());
   }, []);
 
-  useEffect(() => {
-    if (isExpanded && bandId) {
-      loadData();
-    }
-  }, [isExpanded, bandId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [songsData, setlistsData] = await Promise.all([
         getBandSongs(bandId),
@@ -68,7 +62,13 @@ export const AISetlistGenerator = ({ bandId, onSetlistCreated }: Props) => {
     } catch (err) {
       console.error("Failed to load data:", err);
     }
-  };
+  }, [bandId]);
+
+  useEffect(() => {
+    if (isExpanded && bandId) {
+      loadData();
+    }
+  }, [isExpanded, bandId, loadData]);
 
   const handleGenerate = async () => {
     if (songs.length < 3) {

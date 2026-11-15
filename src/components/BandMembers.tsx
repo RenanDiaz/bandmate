@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -48,13 +48,6 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
   const isOwner = band.user_role === "owner";
   const currentMember = members.find((m) => m.user_id === currentUserId);
 
-  useEffect(() => {
-    loadMembers();
-    if (isOwner) {
-      loadInvitations();
-    }
-  }, [band.id, isOwner, refreshKey]);
-
   // Auto-dismiss success feedback; errors stay until the next action.
   useEffect(() => {
     if (feedback?.type === "success") {
@@ -74,7 +67,7 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
     }
   };
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getBandMembers(band.id);
@@ -83,16 +76,23 @@ export const BandMembers: FC<Props> = ({ band, currentUserId, refreshKey, onMemb
       console.error("Failed to load members:", error);
     }
     setLoading(false);
-  };
+  }, [band.id]);
 
-  const loadInvitations = async () => {
+  const loadInvitations = useCallback(async () => {
     try {
       const data = await getBandInvitations(band.id);
       setInvitations(data.filter((inv) => inv.status === "pending"));
     } catch (error) {
       console.error("Failed to load invitations:", error);
     }
-  };
+  }, [band.id]);
+
+  useEffect(() => {
+    loadMembers();
+    if (isOwner) {
+      loadInvitations();
+    }
+  }, [loadMembers, loadInvitations, isOwner, refreshKey]);
 
   const handleRemoveMember = (member: BandMember) => {
     if (member.role === "owner") {

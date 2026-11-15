@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import type { AppUser } from "../context/offlineAuthController";
 import type { Band } from "../services/bandsService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner, Container, ButtonGroup, Button } from "reactstrap";
@@ -69,7 +69,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
     }
   };
 
-  const loadShows = async () => {
+  const loadShows = useCallback(async () => {
     if (!selectedBand) {
       setShows([]);
       setLoading(false);
@@ -85,7 +85,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
       setShows([]);
     }
     setLoading(false);
-  };
+  }, [selectedBand]);
 
   useEffect(() => {
     if (user && selectedBand) {
@@ -94,7 +94,7 @@ const ShowsView: FC<Props> = ({ user, selectedBand }) => {
       setShows([]);
       setLoading(false);
     }
-  }, [user, selectedBand]);
+  }, [user, selectedBand, loadShows]);
 
   const handleEditShow = (show: Show) => {
     setEditingShow(show);

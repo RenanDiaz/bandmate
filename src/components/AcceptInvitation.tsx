@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
@@ -28,31 +28,7 @@ export const AcceptInvitation: FC = () => {
   // through several renders.
   const attemptedRef = useRef(false);
 
-  useEffect(() => {
-    // Wait until we know whether the user is authenticated.
-    if (isCheckingAuth) return;
-
-    if (!token) {
-      setStatus("error");
-      setError(t("invitations.invalidLink"));
-      return;
-    }
-
-    if (!user) {
-      // Stash the token so we can resume once the user logs in (OAuth/email
-      // logins redirect back to the origin and lose this route).
-      sessionStorage.setItem(PENDING_TOKEN_KEY, token);
-      setStatus("needsAuth");
-      return;
-    }
-
-    if (attemptedRef.current) return;
-    attemptedRef.current = true;
-    sessionStorage.removeItem(PENDING_TOKEN_KEY);
-    void acceptFlow(token);
-  }, [isCheckingAuth, user, token, t]);
-
-  const acceptFlow = async (tok: string) => {
+  const acceptFlow = useCallback(async (tok: string) => {
     setStatus("working");
     try {
       const invite = await getInvitationByToken(tok);
@@ -76,7 +52,31 @@ export const AcceptInvitation: FC = () => {
       setStatus("error");
       setError(err instanceof Error ? err.message : t("invitations.loadError"));
     }
-  };
+  }, [t, navigate, refreshBands]);
+
+  useEffect(() => {
+    // Wait until we know whether the user is authenticated.
+    if (isCheckingAuth) return;
+
+    if (!token) {
+      setStatus("error");
+      setError(t("invitations.invalidLink"));
+      return;
+    }
+
+    if (!user) {
+      // Stash the token so we can resume once the user logs in (OAuth/email
+      // logins redirect back to the origin and lose this route).
+      sessionStorage.setItem(PENDING_TOKEN_KEY, token);
+      setStatus("needsAuth");
+      return;
+    }
+
+    if (attemptedRef.current) return;
+    attemptedRef.current = true;
+    sessionStorage.removeItem(PENDING_TOKEN_KEY);
+    void acceptFlow(token);
+  }, [isCheckingAuth, user, token, t, acceptFlow]);
 
   if (isCheckingAuth || status === "working") {
     return (

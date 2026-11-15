@@ -1,5 +1,6 @@
 import type { FC } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useLatest } from "../hooks/useLatest";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner } from "reactstrap";
@@ -33,11 +34,11 @@ export const BandSettings: FC<Props> = ({ user }) => {
   // remounting the page (which would tear down the open invite modal).
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    loadBand();
-  }, [bandId]);
+  // Messages read the latest `t`: a language switch must not reload the page.
+  const tRef = useLatest(t);
+  const userId = user?.id;
 
-  const loadBand = async (showSpinner = true) => {
+  const loadBand = useCallback(async (showSpinner = true) => {
     if (!bandId) {
       navigate("/");
       return;
@@ -45,12 +46,12 @@ export const BandSettings: FC<Props> = ({ user }) => {
 
     if (showSpinner) setLoading(true);
     try {
-      if (!user) throw new Error("User not authenticated");
-      const bands = await getMyBands(user.id);
+      if (!userId) throw new Error("User not authenticated");
+      const bands = await getMyBands(userId);
       const foundBand = bands.find((b) => b.id === parseInt(bandId));
 
       if (!foundBand) {
-        toast.error(t('bands.notFoundOrNoAccess'));
+        toast.error(tRef.current('bands.notFoundOrNoAccess'));
         navigate("/");
         return;
       }
@@ -58,11 +59,15 @@ export const BandSettings: FC<Props> = ({ user }) => {
       setBand(foundBand);
     } catch (error) {
       console.error("Failed to load band:", error);
-      toast.error(t('bands.loadError'));
+      toast.error(tRef.current('bands.loadError'));
       navigate("/");
     }
     if (showSpinner) setLoading(false);
-  };
+  }, [bandId, userId, navigate, toast, tRef]);
+
+  useEffect(() => {
+    loadBand();
+  }, [loadBand]);
 
   const handleMemberChange = () => {
     // Refresh quietly: keep the full-page spinner (and the invite modal) out

@@ -1,29 +1,7 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ToastContainer } from "../components/ToastContainer";
-
-export type ToastType = "success" | "error" | "warning" | "info";
-
-export interface Toast {
-  id: number;
-  type: ToastType;
-  message: string;
-}
-
-export interface ToastContextType {
-  toasts: Toast[];
-  /** Show a toast of an explicit type. */
-  showToast: (type: ToastType, message: string) => void;
-  /** Convenience helpers. */
-  success: (message: string) => void;
-  error: (message: string) => void;
-  warning: (message: string) => void;
-  info: (message: string) => void;
-  /** Manually dismiss a toast by id. */
-  dismissToast: (id: number) => void;
-}
-
-export const ToastContext = createContext<ToastContextType | undefined>(undefined);
+import { ToastContext, type Toast, type ToastContextType, type ToastType } from "./toast";
 
 // Errors linger a little longer so they are easy to read; others auto-dismiss faster.
 const DURATIONS: Record<ToastType, number> = {
@@ -55,8 +33,15 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const warning = useCallback((message: string) => showToast("warning", message), [showToast]);
   const info = useCallback((message: string) => showToast("info", message), [showToast]);
 
+  // The rendered list stays out of the value, so the value never changes and
+  // `useToast()` can go in effect deps without re-running them on each toast.
+  const value = useMemo<ToastContextType>(
+    () => ({ showToast, success, error, warning, info, dismissToast }),
+    [showToast, success, error, warning, info, dismissToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, success, error, warning, info, dismissToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ToastContext.Provider>
