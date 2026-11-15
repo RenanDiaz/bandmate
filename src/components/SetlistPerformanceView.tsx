@@ -1,5 +1,6 @@
 import { Component, type FC, type ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLatest } from "../hooks/useLatest";
 import { useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -514,57 +515,58 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
     if (perf.status !== "error" || perf.unavailableOffline || songNotFound) return;
     toast.error(t(isSong ? "songs.loadError" : "setlists.detail.loadError"));
     navigate(exitPath);
-  }, [perf.status, perf.unavailableOffline, songNotFound, isSong, exitPath, navigate]);
+  }, [perf.status, perf.unavailableOffline, songNotFound, isSong, exitPath, navigate, toast, t]);
+
+  // Keyboard navigation: the listener stays registered and always runs the latest handler.
+  const keyDownRef = useLatest((e: KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      handleNextNav();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      handlePrevNav();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      if (isFullscreen) {
+        exitFullscreen();
+      } else {
+        exitPerformance();
+      }
+    } else if (e.key === "f" || e.key === "F") {
+      e.preventDefault();
+      toggleFullscreen();
+    } else if ((e.key === "l" || e.key === "L") && !isSong) {
+      // A song target has no list.
+      e.preventDefault();
+      setShowSongList((prev) => !prev);
+    } else if (e.key === "t" || e.key === "T") {
+      e.preventDefault();
+      toggleContentView();
+    } else if (e.key === "d" || e.key === "D") {
+      e.preventDefault();
+      toggleInvertPdfColors();
+    } else if (e.key === "+" || e.key === "=") {
+      e.preventDefault();
+      increaseFontSize();
+    } else if (e.key === "-" || e.key === "_") {
+      e.preventDefault();
+      decreaseFontSize();
+    } else if (e.key === "0") {
+      e.preventDefault();
+      resetFontSize();
+    } else if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // A no-op when reordering isn't allowed (offline, guest, viewer, B5).
+      if (!isReorderMode && !canStartReorder) return;
+      e.preventDefault();
+      toggleReorderMode();
+    }
+  });
 
   useEffect(() => {
-    // Keyboard navigation
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        e.preventDefault();
-        handleNextNav();
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        e.preventDefault();
-        handlePrevNav();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        if (isFullscreen) {
-          exitFullscreen();
-        } else {
-          exitPerformance();
-        }
-      } else if (e.key === "f" || e.key === "F") {
-        e.preventDefault();
-        toggleFullscreen();
-      } else if ((e.key === "l" || e.key === "L") && !isSong) {
-        // A song target has no list.
-        e.preventDefault();
-        setShowSongList((prev) => !prev);
-      } else if (e.key === "t" || e.key === "T") {
-        e.preventDefault();
-        toggleContentView();
-      } else if (e.key === "d" || e.key === "D") {
-        e.preventDefault();
-        toggleInvertPdfColors();
-      } else if (e.key === "+" || e.key === "=") {
-        e.preventDefault();
-        increaseFontSize();
-      } else if (e.key === "-" || e.key === "_") {
-        e.preventDefault();
-        decreaseFontSize();
-      } else if (e.key === "0") {
-        e.preventDefault();
-        resetFontSize();
-      } else if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // A no-op when reordering isn't allowed (offline, guest, viewer, B5).
-        if (!isReorderMode && !canStartReorder) return;
-        e.preventDefault();
-        toggleReorderMode();
-      }
-    };
-
+    const handleKeyDown = (e: KeyboardEvent) => keyDownRef.current(e);
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, setlistItems.length, isFullscreen, exitPerformance, isSong, isReorderMode, canStartReorder]);
+  }, [keyDownRef]);
 
   // Close font size dropdown on click outside
   useEffect(() => {

@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
-import type { Toast, ToastType } from "../context/ToastContext";
+import type { Toast, ToastType } from "../context/toast";
 
 interface Props {
   toasts: Toast[];

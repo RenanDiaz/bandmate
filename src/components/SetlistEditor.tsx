@@ -1,5 +1,6 @@
 import type { FC, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useLatest } from "../hooks/useLatest";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Modal, ModalHeader, ModalBody, ModalFooter, FormGroup, Label, Input } from "reactstrap";
 import styled from "styled-components";
@@ -275,6 +276,8 @@ const SetlistEditor: FC = () => {
   const { t } = useTranslation();
   const { selectedBand, user } = useBandContext();
   const toast = useToast();
+  // Read inside the load: a language switch must not reload (and drop unsaved edits).
+  const tRef = useLatest(t);
   // Per-device shortlist (spec §5). A candidate leaves the list once the
   // setlist is saved (or loaded) with it; until then removing it from the
   // setlist brings its star back.
@@ -421,14 +424,14 @@ const SetlistEditor: FC = () => {
         setBandShows(showsResult);
       } catch (error) {
         console.error("Failed to load setlist:", error);
-        toast.error(t('setlists.editor.loadError'));
+        toast.error(tRef.current('setlists.editor.loadError'));
         navigate("/setlists");
       }
       setLoading(false);
     };
 
     loadData();
-  }, [setlistId, navigate]);
+  }, [setlistId, navigate, toast, tRef]);
 
   // Songs already in the loaded setlist are no longer candidates.
   const removeCandidates = candidates.remove;

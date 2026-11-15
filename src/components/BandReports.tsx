@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -44,11 +44,7 @@ export const BandReports: FC<Props> = ({ band }) => {
   const [topVenues, setTopVenues] = useState<VenueStats[]>([]);
   const [countryDistribution, setCountryDistribution] = useState<CountryDistribution[]>([]);
 
-  useEffect(() => {
-    loadReports();
-  }, [band.id]);
-
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     setLoading(true);
     try {
       const [overview, mostUsed, unused, keys, tempos, monthly, venues, countries] = await Promise.all([
@@ -74,7 +70,11 @@ export const BandReports: FC<Props> = ({ band }) => {
       console.error("Failed to load reports:", error);
     }
     setLoading(false);
-  };
+  }, [band.id]);
+
+  useEffect(() => {
+    loadReports();
+  }, [band.id, loadReports]);
 
   const formatMonth = (monthStr: string) => {
     const [year, month] = monthStr.split("-");

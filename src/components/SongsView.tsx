@@ -3,7 +3,7 @@ import type { AppUser } from "../context/offlineAuthController";
 import type { Song } from "../services/songsService";
 import type { Band } from "../services/bandsService";
 import type { RequestType } from "../services/requestsService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner, Container } from "reactstrap";
@@ -67,7 +67,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
   // Process songs with filters and search
   const filteredSongs = processSongs(songs, searchQuery, filters, sortBy);
 
-  const loadSongs = async () => {
+  const loadSongs = useCallback(async () => {
     if (!selectedBand) {
       setSongs([]);
       setLoading(false);
@@ -83,7 +83,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       setSongs([]);
     }
     setLoading(false);
-  };
+  }, [selectedBand]);
 
   useEffect(() => {
     if (user && selectedBand) {
@@ -92,7 +92,7 @@ const SongsView: FC<Props> = ({ user, selectedBand }) => {
       setSongs([]);
       setLoading(false);
     }
-  }, [user, selectedBand]);
+  }, [user, selectedBand, loadSongs]);
 
   const handleEditSong = (song: Song) => {
     setEditingSong(song);

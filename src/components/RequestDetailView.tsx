@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Container, Spinner, Button } from "reactstrap";
@@ -64,7 +64,7 @@ const RequestDetailView: FC = () => {
     }
   };
 
-  const loadRequest = async () => {
+  const loadRequest = useCallback(async () => {
     if (!requestId) return;
 
     setLoading(true);
@@ -87,13 +87,13 @@ const RequestDetailView: FC = () => {
       setRequest(null);
     }
     setLoading(false);
-  };
+  }, [requestId, user?.id]);
 
   useEffect(() => {
     if (user && requestId) {
       loadRequest();
     }
-  }, [user, requestId]);
+  }, [user, requestId, loadRequest]);
 
   const handleApprove = async () => {
     if (!request) return;

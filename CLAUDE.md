@@ -52,8 +52,8 @@ app would not start offline). If it fires, look at `globPatterns`,
 ```
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
-├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
+├── context/           # React Context: BandContext (global state), ToastContext (notifications; context + types in `toast.ts`, value stable so `useToast()` is safe in effect deps), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery, useLatest)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (analytics, supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, isoCodes, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
@@ -854,7 +854,11 @@ instead of writing new ones:
   `busy` state for async confirms.
 - **Transient success / error / warning messages**: use the toast system —
   `const toast = useToast()` then `toast.success(msg)`, `toast.error(msg)`, etc.
-  (`src/context/useToast.ts`).
+  (`src/context/useToast.ts`). `toast` never changes identity: list it in
+  effect deps. `t` does change with the language: a load that must not
+  re-run on a language switch reads it through `useLatest(t)`
+  (`src/hooks/useLatest.ts`), as do window keyboard listeners for their
+  handler.
 - **Persistent, contextual messages inside a form or modal** (e.g. a validation
   error that must stay visible): render them inline, like the `FeedbackBanner`
   in `InviteMemberModal.tsx`.

@@ -100,7 +100,7 @@ export async function getBandMembers(bandId: number): Promise<BandMember[]> {
     }
   }
 
-  return members.map((member: any) => ({
+  return members.map((member) => ({
     ...member,
     email: displayNames[member.user_id] || "Band member",
   }));

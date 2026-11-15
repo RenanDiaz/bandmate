@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLatest } from "../hooks/useLatest";
 import styled from "styled-components";
 import { theme } from "../theme";
 import type { LineTiming } from "../services/songsService";
@@ -56,10 +57,10 @@ export const LineSyncModal = ({
   const lines = content.split("\n");
 
   // Get timing for a line
-  const getLineTiming = (lineIndex: number): number => {
-    const timing = lineTimings.find((lt) => lt.lineIndex === lineIndex);
-    return timing?.startTime ?? 0;
-  };
+  const getLineTiming = useCallback(
+    (lineIndex: number): number => lineTimings.find((lt) => lt.lineIndex === lineIndex)?.startTime ?? 0,
+    [lineTimings]
+  );
 
   // Cleanup on unmount or close
   useEffect(() => {
@@ -96,42 +97,42 @@ export const LineSyncModal = ({
     };
   }, [trackUrl]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: the listener always runs the latest handler (current play state and timings).
+  const keyDownRef = useLatest((e: KeyboardEvent) => {
+    // Space to play/pause
+    if (e.code === "Space" && e.target === document.body) {
+      e.preventDefault();
+      handlePlayPause();
+    }
+    // M to mark current line
+    if (e.code === "KeyM" && selectedLineIndex !== null) {
+      e.preventDefault();
+      handleMarkTime(selectedLineIndex);
+    }
+    // Arrow keys to navigate lines
+    if (e.code === "ArrowDown" && selectedLineIndex !== null && selectedLineIndex < lines.length - 1) {
+      e.preventDefault();
+      setSelectedLineIndex(selectedLineIndex + 1);
+      scrollToLine(selectedLineIndex + 1);
+    }
+    if (e.code === "ArrowUp" && selectedLineIndex !== null && selectedLineIndex > 0) {
+      e.preventDefault();
+      setSelectedLineIndex(selectedLineIndex - 1);
+      scrollToLine(selectedLineIndex - 1);
+    }
+    // Enter to mark and advance
+    if (e.code === "Enter" && selectedLineIndex !== null) {
+      e.preventDefault();
+      handleMarkTime(selectedLineIndex);
+    }
+  });
+
   useEffect(() => {
     if (!isOpen || !trackUrl) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Space to play/pause
-      if (e.code === "Space" && e.target === document.body) {
-        e.preventDefault();
-        handlePlayPause();
-      }
-      // M to mark current line
-      if (e.code === "KeyM" && selectedLineIndex !== null) {
-        e.preventDefault();
-        handleMarkTime(selectedLineIndex);
-      }
-      // Arrow keys to navigate lines
-      if (e.code === "ArrowDown" && selectedLineIndex !== null && selectedLineIndex < lines.length - 1) {
-        e.preventDefault();
-        setSelectedLineIndex(selectedLineIndex + 1);
-        scrollToLine(selectedLineIndex + 1);
-      }
-      if (e.code === "ArrowUp" && selectedLineIndex !== null && selectedLineIndex > 0) {
-        e.preventDefault();
-        setSelectedLineIndex(selectedLineIndex - 1);
-        scrollToLine(selectedLineIndex - 1);
-      }
-      // Enter to mark and advance
-      if (e.code === "Enter" && selectedLineIndex !== null) {
-        e.preventDefault();
-        handleMarkTime(selectedLineIndex);
-      }
-    };
-
+    const handleKeyDown = (e: KeyboardEvent) => keyDownRef.current(e);
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, trackUrl, selectedLineIndex, lines.length]);
+  }, [isOpen, trackUrl, keyDownRef]);
 
   const scrollToLine = (index: number) => {
     const container = linesContainerRef.current;
@@ -220,12 +221,12 @@ export const LineSyncModal = ({
       setCurrentTime(timing);
     }
     setSelectedLineIndex(lineIndex);
-  }, [lineTimings]);
+  }, [getLineTiming]);
 
   const handleEditTime = useCallback((lineIndex: number) => {
     setEditingIndex(lineIndex);
     setEditingValue(formatTime(getLineTiming(lineIndex)));
-  }, [lineTimings]);
+  }, [getLineTiming]);
 
   const handleSaveEditedTime = useCallback(() => {
     if (editingIndex === null) return;
