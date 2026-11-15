@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { IsoCodeOptions } from "./IsoCodeOptions";
+import { normalizeToCode } from "../lib/isoCodes";
 import { createSong, type CreateSongInput } from "../services/songsService";
 import { metadataService } from "../services/metadataService";
 import styled from "styled-components";
@@ -61,7 +63,8 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           albumArt: metadata.albumArt || prev.albumArt,
           releaseDate: metadata.releaseDate || prev.releaseDate,
           spotifyUrl: metadata.spotifyUrl || prev.spotifyUrl,
-          country: metadata.country || prev.country,
+          // An unknown or non-standard code (MusicBrainz XW, SU…) leaves it as it was.
+          country: normalizeToCode("region", metadata.country) ?? prev.country,
           lyrics: metadata.lyrics || prev.lyrics,
           key: metadata.key || prev.key,
           tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
@@ -472,29 +475,31 @@ export const NewSongForm = ({ bandId, onSongCreated }: Props) => {
           <FormGroup>
             <Label htmlFor="songLanguage">
               <i className="bi bi-translate"></i>
-              Language
+              {t("songs.language")}
             </Label>
-            <Input
+            <Select
               id="songLanguage"
-              placeholder="e.g., English, Spanish, French"
               value={formData.language}
               onChange={(e) => setFormData({ ...formData, language: e.target.value })}
               disabled={isSubmitting}
-            />
+            >
+              <IsoCodeOptions kind="language" value={formData.language} />
+            </Select>
           </FormGroup>
 
           <FormGroup>
             <Label htmlFor="songCountry">
               <i className="bi bi-globe-americas"></i>
-              Country
+              {t("songs.country")}
             </Label>
-            <Input
+            <Select
               id="songCountry"
-              placeholder="e.g., USA, UK, Mexico"
               value={formData.country}
               onChange={(e) => setFormData({ ...formData, country: e.target.value })}
               disabled={isSubmitting}
-            />
+            >
+              <IsoCodeOptions kind="region" value={formData.country} />
+            </Select>
           </FormGroup>
         </FormRow>
 

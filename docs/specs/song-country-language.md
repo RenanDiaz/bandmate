@@ -1,6 +1,6 @@
 # Spec: Song country and language as ISO codes
 
-> **Status:** draft · **Created:** 2026-09-26 · **Owner:** Renán Díaz
+> **Status:** implemented (PR 1.1), manual validation pending · **Created:** 2026-09-26 · **Owner:** Renán Díaz
 > **Origin:** two TODOs — "Al obtener metadatos, si trae el país de origen,
 > debería llenarlo con el nombre completo, y no solo la abreviatura" and
 > "Quizás los campos de país de origen e idioma deberían ser dropdown y así
@@ -172,7 +172,7 @@ country` and returns `{ country: <code or raw>, count }` as today.
 
 ### 3.5 Data migration (one-off, idempotent)
 
-`supabase/migrations/20260927130000_normalize_song_country_language.sql`:
+`supabase/migrations/20261116120000_normalize_song_country_language.sql`:
 `UPDATE songs SET country = <code> WHERE lower(unaccent-free(country)) IN
 (...)` for a fixed list of the common spellings (the alias table of §3.1
 frozen into SQL, both languages), and the same for `language`. Rows that
@@ -286,3 +286,26 @@ AC11 on the project the data migration ran on.
 
 Definition of done: the `CLAUDE.md` checklist; the PR names the project the
 data migration ran on and the count of rows it changed.
+
+## Changelog
+
+- **PR 1.1 (Phase 1).** Implemented §3. Differences from the draft:
+  1. **`IsoCodeOptions` instead of `IsoCodeSelect`:** the component renders
+     only the `<option>`s, inside each form's own styled `<select>` (the
+     two forms style it differently). `toSelectValue(kind, raw)` gives the
+     select's value (a known code in canonical case, legacy text as is);
+     `options()` is named `isoOptions()`.
+  2. **Migration name and list:** `20261116120000_…` (after the latest
+     migration). Its spelling lists are generated from `isoCodes.ts`
+     (every code in any case, the English and Spanish `Intl` names folded,
+     the alias tables), not hand-written, so the SQL and the app agree.
+     Dry run on production (read-only) before merging: every value maps to
+     a code except "Shakira" and "Scotland", which stay verbatim; the
+     language typos "Engish" / "Spanich" are aliases.
+  3. **Spanish language names are capitalised** ("Español", not
+     "español"), since they open a list item.
+  4. **The setlist builder's Language filter** (added after this draft)
+     labels its options with `displayName`.
+  5. England / Scotland / Wales are **not** aliased to `GB`: that would
+     lose information, and "Keep" shows them as they are.
+

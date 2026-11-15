@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 import type { Song } from "./songsService";
 import type { SetlistItem } from "./setlistsService";
 import { isSongItem } from "./setlistsService";
+import { normalizeToCode } from "../lib/isoCodes";
 
 // ============================================
 // Report Interfaces
@@ -323,12 +324,15 @@ export async function getCountryDistribution(bandId: number): Promise<CountryDis
 
   if (error) throw error;
 
+  // Grouped by ISO code, so "US", "USA" and "Estados Unidos" are one row;
+  // values that match no code stay rows of their own (song-country-language §3.4).
   const countryMap = new Map<string, number>();
 
   (data || []).forEach((song: { country: string | null }) => {
-    if (song.country) {
-      countryMap.set(song.country, (countryMap.get(song.country) || 0) + 1);
-    }
+    const raw = song.country?.trim();
+    if (!raw) return;
+    const key = normalizeToCode("region", raw) ?? raw;
+    countryMap.set(key, (countryMap.get(key) || 0) + 1);
   });
 
   const result: CountryDistribution[] = [];

@@ -8,6 +8,8 @@ import { TimingSyncModal } from "./TimingSyncModal";
 import { LineSyncModal } from "./LineSyncModal";
 import SheetMusicUpload from "./SheetMusicUpload";
 import { useTranslation } from "react-i18next";
+import { IsoCodeOptions } from "./IsoCodeOptions";
+import { normalizeToCode, toSelectValue } from "../lib/isoCodes";
 import { useToast } from "../context/useToast";
 import { isPermissionDenied } from "../services/permissionError";
 
@@ -62,8 +64,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
         energy: song.energy?.toString() || "",
         danceability: song.danceability?.toString() || "",
         tags: song.tags?.join(", ") || "",
-        language: song.language || "",
-        country: song.country || "",
+        language: toSelectValue("language", song.language),
+        country: toSelectValue("region", song.country),
         hasBackingTracks: song.has_backing_tracks || false,
       });
       // Load sections - support both new separate format and legacy format
@@ -110,7 +112,8 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
           ...prev,
           artist: metadata.artist || prev.artist,
           releaseDate: metadata.releaseDate || prev.releaseDate,
-          country: metadata.country || prev.country,
+          // An unknown or non-standard code (MusicBrainz XW, SU…) leaves it as it was.
+          country: normalizeToCode("region", metadata.country) ?? prev.country,
           lyrics: metadata.lyrics || prev.lyrics,
           key: metadata.key || prev.key,
           tempo: metadata.tempo ? metadata.tempo.toString() : prev.tempo,
@@ -453,29 +456,31 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
             <FormGroup>
               <Label htmlFor="editSongLanguage">
                 <i className="bi bi-translate"></i>
-                Language
+                {t("songs.language")}
               </Label>
-              <Input
+              <Select
                 id="editSongLanguage"
-                placeholder="e.g., English, Spanish, French"
                 value={formData.language}
                 onChange={(e) => setFormData({ ...formData, language: e.target.value })}
                 disabled={isSaving}
-              />
+              >
+                <IsoCodeOptions kind="language" value={formData.language} />
+              </Select>
             </FormGroup>
 
             <FormGroup>
               <Label htmlFor="editSongCountry">
                 <i className="bi bi-globe-americas"></i>
-                Country
+                {t("songs.country")}
               </Label>
-              <Input
+              <Select
                 id="editSongCountry"
-                placeholder="e.g., USA, UK, Mexico"
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 disabled={isSaving}
-              />
+              >
+                <IsoCodeOptions kind="region" value={formData.country} />
+              </Select>
             </FormGroup>
           </FormRow>
 

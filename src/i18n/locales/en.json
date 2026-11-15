@@ -38,7 +38,8 @@
     "creating": "Creating...",
     "saveChanges": "Save Changes",
     "sending": "Sending...",
-    "retry": "Retry"
+    "retry": "Retry",
+    "none": "(none)"
   },
   "nav": {
     "home": "Home",
@@ -327,7 +328,8 @@
       "failed": "Failed to import",
       "importing": "Importing…",
       "submit_one": "Import {{count}} song",
-      "submit_other": "Import {{count}} songs"
+      "submit_other": "Import {{count}} songs",
+      "colCodes": "ISO code like MX or es, or a name in English or Spanish"
     },
     "exportSongs": "Export Songs",
     "printSongbook": "Print Songbook",
@@ -362,8 +364,6 @@
       "chordsProgression": "Enter chord progression (e.g., C  G  Am  F)",
       "genre": "e.g., Rock, Pop, Jazz",
       "tags": "e.g., Rock, Ballad, Encore",
-      "language": "e.g., English, Spanish, French",
-      "country": "e.g., USA, UK, Mexico",
       "lyrics": "Enter song lyrics..."
     },
     "searchPlaceholder": "Search songs by title, artist, or tags...",
@@ -417,7 +417,8 @@
     "notFound": "Song not found",
     "loadError": "Could not load the song",
     "showDetails": "Details",
-    "hideDetails": "Hide details"
+    "hideDetails": "Hide details",
+    "keepValue": "Keep \"{{value}}\""
   },
   "setlists": {
     "title": "Setlists",

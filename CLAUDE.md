@@ -55,7 +55,7 @@ src/
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
 ├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery)
 ├── i18n/              # i18next setup + locales/{en,es}.json
-├── lib/               # Utilities (analytics, supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
+├── lib/               # Utilities (analytics, supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, isoCodes, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
@@ -870,7 +870,7 @@ All tables use Supabase RLS policies unless noted. Key tables:
 | `bands` | Band info, `owner_id` references creator, `avatar_url` |
 | `band_members` | Join table with `role` enum (owner/admin/member/guest) - **RLS disabled**, enforced at app level |
 | `band_invitations` | Token-based invites with expiration |
-| `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity; `updated_at` set by trigger (offline update check) |
+| `songs` | Songs with `band_id` FK, lyrics/chords stored as text, metadata, timing data, transposition, popularity; `updated_at` set by trigger (offline update check). `country` = ISO 3166-1 alpha-2 (`MX`), `language` = ISO 639-1 (`es`), both free text with no CHECK: legacy values stay and show verbatim; names come from `src/lib/isoCodes.ts` (`displayName`, `normalizeToCode`, `IsoCodeOptions` in the forms), never stored |
 | `song_sheet_music` | PDF sheet music attached to songs (files in Storage); `position` is the band's default order |
 | `user_sheet_music_preferences` | Which PDF each user opens first per song, PK `(user_id, song_id)`; RLS restricts rows to `auth.uid()` |
 | `setlists` | Setlists with JSONB `songs` array of items: songs `{type:'song', song_id, position, notes?}` and special items `{type:'break'|'section'|'note', id, label, position, duration?}`; `id` is a client-generated stable key assigned on read (`normalizeSetlistItem`) and used for React keys / drag-and-drop. Draft flag. `target_minutes` (nullable, > 0): shared target length (songs + breaks), set in the editor |
@@ -1081,7 +1081,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (shipped, Phases 1–3; Phase 3 device validation pending): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (shipped, Phase 2 (PRs 2.0–2.6) and Phase 3 (PRs 3.0–3.5); Phase 3 device checklist pending): offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
-- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (draft): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
+- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (implemented, manual validation pending): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, AC11 and AC13 validated; AC9, AC10, AC12, AC14 pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)

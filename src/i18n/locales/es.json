@@ -38,7 +38,8 @@
     "creating": "Creando...",
     "saveChanges": "Guardar Cambios",
     "sending": "Enviando...",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "none": "(ninguno)"
   },
   "nav": {
     "home": "Inicio",
@@ -325,7 +326,8 @@
       "failed": "No se pudo importar",
       "importing": "Importando…",
       "submit_one": "Importar {{count}} canción",
-      "submit_other": "Importar {{count}} canciones"
+      "submit_other": "Importar {{count}} canciones",
+      "colCodes": "código ISO como MX o es, o un nombre en inglés o español"
     },
     "exportSongs": "Exportar Canciones",
     "printSongbook": "Imprimir Cancionero",
@@ -360,8 +362,6 @@
       "chordsProgression": "Ingresa la progresión de acordes (ej., C  G  Am  F)",
       "genre": "ej., Rock, Pop, Jazz",
       "tags": "ej., Rock, Balada, Encore",
-      "language": "ej., Inglés, Español, Francés",
-      "country": "ej., USA, UK, México",
       "lyrics": "Ingresa la letra de la canción..."
     },
     "searchPlaceholder": "Buscar canciones por título, artista o etiquetas...",
@@ -417,7 +417,8 @@
     "notFound": "Canción no encontrada",
     "loadError": "No se pudo cargar la canción",
     "showDetails": "Detalles",
-    "hideDetails": "Ocultar detalles"
+    "hideDetails": "Ocultar detalles",
+    "keepValue": "Mantener \"{{value}}\""
   },
   "setlists": {
     "title": "Setlists",
