@@ -96,7 +96,10 @@ export const SyncControls: FC<SyncControlsProps> = ({
   if (role && isConnected) {
     return (
       <ActiveSessionContainer>
-        <SessionBadge $role={role}>
+        <SessionBadge
+          $role={role}
+          title={role === "host" ? t("performanceSync.hosting") : t("performanceSync.following")}
+        >
           <StatusDot $connected={isConnected} />
           <i className={role === "host" ? "bi bi-broadcast" : "bi bi-eye"} />
           <span>
@@ -106,8 +109,14 @@ export const SyncControls: FC<SyncControlsProps> = ({
           </span>
         </SessionBadge>
 
-        <LeaveButton onClick={onLeaveSession}>
-          <i className="bi bi-x-lg" />
+        <LeaveButton
+          type="button"
+          onClick={onLeaveSession}
+          title={role === "host" ? t("performanceSync.endSession") : t("performanceSync.leaveSession")}
+          aria-label={role === "host" ? t("performanceSync.endSession") : t("performanceSync.leaveSession")}
+        >
+          {/* Not an ×: next to the exit button it read as "close". */}
+          <i className={role === "host" ? "bi bi-stop-fill" : "bi bi-box-arrow-right"} />
           <span>
             {role === "host"
               ? t("performanceSync.endSession")
@@ -548,7 +557,11 @@ const ErrorMessage = styled.div`
 const ActiveSessionContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${theme.space[3]};
+  gap: ${theme.space[2]};
+
+  @media (min-width: ${theme.breakpoints.lg}) {
+    gap: ${theme.space[3]};
+  }
 `;
 
 const SessionBadge = styled.div<{ $role: SyncRole }>`
@@ -573,12 +586,14 @@ const SessionBadge = styled.div<{ $role: SyncRole }>`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
 
-  /* Hide text on mobile when session is active - less space available */
+  /* Icon only below xl (the title names it): with the session's two
+     controls the text squeezed the setlist name on an iPad, in portrait
+     and in landscape. */
   > span {
     display: none;
   }
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.xl}) {
     > span {
       display: inline;
     }
@@ -617,12 +632,14 @@ const LeaveButton = styled.button`
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;
 
-  /* Hide text on mobile when session is active - less space available */
+  /* Icon only below xl (the title names it): with the session's two
+     controls the text squeezed the setlist name on an iPad, in portrait
+     and in landscape. */
   > span {
     display: none;
   }
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.xl}) {
     > span {
       display: inline;
     }
