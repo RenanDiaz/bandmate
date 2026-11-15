@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import { DEFAULT_FILTERS } from "../utils/songFilters";
 import type { SortOption, FilterField, FilterState, FilterOptions } from "../utils/songFilters";
 
@@ -246,6 +247,7 @@ const SortSelect = styled.select`
   padding: ${theme.space[3]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;

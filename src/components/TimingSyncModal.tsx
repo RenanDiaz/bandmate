@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useLatest } from "../hooks/useLatest";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import type { SectionTiming } from "../services/songsService";
 import { useTranslation } from "react-i18next";
 
@@ -1006,6 +1007,7 @@ const TimeInput = styled.input`
   width: 70px;
   font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
   border: 1px solid ${theme.colors.brand.primary};

@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { theme } from "../../theme";
+import { noIosZoom } from "../ui/fields";
 import { formatClock } from "../../utils/setlistText";
 import type { PlanProgress } from "../../utils/setlistPlan";
 
@@ -157,12 +158,8 @@ const TargetInput = styled.input`
   border-radius: ${theme.radius.base};
   padding: ${theme.space[1]} ${theme.space[2]};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   text-align: right;
-
-  /* iOS zooms the page into any field under 16px when it gets focus. */
-  @media (pointer: coarse) {
-    font-size: ${theme.fontSizes.body};
-  }
 
   &:focus {
     outline: none;

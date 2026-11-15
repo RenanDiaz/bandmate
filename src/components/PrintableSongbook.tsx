@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import { useBandContext } from "../context/useBandContext";
 import { getBandSongs } from "../services/songsService";
 import type { Song } from "../services/songsService";
@@ -299,6 +300,7 @@ const Select = styled.select`
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   cursor: pointer;
 
   &:focus {
