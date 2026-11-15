@@ -1081,7 +1081,7 @@ Index: [docs/README.md](docs/README.md).
 - [docs/intents/offline-performance.md](docs/intents/offline-performance.md) - Intent (shipped, Phases 1–3; Phase 3 device validation pending): offline performance mode
 - [docs/specs/offline-performance-phase2-3.md](docs/specs/offline-performance-phase2-3.md) - Spec (shipped, Phase 2 (PRs 2.0–2.6) and Phase 3 (PRs 3.0–3.5); Phase 3 device checklist pending): offline performance Phases 2–3 (PR breakdown in §12)
 - [docs/specs/content-permissions.md](docs/specs/content-permissions.md) - Spec (implemented): content permissions — RLS, services and UI aligned with the role matrix
-- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (implemented, manual validation pending): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
+- [docs/specs/song-country-language.md](docs/specs/song-country-language.md) - Spec (implemented and validated): song country/language as ISO codes, localised dropdowns (1 phase, 1 PR)
 - [docs/specs/themed-setlists.md](docs/specs/themed-setlists.md) - Spec (draft): themed AI setlist generation (1 phase, 1 PR)
 - [docs/specs/song-performance.md](docs/specs/song-performance.md) - Spec (implemented, AC11 and AC13 validated; AC9, AC10, AC12, AC14 pending): perform a single song from the library (1 phase, 2 PRs)
 - [docs/specs/setlist-text-export.md](docs/specs/setlist-text-export.md) - Spec (implemented): setlist text export — pure formatter, three layouts, preview, copy/share (2 PRs)
