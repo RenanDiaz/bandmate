@@ -23,6 +23,7 @@ import type { OfflineEvent } from "../offlineSetlistService";
 import { offlineKeys } from "../../lib/offlineStore";
 import { PERFORM_POSITION_KEY_PREFIX, performPositionKey } from "../../lib/performPosition";
 import { showClockKey } from "../../lib/showClock";
+import { setlistCandidatesKey } from "../../lib/setlistCandidates";
 import { band, rawEntries, rawKeys, resetOfflineTestEnv, seedRaw, snapshotRecords, storeMeta } from "../../test/offlineFixtures";
 
 const USER_A = "user-a";
@@ -216,6 +217,7 @@ describe("confirmSignedInUser and wipeAll (§3.5 #6)", () => {
     await seedRaw({ ...storeMeta(), ...snapshotRecords({ userId: USER_A, setlistId: "a1" }) });
     localStorage.setItem(performPositionKey(USER_A, "a1"), "{}");
     localStorage.setItem(showClockKey(USER_A, "a1"), "{}");
+    localStorage.setItem(setlistCandidatesKey(USER_A, "a1"), "{}");
     localStorage.setItem("bandmate_preferred_instrument_x", "guitar");
   });
 
@@ -235,6 +237,7 @@ describe("confirmSignedInUser and wipeAll (§3.5 #6)", () => {
     expect(await getLastUserId()).toBe(USER_B);
     expect(localStorage.getItem(performPositionKey(USER_A, "a1"))).toBeNull();
     expect(localStorage.getItem(showClockKey(USER_A, "a1"))).toBeNull();
+    expect(localStorage.getItem(setlistCandidatesKey(USER_A, "a1"))).toBeNull();
     expect(events).toContainEqual({ type: "store-wiped", reason: "user-changed" });
   });
 
@@ -247,6 +250,7 @@ describe("confirmSignedInUser and wipeAll (§3.5 #6)", () => {
     expect(await getLastUserId()).toBeNull();
     const remaining = Object.keys(Object.fromEntries(Array.from({ length: localStorage.length }, (_, i) => [localStorage.key(i), 1])));
     expect(remaining.some((k) => k.startsWith(PERFORM_POSITION_KEY_PREFIX))).toBe(false);
+    expect(localStorage.getItem(setlistCandidatesKey(USER_A, "a1"))).toBeNull();
     expect(localStorage.getItem("bandmate_preferred_instrument_x")).toBe("guitar");
   });
 });

@@ -544,7 +544,21 @@
       "selectSong": "Seleccionar {{title}}",
       "noMatchFilters": "Ninguna canción coincide con estos filtros",
       "goToSongs": "Ir a Canciones",
-      "addSongsHintNarrow": "Toca “Agregar canciones” para elegir de la biblioteca"
+      "addSongsHintNarrow": "Toca “Agregar canciones” para elegir de la biblioteca",
+      "candidates": {
+        "viewLabel": "Mostrar canciones",
+        "all": "Todas",
+        "tab_one": "Candidatas ({{count}})",
+        "tab_other": "Candidatas ({{count}})",
+        "mark": "Marcar como candidata",
+        "unmark": "Quitar de candidatas",
+        "markSong": "Marcar {{title}} como candidata",
+        "unmarkSong": "Quitar {{title}} de candidatas",
+        "empty": "Aún no hay candidatas. Toca la estrella de una canción para guardarla aquí mientras decides.",
+        "waiting_one": "Aún no hay canciones — {{count}} candidata en espera",
+        "waiting_other": "Aún no hay canciones — {{count}} candidatas en espera",
+        "show": "Ver candidatas"
+      }
     },
     "rowMenu": {
       "label": "Más acciones para {{item}}",

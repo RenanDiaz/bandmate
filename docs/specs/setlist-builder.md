@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phase 2 implemented (PR 2.1), manual validation pending; Phase 3 not started · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phase 2 implemented (PR 2.1), manual validation pending; Phase 3 implemented (PR 3.1), manual validation pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a
@@ -678,6 +678,22 @@ When this happens, update [themed-setlists.md](themed-setlists.md) §1
 
 ## Changelog
 
+- **PR 3.1 (Phase 3).** Implemented §5: `src/lib/setlistCandidates.ts`
+  (stored as `{ songIds, savedAt }`; the 30 days count from the last
+  change), `useSetlistCandidates`, `clearAllCandidates` in `wipeAll()`, the
+  picker's star and `All · Candidates (n)` tabs, and the empty-state button
+  (on a phone it opens the sheet on the Candidates tab). Additions to the
+  contract:
+  1. **A candidate leaves the list when the setlist is saved (or loaded)
+     with it**, not on the add itself: until Save, removing the song from
+     the setlist brings its star back, and Cancel keeps the shortlist as it
+     was. The picker hides songs already in the setlist, so the star
+     disappears as soon as the song is added, as AC11 asks.
+  2. **The count only covers songs still in the picker** (not in the
+     setlist, not deleted from the library); stale ids stay in storage
+     until the list expires.
+  3. **Search, filters and sort apply inside the Candidates tab** too; its
+     empty state explains the star.
 - **PR 2.1 (Phase 2).** Implemented §4 and §6.3–§6.4: migration
   `20261115120000_setlists_target_minutes.sql` (column + `> 0` check;
   policies unchanged, the setlists INSERT / UPDATE policies are row-level),

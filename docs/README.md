@@ -42,7 +42,7 @@ docs/
 - [specs/setlist-actions-layout.md](specs/setlist-actions-layout.md) — setlist actions by priority: detail header (Perform · Edit · ⋯), sticky reorder toolbar, list cards without hover-reveal (implemented)
 
 ## Setlist creation (2026-09-27)
-- [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three phases, four PRs, no AI; Phase 1 validated, Phase 2 implemented, Phase 3 not started; §11 records the AI follow-up)
+- [specs/setlist-builder.md](specs/setlist-builder.md) — setlist builder: song picker with play history, filters and multi-select, touch reordering, target duration, templates, copy, candidates (three phases, four PRs, no AI; Phase 1 validated, Phases 2–3 implemented; §11 records the AI follow-up)
 - [specs/setlist-medleys.md](specs/setlist-medleys.md) — medleys: consecutive songs grouped into one named entry, rendering-only change (one phase, one PR; fragments are v2)
 
 ## Header and personal agenda (2026-09-27)

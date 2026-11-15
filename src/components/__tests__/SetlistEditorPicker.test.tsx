@@ -10,6 +10,7 @@ import SetlistEditor from "../SetlistEditor";
 import { getBandSetlists, getSetlist, updateSetlist } from "../../services/setlistsService";
 import { getBandSongs } from "../../services/songsService";
 import { getBandShows } from "../../services/showsService";
+import { readCandidates, writeCandidates } from "../../lib/setlistCandidates";
 
 // EditSongModal reaches react-pdf (sheet music); stub it like the other route tests.
 vi.mock("react-pdf", () => ({ Document: () => null, Page: () => null, pdfjs: { GlobalWorkerOptions: {} } }));
@@ -212,5 +213,55 @@ describe("SetlistEditor row menu and Delete (PR 1.2)", () => {
     const handle = document.querySelectorAll("[aria-roledescription='sortable']")[0];
     fireEvent.keyDown(handle, { key: "Delete" });
     expect(await save()).toEqual(["sec", "b"]);
+  });
+});
+
+describe("SetlistEditor candidates (Phase 3, AC11)", () => {
+  const EMPTY: Setlist = { ...SETLIST, songs: [] };
+
+  it("stars survive a remount; saving with a candidate in the setlist drops it", async () => {
+    renderEditor();
+    fireEvent.click(await screen.findByRole("button", { name: "Mark Bravo as a candidate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark Charlie as a candidate" }));
+    expect(readCandidates("user-a", "sl1")).toEqual(["b", "c"]);
+
+    // Adding it hides it (it leaves the picker); removing it again before saving brings the star back.
+    const bravo = screen.getByText("Bravo").closest("[data-picker-index]") as HTMLElement;
+    fireEvent.click(within(bravo).getByRole("button", { name: "Add to setlist" }));
+    expect(screen.getByRole("button", { name: "Candidates (1)" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Setlist/ }));
+    await waitFor(() => expect(updateSetlist).toHaveBeenCalled());
+    await waitFor(() => expect(readCandidates("user-a", "sl1")).toEqual(["c"]));
+  });
+
+  it("loading a setlist that already has a candidate drops it", async () => {
+    writeCandidates("user-a", "sl1", ["a", "c"]);
+    renderEditor();
+    await screen.findByText("Bravo");
+    await waitFor(() => expect(readCandidates("user-a", "sl1")).toEqual(["c"]));
+    expect(screen.getByRole("button", { name: "Remove Charlie from candidates" })).toBeTruthy();
+  });
+
+  it("empty setlist: says how many candidates wait and opens the Candidates tab", async () => {
+    vi.mocked(getSetlist).mockResolvedValue(EMPTY);
+    writeCandidates("user-a", "sl1", ["b", "c"]);
+    renderEditor();
+    expect(await screen.findByText("No songs yet — 2 candidates waiting")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show candidates" }));
+    expect(screen.getByRole("button", { name: "Candidates (2)" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByText("Alpha")).toBeNull();
+  });
+
+  it("narrow: Show candidates opens the sheet on the Candidates tab", async () => {
+    setPhone();
+    vi.mocked(getSetlist).mockResolvedValue(EMPTY);
+    writeCandidates("user-a", "sl1", ["c"]);
+    renderEditor();
+    fireEvent.click(await screen.findByRole("button", { name: "Show candidates" }));
+    const sheet = screen.getByRole("dialog", { name: "Song Library" });
+    expect(within(sheet).getByRole("button", { name: "Candidates (1)" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(sheet).queryByText("Bravo")).toBeNull();
+    expect(within(sheet).getByText("Charlie")).toBeTruthy();
   });
 });
