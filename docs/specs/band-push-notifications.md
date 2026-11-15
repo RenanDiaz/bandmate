@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** in progress (Phase 1 validated on devices; Phases 2 and 3 implemented, device validation pending; Phase 4 not started) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** in progress (Phases 1–3 validated on devices; Phase 4 not started) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -572,6 +572,15 @@ AC1 works; offline, the app starts and the row is hidden.
   `bandmate_flag_push` in localStorage is left alone (inert). Manual step
   outside the diff: delete the variable in Vercel (Preview and Production).
   Update the spec status to implemented.
+
+## Manual validation, Phases 2–3
+
+Done by the owner on devices, in production, before 2026-11-14 (recorded
+on that date), all ✅: Phase 2's Validate (two date edits within a minute →
+one "moved" with the final date; cancel → "cancelled"; notes only →
+nothing) and Phase 3's Validate (invite a second account → push, tap →
+dashboard with the invitation; unknown email → no outbox row). Phase 4 can
+start (§10).
 
 ## Changelog
 

@@ -50,7 +50,7 @@ docs/
 - [specs/my-upcoming-events.md](specs/my-upcoming-events.md) — my upcoming events: shows and rehearsals of every band on the dashboard, one tap opens the event in its band (one phase, four PRs; implemented; validated except AC6 as guest, AC8 and AC9)
 
 ## Notifications (2026-09-27)
-- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2, invitations in Phase 3, flag removal in Phase 4 (four phases, five PRs; in progress, Phase 1 validated, Phases 2 and 3 implemented, device validation pending, Phase 4 not started)
+- [specs/band-push-notifications.md](specs/band-push-notifications.md) — push notifications when another member adds a show, rehearsal or setlist; moved/cancelled in Phase 2, invitations in Phase 3, flag removal in Phase 4 (four phases, five PRs; in progress, Phases 1–3 validated on devices, Phase 4 not started)
 
 ## Performance mode (2026-10-09)
 - [specs/show-clock.md](specs/show-clock.md) — show clock: started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (one phase, one PR; implemented; validated except AC4–AC6 and AC10, which need a real backing track)
