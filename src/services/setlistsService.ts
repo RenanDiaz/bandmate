@@ -195,6 +195,8 @@ export interface Setlist {
   songs: SetlistItem[]; // Now supports all item types
   youtube_playlist_url?: string; // URL of exported YouTube Music playlist
   is_draft?: boolean; // Draft setlists are proposals, not shown in main list
+  /** Target length in minutes (songs + breaks); null/absent = no target. */
+  target_minutes?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -205,12 +207,14 @@ export interface CreateSetlistInput {
   description?: string;
   songs?: SetlistItem[];
   is_draft?: boolean;
+  target_minutes?: number | null;
 }
 
 export interface UpdateSetlistInput {
   name?: string;
   description?: string;
   songs?: SetlistItem[];
+  target_minutes?: number | null;
 }
 
 /**
@@ -327,6 +331,34 @@ export async function createSetlist(setlist: CreateSetlistInput): Promise<Setlis
 
   if (error) throw error;
   return normalizeSetlist(data);
+}
+
+/**
+ * A copy of `sourceId` in the same band (docs/specs/setlist-builder.md §4.3):
+ * its items (special-item ids regenerated, notes kept), description and
+ * target, as a new non-draft setlist named `name`. The linked show and the
+ * YouTube playlist are not copied. `description` overrides the source's.
+ */
+export async function duplicateSetlist(
+  sourceId: string,
+  name: string,
+  options: { description?: string } = {}
+): Promise<Setlist> {
+  const source = await getSetlist(sourceId);
+  const items = source.songs.map((item, position) =>
+    isSongItem(item)
+      ? { ...item, position }
+      : { ...item, id: generateSetlistItemId(), position }
+  );
+  return createSetlist({
+    band_id: source.band_id,
+    name,
+    description: options.description ?? source.description,
+    songs: items,
+    // Only sent when there is one, so a copy never needs the column to exist.
+    ...(source.target_minutes ? { target_minutes: source.target_minutes } : {}),
+    is_draft: false,
+  });
 }
 
 /**

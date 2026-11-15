@@ -1,45 +1,94 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { createSetlist, type CreateSetlistInput } from "../services/setlistsService";
+import {
+  createSetlist,
+  duplicateSetlist,
+  isSongItem,
+  type CreateSetlistInput,
+  type Setlist,
+} from "../services/setlistsService";
+import { isPermissionDenied } from "../services/permissionError";
+import { SETLIST_TEMPLATES, templateItems, type SetlistTemplateId } from "../utils/setlistTemplates";
 import styled from "styled-components";
 import { theme } from "../theme";
 import { useToast } from "../context/useToast";
 
 interface Props {
   bandId: number;
+  /** The band's setlists, for "Copy of…" (setlist builder spec §4.3). */
+  setlists?: Setlist[];
   onSetlistCreated: () => void;
 }
 
-export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
+type StartFrom = "blank" | "template" | "copy";
+const START_FROM: readonly StartFrom[] = ["blank", "template", "copy"];
+
+export const NewSetlistForm = ({ bandId, setlists = [], onSetlistCreated }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
   });
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Start from (spec §4.2–4.3): blank, a structure template or a copy.
+  const [startFrom, setStartFrom] = useState<StartFrom>("blank");
+  const [templateId, setTemplateId] = useState<SetlistTemplateId>("two-sets-break");
+  const [sourceId, setSourceId] = useState("");
+  const copySources = setlists.filter((setlist) => !setlist.is_draft);
+
+  const reset = () => {
+    setFormData({ name: "", description: "" });
+    setStartFrom("blank");
+    setSourceId("");
+    setIsExpanded(false);
+  };
+
+  // Choosing a source pre-fills "{name} (copy)" and its description.
+  const chooseSource = (id: string) => {
+    setSourceId(id);
+    const source = copySources.find((setlist) => setlist.id === id);
+    if (!source) return;
+    setFormData({
+      name: t("setlists.copyName", { name: source.name }),
+      description: source.description ?? "",
+    });
+  };
+
+  const canSubmit =
+    formData.name.trim() !== "" && !isSubmitting && (startFrom !== "copy" || sourceId !== "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!canSubmit) return;
 
     setIsSubmitting(true);
     try {
-      const setlistInput: CreateSetlistInput = {
-        name: formData.name.trim(),
-        band_id: bandId,
-        description: formData.description.trim() || undefined,
-        songs: [],
-      };
+      const name = formData.name.trim();
+      const description = formData.description.trim() || undefined;
+      let created: Setlist;
+      if (startFrom === "copy") {
+        created = await duplicateSetlist(sourceId, name, { description });
+      } else {
+        const setlistInput: CreateSetlistInput = {
+          name,
+          band_id: bandId,
+          description,
+          songs: startFrom === "template" ? templateItems(templateId, t) : [],
+        };
+        created = await createSetlist(setlistInput);
+      }
 
-      await createSetlist(setlistInput);
-      setFormData({ name: "", description: "" });
-      setIsExpanded(false);
+      reset();
       onSetlistCreated();
+      // Building is the next step, so open the editor (spec §4.4).
+      navigate(`/setlists/${created.id}/edit`);
     } catch (error) {
       console.error("Failed to create setlist:", error);
-      toast.error(t('setlists.createError'));
+      toast.error(isPermissionDenied(error) ? t('common.noPermission') : t('setlists.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -62,7 +111,7 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
           {t('setlists.createNewSetlist')}
         </FormTitle>
         <CloseButton
-          onClick={() => setIsExpanded(false)}
+          onClick={reset}
           type="button"
           aria-label={t('common.closeForm')}
         >
@@ -71,6 +120,60 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
       </FormHeader>
 
       <Form onSubmit={handleSubmit}>
+        <FormGroup role="radiogroup" aria-labelledby="setlistStartFromLabel">
+          <Label as="span" id="setlistStartFromLabel">
+            <i className="bi bi-layout-text-sidebar"></i>
+            {t('setlists.templates.startFrom')}
+          </Label>
+          <Segmented>
+            {START_FROM.map((option) => (
+              <SegmentButton
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={startFrom === option}
+                $active={startFrom === option}
+                onClick={() => setStartFrom(option)}
+                disabled={isSubmitting || (option === "copy" && copySources.length === 0)}
+                title={option === "copy" && copySources.length === 0 ? t('setlists.templates.noSetlistsToCopy') : undefined}
+              >
+                {t(`setlists.templates.${option === "copy" ? "copyOf" : option}`)}
+              </SegmentButton>
+            ))}
+          </Segmented>
+          {startFrom === "template" && (
+            <Select
+              aria-label={t('setlists.templates.chooseTemplate')}
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value as SetlistTemplateId)}
+              disabled={isSubmitting}
+            >
+              {SETLIST_TEMPLATES.map((id) => (
+                <option key={id} value={id}>
+                  {t(`setlists.templates.names.${id}`)}
+                </option>
+              ))}
+            </Select>
+          )}
+          {startFrom === "copy" && (
+            <Select
+              aria-label={t('setlists.templates.chooseSetlist')}
+              value={sourceId}
+              onChange={(e) => chooseSource(e.target.value)}
+              disabled={isSubmitting}
+            >
+              <option value="" disabled>
+                {t('setlists.templates.chooseSetlist')}
+              </option>
+              {copySources.map((setlist) => (
+                <option key={setlist.id} value={setlist.id}>
+                  {setlist.name} · {t('setlists.songCount', { count: setlist.songs.filter(isSongItem).length })}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormGroup>
+
         <FormGroup>
           <Label htmlFor="setlistName">
             {t('setlists.setlistName')} <Required>*</Required>
@@ -102,10 +205,10 @@ export const NewSetlistForm = ({ bandId, onSetlistCreated }: Props) => {
         </FormGroup>
 
         <FormActions>
-          <CancelButton type="button" onClick={() => setIsExpanded(false)} disabled={isSubmitting}>
+          <CancelButton type="button" onClick={reset} disabled={isSubmitting}>
             {t('common.cancel')}
           </CancelButton>
-          <SubmitButton type="submit" disabled={!formData.name.trim() || isSubmitting}>
+          <SubmitButton type="submit" disabled={!canSubmit}>
             {isSubmitting ? (
               <>
                 <Spinner />
@@ -233,6 +336,55 @@ const Label = styled.label`
 
   i {
     color: ${theme.colors.brand.primary};
+  }
+`;
+
+const Segmented = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${theme.space[1]};
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: ${theme.radius.base};
+  padding: ${theme.space[1]};
+`;
+
+const SegmentButton = styled.button<{ $active: boolean }>`
+  flex: 1 1 auto;
+  min-height: 36px;
+  border: none;
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.space[1]} ${theme.space[3]};
+  font-size: ${theme.fontSizes.bodySm};
+  font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  background: ${(p) => (p.$active ? theme.colors.brand.primary : "transparent")};
+  color: ${(p) => (p.$active ? "white" : "var(--color-text-secondary)")};
+  transition: all ${theme.transitions.fast} ease;
+
+  &:hover:not(:disabled) {
+    color: ${(p) => (p.$active ? "white" : "var(--color-text-primary)")};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const Select = styled.select`
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: ${theme.space[2]} ${theme.space[3]};
+  border-radius: ${theme.radius.base};
+  font-size: ${theme.fontSizes.body};
+  font-family: ${theme.fonts.sans};
+
+  &:focus {
+    outline: none;
+    border-color: ${theme.colors.brand.primary};
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
   }
 `;
 

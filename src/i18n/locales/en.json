@@ -578,7 +578,8 @@
       "noUpcomingShowsHint": "Create a new show to link this setlist",
       "createNewShow": "Create New Show",
       "linkSuccess": "Setlist linked to show successfully",
-      "linkError": "Failed to link setlist to show. Please try again."
+      "linkError": "Failed to link setlist to show. Please try again.",
+      "total": "Total: {{duration}}"
     },
     "export": {
       "button": "Export",
@@ -643,7 +644,39 @@
     "deleteSetlistTooltip": "Delete setlist",
     "perform": "Perform",
     "songCount_one": "{{count}} song",
-    "songCount_other": "{{count}} songs"
+    "songCount_other": "{{count}} songs",
+    "plan": {
+      "songs_one": "{{count}} song",
+      "songs_other": "{{count}} songs",
+      "music": "{{duration}} of music",
+      "withBreaks": "{{duration}} with breaks",
+      "target": "Target",
+      "minutes": "min",
+      "progressLabel": "Length against the target, in minutes",
+      "under": "{{total}} / {{target}}",
+      "over": "{{total}} / {{target}} (+{{over}})"
+    },
+    "templates": {
+      "startFrom": "Start from",
+      "blank": "Blank",
+      "template": "Template",
+      "copyOf": "Copy of…",
+      "chooseTemplate": "Choose a template",
+      "chooseSetlist": "Choose a setlist",
+      "noSetlistsToCopy": "No setlists to copy yet",
+      "names": {
+        "single-set": "Single set",
+        "two-sets-break": "Two sets + break",
+        "two-sets-encore": "Two sets + break + encore"
+      },
+      "set": "Set {{number}}",
+      "singleSetLabel": "Set",
+      "break": "Break",
+      "encore": "Encore"
+    },
+    "duplicate": "Duplicate",
+    "copyName": "{{name}} (copy)",
+    "duplicateError": "Could not duplicate the setlist"
   },
   "shows": {
     "title": "Shows",

@@ -54,6 +54,9 @@ import { SongPicker } from "./setlist-builder/SongPicker";
 import { PickerSheet } from "./setlist-builder/PickerSheet";
 import { SETLIST_DROP_ID, editorCollisionDetection, songIdFromPickerDrag } from "./setlist-builder/pickerDnd";
 import { SetlistDropZone } from "./setlist-builder/SetlistDropZone";
+import { PlanBar } from "./setlist-builder/PlanBar";
+import { planProgress, sectionSubtotals, normalizeTargetMinutes } from "../utils/setlistPlan";
+import { formatClock } from "../utils/setlistText";
 
 // Sortable song card component
 interface SortableSetlistSongCardProps {
@@ -177,6 +180,8 @@ interface SortableSpecialItemCardProps {
   index: number;
   count: number;
   onMove: (index: number, target: MoveTarget) => void;
+  /** Sections only: songs + breaks up to the next section (spec §4.1). */
+  subtotalSeconds?: number;
 }
 
 const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
@@ -187,6 +192,7 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
   index,
   count,
   onMove,
+  subtotalSeconds,
 }) => {
   const { t } = useTranslation();
   const {
@@ -232,6 +238,11 @@ const SortableSpecialItemCard: FC<SortableSpecialItemCardProps> = ({
       <SpecialItemContent>
         <SpecialItemType>{getTypeLabel()}</SpecialItemType>
         <SpecialItemLabel>{item.label}</SpecialItemLabel>
+        {isSectionItem(item) && subtotalSeconds !== undefined && subtotalSeconds > 0 && (
+          <SpecialItemDuration data-testid="section-subtotal">
+            <i className="bi bi-clock"></i> {formatClock(subtotalSeconds)}
+          </SpecialItemDuration>
+        )}
         {isBreakItem(item) && item.duration && (
           <SpecialItemDuration>
             <i className="bi bi-clock"></i> {item.duration} min
@@ -269,6 +280,8 @@ const SetlistEditor: FC = () => {
   const [setlistItems, setSetlistItems] = useState<SetlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Shared target length (spec §4.1, `setlists.target_minutes`); null = none.
+  const [targetMinutes, setTargetMinutes] = useState<number | null>(null);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   // History signals for the picker; null when either read failed (spec §3.6).
   const [bandSetlists, setBandSetlists] = useState<Setlist[] | null>(null);
@@ -376,6 +389,7 @@ const SetlistEditor: FC = () => {
 
         // Items already carry stable ids (see normalizeSetlistItem)
         setSetlistItems(setlistData.songs || []);
+        setTargetMinutes(normalizeTargetMinutes(setlistData.target_minutes));
 
         // The signals' reads never fail the editor: the picker renders without them.
         // Drafts are included so a completed show linked to one still counts.
@@ -412,7 +426,9 @@ const SetlistEditor: FC = () => {
 
   // Leaving with unsaved changes (Cancel or back) asks first; nothing to
   // lose → leave at once.
-  const hasUnsavedChanges = setlist !== null && !deepEqual(setlistItems, setlist.songs || []);
+  const targetChanged = setlist !== null && targetMinutes !== normalizeTargetMinutes(setlist.target_minutes);
+  const hasUnsavedChanges =
+    setlist !== null && (targetChanged || !deepEqual(setlistItems, setlist.songs || []));
   const leaveEditor = () => {
     if (hasUnsavedChanges) {
       setIsDiscardConfirmOpen(true);
@@ -428,6 +444,9 @@ const SetlistEditor: FC = () => {
     try {
       await updateSetlist(setlist.id, {
         songs: setlistItems,
+        // Only sent when it changed, so saving never depends on the column
+        // unless the target is actually used.
+        ...(targetChanged ? { target_minutes: targetMinutes } : {}),
       });
       navigate("/setlists");
     } catch (error) {
@@ -743,16 +762,12 @@ const SetlistEditor: FC = () => {
     [availableSongs, bandSetlists, bandShows]
   );
 
-  const calculateTotalDuration = (): number => {
-    return songItemsInSetlist.reduce((total, setlistSong) => {
-      const song = getSongById(setlistSong.song_id);
-      return total + (song?.duration || 0);
-    }, 0);
-  };
-
-  // Count items by type for stats
-  const songCount = songItemsInSetlist.length;
-  const specialItemCount = setlistItems.length - songCount;
+  const songsById = useMemo(() => new Map(availableSongs.map((song) => [song.id, song])), [availableSongs]);
+  const progress = useMemo(
+    () => planProgress(setlistItems, songsById, targetMinutes),
+    [setlistItems, songsById, targetMinutes]
+  );
+  const subtotals = useMemo(() => sectionSubtotals(setlistItems, songsById), [setlistItems, songsById]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -788,8 +803,6 @@ const SetlistEditor: FC = () => {
       </PageWrapper>
     );
   }
-
-  const totalDuration = calculateTotalDuration();
 
   return (
     <PageWrapper>
@@ -854,12 +867,10 @@ const SetlistEditor: FC = () => {
                   <i className="bi bi-music-note-list"></i>
                   {t('setlists.editor.setlistPanel')}
                 </PanelTitle>
-                <PanelStats>
-                  {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
-                  {specialItemCount > 0 && <> · {specialItemCount} {specialItemCount === 1 ? t("setlists.editor.item") : t("setlists.editor.items")}</>}
-                  {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
-                </PanelStats>
               </PanelHeader>
+              <PlanRow>
+                <PlanBar progress={progress} targetMinutes={targetMinutes} onTargetChange={setTargetMinutes} />
+              </PlanRow>
 
               {/* Add songs (narrow), add special item and AI optimize */}
               <AddItemBar>
@@ -963,6 +974,7 @@ const SetlistEditor: FC = () => {
                                 index={index}
                                 count={setlistItems.length}
                                 onMove={handleMoveItem}
+                                subtotalSeconds={isSectionItem(item) ? subtotals.get(itemKey) : undefined}
                               />
                             </Fragment>
                           );
@@ -988,9 +1000,10 @@ const SetlistEditor: FC = () => {
 
         {!capabilities.wide && (
           <StickyFooter>
-            <StickyFooterStats>
-              {songCount} {songCount === 1 ? t("setlists.items.song").toLowerCase() : t("setlists.songs").toLowerCase()}
-              {totalDuration > 0 && <> · {formatDuration(totalDuration)}</>}
+            <StickyFooterStats $over={progress.overBySeconds !== undefined}>
+              {t("setlists.plan.songs", { count: progress.songCount })}
+              {progress.totalSeconds > 0 && <> · {formatClock(progress.totalSeconds)}</>}
+              {progress.targetSeconds !== undefined && <> / {targetMinutes}:00</>}
             </StickyFooterStats>
             <SaveButton onClick={handleSave} disabled={saving}>
               {saving ? <Spinner size="sm" /> : <i className="bi bi-check-circle"></i>}
@@ -1390,11 +1403,14 @@ const PanelTitle = styled.h2`
   }
 `;
 
-const PanelStats = styled.div`
-  font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
-  font-weight: ${theme.fontWeights.medium};
-  white-space: nowrap;
+/** The plan bar, under the panel title (spec §4.1). */
+const PlanRow = styled.div`
+  padding: ${theme.space[3]} ${theme.space[5]};
+  border-bottom: 1px solid var(--color-border);
+
+  @media ${narrow} {
+    padding: ${theme.space[3]} ${theme.space[4]};
+  }
 `;
 
 
@@ -1473,11 +1489,12 @@ const StickyFooter = styled.div`
   }
 `;
 
-const StickyFooterStats = styled.div`
+const StickyFooterStats = styled.div<{ $over?: boolean }>`
   white-space: nowrap;
   font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
+  color: ${(p) => (p.$over ? theme.colors.semantic.warning : "var(--color-text-secondary)")};
   font-weight: ${theme.fontWeights.medium};
+  font-variant-numeric: tabular-nums;
 `;
 
 const AddSongsButton = styled.button`

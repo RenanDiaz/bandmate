@@ -1,5 +1,6 @@
 import type { SetlistItem, SetlistSongItem } from "../services/setlistsService";
 import type { Song } from "../services/songsService";
+import { planProgress } from "./setlistPlan";
 
 /**
  * Plain-text export of a setlist (spec: docs/specs/setlist-text-export.md).
@@ -113,18 +114,13 @@ export function formatClock(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-/** Seconds of music and seconds including breaks. */
+/** Seconds of music and seconds including breaks (same numbers as the plan bar). */
 export function setlistTextDurations(
   items: SetlistItem[],
   songsById: ReadonlyMap<string, Song>,
 ): { musicSeconds: number; totalSeconds: number } {
-  let musicSeconds = 0;
-  let breakSeconds = 0;
-  for (const item of items) {
-    if (isSong(item)) musicSeconds += songsById.get(item.song_id)?.duration || 0;
-    else if (item.type === "break") breakSeconds += (item.duration || 0) * 60;
-  }
-  return { musicSeconds, totalSeconds: musicSeconds + breakSeconds };
+  const { musicSeconds, totalSeconds } = planProgress(items, songsById);
+  return { musicSeconds, totalSeconds };
 }
 
 /** NFD, strip marks, lowercase, non-alphanumerics → "-", trimmed; "setlist" when empty. */

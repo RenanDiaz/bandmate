@@ -59,14 +59,14 @@ describe("SetlistList cards (spec §3)", () => {
     expect(location()).toBe("/setlists/s1/perform");
   });
 
-  it("More actions holds Edit and Delete for editors and is absent for guests", async () => {
+  it("More actions holds Edit, Duplicate and Delete for editors and is absent for guests", async () => {
     const { onDelete } = renderList();
     const more = screen.getAllByRole("button", { name: "More actions" });
     expect(more).toHaveLength(2);
     await userEvent.click(more[0]);
     const menu = screen.getByRole("menu");
     const items = Array.from(menu.querySelectorAll("button.dropdown-item")).map((el) => el.textContent?.trim());
-    expect(items).toEqual(["Edit", "Delete"]);
+    expect(items).toEqual(["Edit", "Duplicate", "Delete"]);
     expect(menu.querySelectorAll(".dropdown-divider")).toHaveLength(1);
 
     await userEvent.click(within(menu).getByText("Delete"));
