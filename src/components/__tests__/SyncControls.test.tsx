@@ -52,3 +52,26 @@ describe("SyncControls offline (B4)", () => {
     expect(markup).not.toContain("Sync sessions need a connection");
   });
 });
+
+const activeHtml = (role: "host" | "viewer") =>
+  renderToStaticMarkup(
+    <I18nextProvider i18n={i18n}>
+      <SyncControls {...props} role={role} isConnected hasActiveSession activeSessionSetlistId="s1" />
+    </I18nextProvider>
+  );
+
+describe("SyncControls with an active session", () => {
+  it("is one closed menu trigger named by the role, with nothing to end the session outside it", () => {
+    for (const [role, label] of [
+      ["host", en.performanceSync.hosting],
+      ["viewer", en.performanceSync.following],
+    ] as const) {
+      const markup = activeHtml(role);
+      expect(markup.match(/<button/g)).toHaveLength(1);
+      expect(markup).toContain(`aria-label="${label}"`);
+      expect(markup).toContain('aria-expanded="false"');
+      expect(markup).not.toContain(en.performanceSync.endSession);
+      expect(markup).not.toContain(`>${en.performanceSync.leaveSession}<`);
+    }
+  });
+});

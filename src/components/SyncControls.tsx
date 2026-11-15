@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { theme } from "../theme";
@@ -47,6 +47,18 @@ export const SyncControls: FC<SyncControlsProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // A tap outside closes the menu (on phones the backdrop does it). Not
+  // Escape: performance mode uses it to exit.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isOpen]);
 
   // Calculate how long the session has been active
   const getSessionDuration = () => {
@@ -92,29 +104,72 @@ export const SyncControls: FC<SyncControlsProps> = ({
 
   const sessionDuration = getSessionDuration();
 
-  // Render active session indicator
+  const handleLeaveSession = async () => {
+    await onLeaveSession();
+    setIsOpen(false);
+  };
+
+  // Active session: one trigger in the role's colour, its menu holds the state
+  // and End / Leave. Two taps on purpose: a stray tap on stage must not end
+  // the session for the whole band.
   if (role && isConnected) {
+    const roleLabel = role === "host" ? t("performanceSync.hosting") : t("performanceSync.following");
     return (
-      <ActiveSessionContainer>
-        <SessionBadge $role={role}>
+      <SyncContainer ref={containerRef}>
+        <SessionTrigger
+          type="button"
+          $role={role}
+          $isOpen={isOpen}
+          onClick={() => setIsOpen(!isOpen)}
+          title={roleLabel}
+          aria-label={roleLabel}
+          aria-expanded={isOpen}
+        >
           <StatusDot $connected={isConnected} />
           <i className={role === "host" ? "bi bi-broadcast" : "bi bi-eye"} />
-          <span>
-            {role === "host"
-              ? t("performanceSync.hosting")
-              : t("performanceSync.following")}
-          </span>
-        </SessionBadge>
+          <span>{roleLabel}</span>
+          <i className={`bi bi-chevron-${isOpen ? "up" : "down"}`} />
+        </SessionTrigger>
 
-        <LeaveButton onClick={onLeaveSession}>
-          <i className="bi bi-x-lg" />
-          <span>
-            {role === "host"
-              ? t("performanceSync.endSession")
-              : t("performanceSync.leaveSession")}
-          </span>
-        </LeaveButton>
-      </ActiveSessionContainer>
+        {isOpen && (
+          <>
+            <Backdrop onClick={() => setIsOpen(false)} />
+            <SyncDropdown>
+              <DropdownHeader>{t("performanceSync.syncSession")}</DropdownHeader>
+              {error && <ErrorMessage>{error}</ErrorMessage>}
+              <DropdownSection>
+                <SectionTitle>
+                  <i className={role === "host" ? "bi bi-broadcast" : "bi bi-eye"} />
+                  {roleLabel}
+                  {sessionDuration && (
+                    <SessionTime>
+                      <i className="bi bi-clock" />
+                      {sessionDuration}
+                    </SessionTime>
+                  )}
+                </SectionTitle>
+                {role !== "host" && hostDisplayName && (
+                  <HostInfo>
+                    <i className="bi bi-person-fill" />
+                    <span>{hostDisplayName}</span>
+                  </HostInfo>
+                )}
+                <SectionDescription>
+                  {role === "host" ? t("performanceSync.hostingDesc") : t("performanceSync.followingDesc")}
+                </SectionDescription>
+                <ActionButton type="button" onClick={handleLeaveSession} disabled={isLoading} $variant="danger">
+                  {isLoading ? (
+                    <i className="bi bi-arrow-repeat spinning" />
+                  ) : (
+                    <i className={role === "host" ? "bi bi-stop-fill" : "bi bi-box-arrow-right"} />
+                  )}
+                  {role === "host" ? t("performanceSync.endSession") : t("performanceSync.leaveSession")}
+                </ActionButton>
+              </DropdownSection>
+            </SyncDropdown>
+          </>
+        )}
+      </SyncContainer>
     );
   }
 
@@ -132,7 +187,7 @@ export const SyncControls: FC<SyncControlsProps> = ({
 
   // Render sync button and dropdown
   return (
-    <SyncContainer>
+    <SyncContainer ref={containerRef}>
       <SyncButton
         onClick={() => setIsOpen(!isOpen)}
         $isOpen={isOpen}
@@ -545,43 +600,41 @@ const ErrorMessage = styled.div`
 `;
 
 // Active Session Components
-const ActiveSessionContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[3]};
-`;
-
-const SessionBadge = styled.div<{ $role: SyncRole }>`
+/** The Sync trigger in the role's colour: purple hosting, green following. */
+const SessionTrigger = styled.button<{ $role: SyncRole; $isOpen: boolean }>`
+  --session-color: ${(props) =>
+    props.$role === "host" ? theme.colors.brand.primary : theme.colors.semantic.success};
   display: flex;
   align-items: center;
   gap: ${theme.space[2]};
   padding: ${theme.space[2]} ${theme.space[3]};
   background: ${(props) =>
-    props.$role === "host"
-      ? theme.colors.brand.primary + "20"
-      : theme.colors.semantic.success + "20"};
-  border: 1px solid
-    ${(props) =>
-      props.$role === "host"
-        ? theme.colors.brand.primary
-        : theme.colors.semantic.success};
+    props.$role === "host" ? theme.colors.brand.primary + "20" : theme.colors.semantic.success + "20"};
+  border: 1px solid var(--session-color);
   border-radius: ${theme.radius.base};
-  color: ${(props) =>
-    props.$role === "host"
-      ? theme.colors.brand.primary
-      : theme.colors.semantic.success};
+  color: var(--session-color);
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast} ease;
+  box-shadow: ${(props) => (props.$isOpen ? "0 0 0 3px rgba(139, 92, 246, 0.25)" : "none")};
 
-  /* Hide text on mobile when session is active - less space available */
+  /* Icon only below xl (the title names it), like the view group. */
   > span {
     display: none;
   }
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.xl}) {
+    padding: ${theme.space[2]} ${theme.space[4]};
+
     > span {
       display: inline;
     }
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$role === "host" ? theme.colors.brand.primary + "30" : theme.colors.semantic.success + "30"};
   }
 `;
 
@@ -601,37 +654,6 @@ const StatusDot = styled.div<{ $connected: boolean }>`
     50% {
       opacity: 0.5;
     }
-  }
-`;
-
-const LeaveButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[2]};
-  padding: ${theme.space[2]} ${theme.space[3]};
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: ${theme.radius.base};
-  color: var(--color-text-secondary);
-  font-size: ${theme.fontSizes.bodySm};
-  cursor: pointer;
-  transition: all ${theme.transitions.fast} ease;
-
-  /* Hide text on mobile when session is active - less space available */
-  > span {
-    display: none;
-  }
-
-  @media (min-width: ${theme.breakpoints.md}) {
-    > span {
-      display: inline;
-    }
-  }
-
-  &:hover {
-    background: ${theme.colors.semantic.errorBgDark};
-    border-color: ${theme.colors.semantic.error};
-    color: ${theme.colors.semantic.error};
   }
 `;
 

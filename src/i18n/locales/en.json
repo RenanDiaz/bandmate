@@ -1094,6 +1094,8 @@
     "following": "Following",
     "endSession": "End Session",
     "leaveSession": "Leave",
+    "hostingDesc": "Band members who join follow the song you're on.",
+    "followingDesc": "You follow the song the host is on.",
     "noActiveSession": "No active session for this band",
     "connectionError": "Connection error",
     "connected": "Connected",
