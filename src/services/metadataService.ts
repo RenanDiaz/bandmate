@@ -73,7 +73,7 @@ class MetadataService {
       if (spotifyData) {
         console.log('✅ Spotify basic metadata retrieved');
       }
-    } catch (error) {
+    } catch {
       console.log('⚠️  Spotify metadata failed, will try MusicBrainz');
     }
 

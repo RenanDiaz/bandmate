@@ -243,11 +243,11 @@ export type ThemeMode = 'light' | 'dark';
 // Helper function to get colors based on mode
 export const getColor = (mode: ThemeMode, path: string) => {
   const parts = path.split('.');
-  let value: any = theme.colors[mode];
+  let value: unknown = theme.colors[mode];
 
   for (const part of parts) {
     if (value && typeof value === 'object') {
-      value = value[part];
+      value = (value as Record<string, unknown>)[part];
     } else {
       return undefined;
     }

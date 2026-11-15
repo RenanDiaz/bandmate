@@ -172,7 +172,7 @@ class GroqService {
 
     try {
       return JSON.parse(cleaned);
-    } catch (error) {
+    } catch {
       console.error("Failed to parse JSON response:", response);
       throw new Error("Failed to parse AI response as JSON");
     }

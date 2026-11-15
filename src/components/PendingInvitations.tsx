@@ -66,9 +66,9 @@ export const PendingInvitations: FC<Props> = ({ onInvitationAccepted }) => {
       await acceptInvitation(invitation.id);
       await loadInvitations();
       onInvitationAccepted?.();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to accept invitation:", error);
-      toast.error(error.message || t("bands.acceptInvitationError"));
+      toast.error((error instanceof Error && error.message) || t("bands.acceptInvitationError"));
     }
     setProcessingId(null);
   };

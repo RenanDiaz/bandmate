@@ -42,8 +42,8 @@ export const Login = () => {
         if (error) throw error;
         navigate("/songs");
       }
-    } catch (error: any) {
-      setError(error.message || "An error occurred");
+    } catch (error) {
+      setError((error instanceof Error && error.message) || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -60,8 +60,8 @@ export const Login = () => {
         },
       });
       if (error) throw error;
-    } catch (error: any) {
-      setError(error.message || "An error occurred");
+    } catch (error) {
+      setError((error instanceof Error && error.message) || "An error occurred");
       setLoading(false);
     }
   };

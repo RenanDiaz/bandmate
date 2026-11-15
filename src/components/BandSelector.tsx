@@ -152,9 +152,9 @@ export const BandSelector: FC<Props> = ({ onSelect, selectedBand }) => {
       await acceptInvitation(invitation.id);
       await loadInvitations();
       await loadBands();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to accept invitation:", error);
-      toast.error(error.message || t('bands.acceptInvitationError'));
+      toast.error((error instanceof Error && error.message) || t('bands.acceptInvitationError'));
     }
     setProcessingInvitationId(null);
   };
