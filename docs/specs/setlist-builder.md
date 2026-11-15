@@ -1,6 +1,6 @@
 # Spec: Setlist builder — creating a setlist from scratch
 
-> **Status:** in progress — Phase 1 implemented and validated (2026-11-14); Phase 2 implemented (PR 2.1), manual validation pending; Phase 3 implemented (PR 3.1), manual validation pending · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented and validated — Phases 1, 2 and 3 validated (2026-11-14); §11 (AI) not scheduled · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** the editor works when you already know which songs go in, and
 > gives no help when you don't ("sin tenerlo en papel").
 > **Scope:** turn the setlist editor from an *ordering* editor into a
@@ -675,6 +675,16 @@ When this happens, update [themed-setlists.md](themed-setlists.md) §1
 - Found and fixed in this PR: Cancel discarded unsaved changes without
   asking (now a `ConfirmModal`), the panel was titled "Setlists", and on a
   phone Cancel sat on its own row under the title.
+
+## Manual validation, Phases 2–3 (2026-11-14)
+
+Done by the owner in production after PRs 2.1 and 3.1 shipped, all ✅:
+
+- **Phase 2:** AC7 (target, progress, amber over the target, clearing it),
+  AC8 (section subtotals), AC9 (create from a template and from a copy),
+  AC10 (Duplicate from the list).
+- **Phase 3:** AC11 (candidates survive a reload, adding one and saving
+  removes it, signing out clears them).
 
 ## Changelog
 
