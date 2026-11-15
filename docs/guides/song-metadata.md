@@ -73,8 +73,16 @@ Vercel. (Until November 2026 the credentials were `VITE_SPOTIFY_CLIENT_*`
 variables, inlined in the public bundle; rotate the old client secret if it
 was ever deployed.)
 
-The metadata columns on `songs` come from
-`supabase/migrations/20260117171019_add_song_metadata_fields.sql`.
+The metadata columns on `songs` (album, release date, energy, …) come from
+`supabase/migrations/20260117171019_add_song_metadata_fields.sql`; `country`
+and `language` are older (in the baseline).
+
+Country is stored as an ISO 3166-1 alpha-2 code (`MX`), language as an ISO
+639-1 code (`es`); the app renders their names with `Intl.DisplayNames` in
+the UI language (`src/lib/isoCodes.ts`). The lookup fills Country from
+MusicBrainz's artist country, which is already a code; a non-standard one
+(`XW` worldwide, `XE` Europe, historical `SU`) leaves the field as it was.
+No service returns a song's language.
 
 ## Limits
 

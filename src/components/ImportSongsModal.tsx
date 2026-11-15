@@ -7,6 +7,7 @@ import styled from "styled-components";
 import Papa from "papaparse";
 import { theme } from "../theme";
 import { createSong, getBandSongs, type CreateSongInput, type Song } from "../services/songsService";
+import { normalizeToCode } from "../lib/isoCodes";
 
 interface Props {
   isOpen: boolean;
@@ -225,8 +226,9 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
           band_id: bandId,
           title: song.title.trim(),
           artist: song.artist?.trim(),
-          language: song.language?.trim(),
-          country: song.country?.trim(),
+          // A code or an English / Spanish name becomes the code; anything else is kept verbatim.
+          language: normalizeToCode("language", song.language) ?? (song.language?.trim() || undefined),
+          country: normalizeToCode("region", song.country) ?? (song.country?.trim() || undefined),
           release_date: song.releaseYear?.trim(),
           duration: parseDuration(song.duration || ""),
           tempo: parseTempo(song.tempo || ""),
@@ -285,8 +287,8 @@ export const ImportSongsModal: FC<Props> = ({ isOpen, onClose, onImportComplete,
           <ColumnList>
             <li><code>Title</code> ({t("songs.import.colRequired")})</li>
             <li><code>Artist</code></li>
-            <li><code>Language</code></li>
-            <li><code>Country</code></li>
+            <li><code>Language</code> ({t("songs.import.colCodes")})</li>
+            <li><code>Country</code> ({t("songs.import.colCodes")})</li>
             <li><code>Release year</code> ({t("songs.import.colReleaseYearAlt")} <code>Release Year</code>)</li>
             <li><code>Duration</code> ({t("songs.import.colDuration")})</li>
             <li><code>Tempo</code> ({t("songs.import.colTempo")})</li>

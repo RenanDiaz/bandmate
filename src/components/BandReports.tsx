@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { displayName } from "../lib/isoCodes";
 import type { Band } from "../services/bandsService";
 import type {
   BandOverviewStats,
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export const BandReports: FC<Props> = ({ band }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [overviewStats, setOverviewStats] = useState<BandOverviewStats | null>(null);
@@ -272,7 +273,7 @@ export const BandReports: FC<Props> = ({ band }) => {
             {countryDistribution.map((item, index) => (
               <CountryItem key={item.country}>
                 <CountryRank>{index + 1}</CountryRank>
-                <CountryName>{item.country}</CountryName>
+                <CountryName>{displayName("region", item.country, i18n.language)}</CountryName>
                 <CountryBarTrack>
                   <CountryBarFill
                     $percentage={

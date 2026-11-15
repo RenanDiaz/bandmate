@@ -24,6 +24,7 @@ import {
 import { PLAYED_STATUSES, type SongSignals } from "../../utils/songSignals";
 import { PickerFilterChip } from "./PickerFilterChip";
 import { formatSignalLine } from "./signalLine";
+import { displayName } from "../../lib/isoCodes";
 import { pickerDragId } from "./pickerDnd";
 
 export interface SongPickerProps {
@@ -342,7 +343,7 @@ export const SongPicker: FC<SongPickerProps> = ({
         {facets.languages.length >= 2 && (
           <PickerFilterChip
             label={t("setlists.picker.filter.language")}
-            options={facets.languages.map((value) => ({ value, label: value }))}
+            options={facets.languages.map((value) => ({ value, label: displayName("language", value, i18n.language) }))}
             selected={filters.languages}
             onChange={(value) => setFilter("languages", value)}
             touch={touch}
