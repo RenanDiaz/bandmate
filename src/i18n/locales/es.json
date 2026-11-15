@@ -1495,7 +1495,6 @@
   },
   "ai": {
     "title": "Funciones con IA",
-    "notConfigured": "Agrega VITE_GROQ_API_KEY a tu archivo .env para habilitar la generación de setlists con IA.",
     "generateWithAI": "Generar Setlist con IA",
     "generateSetlist": "Generador de Setlists con IA",
     "generateDescription": "Deja que la IA cree un setlist optimizado de tus {{count}} canciones basado en tus preferencias.",

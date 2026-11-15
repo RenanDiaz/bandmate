@@ -150,19 +150,9 @@ export const AISetlistGenerator = ({ bandId, onSetlistCreated }: Props) => {
     setError(null);
   };
 
-  if (!isConfigured) {
-    return (
-      <NotConfiguredBanner>
-        <BannerIcon>
-          <i className="bi bi-stars"></i>
-        </BannerIcon>
-        <BannerContent>
-          <BannerTitle>{t("ai.title")}</BannerTitle>
-          <BannerText>{t("ai.notConfigured")}</BannerText>
-        </BannerContent>
-      </NotConfiguredBanner>
-    );
-  }
+  // AI features off (VITE_AI_FEATURES): show nothing rather than a setup
+  // instruction meant for whoever deploys the app.
+  if (!isConfigured) return null;
 
   if (!isExpanded) {
     return (
@@ -402,39 +392,10 @@ const spin = keyframes`
 
 // Styled Components
 
-const NotConfiguredBanner = styled.div`
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: ${theme.radius.lg};
-  padding: ${theme.space[5]};
-  display: flex;
-  align-items: center;
-  gap: ${theme.space[4]};
-  margin-bottom: ${theme.space[4]};
-`;
 
-const BannerIcon = styled.div`
-  font-size: ${theme.fontSizes.h1};
-  color: ${theme.colors.brand.primary};
-  opacity: 0.7;
-`;
 
-const BannerContent = styled.div`
-  flex: 1;
-`;
 
-const BannerTitle = styled.h4`
-  font-size: ${theme.fontSizes.body};
-  font-weight: ${theme.fontWeights.semibold};
-  color: var(--color-text-primary);
-  margin: 0 0 ${theme.space[1]} 0;
-`;
 
-const BannerText = styled.p`
-  font-size: ${theme.fontSizes.bodySm};
-  color: var(--color-text-secondary);
-  margin: 0;
-`;
 
 const ExpandButton = styled.button`
   width: 100%;

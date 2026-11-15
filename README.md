@@ -89,13 +89,13 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    |----------|----------|---------|
    | `VITE_SUPABASE_URL` | ✅ | Supabase project URL |
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
-   | `VITE_SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_SECRET` | — | Spotify metadata ([setup](docs/guides/song-metadata.md)) |
-   | `VITE_GROQ_API_KEY` | — | AI setlist features ([free key](https://console.groq.com)) |
+   | `VITE_AI_FEATURES` | — | `true` shows the AI setlist features; set it once the `groq-chat` function has its key (step 5). Not a secret |
    | `VITE_VAPID_PUBLIC_KEY` | — | Public VAPID key for push notifications, from `npm run vapid-keys` ([docs/setup/push-notifications.md](docs/setup/push-notifications.md)); public by design |
    | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"`, or open any page with `?flag=push` / `?flag=-push`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
-   > Don't put production secrets in them.
+   > Don't put production secrets in them: the Spotify and Groq keys are
+   > Edge Function secrets (step 5).
 
 3. **Set up the database**
 
@@ -123,6 +123,15 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    supabase functions deploy calendar-feed --no-verify-jwt
    supabase functions deploy send-push-notifications --no-verify-jwt  # after docs/setup/push-notifications.md
    ```
+   Spotify metadata and the AI setlist features call two more functions that
+   keep their keys server-side and need a signed-in user:
+   ```bash
+   supabase secrets set SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=...  # docs/guides/song-metadata.md
+   supabase secrets set GROQ_API_KEY=...                                  # free key at https://console.groq.com
+   supabase functions deploy spotify-metadata
+   supabase functions deploy groq-chat
+   ```
+   Then set `VITE_AI_FEATURES=true` (step 2) to show the AI features.
 
 6. **Run it**
    ```bash

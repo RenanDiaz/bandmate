@@ -12,7 +12,7 @@ combines:
 
 | Source | Service | Provides | Auth |
 |--------|---------|----------|------|
-| Spotify Web API (Client Credentials) | `spotifyService.ts` | title, artist, album, release date, artwork, Spotify URL, duration, popularity | `VITE_SPOTIFY_CLIENT_*` |
+| Spotify Web API (Client Credentials) | `spotifyService.ts` | title, artist, album, release date, artwork, Spotify URL, duration, popularity | `spotify-metadata` Edge Function (secrets `SPOTIFY_CLIENT_*`, signed-in user) |
 | MusicBrainz | `musicBrainzService.ts` | fallback basic metadata, artist country, recording ID | none (User-Agent) |
 | AcousticBrainz | `musicBrainzService.ts` | key, tempo, danceability, acousticness, genre, instrumental, mood | none |
 | Lyrics.ovh | `lyricsService.ts` | lyrics | none |
@@ -50,18 +50,20 @@ audio analysis — are not implemented.
    **Create app**: any name, redirect URI `http://localhost:5173` (required but
    unused), API **Web API**.
 2. **Settings** → copy the **Client ID** and **Client Secret**.
-3. Add them to `.env`, then restart `npm run dev`:
-   ```env
-   VITE_SPOTIFY_CLIENT_ID=...
-   VITE_SPOTIFY_CLIENT_SECRET=...
+3. Store them as Edge Function secrets and deploy the function:
+   ```bash
+   supabase secrets set SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=...
+   supabase functions deploy spotify-metadata
    ```
-4. In production, set the same variables in Vercel (Project → Settings →
-   Environment Variables) and redeploy.
 
-> ⚠️ Every `VITE_*` variable is inlined into the public bundle, so the client
-> secret is visible to anyone who loads the app. This is known technical debt
-> (see "Environment Variables" in [CLAUDE.md](../../CLAUDE.md)); the fix is to
-> move the token exchange behind an Edge Function.
+The browser never sees the credentials: `spotifyService` calls the
+`spotify-metadata` Edge Function (`supabase/functions/spotify-metadata`), which
+does the Client Credentials exchange, caches the token and answers
+`{ metadata }` for a signed-in user. Without the secrets it answers
+`not-configured` and the lookup falls back to MusicBrainz. Nothing is set in
+Vercel. (Until November 2026 the credentials were `VITE_SPOTIFY_CLIENT_*`
+variables, inlined in the public bundle; rotate the old client secret if it
+was ever deployed.)
 
 The metadata columns on `songs` come from
 `supabase/migrations/20260117171019_add_song_metadata_fields.sql`.

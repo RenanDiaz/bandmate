@@ -587,6 +587,10 @@ without redoing it.
 
 - `VITE_GROQ_API_KEY` is inlined in the public bundle: anyone can read it
   and spend the quota (already listed as technical debt in CLAUDE.md).
+  *Update, November 2026:* the key moved to the generic `groq-chat` Edge
+  Function (signed-in user, model allow-list, size caps); the prompts still
+  run in the browser. The role check, per-band cap and response validation
+  of 11.2 remain open.
 - Each generation sends the whole catalog and up to five previous setlists;
   above 40 songs "compact mode" drops key, tempo and energy, so the model
   decides with less data while the request stays large.

@@ -1,14 +1,15 @@
 /**
  * Groq AI Service
  *
- * Provides LLM capabilities using Groq's free tier API.
- * Used for AI-powered features like setlist generation and song suggestions.
- *
- * Setup:
- * 1. Create an account at https://console.groq.com
- * 2. Get your API key from the dashboard
- * 3. Add to .env: VITE_GROQ_API_KEY
+ * LLM calls for the AI setlist features. The Groq API key never reaches the
+ * browser: requests go through the `groq-chat` Edge Function
+ * (supabase/functions/groq-chat), which holds `GROQ_API_KEY` and requires a
+ * signed-in user. The UI shows the AI features only when the public flag
+ * `VITE_AI_FEATURES=true` is set (not a secret: it says the server side is
+ * set up).
  */
+
+import { supabase } from "../lib/supabaseClient";
 
 export class GroqApiError extends Error {
   status: number;
@@ -63,36 +64,35 @@ export const GROQ_MODELS = {
   GEMMA_2_9B: "gemma2-9b-it",
 } as const;
 
-class GroqService {
-  private apiKey: string;
-  private baseUrl = "https://api.groq.com/openai/v1";
-
-  constructor() {
-    this.apiKey = import.meta.env.VITE_GROQ_API_KEY || "";
-
-    if (!this.apiKey) {
-      console.warn(
-        "Groq API key not configured. Set VITE_GROQ_API_KEY in .env to enable AI features."
-      );
-    }
+/** Error codes the `groq-chat` function answers with (see its header). */
+async function errorCode(context: unknown): Promise<string | undefined> {
+  if (!(context instanceof Response)) return undefined;
+  try {
+    const body = await context.clone().json();
+    return typeof body?.error === "string" ? body.error : undefined;
+  } catch {
+    return undefined;
   }
+}
 
+class GroqService {
   /**
-   * Check if Groq API is configured
+   * Whether the AI features are offered. The key lives on the server, so
+   * this is the public `VITE_AI_FEATURES` flag, set where `GROQ_API_KEY` is.
    */
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return import.meta.env.VITE_AI_FEATURES === "true";
   }
 
   /**
-   * Send a chat completion request to Groq
+   * Send a chat completion request through the `groq-chat` Edge Function.
    */
   async chat(
     messages: GroqMessage[],
     options: GroqCompletionOptions = {}
   ): Promise<string> {
     if (!this.isConfigured()) {
-      throw new Error("Groq API not configured. Please add VITE_GROQ_API_KEY to your .env file.");
+      throw new Error("AI features are not enabled.");
     }
 
     const {
@@ -102,46 +102,33 @@ class GroqService {
       topP = 1,
     } = options;
 
-    try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature,
-          max_tokens: maxTokens,
-          top_p: topP,
-        }),
-      });
+    const { data, error } = await supabase.functions.invoke<{ content: string }>("groq-chat", {
+      body: { messages, model, temperature, maxTokens, topP },
+    });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Groq API error:", response.status, errorBody);
+    if (error) {
+      // FunctionsHttpError: the function answered non-2xx; its Response is in `context`.
+      const context = (error as { context?: unknown }).context;
+      const status = context instanceof Response ? context.status : 0;
+      const code = await errorCode(context);
+      console.error("groq-chat error:", status, code ?? error.message);
 
-        if (response.status === 401) {
-          throw new Error("Invalid Groq API key. Please check your VITE_GROQ_API_KEY.");
-        }
-        if (response.status === 413) {
-          throw new GroqApiError("Request too large for Groq API. Try reducing the amount of data sent.", 413);
-        }
-        if (response.status === 429) {
-          throw new Error("Groq API rate limit exceeded. Please try again later.");
-        }
-        throw new Error(`Groq API error: ${response.status}`);
+      if (status === 413 || code === "too-large") {
+        throw new GroqApiError("Request too large for the AI service. Try reducing the amount of data sent.", 413);
       }
-
-      const data: GroqChatResponse = await response.json();
-      return data.choices[0]?.message?.content || "";
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
+      if (status === 429 || code === "rate-limited") {
+        throw new Error("AI service rate limit exceeded. Please try again later.");
       }
-      throw new Error("Failed to communicate with Groq API");
+      if (status === 401) {
+        throw new Error("Sign in again to use the AI features.");
+      }
+      if (code === "not-configured" || code === "upstream-auth") {
+        throw new Error("The AI service isn't set up on the server.");
+      }
+      throw new Error(status ? `AI service error: ${status}` : "Failed to reach the AI service.");
     }
+
+    return data?.content ?? "";
   }
 
   /**
