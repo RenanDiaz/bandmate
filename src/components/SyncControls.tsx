@@ -313,12 +313,14 @@ const SyncButton = styled.button<{ $isOpen: boolean; $hasSession?: boolean }>`
   font-size: ${theme.fontSizes.bodySm};
   font-weight: ${theme.fontWeights.medium};
 
-  /* Icon only on phones (the label is the aria-label / title): the text wrapped the top bar. */
+  /* Icon only below lg (the label is the aria-label / title): on a phone the
+     text wrapped the top bar, on an iPad in portrait it kept the bar from
+     fitting on one row. */
   > span {
     display: none;
   }
 
-  @media (min-width: ${theme.breakpoints.md}) {
+  @media (min-width: ${theme.breakpoints.lg}) {
     padding: ${theme.space[2]} ${theme.space[4]};
 
     > span {

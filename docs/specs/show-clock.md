@@ -100,4 +100,8 @@ song's backing track or by hand, and stoppable for a soundcheck.
 - **AC4–AC6**, **AC10**: **pending**, need a local backing track on a device.
 - Found: on an iPad in portrait the top bar's one-row layout (from `md`)
   squeezed the clock and stacked "1 / 2" over Sync — fixed in this PR (one
-  row from `lg`).
+  row from `lg`). Revised on 2026-11-15: two rows took too much height from
+  the sheet music, so the bar is one row again from `md`, with tighter
+  spacing, an icon-only Sync button below `lg` and the Lyrics / Chords /
+  Sheet group hidden below `lg` (the floating toggle and `T` remain); the
+  clock and counter never shrink, the setlist name does (ellipsis).

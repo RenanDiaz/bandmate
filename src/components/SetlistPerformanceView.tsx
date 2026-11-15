@@ -1175,7 +1175,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                   title={t("performance.showLyrics", "Show Lyrics")}
                 >
                   <i className="bi bi-mic"></i>
-                  {t("performance.lyrics", "Lyrics")}
+                  <span>{t("performance.lyrics", "Lyrics")}</span>
                 </ViewToggleButton>
                 <ViewToggleButton
                   onClick={() => chooseContentView("chords")}
@@ -1183,7 +1183,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                   title={t("performance.showChords", "Show Chords")}
                 >
                   <i className="bi bi-music-note"></i>
-                  {t("performance.chords", "Chords")}
+                  <span>{t("performance.chords", "Chords")}</span>
                 </ViewToggleButton>
                 {isCurrentItemSong && (
                   <ViewToggleButton
@@ -1192,7 +1192,7 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
                     title={t("performance.showSheetMusic", "Show Sheet Music")}
                   >
                     <i className="bi bi-file-earmark-music"></i>
-                    {t("performance.sheetMusic", "Sheet")}
+                    <span>{t("performance.sheetMusic", "Sheet")}</span>
                   </ViewToggleButton>
                 )}
               </ViewToggleGroup>
@@ -1770,13 +1770,20 @@ const TopBar = styled.div`
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 
-  /* One row only from lg: between md and lg (an iPad in portrait) the
-     controls take the whole width and squeeze the clock and counter. */
-  @media (min-width: ${theme.breakpoints.lg}) {
+  /* One row from md: on an iPad in portrait every pixel of height goes to
+     the sheet music. Between md and lg it fits with tighter spacing and an
+     icon-only Sync button; the setlist name is what shrinks (ellipsis). */
+  @media (min-width: ${theme.breakpoints.md}) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    gap: ${theme.space[3]};
+    padding: ${theme.space[3]} ${theme.space[4]};
+  }
+
+  @media (min-width: ${theme.breakpoints.lg}) {
     gap: ${theme.space[4]};
+    padding: ${theme.space[4]} ${theme.space[6]};
   }
 `;
 
@@ -1787,9 +1794,14 @@ const TopBarRow = styled.div`
   gap: ${theme.space[4]};
   min-width: 0;
 
-  @media (min-width: ${theme.breakpoints.lg}) {
+  @media (min-width: ${theme.breakpoints.md}) {
     flex: 1;
     justify-content: flex-start;
+    gap: ${theme.space[3]};
+  }
+
+  @media (min-width: ${theme.breakpoints.lg}) {
+    gap: ${theme.space[4]};
   }
 `;
 
@@ -1829,9 +1841,13 @@ const TopBarControls = styled.div`
   flex-wrap: wrap;
   justify-content: flex-end;
 
+  @media (min-width: ${theme.breakpoints.md}) {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+  }
+
   @media (min-width: ${theme.breakpoints.lg}) {
     gap: ${theme.space[3]};
-    flex-wrap: nowrap;
   }
 `;
 
@@ -1904,7 +1920,9 @@ const ViewToggleGroup = styled.div`
   border-radius: ${theme.radius.base};
   border: 1px solid var(--color-border);
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  /* Below lg the floating toggle and the T shortcut switch the view: the
+     group would keep the top bar from fitting on one row. */
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: none;
   }
 `;
@@ -1915,7 +1933,7 @@ const ViewToggleButton = styled.button<{ $active: boolean }>`
   border: none;
   color: ${(props) =>
     props.$active ? "white" : 'var(--color-text-secondary)'};
-  padding: ${theme.space[2]} ${theme.space[4]};
+  padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.sm};
   display: flex;
   align-items: center;
@@ -1927,6 +1945,19 @@ const ViewToggleButton = styled.button<{ $active: boolean }>`
 
   i {
     font-size: ${theme.fontSizes.body};
+  }
+
+  /* Icons only between lg and xl (the title names them). */
+  > span {
+    display: none;
+  }
+
+  @media (min-width: ${theme.breakpoints.xl}) {
+    padding: ${theme.space[2]} ${theme.space[4]};
+
+    > span {
+      display: inline;
+    }
   }
 
   &:hover {
@@ -2948,7 +2979,8 @@ const MobileToggleButton = styled.button<{ $contentType: "chords" | "lyrics" | "
     transform: scale(0.95);
   }
 
-  @media (max-width: ${theme.breakpoints.md}) {
+  /* Wherever the top bar's view group is hidden (below lg). */
+  @media (max-width: ${theme.breakpoints.lgDown}) {
     display: flex;
   }
 `;
