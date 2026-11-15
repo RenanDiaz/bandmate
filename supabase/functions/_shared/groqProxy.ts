@@ -5,15 +5,14 @@
  * (src/lib/__tests__/groqProxy.test.ts).
  */
 
-/** Models the app may ask for; anything else is refused. */
-export const GROQ_ALLOWED_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "mixtral-8x7b-32768",
-  "gemma2-9b-it",
-] as const;
+/**
+ * Models the app may ask for; anything else is refused. Keep in sync with
+ * `GROQ_MODELS` in src/services/groqService.ts. Groq retired the Llama 3.x
+ * models on 2026-08-16 (https://console.groq.com/docs/deprecations).
+ */
+export const GROQ_ALLOWED_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"] as const;
 
-export const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 /** Caps that keep one signed-in user from spending the key on huge calls. */
 export const GROQ_LIMITS = {
@@ -31,6 +30,11 @@ export interface GroqChatRequest {
   temperature: number;
   max_tokens: number;
   top_p: number;
+  /**
+   * gpt-oss models reason before answering, and the reasoning counts against
+   * `max_tokens`; "low" keeps room for the JSON the app asks for.
+   */
+  reasoning_effort?: "low" | "medium" | "high";
 }
 
 export type ParsedGroqRequest =
@@ -84,7 +88,14 @@ export function parseGroqChatRequest(body: unknown): ParsedGroqRequest {
 
   return {
     ok: true,
-    request: { model, messages: clean, temperature, max_tokens: maxTokens, top_p: topP },
+    request: {
+      model,
+      messages: clean,
+      temperature,
+      max_tokens: maxTokens,
+      top_p: topP,
+      ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" as const } : {}),
+    },
   };
 }
 

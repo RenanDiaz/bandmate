@@ -19,6 +19,7 @@ describe("parseGroqChatRequest", () => {
         temperature: 0.7,
         max_tokens: 2048,
         top_p: 1,
+        reasoning_effort: "low",
       },
     });
   });
@@ -26,13 +27,13 @@ describe("parseGroqChatRequest", () => {
   it("passes allowed options through", () => {
     const parsed = parseGroqChatRequest({
       messages: [{ role: "system", content: "s" }, user()],
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
       temperature: 0.2,
       maxTokens: 512,
       topP: 0.9,
     });
     expect(parsed.ok && parsed.request).toMatchObject({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
       temperature: 0.2,
       max_tokens: 512,
       top_p: 0.9,
@@ -52,6 +53,7 @@ describe("parseGroqChatRequest", () => {
     ["unknown role", { messages: [{ role: "tool", content: "x" }] }],
     ["non-string content", { messages: [{ role: "user", content: 1 }] }],
     ["model outside the list", { messages: [user()], model: "gpt-4" }],
+    ["retired Llama model", { messages: [user()], model: "llama-3.3-70b-versatile" }],
     ["temperature out of range", { messages: [user()], temperature: 3 }],
     ["maxTokens above the cap", { messages: [user()], maxTokens: GROQ_LIMITS.maxTokens + 1 }],
     ["fractional maxTokens", { messages: [user()], maxTokens: 10.5 }],

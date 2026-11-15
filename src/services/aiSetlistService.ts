@@ -371,7 +371,7 @@ export async function generateSetlist(
 
   try {
     const response = await groqService.complete(userPrompt, systemPrompt, {
-      model: GROQ_MODELS.LLAMA_3_3_70B,
+      model: GROQ_MODELS.CAPABLE,
       temperature: 0.8,
       maxTokens: 2048,
     });
@@ -385,7 +385,7 @@ export async function generateSetlist(
         compact.userPrompt,
         compact.systemPrompt,
         {
-          model: GROQ_MODELS.LLAMA_3_3_70B,
+          model: GROQ_MODELS.CAPABLE,
           temperature: 0.8,
           maxTokens: 2048,
         }
@@ -477,7 +477,7 @@ Suggest an optimized order that improves the flow.${hasSections ? " Remember to 
 }`;
 
   const response = await groqService.complete(userPrompt, systemPrompt, {
-    model: GROQ_MODELS.LLAMA_3_3_70B,
+    model: GROQ_MODELS.CAPABLE,
     temperature: 0.5,
     maxTokens: 2048,
   });
@@ -553,7 +553,7 @@ Suggest ${count} new songs they should learn. Respond with JSON:
 }`;
 
   const response = await groqService.complete(userPrompt, systemPrompt, {
-    model: GROQ_MODELS.LLAMA_3_3_70B,
+    model: GROQ_MODELS.CAPABLE,
     temperature: 0.9,
     maxTokens: 2048,
   });
@@ -603,7 +603,7 @@ Provide analysis in JSON format:
 }`;
 
   const response = await groqService.complete(userPrompt, systemPrompt, {
-    model: GROQ_MODELS.LLAMA_3_3_70B,
+    model: GROQ_MODELS.CAPABLE,
     temperature: 0.6,
     maxTokens: 1024,
   });
@@ -677,7 +677,7 @@ Suggest the top 3 best choices for the next song. Respond with JSON:
 }`;
 
   const response = await groqService.complete(userPrompt, systemPrompt, {
-    model: GROQ_MODELS.LLAMA_3_1_8B, // Use faster model for quick suggestions
+    model: GROQ_MODELS.FAST, // Use faster model for quick suggestions
     temperature: 0.7,
     maxTokens: 512,
   });

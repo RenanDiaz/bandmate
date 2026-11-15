@@ -52,16 +52,17 @@ export interface GroqCompletionOptions {
   topP?: number;
 }
 
-// Available models on Groq free tier
+/**
+ * Groq models by role, so a retirement only changes the values here and in
+ * the `groq-chat` allow-list (supabase/functions/_shared/groqProxy.ts).
+ * Groq shut down the Llama 3.x models on 2026-08-16
+ * (https://console.groq.com/docs/deprecations).
+ */
 export const GROQ_MODELS = {
-  // Fast and efficient for most tasks
-  LLAMA_3_1_8B: "llama-3.1-8b-instant",
-  // More capable, versatile model (recommended)
-  LLAMA_3_3_70B: "llama-3.3-70b-versatile",
-  // Mixtral for diverse tasks
-  MIXTRAL: "mixtral-8x7b-32768",
-  // Gemma for lightweight tasks
-  GEMMA_2_9B: "gemma2-9b-it",
+  /** Default: generation, optimization, suggestions. */
+  CAPABLE: "openai/gpt-oss-120b",
+  /** Quick, light answers. */
+  FAST: "openai/gpt-oss-20b",
 } as const;
 
 /** The error body the `groq-chat` function answers with (see its header). */
@@ -99,7 +100,7 @@ class GroqService {
     }
 
     const {
-      model = GROQ_MODELS.LLAMA_3_3_70B,
+      model = GROQ_MODELS.CAPABLE,
       temperature = 0.7,
       maxTokens = 2048,
       topP = 1,

@@ -15,8 +15,9 @@ This is a design, not code. Signatures are the contract; no bodies here.
 
 `AISetlistGenerator` (`src/components/AISetlistGenerator.tsx`, mounted in
 `SetlistsView`) already generates a setlist from the band's catalog through
-`generateSetlist()` in `src/services/aiSetlistService.ts` (Groq,
-`llama-3.3-70b-versatile`, temperature 0.8). The options today: mood
+`generateSetlist()` in `src/services/aiSetlistService.ts` (Groq through
+the `groq-chat` Edge Function, `openai/gpt-oss-120b` since Groq retired
+`llama-3.3-70b-versatile` in August 2026, temperature 0.8). The options today: mood
 (energetic / chill / mixed / building), length by song count or duration,
 split into sets, free-text custom instructions. A theme ("80s night", "acoustic
 set", "Christmas", "wedding", "only Spanish songs") can be typed into the
