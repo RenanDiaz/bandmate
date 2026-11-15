@@ -53,13 +53,13 @@ app would not start offline). If it fires, look at `globPatterns`,
 src/
 ├── components/        # React components (views, modals, forms); AppNavbar = the header (see "Header")
 ├── context/           # React Context: BandContext (global state), ToastContext (notifications; context + types in `toast.ts`, value stable so `useToast()` is safe in effect deps), offlineAuthController (auth modes), offlineDownloadController (running offline download + results)
-├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery, useLatest)
+├── hooks/             # Custom hooks (useSetlistPerformanceData + performanceDataController, performanceTarget, performanceDataSource, snapshotPerformanceDataSource, songPerformanceDataSource, usePerformItems; useShowClock, usePerformanceSync, useLocalBackingTracks, useOnlineStatus, useOfflineDownload, useOfflineStartup, useOfflineUpdateCheck, useSetlistTextExport, useInputCapabilities, usePickerState, useSortableSensors, useOpenInBand, useBandFromQuery, useLatest, useSheetSwipe)
 ├── i18n/              # i18next setup + locales/{en,es}.json
 ├── lib/               # Utilities (analytics, supabaseClient, authSession, networkErrors, backingTrackEngine, offlineStore, offlineDownloadUi, platform, pwaUpdates, pushSupport, wakeLock, performPosition, showClock, isoCodes, pdfWorker, BandStorage, siteConfig, transposition, dates, calendar export)
 ├── services/          # Supabase + external API data access layer
 ├── styles/            # CSS design tokens
 ├── test/              # Vitest setup and fixtures (tests live next to code in __tests__/)
-├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch, pdfPages)
+├── utils/             # Pure helpers (songFilters, songSignals, setlistInsert, setlistMove, deepEqual, performItems, setlistText, upcomingEvents, bandColors, bandSwitch, pdfPages, sheetSwipe)
 ├── theme.ts           # Styled Components theme
 ├── entry-server.tsx   # Build-time SSR entry for the landing page
 ├── App.tsx            # Root component: providers, theme attribute, invite redirect, <AppNavbar />, footer

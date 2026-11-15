@@ -1,6 +1,7 @@
 import { Component, type FC, type ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLatest } from "../hooks/useLatest";
+import { useSheetSwipe } from "../hooks/useSheetSwipe";
 import { useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
@@ -267,6 +268,14 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
   // iPhone Safari (and the installed iOS app) has no element fullscreen: the button would do nothing.
   const [canFullscreen] = useState(() => typeof document !== "undefined" && document.fullscreenEnabled === true);
   const [showSongList, setShowSongList] = useState(false);
+  // Below md the list is a bottom sheet: its handle swipes (up expands, down
+  // collapses or closes).
+  const closeSongList = useCallback(() => setShowSongList(false), []);
+  const sheetSwipe = useSheetSwipe({ onClose: closeSongList, active: isSongListSheet });
+  const resetSheet = sheetSwipe.reset;
+  useEffect(() => {
+    if (!showSongList) resetSheet();
+  }, [showSongList, resetSheet]);
   const [contentView, setContentView] = useState<"chords" | "lyrics" | "sheetMusic">(readPreferredContentView);
   const [sheetMusicList, setSheetMusicList] = useState<SheetMusic[]>([]);
   const [selectedSheetMusicId, setSelectedSheetMusicId] = useState<string | null>(null);
@@ -1275,9 +1284,12 @@ export const PerformanceView: FC<{ target: PerformanceTarget | undefined }> = ({
         {/* Song List Sidebar */}
         {showSongList && !isSong && (
           <>
-          <SongListBackdrop onClick={() => setShowSongList(false)} />
-          <SongListSidebar>
-            <SidebarHeader>
+          <SongListBackdrop onClick={closeSongList} />
+          <SongListSidebar
+            $expanded={sheetSwipe.expanded}
+            style={sheetSwipe.dragging ? { transform: `translateY(${sheetSwipe.offset}px)`, transition: "none" } : undefined}
+          >
+            <SidebarHeader {...sheetSwipe.handleProps}>
               {isReorderMode ? t("performance.reorderSongs") : t("performance.setlist")}
               {isReorderMode && (
                 <SidebarHint>{t("performance.dragToReorder")}</SidebarHint>
@@ -2089,7 +2101,12 @@ const SongListBackdrop = styled.div`
   }
 `;
 
-const SongListSidebar = styled.div`
+/** The song list is a bottom sheet up to md (same query as its styles). */
+function isSongListSheet(): boolean {
+  return typeof window !== "undefined" && window.matchMedia(`(max-width: ${theme.breakpoints.md})`).matches;
+}
+
+const SongListSidebar = styled.div<{ $expanded: boolean }>`
   width: 320px;
   background: var(--color-bg-secondary);
   border-right: 1px solid var(--color-border);
@@ -2104,7 +2121,8 @@ const SongListSidebar = styled.div`
     bottom: 0;
     top: auto;
     width: 100%;
-    max-height: 60vh;
+    max-height: ${(props) => (props.$expanded ? "90vh" : "60vh")};
+    transition: transform ${theme.transitions.base} ease, max-height ${theme.transitions.base} ease;
     border-right: none;
     border-top: 1px solid var(--color-border);
     border-radius: ${theme.radius.lg} ${theme.radius.lg} 0 0;
@@ -2127,6 +2145,10 @@ const SidebarHeader = styled.div`
 
   @media (max-width: ${theme.breakpoints.md}) {
     padding-top: ${theme.space[5]};
+    /* The handle's row takes the swipe (useSheetSwipe); the list keeps its scroll. */
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
 
     &::before {
       content: "";
