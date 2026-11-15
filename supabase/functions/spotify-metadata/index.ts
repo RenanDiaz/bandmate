@@ -17,7 +17,8 @@ import {
  * Answer: `{ metadata: SpotifySongMetadata | null }` (null: no match).
  * Errors: `{ error: <code> }` with 400 invalid-request, 401
  * not-authenticated, 429 rate-limited, 500 not-configured, 502
- * upstream-error.
+ * upstream-error (+ `stage`: token | search and `upstreamStatus`, Spotify's
+ * HTTP status).
  */
 
 const corsHeaders = {
@@ -36,6 +37,12 @@ function json(body: Record<string, unknown>, status = 200): Response {
 /** Cached for the life of the worker; refreshed a minute before it expires. */
 let token: { value: string; expiresAt: number } | null = null;
 
+class SpotifyError extends Error {
+  constructor(readonly stage: "token" | "search", readonly upstreamStatus: number) {
+    super(`${stage} request failed: ${upstreamStatus}`);
+  }
+}
+
 async function accessToken(clientId: string, clientSecret: string): Promise<string> {
   if (token && token.expiresAt > Date.now()) return token.value;
   const response = await fetch("https://accounts.spotify.com/api/token", {
@@ -46,7 +53,10 @@ async function accessToken(clientId: string, clientSecret: string): Promise<stri
     },
     body: "grant_type=client_credentials",
   });
-  if (!response.ok) throw new Error(`token request failed: ${response.status}`);
+  if (!response.ok) {
+    console.error("spotify-metadata: token request failed", response.status, await response.text());
+    throw new SpotifyError("token", response.status);
+  }
   const data = await response.json();
   token = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 - 60_000 };
   return token.value;
@@ -89,12 +99,15 @@ Deno.serve(async (req) => {
     if (!response.ok) {
       console.error("spotify-metadata: Spotify answered", response.status, await response.text());
       if (response.status === 401) token = null;
-      return json({ error: "upstream-error" }, 502);
+      return json({ error: "upstream-error", stage: "search", upstreamStatus: response.status }, 502);
     }
     const data = await response.json();
     const track: SpotifyTrack | undefined = data?.tracks?.items?.[0];
     return json({ metadata: track ? trackToMetadata(track) : null });
   } catch (err) {
+    if (err instanceof SpotifyError) {
+      return json({ error: "upstream-error", stage: err.stage, upstreamStatus: err.upstreamStatus }, 502);
+    }
     console.error("spotify-metadata: request failed", err);
     return json({ error: "upstream-error" }, 502);
   }

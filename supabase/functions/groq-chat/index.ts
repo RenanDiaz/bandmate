@@ -13,7 +13,8 @@ import { groqUpstreamError, parseGroqChatRequest } from "../_shared/groqProxy.ts
  * Answer: `{ content: string }`.
  * Errors: `{ error: <code> }` with 400 invalid-request, 401
  * not-authenticated, 413 too-large, 429 rate-limited, 500 not-configured,
- * 502 upstream-auth / upstream-error.
+ * 502 upstream-auth / upstream-error. Errors from Groq add
+ * `upstreamStatus` (Groq's HTTP status).
  */
 
 const corsHeaders = {
@@ -72,7 +73,8 @@ Deno.serve(async (req) => {
   if (!response.ok) {
     console.error("groq-chat: Groq answered", response.status, await response.text());
     const mapped = groqUpstreamError(response.status);
-    return json({ error: mapped.error }, mapped.status);
+    // Groq's status (not its body) helps tell a bad model from a bad key.
+    return json({ error: mapped.error, upstreamStatus: response.status }, mapped.status);
   }
 
   const data = await response.json();

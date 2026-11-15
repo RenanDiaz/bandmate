@@ -64,14 +64,17 @@ export const GROQ_MODELS = {
   GEMMA_2_9B: "gemma2-9b-it",
 } as const;
 
-/** Error codes the `groq-chat` function answers with (see its header). */
-async function errorCode(context: unknown): Promise<string | undefined> {
-  if (!(context instanceof Response)) return undefined;
+/** The error body the `groq-chat` function answers with (see its header). */
+async function errorBody(context: unknown): Promise<{ code?: string; upstreamStatus?: number }> {
+  if (!(context instanceof Response)) return {};
   try {
     const body = await context.clone().json();
-    return typeof body?.error === "string" ? body.error : undefined;
+    return {
+      code: typeof body?.error === "string" ? body.error : undefined,
+      upstreamStatus: typeof body?.upstreamStatus === "number" ? body.upstreamStatus : undefined,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -110,8 +113,8 @@ class GroqService {
       // FunctionsHttpError: the function answered non-2xx; its Response is in `context`.
       const context = (error as { context?: unknown }).context;
       const status = context instanceof Response ? context.status : 0;
-      const code = await errorCode(context);
-      console.error("groq-chat error:", status, code ?? error.message);
+      const { code, upstreamStatus } = await errorBody(context);
+      console.error("groq-chat error:", status, code ?? error.message, upstreamStatus ?? "");
 
       if (status === 413 || code === "too-large") {
         throw new GroqApiError("Request too large for the AI service. Try reducing the amount of data sent.", 413);
@@ -125,7 +128,10 @@ class GroqService {
       if (code === "not-configured" || code === "upstream-auth") {
         throw new Error("The AI service isn't set up on the server.");
       }
-      throw new Error(status ? `AI service error: ${status}` : "Failed to reach the AI service.");
+      if (!status) throw new Error("Failed to reach the AI service.");
+      throw new Error(
+        upstreamStatus ? `AI service error: ${status} (provider ${upstreamStatus})` : `AI service error: ${status}`
+      );
     }
 
     return data?.content ?? "";
