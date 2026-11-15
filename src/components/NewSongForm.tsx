@@ -878,7 +878,8 @@ const MetadataSection = styled.div`
 `;
 
 const FetchButton = styled.button`
-  background: #1db954; /* Spotify green */
+  /* Same look as the edit modal's button (EditSongModal) */
+  background: linear-gradient(135deg, ${theme.colors.brand.primary}, ${theme.colors.brand.primaryHover});
   border: none;
   color: white;
   padding: ${theme.space[3]} ${theme.space[4]};
@@ -891,15 +892,15 @@ const FetchButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: ${theme.space[2]};
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
 
   i {
     font-size: ${theme.fontSizes.bodyLg};
   }
 
   &:hover:not(:disabled) {
-    background: #1ed760;
     transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   }
 
   &:active:not(:disabled) {
