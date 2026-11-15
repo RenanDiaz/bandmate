@@ -251,24 +251,24 @@ export const EditSongModal = ({ song, isOpen, onClose, onSave }: Props) => {
                 {isFetchingMetadata ? (
                   <>
                     <Spinner />
-                    Fetching metadata...
+                    {t("songs.fetchingMetadata")}
                   </>
                 ) : metadataFetched ? (
                   <>
                     <i className="bi bi-check-circle-fill"></i>
-                    Metadata Loaded
+                    {t("songs.metadataLoaded")}
                   </>
                 ) : (
                   <>
                     <i className="bi bi-music-note-list"></i>
-                    Fetch Metadata (Spotify + MusicBrainz)
+                    {t("songs.fetchMetadata")}
                   </>
                 )}
               </FetchButton>
               {metadataFetched && (
                 <SuccessMessage>
                   <i className="bi bi-info-circle"></i>
-                  Metadata successfully loaded from multiple sources! You can edit any field before saving.
+                  {t("songs.metadataSuccess")}
                 </SuccessMessage>
               )}
             </MetadataSection>

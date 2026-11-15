@@ -232,7 +232,7 @@
   },
   "features": {
     "songLibrary": "Song Library",
-    "songLibraryDesc": "Store and organize all your songs with lyrics, chords, and automatic metadata from Spotify",
+    "songLibraryDesc": "Store and organize all your songs with lyrics, chords, and automatic metadata lookup",
     "bandManagement": "Band Management",
     "bandManagementDesc": "Create multiple bands, invite members, and manage permissions with role-based access",
     "setlists": "Setlists",
@@ -333,7 +333,7 @@
     "printSongbook": "Print Songbook",
     "spotifySearch": "Search Spotify",
     "fetchFromSpotify": "Fetch from Spotify",
-    "fetchMetadata": "Fetch Metadata (Spotify + MusicBrainz)",
+    "fetchMetadata": "Fetch Metadata",
     "fetchingMetadata": "Fetching metadata...",
     "metadataLoaded": "Metadata Loaded",
     "metadataSuccess": "Metadata successfully loaded from multiple sources! You can edit any field before saving.",
