@@ -1,6 +1,6 @@
 # Spec: Band push notifications
 
-> **Status:** implemented (Phases 1–3 validated on devices; Phase 4 — flag removed in PR 4.1 — pending its Validate) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
+> **Status:** implemented and validated (Phases 1–4; no feature flag since PR 4.1) · **Created:** 2026-09-27 · **Owner:** Renán Díaz
 > **Origin:** "push notifications de cuando alguien de la banda agrega un
 > show, un setlist, un ensayo, cosas así".
 > **Scope:** Web Push to band members when another member creates a show, a
@@ -581,6 +581,13 @@ one "moved" with the final date; cancel → "cancelled"; notes only →
 nothing) and Phase 3's Validate (invite a second account → push, tap →
 dashboard with the invitation; unknown email → no outbox row). Phase 4 can
 start (§10).
+
+## Manual validation, Phase 4 (2026-11-14)
+
+Done by the owner in production after PR 4.1 shipped and
+`VITE_PUSH_NOTIFICATIONS` was removed from Vercel, ✅: a profile that never
+had the flag sees Notifications in the user menu and turns it on, AC1
+works, and offline the app starts with the row hidden (AC24).
 
 ## Changelog
 
