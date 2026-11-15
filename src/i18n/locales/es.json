@@ -232,7 +232,7 @@
   },
   "features": {
     "songLibrary": "Biblioteca de Canciones",
-    "songLibraryDesc": "Almacena y organiza todas tus canciones con letras, acordes y metadatos automáticos de Spotify",
+    "songLibraryDesc": "Almacena y organiza todas tus canciones con letras, acordes y búsqueda automática de metadatos",
     "bandManagement": "Gestión de Banda",
     "bandManagementDesc": "Crea múltiples bandas, invita miembros y gestiona permisos con acceso basado en roles",
     "setlists": "Setlists",
@@ -331,7 +331,7 @@
     "printSongbook": "Imprimir Cancionero",
     "spotifySearch": "Buscar en Spotify",
     "fetchFromSpotify": "Obtener de Spotify",
-    "fetchMetadata": "Obtener Metadatos (Spotify + MusicBrainz)",
+    "fetchMetadata": "Obtener metadatos",
     "fetchingMetadata": "Obteniendo metadatos...",
     "metadataLoaded": "Metadatos Cargados",
     "metadataSuccess": "¡Metadatos cargados exitosamente de múltiples fuentes! Puedes editar cualquier campo antes de guardar.",
