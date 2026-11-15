@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import styled, { css } from "styled-components";
 import { useDraggable } from "@dnd-kit/core";
 import { theme } from "../../theme";
+import { noIosZoom } from "../ui/fields";
 import type { Song } from "../../services/songsService";
 import type { InputCapabilities } from "../../hooks/useInputCapabilities";
 import { usePickerState } from "../../hooks/usePickerState";
@@ -721,6 +722,7 @@ const SortSelect = styled.select<{ $touch: boolean }>`
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   max-width: 60%;
 `;
 

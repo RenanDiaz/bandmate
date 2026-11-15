@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import { PrimaryButton, SecondaryButton } from "./ui/buttons";
 import {
   getSetlist,
@@ -1714,13 +1715,9 @@ const NotesInput = styled.input`
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   transition: all ${theme.transitions.fast} ease;
   font-family: ${theme.fonts.sans};
-
-  /* iOS zooms the page into any field under 16px when it gets focus. */
-  @media (pointer: coarse) {
-    font-size: ${theme.fontSizes.body};
-  }
 
   &::placeholder {
     color: var(--color-text-tertiary);

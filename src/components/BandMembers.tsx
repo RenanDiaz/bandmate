@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Spinner } from "reactstrap";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import type { Band } from "../services/bandsService";
 import {
   getBandMembers,
@@ -725,6 +726,7 @@ const RoleSelect = styled.select`
   padding: ${theme.space[2]} ${theme.space[4]};
   border-radius: ${theme.radius.base};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   font-weight: ${theme.fontWeights.medium};
   cursor: pointer;
   transition: all ${theme.transitions.fast} ease;

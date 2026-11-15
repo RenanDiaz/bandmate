@@ -839,6 +839,9 @@ Reference `src/theme.ts` for the design system. Key patterns:
   In dialogs and forms use `PrimaryButton` (`$tone="danger"` for red actions),
   `SecondaryButton` and `DangerOutlineButton` from `src/components/ui/buttons.ts`,
   always with an explicit `type` (a native `<button>` inside `<Form>` submits)
+- Form fields: a text field or select styled under 16px adds `${noIosZoom}`
+  (`src/components/ui/fields.ts`) after its `font-size`, or iOS zooms the page
+  when it gets focus (16px on touch screens, the compact size with a mouse)
 - Print styles: Components hide navbar and use `@media print` for print views
 
 ### User Feedback & Dialogs

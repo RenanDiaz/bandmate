@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import styled from "styled-components";
 import { theme } from "../theme";
+import { noIosZoom } from "./ui/fields";
 import type { SectionTiming } from "../services/songsService";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../context/useToast";
@@ -480,6 +481,7 @@ const SectionEditInput = styled.input`
   color: var(--color-text-primary);
   padding: ${theme.space[1]} ${theme.space[2]};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
   width: 100px;
 
   &:focus {
@@ -544,6 +546,7 @@ const SectionNameInput = styled.input`
   padding: ${theme.space[2]} ${theme.space[3]};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.fontSizes.bodySm};
+  ${noIosZoom}
 
   &::placeholder {
     color: var(--color-text-tertiary);
