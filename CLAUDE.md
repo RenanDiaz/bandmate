@@ -921,8 +921,10 @@ VITE_PUSH_NOTIFICATIONS=true                        # feature flag: Notification
 
 ## Database Migrations
 
-- **`supabase/migrations/`** — the source of truth, applied with
-  `supabase db push`. It starts with `20260101000000_baseline.sql` (see
+- **`supabase/migrations/`** — the source of truth, applied to production
+  with `supabase db push --remote` (Supabase CLI 3 targets the local Docker
+  stack without `--remote`; `functions deploy` and `secrets` still target
+  the linked project). It starts with `20260101000000_baseline.sql` (see
   "Database Schema Notes"). **All new migrations go here**, named
   `<YYYYMMDDHHMMSS>_description.sql`, dated after the latest one.
 - **`migrations/`** — legacy files that built the schema by hand in the
@@ -1042,7 +1044,7 @@ needed") so reviewers know it was checked, not skipped.
 
 ### Adding a migration
 1. Create `supabase/migrations/<timestamp>_description.sql`
-2. Check it locally with `supabase db reset`, then apply with `supabase db push`
+2. Check it locally with `supabase db reset`, then apply with `supabase db push --remote`
 3. Update the schema table above if you add a table
 
 ## External Documentation

@@ -4,7 +4,7 @@
 > `supabase/migrations/`, starting with
 > [`20260101000000_baseline.sql`](../supabase/migrations/20260101000000_baseline.sql),
 > a dump of production taken on 2026-09-26 that replaces everything below.
-> A fresh database is `supabase db push` (remote) or `supabase db reset`
+> A fresh database is `supabase db push --remote` or `supabase db reset`
 > (local). The files here show how the schema got there; production may
 > differ from them (it did: some policies carry names no file here creates),
 > so read the baseline, not these, to know what exists.
@@ -13,7 +13,7 @@ This directory contains the legacy SQL migration files for the Bandmate database
 
 > **Two migration flows exist in this repo:**
 >
-> - **`supabase/migrations/`** — managed by the Supabase CLI (`supabase db push`).
+> - **`supabase/migrations/`** — managed by the Supabase CLI (`supabase db push --remote`).
 >   Files there follow the required `<timestamp>_name.sql` naming and are tracked
 >   in the project's `supabase_migrations.schema_migrations` table. **New
 >   migrations should go here.**
@@ -22,7 +22,7 @@ This directory contains the legacy SQL migration files for the Bandmate database
 >
 > `BAND_AVATAR_AND_OWNERSHIP_MIGRATION.sql` has been moved into the CLI flow as
 > [`supabase/migrations/20260627134532_band_avatar_and_ownership.sql`](../supabase/migrations/20260627134532_band_avatar_and_ownership.sql)
-> and can be applied with `supabase db push`.
+> and can be applied with `supabase db push --remote`.
 
 ## Files
 
@@ -33,7 +33,7 @@ This directory contains the legacy SQL migration files for the Bandmate database
 - **[BAND_MEMBERS_MIGRATION_V4.sql](BAND_MEMBERS_MIGRATION_V4.sql)** - Latest version
 
 ### Band Settings
-- **[supabase/migrations/20260627134532_band_avatar_and_ownership.sql](../supabase/migrations/20260627134532_band_avatar_and_ownership.sql)** - Adds `bands.avatar_url`, the public `band-avatars` storage bucket, widens the band UPDATE policy to owners + admins, and adds the `transfer_band_ownership()` RPC _(moved to the CLI flow — apply with `supabase db push`)_
+- **[supabase/migrations/20260627134532_band_avatar_and_ownership.sql](../supabase/migrations/20260627134532_band_avatar_and_ownership.sql)** - Adds `bands.avatar_url`, the public `band-avatars` storage bucket, widens the band UPDATE policy to owners + admins, and adds the `transfer_band_ownership()` RPC _(moved to the CLI flow — apply with `supabase db push --remote`)_
 
 ### Supporting Functions & Fixes
 - **[ADD_GET_BAND_MEMBERS_FUNCTION.sql](ADD_GET_BAND_MEMBERS_FUNCTION.sql)** - Function to retrieve band members

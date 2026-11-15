@@ -50,7 +50,7 @@ The function rejects every request without the matching `x-push-secret`
 
 ## 3. Database: pg_net and Vault
 
-Apply the migration (`supabase db push`,
+Apply the migration (`supabase db push --remote`,
 `20260927180000_push_notifications.sql`). It enables `pg_net` when it can; if
 it printed "pg_net not available", enable it under Database → Extensions.
 
@@ -126,7 +126,7 @@ Changes wait two minutes for more edits, then a `pg_cron` job posts them
 (the same job re-posts calls the function never received). Once per project:
 
 1. Dashboard → Database → Extensions → enable **pg_cron**.
-2. `supabase db push` (migration `20260928120000_push_notifications_changes.sql`
+2. `supabase db push --remote` (migration `20260928120000_push_notifications_changes.sql`
    schedules the job when `pg_cron` is there).
 3. `supabase functions deploy send-push-notifications --no-verify-jwt`
    (new texts, and it refuses rows still inside their window).

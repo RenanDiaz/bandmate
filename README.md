@@ -104,8 +104,10 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    Supabase project is created from the repo with:
    ```bash
    supabase link --project-ref <your-project-ref>
-   supabase db push
+   supabase db push --remote
    ```
+   (Supabase CLI 3 needs `--remote`; without it `db push` targets the local
+   Docker stack.)
    For a local database (Docker): `supabase start`, then `supabase db reset`
    to rebuild it from the migrations. The files in
    [`migrations/`](migrations/README.md) are the legacy history the baseline
