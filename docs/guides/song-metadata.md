@@ -46,6 +46,14 @@ audio analysis — are not implemented.
 
 ## Spotify setup
 
+> **Off in production (November 2026).** Spotify now requires the owner of a
+> Development Mode app to have Spotify Premium; without it the token or
+> search request fails and `spotify-metadata` answered 502 on every lookup.
+> The secrets were removed, so the function answers `not-configured` at once
+> and lookups use MusicBrainz only (no album artwork, Spotify link or
+> popularity). To turn it back on, follow the steps below with an account
+> that has Premium; no code change is needed.
+
 1. At the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard),
    **Create app**: any name, redirect URI `http://localhost:5173` (required but
    unused), API **Web API**.
