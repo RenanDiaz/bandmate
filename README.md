@@ -44,7 +44,7 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
 - Show scheduling with venue, soundcheck and linked setlist; list and calendar views
 - Rehearsal scheduling linked to shows and setlists
 - Personal agenda across your bands on the dashboard
-- Push notifications (behind a feature flag until the device checklist passes): get notified when someone in your band adds a show, a rehearsal or a setlist, or moves or cancels a show or rehearsal (several edits in a row send one notice), and when you are invited to a band; on per device, mute per band, one tap opens it in the right band (iPhone/iPad: installed app only)
+- Push notifications: get notified when someone in your band adds a show, a rehearsal or a setlist, or moves or cancels a show or rehearsal (several edits in a row send one notice), and when you are invited to a band; on per device, mute per band, one tap opens it in the right band (iPhone/iPad: installed app only)
 - Calendar sync: a personal iCal feed of the band's shows, soundchecks and rehearsals (one tap for Apple, Google and Outlook calendars), plus per-event `.ics` downloads
 
 **Performance mode**
@@ -93,7 +93,6 @@ Live at **[www.bandmate.space](https://www.bandmate.space)**.
    | `VITE_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
    | `VITE_AI_FEATURES` | — | `true` shows the AI setlist features; set it once the `groq-chat` function has its key (step 5). Not a secret |
    | `VITE_VAPID_PUBLIC_KEY` | — | Public VAPID key for push notifications, from `npm run vapid-keys` ([docs/setup/push-notifications.md](docs/setup/push-notifications.md)); public by design |
-   | `VITE_PUSH_NOTIFICATIONS` | — | `true` shows the Notifications settings (off by default; per device: `localStorage.bandmate_flag_push = "1"`, or open any page with `?flag=push` / `?flag=-push`) |
 
    > ⚠️ `VITE_*` variables are embedded in the client bundle and are public.
    > Don't put production secrets in them: the Spotify and Groq keys are
@@ -213,7 +212,7 @@ Architecture, conventions, routes and the data model are documented in
 - [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) — spec (implemented): email a member how to sign in
 - [docs/specs/app-header.md](docs/specs/app-header.md) — spec (implemented): lighter app header (About out of the nav, one link list, desktop from `lg`)
 - [docs/specs/my-upcoming-events.md](docs/specs/my-upcoming-events.md) — spec (implemented): my upcoming events across bands on the dashboard
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (in progress, Phases 1–3 validated on devices, Phase 4 not started): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) — spec (implemented; Phases 1–3 validated on devices, Phase 4 pending its check): band push notifications for new shows, rehearsals and setlists, moved / cancelled shows and rehearsals, and band invitations
 - [migrations/README.md](migrations/README.md) — migrations
 
 ## 🗺️ Roadmap

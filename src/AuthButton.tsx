@@ -11,7 +11,6 @@ import { useBandContext } from "./context/useBandContext";
 import { useToast } from "./context/useToast";
 import { signOutEverywhereOrLocally } from "./lib/authSession";
 import { getPwaUpdater } from "./lib/pwaUpdates";
-import { isPushNotificationsEnabled } from "./lib/featureFlags";
 import { unsubscribeThisDevice, updateThisDeviceLocale } from "./lib/pushSupport";
 import { openNotificationSettings } from "./components/notifications/notificationSettingsStore";
 
@@ -65,7 +64,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     // Pushes are written in the subscription's language: follow the app's.
-    if (isPushNotificationsEnabled() && authMode === "session") {
+    if (authMode === "session") {
       updateThisDeviceLocale(lng).catch((error) => console.warn("Push locale update failed:", error));
     }
   };
@@ -233,7 +232,7 @@ export const AuthButton: FC<AuthButtonProps> = ({ variant = "dropdown", onAction
         <span>{t('nav.about')}</span>
       </MenuItem>
       {/* Reads and writes the server: session and online only (spec §2.1). */}
-      {isPushNotificationsEnabled() && authMode === "session" && isOnline && (
+      {authMode === "session" && isOnline && (
         <MenuItem
           $inline={inline}
           onClick={() => {

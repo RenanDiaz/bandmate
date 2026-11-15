@@ -475,8 +475,8 @@ desktop bar it is `variant="dropdown"` with `compact`: a trigger with the avatar
 click outside or the trigger). In the mobile drawer (`CustomOffcanvas`) it is
 `variant="inline"`: the same content as flat rows of the drawer (account
 header, Language, Offline setlists, About, Notifications, Check for updates, Sign out) with
-`onAction` closing the drawer. Notifications shows only with
-`isPushNotificationsEnabled()`, in `session` and online; it opens the modal
+`onAction` closing the drawer. Notifications shows only in `session` and
+online; it opens the modal
 through `notificationSettingsStore`, rendered by `NotificationSettingsHost`
 in `App` (a modal inside the drawer would unmount with it). About (`/about`) shows in `session` and `offline-cached`. Never render a floating menu inside the drawer:
 anchored to its last row it opens below the viewport. Tests:
@@ -513,11 +513,9 @@ strips so the precache matches offline (without it every icon is blank).
 Band push notifications ([docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md),
 setup: [docs/setup/push-notifications.md](docs/setup/push-notifications.md)).
 Server side: triggers → `notification_events` → `send-push-notifications`
-(see "Edge Functions"). Client side, behind `isPushNotificationsEnabled()`
-(`VITE_PUSH_NOTIFICATIONS=true` or `localStorage.bandmate_flag_push = "1"`,
-which devices without a console set by opening any page with `?flag=push`
-(`?flag=-push` clears it; `applyFlagParams`, called in `main.tsx`, drops the
-param before the first render); the flag hides UI only):
+(see "Edge Functions"). Client side, available to everyone since Phase 4
+(no feature flag; a stale `bandmate_flag_push` key in localStorage is
+inert):
 
 - **Worker:** `public/push-sw.js` (`push` → always a notification, even for
   an unreadable payload — browsers require it; `notificationclick` →
@@ -933,7 +931,6 @@ Optional:
 ```
 VITE_AI_FEATURES=true                               # show the AI setlist features (not a secret; the key is the groq-chat function's)
 VITE_VAPID_PUBLIC_KEY=<public key>                  # Web Push application server key from `npm run vapid-keys` (public by design)
-VITE_PUSH_NOTIFICATIONS=true                        # feature flag: Notifications settings (not a secret; see "Push notifications")
 ```
 
 > ⚠️ **Every `VITE_*` variable is inlined into the public client bundle.**
@@ -1096,5 +1093,5 @@ Index: [docs/README.md](docs/README.md).
 - [docs/specs/show-clock.md](docs/specs/show-clock.md) - Spec (implemented, validated except AC4–AC6 and AC10, which need a real backing track): show clock in performance mode — started by the first song's backing track or by hand, Stop / Resume / Reset for soundchecks (1 phase, 1 PR)
 - [docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md) - Spec (implemented and validated): email a member how to sign in — owner-only button in the member list, Edge Function naming the account / button they use, per-recipient rate limit (1 phase, 1 PR)
 - [docs/setup/push-notifications.md](docs/setup/push-notifications.md) - Push notifications: VAPID keys, secrets, Vault, deploy, end-to-end check
-- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, Phases 1–3 validated on devices, Phase 4 not started): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; Phase 4 removes the flag (4 phases, 5 PRs)
+- [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md) - Spec (in progress, implemented; Phases 1–3 validated on devices, Phase 4 (flag removed) pending its check): band push notifications — Web Push (VAPID) from DB triggers via an outbox + Edge Function when another member adds a show, rehearsal or setlist, or moves / cancels a show or rehearsal (coalesced 2 min, `pg_cron`), and to the invitee when invited to a band; no feature flag since Phase 4 (4 phases, 5 PRs)
 - [migrations/README.md](migrations/README.md) - Database migration guide

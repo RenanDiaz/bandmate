@@ -7,7 +7,6 @@ import { performUserSignOut } from "../context/offlineAuthController";
 import { bandContext, renderApp } from "../test/renderApp";
 import { wipeAll } from "../services/offlineSetlistService";
 import { unsubscribeThisDevice, updateThisDeviceLocale } from "../lib/pushSupport";
-import { PUSH_FLAG_STORAGE_KEY } from "../lib/featureFlags";
 import {
   closeNotificationSettings,
   useNotificationSettingsOpen,
@@ -31,20 +30,15 @@ beforeEach(() => {
   vi.mocked(wipeAll).mockClear();
   vi.mocked(unsubscribeThisDevice).mockClear();
   vi.mocked(updateThisDeviceLocale).mockClear();
-  localStorage.removeItem(PUSH_FLAG_STORAGE_KEY);
   closeNotificationSettings();
 });
 
 const SettingsOpenProbe = () => <output data-testid="settings-open">{String(useNotificationSettingsOpen())}</output>;
 
 describe("AuthButton notifications (band push notifications §2.1)", () => {
-  it("has no Notifications row with the flag off", () => {
-    renderApp(<AuthButton variant="inline" />, { ctx: signedIn });
-    expect(screen.queryByRole("button", { name: "Notifications" })).toBeNull();
-  });
-
-  it("with the flag on, lists Notifications before Check for updates and opens the settings", async () => {
-    localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "1");
+  it("lists Notifications before Check for updates (no flag, AC24) and opens the settings", async () => {
+    // A stale per-device flag from the rollout is inert.
+    localStorage.setItem("bandmate_flag_push", "0");
     const onAction = vi.fn();
     renderApp(
       <>
@@ -64,7 +58,6 @@ describe("AuthButton notifications (band push notifications §2.1)", () => {
   });
 
   it("hides Notifications offline and in offline-cached", () => {
-    localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "1");
     const { setContext } = renderApp(<AuthButton variant="inline" />, {
       ctx: bandContext({ user: { id: "user-a", email: "ana@example.com" }, isOnline: false }),
     });
@@ -98,14 +91,15 @@ describe("AuthButton notifications (band push notifications §2.1)", () => {
     await expect(clear()).rejects.toThrow("idb");
   });
 
-  it("changing the language updates the push language only with the flag on", async () => {
-    renderApp(<AuthButton variant="inline" />, { ctx: signedIn });
+  it("changing the language updates this device's push language in session only", async () => {
+    const { setContext } = renderApp(<AuthButton variant="inline" />, { ctx: signedIn });
     await userEvent.click(screen.getByRole("button", { name: "ES" }));
-    expect(updateThisDeviceLocale).not.toHaveBeenCalled();
+    expect(updateThisDeviceLocale).toHaveBeenCalledWith("es");
 
-    localStorage.setItem(PUSH_FLAG_STORAGE_KEY, "1");
+    vi.mocked(updateThisDeviceLocale).mockClear();
+    setContext(bandContext({ user: { id: "user-a" }, authMode: "offline-cached" }));
     await userEvent.click(screen.getByRole("button", { name: "EN" }));
-    expect(updateThisDeviceLocale).toHaveBeenCalledWith("en");
+    expect(updateThisDeviceLocale).not.toHaveBeenCalled();
   });
 });
 
@@ -140,7 +134,7 @@ describe("AuthButton inline (mobile drawer)", () => {
     expect(about.getAttribute("href")).toBe("/about");
     const panel = screen.getByTestId("account-panel");
     const labels = Array.from(panel.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
 
     await userEvent.click(about);
     expect(onAction).toHaveBeenCalledTimes(1);
@@ -197,7 +191,7 @@ describe("AuthButton dropdown (desktop navbar)", () => {
 
     const menu = screen.getByRole("menu");
     const labels = Array.from(menu.querySelectorAll("button, a"), (el) => el.textContent?.trim());
-    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Check for updates", "Sign out"]);
+    expect(labels).toEqual(["EN", "ES", "Offline setlists", "About", "Notifications", "Check for updates", "Sign out"]);
 
     const about = within(menu).getByRole("link", { name: "About" });
     expect(about.getAttribute("href")).toBe("/about");
