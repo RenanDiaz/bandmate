@@ -97,8 +97,8 @@ migrations/            # Legacy SQL, applied manually — historical reference
 | `performanceSessionService.ts` | Real-time sync sessions using Supabase Realtime |
 | `pushSubscriptionService.ts` | Push notifications: this browser's subscription row (`savePushSubscription` → `register_push_subscription` RPC, `deletePushSubscription`, `hasPushSubscription`, `updatePushSubscriptionLocale`) and per-band mutes (`getMutedBandIds`, `setBandMuted`). Browser side: `src/lib/pushSupport.ts`, see "Push notifications" |
 | `offlineSetlistService.ts` | Offline copies of setlists in IndexedDB (via `src/lib/offlineStore.ts`): reads filtered by the current user (`prefetchOfflineReads` warms the list during the A6 race), `confirmSignedInUser`, `wipeAll`, schema-wipe notice, events; downloads (`planDownload`, `downloadSetlist`, `resumeInterruptedDownloads`, `cancelDownload`, `removeSnapshot`, `collectGarbage`, `requestPersistence`, `listInterruptedDownloads`, `getStorageUsage`). perform mode (PR 2.4): `refreshSnapshotRows`, `patchSnapshotSetlist`, `patchSnapshotPreference`, `recordLocalPreference`, `flushLocalPreferences`, `markSnapshotFileMissing`. Update check (PR 3.1): `checkForUpdates`, `verifySnapshot`. See "Offline store", "Offline downloads", "Offline update check" and "Offline download UI" below |
-| `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) |
-| `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations |
+| `groqService.ts`, `aiSetlistService.ts` | AI setlist generation/optimization (Groq) through the `groq-chat` Edge Function; `groqService.isConfigured()` is the public `VITE_AI_FEATURES === "true"` flag |
+| `spotifyService.ts`, `musicBrainzService.ts`, `metadataService.ts`, `lyricsService.ts`, `youtubeService.ts` | External metadata/lyrics integrations; Spotify through the `spotify-metadata` Edge Function (null on any failure) |
 
 **Routing Pattern**: Protected routes show `BandSelector` overlay when user is logged in but no band is selected.
 
@@ -755,6 +755,19 @@ They run with the service role key, so they bypass RLS — validate inputs caref
   [docs/setup/push-notifications.md](docs/setup/push-notifications.md) and
   [docs/specs/band-push-notifications.md](docs/specs/band-push-notifications.md).
   Needs `pg_cron` for the moved / cancelled events.
+- `groq-chat` / `spotify-metadata` — proxies that keep the Groq key
+  (`GROQ_API_KEY`) and the Spotify credentials (`SPOTIFY_CLIENT_ID`,
+  `SPOTIFY_CLIENT_SECRET`) server-side. Default `verify_jwt`, and both also
+  require a real user (`auth.getUser`: the anon key alone passes
+  `verify_jwt`). `groq-chat` takes `{ messages, model?, temperature?,
+  maxTokens?, topP? }` and answers `{ content }`; models are an allow-list and
+  requests are capped (20 messages, 120 000 characters, 4096 tokens) in
+  `_shared/groqProxy.ts`; 413 stays 413 (the AI callers retry in compact
+  mode), a bad key becomes 502 `upstream-auth`, never 401.
+  `spotify-metadata` takes `{ title, artist? }` and answers `{ metadata }`
+  (null: no match), token cached per worker (`_shared/spotifyMetadata.ts`).
+  Both shared modules are dependency-free and tested from
+  `src/lib/__tests__/`.
 - `send-invitation-email` — sends invitation emails via Resend. Needs `RESEND_API_KEY` and `APP_URL`. See [docs/setup/email-sending.md](docs/setup/email-sending.md).
 - `send-sign-in-help` — "Email how to sign in" in the member list
   ([docs/specs/member-sign-in-help.md](docs/specs/member-sign-in-help.md)):
@@ -894,19 +907,17 @@ VITE_SUPABASE_ANON_KEY=<anon_key>
 
 Optional:
 ```
-VITE_SPOTIFY_CLIENT_ID=<spotify_client_id>          # metadata enrichment
-VITE_SPOTIFY_CLIENT_SECRET=<spotify_client_secret>  # see warning below
-VITE_GROQ_API_KEY=<groq_api_key>                    # AI setlist generation (https://console.groq.com)
+VITE_AI_FEATURES=true                               # show the AI setlist features (not a secret; the key is the groq-chat function's)
 VITE_VAPID_PUBLIC_KEY=<public key>                  # Web Push application server key from `npm run vapid-keys` (public by design)
 VITE_PUSH_NOTIFICATIONS=true                        # feature flag: Notifications settings (not a secret; see "Push notifications")
 ```
 
 > ⚠️ **Every `VITE_*` variable is inlined into the public client bundle.**
-> `VITE_SPOTIFY_CLIENT_SECRET` and `VITE_GROQ_API_KEY` are therefore exposed to
-> anyone who loads the app. This is known technical debt; the fix is to move
-> those calls behind an Edge Function. **Do not add new secrets as `VITE_*`
-> variables** — server-side secrets belong in Edge Function env
-> (`supabase secrets set`).
+> **Do not add secrets as `VITE_*` variables** — they belong in Edge Function
+> env (`supabase secrets set`). Spotify (`SPOTIFY_CLIENT_ID`,
+> `SPOTIFY_CLIENT_SECRET`) and Groq (`GROQ_API_KEY`) live there, behind the
+> `spotify-metadata` and `groq-chat` functions; until November 2026 they were
+> `VITE_SPOTIFY_CLIENT_*` / `VITE_GROQ_API_KEY` and shipped in the bundle.
 
 ## Database Migrations
 

@@ -1495,7 +1495,6 @@
   },
   "ai": {
     "title": "AI-Powered Features",
-    "notConfigured": "Add VITE_GROQ_API_KEY to your .env file to enable AI-powered setlist generation.",
     "generateWithAI": "Generate Setlist with AI",
     "generateSetlist": "AI Setlist Generator",
     "generateDescription": "Let AI create an optimized setlist from your {{count}} songs based on your preferences.",

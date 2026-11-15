@@ -1,14 +1,15 @@
 /**
  * Groq AI Service
  *
- * Provides LLM capabilities using Groq's free tier API.
- * Used for AI-powered features like setlist generation and song suggestions.
- *
- * Setup:
- * 1. Create an account at https://console.groq.com
- * 2. Get your API key from the dashboard
- * 3. Add to .env: VITE_GROQ_API_KEY
+ * LLM calls for the AI setlist features. The Groq API key never reaches the
+ * browser: requests go through the `groq-chat` Edge Function
+ * (supabase/functions/groq-chat), which holds `GROQ_API_KEY` and requires a
+ * signed-in user. The UI shows the AI features only when the public flag
+ * `VITE_AI_FEATURES=true` is set (not a secret: it says the server side is
+ * set up).
  */
+
+import { supabase } from "../lib/supabaseClient";
 
 export class GroqApiError extends Error {
   status: number;
@@ -51,97 +52,90 @@ export interface GroqCompletionOptions {
   topP?: number;
 }
 
-// Available models on Groq free tier
+/**
+ * Groq models by role, so a retirement only changes the values here and in
+ * the `groq-chat` allow-list (supabase/functions/_shared/groqProxy.ts).
+ * Groq shut down the Llama 3.x models on 2026-08-16
+ * (https://console.groq.com/docs/deprecations).
+ */
 export const GROQ_MODELS = {
-  // Fast and efficient for most tasks
-  LLAMA_3_1_8B: "llama-3.1-8b-instant",
-  // More capable, versatile model (recommended)
-  LLAMA_3_3_70B: "llama-3.3-70b-versatile",
-  // Mixtral for diverse tasks
-  MIXTRAL: "mixtral-8x7b-32768",
-  // Gemma for lightweight tasks
-  GEMMA_2_9B: "gemma2-9b-it",
+  /** Default: generation, optimization, suggestions. */
+  CAPABLE: "openai/gpt-oss-120b",
+  /** Quick, light answers. */
+  FAST: "openai/gpt-oss-20b",
 } as const;
 
-class GroqService {
-  private apiKey: string;
-  private baseUrl = "https://api.groq.com/openai/v1";
-
-  constructor() {
-    this.apiKey = import.meta.env.VITE_GROQ_API_KEY || "";
-
-    if (!this.apiKey) {
-      console.warn(
-        "Groq API key not configured. Set VITE_GROQ_API_KEY in .env to enable AI features."
-      );
-    }
+/** The error body the `groq-chat` function answers with (see its header). */
+async function errorBody(context: unknown): Promise<{ code?: string; upstreamStatus?: number }> {
+  if (!(context instanceof Response)) return {};
+  try {
+    const body = await context.clone().json();
+    return {
+      code: typeof body?.error === "string" ? body.error : undefined,
+      upstreamStatus: typeof body?.upstreamStatus === "number" ? body.upstreamStatus : undefined,
+    };
+  } catch {
+    return {};
   }
+}
 
+class GroqService {
   /**
-   * Check if Groq API is configured
+   * Whether the AI features are offered. The key lives on the server, so
+   * this is the public `VITE_AI_FEATURES` flag, set where `GROQ_API_KEY` is.
    */
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return import.meta.env.VITE_AI_FEATURES === "true";
   }
 
   /**
-   * Send a chat completion request to Groq
+   * Send a chat completion request through the `groq-chat` Edge Function.
    */
   async chat(
     messages: GroqMessage[],
     options: GroqCompletionOptions = {}
   ): Promise<string> {
     if (!this.isConfigured()) {
-      throw new Error("Groq API not configured. Please add VITE_GROQ_API_KEY to your .env file.");
+      throw new Error("AI features are not enabled.");
     }
 
     const {
-      model = GROQ_MODELS.LLAMA_3_3_70B,
+      model = GROQ_MODELS.CAPABLE,
       temperature = 0.7,
       maxTokens = 2048,
       topP = 1,
     } = options;
 
-    try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature,
-          max_tokens: maxTokens,
-          top_p: topP,
-        }),
-      });
+    const { data, error } = await supabase.functions.invoke<{ content: string }>("groq-chat", {
+      body: { messages, model, temperature, maxTokens, topP },
+    });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Groq API error:", response.status, errorBody);
+    if (error) {
+      // FunctionsHttpError: the function answered non-2xx; its Response is in `context`.
+      const context = (error as { context?: unknown }).context;
+      const status = context instanceof Response ? context.status : 0;
+      const { code, upstreamStatus } = await errorBody(context);
+      console.error("groq-chat error:", status, code ?? error.message, upstreamStatus ?? "");
 
-        if (response.status === 401) {
-          throw new Error("Invalid Groq API key. Please check your VITE_GROQ_API_KEY.");
-        }
-        if (response.status === 413) {
-          throw new GroqApiError("Request too large for Groq API. Try reducing the amount of data sent.", 413);
-        }
-        if (response.status === 429) {
-          throw new Error("Groq API rate limit exceeded. Please try again later.");
-        }
-        throw new Error(`Groq API error: ${response.status}`);
+      if (status === 413 || code === "too-large") {
+        throw new GroqApiError("Request too large for the AI service. Try reducing the amount of data sent.", 413);
       }
-
-      const data: GroqChatResponse = await response.json();
-      return data.choices[0]?.message?.content || "";
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
+      if (status === 429 || code === "rate-limited") {
+        throw new Error("AI service rate limit exceeded. Please try again later.");
       }
-      throw new Error("Failed to communicate with Groq API");
+      if (status === 401) {
+        throw new Error("Sign in again to use the AI features.");
+      }
+      if (code === "not-configured" || code === "upstream-auth") {
+        throw new Error("The AI service isn't set up on the server.");
+      }
+      if (!status) throw new Error("Failed to reach the AI service.");
+      throw new Error(
+        upstreamStatus ? `AI service error: ${status} (provider ${upstreamStatus})` : `AI service error: ${status}`
+      );
     }
+
+    return data?.content ?? "";
   }
 
   /**
