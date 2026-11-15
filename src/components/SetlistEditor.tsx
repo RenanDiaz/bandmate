@@ -1717,6 +1717,11 @@ const NotesInput = styled.input`
   transition: all ${theme.transitions.fast} ease;
   font-family: ${theme.fonts.sans};
 
+  /* iOS zooms the page into any field under 16px when it gets focus. */
+  @media (pointer: coarse) {
+    font-size: ${theme.fontSizes.body};
+  }
+
   &::placeholder {
     color: var(--color-text-tertiary);
   }

@@ -159,6 +159,11 @@ const TargetInput = styled.input`
   font-size: ${theme.fontSizes.bodySm};
   text-align: right;
 
+  /* iOS zooms the page into any field under 16px when it gets focus. */
+  @media (pointer: coarse) {
+    font-size: ${theme.fontSizes.body};
+  }
+
   &:focus {
     outline: none;
     border-color: ${theme.colors.brand.primary};
